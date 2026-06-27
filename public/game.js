@@ -22,26 +22,43 @@ document.addEventListener("DOMContentLoaded", () => {
 		});
 	}
 
-	document.querySelectorAll(".menu-item").forEach(item => {
+	// --- LOGICĂ SCHIMBARE DIFICULTATE (DOAR PENTRU EX, MED, HARD, HOME) ---
+	document.querySelectorAll(".menu-item:not(.theme-item)").forEach(item => {
 		item.addEventListener("click", function() {
 			const choice = this.getAttribute("data-level");
 			if (menu) menu.classList.add("hidden");
 
 			if (choice === "home") {
-				window.location.reload(); // Reîncarcă pagina pentru a vedea meniul inițial
-			} else {
+				window.location.reload(); 
+			} else if (choice) {
 				// Când se schimbă dificultatea din dropdown, ascundem overlay-ul dacă e deschis
 				const overlay = document.getElementById('difficulty-overlay');
 				if (overlay) overlay.classList.add('hidden');
 
-				console.log("Schimbare dificultate din dropdown-menu:", choice);
-				// Trimite semnalul de schimbare dificultate către server
-				if (socket) {
-					socket.emit('setDifficulty', choice);
-				} else {
-					alert("Nu ești conectat la server!");
-				}
+				console.log("Schimbare dificultate cerută în meci:", choice);
+				socket.emit('setDifficulty', choice);
 			}
+		});
+	});
+
+	// --- LOGICĂ SCHIMBARE TEME VIZUALE (SEPARATĂ COMPLET) ---
+	const savedTheme = localStorage.getItem('f1-guesser-theme') || 'default';
+	document.body.setAttribute('data-app-theme', savedTheme);
+
+	document.querySelectorAll(".theme-item").forEach(item => {
+		item.addEventListener("click", function(e) {
+			e.stopPropagation(); // Oprim propagarea ca să nu închidă alte meniuri aiurea
+			const selectedTheme = this.getAttribute("data-theme");
+			
+			// Aplicăm tema pe body
+			document.body.setAttribute('data-app-theme', selectedTheme);
+			
+			// Salvăm în memoria browserului
+			localStorage.setItem('f1-guesser-theme', selectedTheme);
+			
+			// Închidem doar meniul dropdown, fără să trimitem nimic la server
+			if (menu) menu.classList.add("hidden");
+			console.log(`Tema vizuală schimbată la: ${selectedTheme}`);
 		});
 	});
 	
@@ -145,7 +162,29 @@ document.addEventListener("DOMContentLoaded", () => {
 			menu.classList.add("hidden");
 		}
 	});
-}); // Aici era paranteza lipsă din versiunea ta originală!
+}); 
+
+	// --- LOGICĂ SCHIMBARE TEME VIZUALE ---
+	// Încărcăm tema salvată anterior (dacă există)
+	const savedTheme = localStorage.getItem('f1-guesser-theme') || 'default';
+	document.body.setAttribute('data-app-theme', savedTheme);
+
+	document.querySelectorAll(".theme-item").forEach(item => {
+		item.addEventListener("click", function(e) {
+			e.stopPropagation();
+			const selectedTheme = this.getAttribute("data-theme");
+			
+			// Aplicăm tema pe body
+			document.body.setAttribute('data-app-theme', selectedTheme);
+			
+			// Salvăm opțiunea în memoria browserului
+			localStorage.setItem('f1-guesser-theme', selectedTheme);
+			
+			// Închidem meniul
+			if (menu) menu.classList.add("hidden");
+			console.log(`Tema vizuală schimbată la: ${selectedTheme}`);
+		});
+	});
 
 let driversList = [];
 let selectedDriverId = null;
