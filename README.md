@@ -27,3 +27,22 @@ Un joc web interactiv de tip Wordle inspirat din Formula 1, unde te poți duela 
  └── [public]             # Folderul pentru fișierele statice accesate de browser
       ├── index.html      # Interfața vizuală a jocului
       └── game.js         # Logica din browser și legarea evenimentelor
+
+⚙️ Instalare și Pornire
+Instalare dependențe:
+
+Bash
+npm install express socket.io
+Pornire server:
+
+Bash
+node server.js
+Accesare:
+Deschide browserul la http://localhost:3000.
+
+💡 Legendă Culori (Indicii)
+🟩 Verde: Potrivire perfectă.
+🟨 Galben: Echipa introdusă se află în istoricul fostelor echipe ale pilotului.
+🟧 Portocaliu: Valoarea corectă este mai mare decât cea introdusă.
+🟪 Violet: Valoarea corectă este mai mică decât cea introdusă.
+🟥 Roșu: Lipsă totală de potrivire.
