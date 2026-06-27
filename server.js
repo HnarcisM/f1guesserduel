@@ -66,6 +66,7 @@ io.on('connection', (socket) => {
         if (!currentRoom || !rooms[currentRoom]) return;
         
         rooms[currentRoom].difficulty = difficulty;
+        rooms[currentRoom].attempts = {};
 
         getDriversByDifficulty(difficulty, (err, drivers) => {
             if (err || drivers.length === 0) {
