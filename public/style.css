@@ -41,7 +41,8 @@
 /* --- ADAPTARE DESIGN LA VARIABILE --- */
 body { 
     background: var(--bg-gradient);
-    background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, auto, 30px 30px, 30px 30px; /* pentru textura carbon */
+    background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, auto, 30px 30px, 30px 30px; 
+    background-attachment: fixed; /* ACEASTA ESTE LINIA CARE PREVINE ALUNGIREA */
     color: var(--text-primary); 
     font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; 
     text-align: center; 
@@ -181,6 +182,45 @@ button#sendGuessBtn, .restart-inline-btn { background-color: var(--accent-f1); c
     border: 1px solid rgba(255, 24, 1, 0.3);
     letter-spacing: 0.5px;
     box-shadow: 0 0 15px rgba(255, 24, 1, 0.1);
+}
+
+.header-right{
+    position: absolute;
+    right: 30px;
+    top: 50%;
+    transform: translateY(-50%);
+
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.room-badge{
+    background:rgba(56,189,248,.12);
+    border:1px solid rgba(56,189,248,.35);
+    color:#38bdf8;
+
+    padding:8px 16px;
+    border-radius:20px;
+
+    font-size:13px;
+    font-weight:700;
+
+    cursor:pointer;
+
+    transition:.2s;
+    user-select:none;
+}
+
+.room-badge:hover{
+    transform:translateY(-1px);
+    background:rgba(56,189,248,.22);
+}
+
+.room-badge.copied{
+    background:#10b981;
+    border-color:#10b981;
+    color:white;
 }
 
 /* --- CONTAINER CENTRAL --- */
@@ -433,3 +473,5 @@ button#sendGuessBtn:hover { background: #e01200; }
 /* Adaptare automată la variabila de accent dacă se dorește ulterior */
 [data-app-theme="neon"] .dist-bar { background-color: #00f0ff; }
 [data-app-theme="light"] .dist-bar-container { background: #e5e7eb; }
+
+

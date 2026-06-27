@@ -82,8 +82,37 @@ document.addEventListener("DOMContentLoaded", () => {
 		window.history.pushState({}, '', `?room=${roomId}`);
 	}
 
-	const linkTextEl = document.getElementById("linkText");
-	if (linkTextEl) linkTextEl.innerText = window.location.href;
+	const roomBadge = document.getElementById("roomBadge");
+
+	if(roomBadge){
+
+		roomBadge.innerHTML = `🏁 ROOM #${roomId.toUpperCase()}`;
+
+		roomBadge.addEventListener("click", async ()=>{
+
+			try{
+
+				await navigator.clipboard.writeText(window.location.href);
+
+				roomBadge.innerHTML="✅ LINK COPIAT!";
+				roomBadge.classList.add("copied");
+
+				setTimeout(()=>{
+
+					roomBadge.innerHTML=`🏁 ROOM #${roomId.toUpperCase()}`;
+					roomBadge.classList.remove("copied");
+
+				},2000);
+
+			}catch{
+
+				alert("Nu s-a putut copia link-ul.");
+
+			}
+
+		});
+
+	}
 
 	if (socket) {
 		socket.emit('joinRoom', roomId);
@@ -163,28 +192,6 @@ document.addEventListener("DOMContentLoaded", () => {
 		}
 	});
 }); 
-
-	// --- LOGICĂ SCHIMBARE TEME VIZUALE ---
-	// Încărcăm tema salvată anterior (dacă există)
-	const savedTheme = localStorage.getItem('f1-guesser-theme') || 'default';
-	document.body.setAttribute('data-app-theme', savedTheme);
-
-	document.querySelectorAll(".theme-item").forEach(item => {
-		item.addEventListener("click", function(e) {
-			e.stopPropagation();
-			const selectedTheme = this.getAttribute("data-theme");
-			
-			// Aplicăm tema pe body
-			document.body.setAttribute('data-app-theme', selectedTheme);
-			
-			// Salvăm opțiunea în memoria browserului
-			localStorage.setItem('f1-guesser-theme', selectedTheme);
-			
-			// Închidem meniul
-			if (menu) menu.classList.add("hidden");
-			console.log(`Tema vizuală schimbată la: ${selectedTheme}`);
-		});
-	});
 
 let driversList = [];
 let selectedDriverId = null;
