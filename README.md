@@ -29,14 +29,8 @@ Un joc web interactiv de tip Wordle inspirat din Formula 1, unde te poți duela 
       └── game.js         # Logica din browser și legarea evenimentelor
 
 ⚙️ Instalare și Pornire
-Instalare dependențe:
+Run F1GuesserDuel.bat
 
-Bash
-npm install express socket.io
-Pornire server:
-
-Bash
-node server.js
 Accesare:
 Deschide browserul la http://localhost:3000.
 
