@@ -65,9 +65,32 @@
         <button id="sendGuessBtn">Trimite</button>
     </div>
 
-    <div class="end-game-popup" id="endGameDisplay">
+	<div class="end-game-popup" id="endGameDisplay">
         <h2 id="endGameTitle">🏆 Felicitări!</h2>
         <p id="endGameMessage">Ai ghicit pilotul.</p>
+        
+        <div id="stats-container" style="margin: 20px 0; border-top: 1px solid #2a2a3a; padding-top: 15px; text-align: left;">
+            <p style="text-align: center; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; color: #ff1801; font-weight: 800;">📊 STATISTICI REALE</p>
+            <div style="display: flex; justify-content: space-around; text-align: center; margin-bottom: 15px;">
+                <div>
+                    <div id="stat-played" style="font-size: 20px; font-weight: 800;">0</div>
+                    <div style="font-size: 11px; color: #9ca3af;">Jucate</div>
+                </div>
+                <div>
+                    <div id="stat-winrate" style="font-size: 20px; font-weight: 800;">0%</div>
+                    <div style="font-size: 11px; color: #9ca3af;">Rată Câștig</div>
+                </div>
+                <div>
+                    <div id="stat-streak" style="font-size: 20px; font-weight: 800;">0</div>
+                    <div style="font-size: 11px; color: #9ca3af;">Curent Streak</div>
+                </div>
+            </div>
+            
+            <p style="font-size: 12px; font-weight: 700; color: #9ca3af; margin-bottom: 5px;">DISTRIBUȚIE ÎNCERCĂRI:</p>
+            <div id="guess-distribution" style="display: flex; flex-direction: column; gap: 4px;">
+                </div>
+        </div>
+
         <button class="restart-inline-btn" id="restartGameBtn">🔄 Joacă din nou</button>
     </div>
 

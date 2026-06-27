@@ -441,11 +441,20 @@ socket.on('guessResult', (data) => {
 				document.getElementById("endGameTitle").innerText = "🏆 AI CÂȘTIGAT!";
 				document.getElementById("endGameMessage").innerHTML = `Ai descoperit pilotul misterios în <strong>${attempts}</strong> ${attempts === 1 ? 'încercare' : 'încercări'}!`;
 				popup.classList.add("win-style"); // Aplică stilul auriu + pulse
+				
+				// [AICI AM ADĂUGAT]: Salvăm meciul câștigat în statistici
+				updateStats(true, attempts);
 			} else {
 				document.getElementById("endGameTitle").innerText = "💀 AI PIERDUT!";
 				document.getElementById("endGameMessage").innerHTML = `Din păcate nu ai ghicit. Pilotul misterios era: <strong>${target ? target.name : 'Necunoscut'}</strong>`;
 				popup.classList.add("lose-style"); // Aplică stilul roșu + scuturare
+				
+				// [AICI AM ADĂUGAT]: Salvăm meciul pierdut în statistici
+				updateStats(false, 0);
 			}
+			
+			// [AICI AM ADĂUGAT]: Calculăm și desenăm graficele în popup
+			renderStats();
 			
 			// Afișăm popup-ul cu noul efect elastic
 			popup.classList.add("show");
@@ -571,4 +580,72 @@ function handleFlagError(imgElement, isoCode, currentStep) {
         imgElement.onerror = null;
         imgElement.src = absoluteFlagFallback;
     }
+}
+
+// --- FUNCȚII PENTRU GESTIONARE LOCALSTORAGE STATS ---
+function getStats() {
+	const defaultStats = {
+		played: 0,
+		won: 0,
+		streak: 0,
+		distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
+	};
+	let stats = JSON.parse(localStorage.getItem('f1-guesser-stats'));
+	if (!stats) return defaultStats;
+	if (!stats.distribution) stats.distribution = defaultStats.distribution;
+	return stats;
+}
+
+function updateStats(isWin, attempts) {
+	let stats = getStats();
+	stats.played += 1;
+	
+	if (isWin) {
+		stats.won += 1;
+		stats.streak += 1;
+		if (attempts >= 1 && attempts <= 6) {
+			stats.distribution[attempts] = (stats.distribution[attempts] || 0) + 1;
+		}
+	} else {
+		stats.streak = 0; // Resetăm streak-ul la înfrângere
+	}
+	
+	localStorage.setItem('f1-guesser-stats', JSON.stringify(stats));
+}
+
+function renderStats() {
+	const stats = getStats();
+	
+	// Calculare rată de câștig (%)
+	const winRate = stats.played > 0 ? Math.round((stats.won / stats.played) * 100) : 0;
+	
+	// Afișăm numerele în căsuțele din popup
+	if(document.getElementById('stat-played')) document.getElementById('stat-played').innerText = stats.played;
+	if(document.getElementById('stat-winrate')) document.getElementById('stat-winrate').innerText = winRate + "%";
+	if(document.getElementById('stat-streak')) document.getElementById('stat-streak').innerText = stats.streak;
+	
+	// Generăm graficul cu bare pentru încercări
+	const distributionContainer = document.getElementById('guess-distribution');
+	if (distributionContainer) {
+		distributionContainer.innerHTML = '';
+		
+		// Găsim valoarea maximă pentru a scala barele vizual corect
+		const maxDistributionValue = Math.max(...Object.values(stats.distribution), 1);
+		
+		for (let i = 1; i <= 6; i++) {
+			const count = stats.distribution[i] || 0;
+			// Lățimea barei în procente
+			const barWidth = count > 0 ? Math.max(10, Math.round((count / maxDistributionValue) * 100)) : 8;
+			
+			const row = document.createElement('div');
+			row.className = 'dist-row';
+			row.innerHTML = `
+				<div class="dist-label">${i}</div>
+				<div class="dist-bar-container">
+					<div class="dist-bar" style="width: ${barWidth}%;"> ${count} </div>
+				</div>
+			`;
+			distributionContainer.appendChild(row);
+		}
+	}
 }

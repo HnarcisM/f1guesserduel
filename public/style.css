@@ -397,3 +397,39 @@ button#sendGuessBtn:hover { background: #e01200; }
     0% { box-shadow: 0 0 15px rgba(255, 215, 0, 0.3); }
     100% { box-shadow: 0 0 30px rgba(255, 215, 0, 0.6); }
 }
+
+/* --- STILURI GENERALE PENTRU GRAFIC STATISTICI --- */
+.dist-row {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    font-weight: bold;
+    gap: 8px;
+}
+.dist-label {
+    width: 10px;
+    color: #9ca3af;
+}
+.dist-bar-container {
+    flex-grow: 1;
+    background: #1e1e27;
+    border-radius: 4px;
+    height: 16px;
+    overflow: hidden;
+}
+.dist-bar {
+    background-color: #ff1801; /* Roșu F1 implicit */
+    height: 100%;
+    width: 0%; /* Va crește din JS */
+    color: white;
+    text-align: right;
+    padding-right: 5px;
+    font-size: 10px;
+    line-height: 16px;
+    box-sizing: border-box;
+    transition: width 0.6s ease;
+    border-radius: 4px;
+}
+/* Adaptare automată la variabila de accent dacă se dorește ulterior */
+[data-app-theme="neon"] .dist-bar { background-color: #00f0ff; }
+[data-app-theme="light"] .dist-bar-container { background: #e5e7eb; }
