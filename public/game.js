@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	const siteTitle = document.querySelector(".site-header h1");
 	if (siteTitle) {
 		siteTitle.addEventListener("click", () => {
-			window.location.reload(); // Reîncarcă pagina pentru a reveni la meniul principal
+			window.location.reload();
 		});
 	}
 
@@ -266,18 +266,89 @@ function setupSocketEvents() {
 		let c0 = document.getElementById(`cell-${rowIndex}-0`);
 		if (!c0) return; 
 		
+		// --- CELULA 0: PILOT (Nume și ID) ---
 		c0.className = `cell ${guess.id === target.id ? 'green' : 'red'}`;
 		c0.style.flexDirection = "column";
-		c0.style.lineHeight = "1.2";
-		c0.style.padding = "5px 2px";
+		c0.style.lineHeight = "1.3";
+		c0.style.padding = "4px 2px";
+		c0.style.justifyContent = "space-between";
+		c0.style.alignItems = "stretch";
 		c0.innerHTML = `
-			<span style="font-size: 14px; font-weight: bold; display: block;">${guess.id}</span>
-			<span style="font-size: 9px; font-weight: normal; text-transform: none; color: rgba(255,255,255,0.85); display: block;">${guess.name}</span>
+			<span style="font-size: 14px; font-weight: 800; display: block; letter-spacing: 0.5px; margin-bottom: 2px;">
+				${guess.id}
+			</span>
+			<span style="
+				font-size: 10px; 
+				font-weight: 700; 
+				text-transform: none; 
+				color: #ffffff; 
+				display: block; 
+				background: rgba(0, 0, 0, 0.4); 
+				padding: 2px 4px; 
+				border-radius: 4px;
+				word-break: break-word;
+			">
+				${guess.name}
+			</span>
 		`;
 
+		// --- CELULA 1: ȚARĂ (Prioritate strictă Local -> Online + Opacitate mărită) ---
 		let c1 = document.getElementById(`cell-${rowIndex}-1`);
-		if (c1) { c1.className = `cell ${guess.nat === target.nat ? 'green' : 'red'}`; c1.innerText = guess.nat; }
+		if (c1) { 
+			c1.className = `cell ${guess.nat === target.nat ? 'green' : 'red'}`; 
+			c1.style.position = "relative";
+			c1.style.padding = "0";
+			c1.style.overflow = "hidden";
+			c1.style.display = "flex";
+			c1.style.flexDirection = "column";
+			c1.style.justifyContent = "flex-end";
+			c1.style.alignItems = "stretch";
+
+			const f1ToIso = {
+				"GBR": "gb", "GER": "de", "NED": "nl", "SUI": "ch", "SPA": "es",
+				"RSA": "za", "MAS": "my", "MON": "mc", "UAE": "ae", "CHI": "cl",
+				"URU": "uy", "DEN": "dk", "POR": "pt", "THA": "th", "MEX": "mx",
+				"BUL": "bg", "CRO": "hr", "FRA": "fr", "ITA": "it", "USA": "us",
+				"CAN": "ca", "AUS": "au", "AUT": "at", "BRA": "br", "FIN": "fi",
+				"JPN": "jp", "NZL": "nz", "BEL": "be", "SWE": "se", "ARG": "ar"
+			};
+			let isoCode = f1ToIso[guess.nat.toUpperCase()] || guess.nat.substring(0, 2).toLowerCase();
+			
+			let localFlagPng = `/flags/${isoCode}.png`;
+			let localFlagSvg = `/flags/${isoCode}.svg`;
+			let onlineFlagUrl = `https://flagcdn.com/w160/${isoCode}.png`;
+
+			c1.innerHTML = `
+				<img src="${localFlagPng}" alt="${guess.nat}" 
+					onerror="this.onerror=function(){ this.onerror=function(){ this.onerror=null; this.src='${onlineFlagUrl}'; }; this.src='${localFlagSvg}'; }; this.src='${localFlagPng}';"
+					style="
+						position: absolute;
+						top: 0; left: 0; width: 100%; height: 100%;
+						object-fit: cover;
+						opacity: 0.55; /* Am mărit de la 0.35 pentru a fi mult mai vizibil */
+						z-index: 1;
+					"
+				>
+				<span style="
+					position: relative;
+					z-index: 2;
+					font-size: 10px; 
+					font-weight: 700; 
+					text-transform: uppercase; 
+					color: #ffffff; 
+					background: rgba(0, 0, 0, 0.5); /* Am întunecat fundalul textului pentru contrast */
+					padding: 2px 4px; 
+					border-radius: 4px;
+					margin: 2px;
+					text-align: center;
+				">
+					${guess.nat}
+				</span>
+			`;
+		}
 		
+		
+		// --- CELULA 2: ECHIPĂ (Versiune Universală pentru Modul HARD) ---
 		let currentGuessTeam = guess.team[0];
 		let teamClass = 'red';
 		if (target.team.includes(currentGuessTeam)) {
@@ -285,36 +356,157 @@ function setupSocketEvents() {
 		}
 		
 		let c2 = document.getElementById(`cell-${rowIndex}-2`);
-		if (c2) { c2.className = `cell ${teamClass}`; c2.innerText = currentGuessTeam.substring(0,5); }
-		
-// --- CELULA 3: VÂRSTĂ ---
-        let ageClass = target.age > guess.age ? 'orange' : (target.age < guess.age ? 'purple' : 'green');
-        let c3 = document.getElementById(`cell-${rowIndex}-3`);
-        if (c3) { 
-            c3.className = `cell ${ageClass} cell-arrow`; 
-            let arrow = target.age > guess.age ? '↑' : (target.age < guess.age ? '↓' : '');
-            // Afișare pe același rând: Număr + Spațiu + Săgeată
-            c3.innerHTML = `<span>${guess.age}</span>${arrow ? `<span class="arrow-indicator">${arrow}</span>` : ''}`;
-        }
-        
-        // --- CELULA 4: DEBUT ---
-        let debutClass = target.debut > guess.debut ? 'orange' : (target.debut < guess.debut ? 'purple' : 'green');
-        let c4 = document.getElementById(`cell-${rowIndex}-4`);
-        if (c4) { 
-            c4.className = `cell ${debutClass} cell-arrow`; 
-            let arrow = target.debut > guess.debut ? '↑' : (target.debut < guess.debut ? '↓' : '');
-            c4.innerHTML = `<span>${guess.debut}</span>${arrow ? `<span class="arrow-indicator">${arrow}</span>` : ''}`;
-        }
-        
-        // --- CELULA 5: VICTORII ---
-        let winsClass = target.wins > guess.wins ? 'orange' : (target.wins < guess.wins ? 'purple' : 'green');
-        let c5 = document.getElementById(`cell-${rowIndex}-5`);
-        if (c5) { 
-            c5.className = `cell ${winsClass} cell-arrow`; 
-            let arrow = target.wins > guess.wins ? '↑' : (target.wins < guess.wins ? '↓' : '');
-            c5.innerHTML = `<span>${guess.wins}</span>${arrow ? `<span class="arrow-indicator">${arrow}</span>` : ''}`;
-        }
+		if (c2) { 
+			c2.className = `cell ${teamClass}`; 
+			c2.style.position = "relative";
+			c2.style.padding = "0";
+			c2.style.overflow = "hidden";
+			c2.style.display = "flex";
+			c2.style.flexDirection = "column";
+			c2.style.justifyContent = "flex-end";
+			c2.style.alignItems = "stretch";
 
+			// Dicționar de bază pentru echipele foarte cunoscute
+			const teamLogosOnline = {
+				"Ferrari": "https://upload.wikimedia.org/wikipedia/sco/d/d4/Ferrari-Logo.svg",
+				"Mercedes": "https://upload.wikimedia.org/wikipedia/commons/9/90/Mercedes-Logo.svg",
+				"Red Bull": "https://upload.wikimedia.org/wikipedia/en/b/b5/Red_Bull_Racing_logo.svg",
+				"McLaren": "https://upload.wikimedia.org/wikipedia/en/6/66/McLaren_Racing_logo.svg",
+				"Alpine": "https://upload.wikimedia.org/wikipedia/commons/7/7e/Alpine_F1_Team_Logo.svg",
+				"Aston Martin": "https://upload.wikimedia.org/wikipedia/commons/2/2b/Aston_Martin_Lagonda_brand_logo.svg",
+				"Williams": "https://upload.wikimedia.org/wikipedia/commons/6/6d/Williams_Racing_2020_Logo.svg",
+				"AlphaTauri": "https://upload.wikimedia.org/wikipedia/commons/e/e4/Scuderia_AlphaTauri_logo.svg",
+				"RB": "https://upload.wikimedia.org/wikipedia/commons/e/e4/Scuderia_AlphaTauri_logo.svg",
+				"Racing Bulls": "https://upload.wikimedia.org/wikipedia/commons/e/e4/Scuderia_AlphaTauri_logo.svg",
+				"Haas": "https://upload.wikimedia.org/wikipedia/commons/e/e2/Haas_F1_Team_logo.svg",
+				"Alfa Romeo": "https://upload.wikimedia.org/wikipedia/commons/2/26/Alfa_Romeo_F1_Team_Orlen_logo.svg",
+				"Sauber": "https://upload.wikimedia.org/wikipedia/commons/c/cc/Stake_F1_Team_Kick_Sauber_logo.svg",
+				"Renault": "https://upload.wikimedia.org/wikipedia/commons/b/b1/Renault_2021.svg",
+				"Racing Point": "https://upload.wikimedia.org/wikipedia/commons/e/e2/Racing_Point_F1_logo.svg",
+				"Force India": "https://upload.wikimedia.org/wikipedia/en/a/a2/Sahara_Force_India_F1_Team_logo.svg",
+				"Toro Rosso": "https://upload.wikimedia.org/wikipedia/en/3/3d/Scuderia_Toro_Rosso_logo.svg",
+				"Lotus": "https://upload.wikimedia.org/wikipedia/commons/c/cf/Lotus_F1_Team_logo.svg"
+			};
+
+			// 1. Curățăm string-ul pentru fișierele locale
+			let checkName = currentGuessTeam.toLowerCase().replace(/\s+/g, '');
+			let cleanTeamName = "";
+
+			// 2. Mapări pentru ce ai deja salvat local pe disc
+			if (checkName.includes("ferrari")) cleanTeamName = "Ferrari";
+			else if (checkName.includes("mercedes")) cleanTeamName = "Mercedes";
+			else if (checkName.includes("redbull")) cleanTeamName = "RedBull";
+			else if (checkName.includes("mclaren")) cleanTeamName = "McLaren";
+			else if (checkName.includes("alpine")) cleanTeamName = "Alpine";
+			else if (checkName.includes("aston")) cleanTeamName = "AstonMartin";
+			else if (checkName.includes("williams")) cleanTeamName = "Williams";
+			else if (checkName.includes("haas")) cleanTeamName = "Haas";
+			else if (checkName.includes("alfa")) cleanTeamName = "AlfaRomeo";
+			else if (checkName.includes("sauber") || checkName.includes("stake")) cleanTeamName = "Stake";
+			else if (checkName.includes("renault")) cleanTeamName = "Renault";
+			else if (checkName.includes("tororosso")) cleanTeamName = "ToroRosso";
+			else if (checkName === "rb" || checkName.includes("racingbulls") || checkName.includes("alphatauri")) {
+				cleanTeamName = "ToroRosso";
+			} else {
+				// Pentru echipele de pe Hard care nu sunt listate mai sus, încercăm formatul numelui compactat
+				// Exemplu: "Benetton" devine "Benetton" -> va găsi Benetton.png pe care îl ai în folder!
+				cleanTeamName = currentGuessTeam.replace(/[^a-zA-Z0-9]/g, '');
+			}
+
+			// 3. Generăm link-urile locale
+			let localPng = `/logos/${cleanTeamName}.png`;
+			let localSvg = `/logos/${cleanTeamName}.svg`;
+			let localJpg = `/logos/${cleanTeamName}.jpg`;
+			
+			// 4. Mecanism Inteligent Online pentru Modul Hard:
+			// Dacă echipa nu e în dicționarul nostru, încercăm să construim dinamic un URL probabil de pe Wikipedia
+			let onlineUrl = teamLogosOnline[currentGuessTeam] || teamLogosOnline["RB"];
+			if (!onlineUrl) {
+				let formattedWikiName = encodeURIComponent(currentGuessTeam.replace(/\s+/g, '_'));
+				onlineUrl = `https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/F1_logo_red.svg/320px-F1_logo_red.svg.png`; 
+			}
+
+			// Imaginea de rezervă absolută (un logo F1 generic) în caz că absolut nimic nu funcționează online/local
+			let absoluteFallback = `https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/F1_logo_red.svg/320px-F1_logo_red.svg.png`;
+
+			// 5. Alegem extensia de start
+			let preferredSrc = localPng;
+			if (cleanTeamName === "AstonMartin") preferredSrc = localJpg;
+			else if (["AlfaRomeo", "Alpine", "Haas", "McLaren", "Mercedes", "Minardi", "RacingPoint"].includes(cleanTeamName)) {
+				preferredSrc = localSvg;
+			}
+
+			c2.innerHTML = `
+				<img src="${preferredSrc}" alt="${currentGuessTeam}" 
+					onerror="this.onerror=function(){ 
+						this.onerror=function(){ 
+							this.onerror=function(){ 
+								this.onerror=function(){
+									this.onerror=null;
+									this.src='${absoluteFallback}';
+								};
+								this.src='${onlineUrl}'; 
+							}; 
+							this.src='${localJpg}'; 
+						}; 
+						this.src='${localSvg}'; 
+					};"
+					style="
+						position: absolute;
+						top: 50%; left: 50%;
+						transform: translate(-50%, -55%);
+						width: 80%; height: 80%;
+						object-fit: contain;
+						opacity: 0.55;
+						z-index: 1;
+					"
+				>
+				<span style="
+					position: relative;
+					z-index: 2;
+					font-size: 10px; 
+					font-weight: 700; 
+					text-transform: uppercase; 
+					color: #ffffff; 
+					background: rgba(0, 0, 0, 0.5); 
+					padding: 2px 4px; 
+					border-radius: 4px;
+					margin: 2px;
+					text-align: center;
+				">
+					${currentGuessTeam.substring(0, 5)}
+				</span>
+			`;
+		}
+		
+		// --- CELULA 3: VÂRSTĂ ---
+		let ageClass = target.age > guess.age ? 'orange' : (target.age < guess.age ? 'purple' : 'green');
+		let c3 = document.getElementById(`cell-${rowIndex}-3`);
+		if (c3) { 
+			c3.className = `cell ${ageClass} cell-arrow`; 
+			let arrow = target.age > guess.age ? '↑' : (target.age < guess.age ? '↓' : '');
+			c3.innerHTML = `<span>${guess.age}</span>${arrow ? `<span class="arrow-indicator">${arrow}</span>` : ''}`;
+		}
+		
+		// --- CELULA 4: DEBUT ---
+		let debutClass = target.debut > guess.debut ? 'orange' : (target.debut < guess.debut ? 'purple' : 'green');
+		let c4 = document.getElementById(`cell-${rowIndex}-4`);
+		if (c4) { 
+			c4.className = `cell ${debutClass} cell-arrow`; 
+			let arrow = target.debut > guess.debut ? '↑' : (target.debut < guess.debut ? '↓' : '');
+			c4.innerHTML = `<span>${guess.debut}</span>${arrow ? `<span class="arrow-indicator">${arrow}</span>` : ''}`;
+		}
+		
+		// --- CELULA 5: VICTORII ---
+		let winsClass = target.wins > guess.wins ? 'orange' : (target.wins < guess.wins ? 'purple' : 'green');
+		let c5 = document.getElementById(`cell-${rowIndex}-5`);
+		if (c5) { 
+			c5.className = `cell ${winsClass} cell-arrow`; 
+			let arrow = target.wins > guess.wins ? '↑' : (target.wins < guess.wins ? '↓' : '');
+			c5.innerHTML = `<span>${guess.wins}</span>${arrow ? `<span class="arrow-indicator">${arrow}</span>` : ''}`;
+		}
+
+		// --- LOGICĂ FINAL JOC ---
 		if (isWin) {
 			document.getElementById("gameZone").style.display = "none";
 			document.getElementById("status").style.display = "none";
@@ -339,4 +531,40 @@ function setupSocketEvents() {
 		selectedDriverId = null;
 		currentFocus = -1;
 	});
+}
+
+// Funcție ajutătoare pentru a converti codul țării (ex: GBR) în Emoji de Steag
+function getFlagEmoji(countryCode) {
+    if (!countryCode || countryCode.length !== 3) return "🏳️";
+    
+    // Dicționar pentru excepțiile specifice din F1 (unde codurile FIA diferă de codurile standard de țară ISO)
+    const f1Exceptions = {
+        "GBR": "GB", // Marea Britanie
+        "GER": "DE", // Germania
+        "NED": "NL", // Olanda
+        "SUI": "CH", // Elveția
+        "SPA": "ES", // Spania
+        "RSA": "ZA", // Africa de Sud
+        "MAS": "MY", // Malaezia
+        "MON": "MC", // Monaco
+        "UAE": "AE", // Emiratele Arabe Unite
+        "CHI": "CL", // Chile
+        "URU": "UY", // Uruguay
+        "DEN": "DK", // Danemarca
+        "POR": "PT", // Portugalia
+        "THA": "TH", // Thailanda
+        "MEX": "MX", // Mexic
+        "BUL": "BG", // Bulgaria
+        "CRO": "HR", // Croația
+    };
+
+    let code = f1Exceptions[countryCode.toUpperCase()] || countryCode.substring(0, 2).toUpperCase();
+    
+    try {
+        return code.toUpperCase().replace(/./g, char => 
+            String.fromCodePoint(char.charCodeAt(0) + 127397)
+        );
+    } catch (e) {
+        return "🏳️";
+    }
 }
