@@ -14,6 +14,14 @@ document.addEventListener("DOMContentLoaded", () => {
 		});
 	}
 
+	// Logica pentru click pe titlul principal (logo) -> Reîncărcare/Home
+	const siteTitle = document.querySelector(".site-header h1");
+	if (siteTitle) {
+		siteTitle.addEventListener("click", () => {
+			window.location.reload(); // Reîncarcă pagina pentru a reveni la meniul principal
+		});
+	}
+
 	document.querySelectorAll(".menu-item").forEach(item => {
 		item.addEventListener("click", function() {
 			const choice = this.getAttribute("data-level");
@@ -279,17 +287,33 @@ function setupSocketEvents() {
 		let c2 = document.getElementById(`cell-${rowIndex}-2`);
 		if (c2) { c2.className = `cell ${teamClass}`; c2.innerText = currentGuessTeam.substring(0,5); }
 		
-		let ageClass = target.age > guess.age ? 'orange' : (target.age < guess.age ? 'purple' : 'green');
-		let c3 = document.getElementById(`cell-${rowIndex}-3`);
-		if (c3) { c3.className = `cell ${ageClass}`; c3.innerText = guess.age; }
-		
-		let debutClass = target.debut > guess.debut ? 'orange' : (target.debut < guess.debut ? 'purple' : 'green');
-		let c4 = document.getElementById(`cell-${rowIndex}-4`);
-		if (c4) { c4.className = `cell ${debutClass}`; c4.innerText = guess.debut; }
-		
-		let winsClass = target.wins > guess.wins ? 'orange' : (target.wins < guess.wins ? 'purple' : 'green');
-		let c5 = document.getElementById(`cell-${rowIndex}-5`);
-		if (c5) { c5.className = `cell ${winsClass}`; c5.innerText = guess.wins; }
+// --- CELULA 3: VÂRSTĂ ---
+        let ageClass = target.age > guess.age ? 'orange' : (target.age < guess.age ? 'purple' : 'green');
+        let c3 = document.getElementById(`cell-${rowIndex}-3`);
+        if (c3) { 
+            c3.className = `cell ${ageClass} cell-arrow`; 
+            let arrow = target.age > guess.age ? '↑' : (target.age < guess.age ? '↓' : '');
+            // Afișare pe același rând: Număr + Spațiu + Săgeată
+            c3.innerHTML = `<span>${guess.age}</span>${arrow ? `<span class="arrow-indicator">${arrow}</span>` : ''}`;
+        }
+        
+        // --- CELULA 4: DEBUT ---
+        let debutClass = target.debut > guess.debut ? 'orange' : (target.debut < guess.debut ? 'purple' : 'green');
+        let c4 = document.getElementById(`cell-${rowIndex}-4`);
+        if (c4) { 
+            c4.className = `cell ${debutClass} cell-arrow`; 
+            let arrow = target.debut > guess.debut ? '↑' : (target.debut < guess.debut ? '↓' : '');
+            c4.innerHTML = `<span>${guess.debut}</span>${arrow ? `<span class="arrow-indicator">${arrow}</span>` : ''}`;
+        }
+        
+        // --- CELULA 5: VICTORII ---
+        let winsClass = target.wins > guess.wins ? 'orange' : (target.wins < guess.wins ? 'purple' : 'green');
+        let c5 = document.getElementById(`cell-${rowIndex}-5`);
+        if (c5) { 
+            c5.className = `cell ${winsClass} cell-arrow`; 
+            let arrow = target.wins > guess.wins ? '↑' : (target.wins < guess.wins ? '↓' : '');
+            c5.innerHTML = `<span>${guess.wins}</span>${arrow ? `<span class="arrow-indicator">${arrow}</span>` : ''}`;
+        }
 
 		if (isWin) {
 			document.getElementById("gameZone").style.display = "none";

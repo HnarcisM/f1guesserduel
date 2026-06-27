@@ -31,6 +31,7 @@ body {
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
+    cursor: pointer; /* Linia adăugată: indică faptul că titlul este acum clicabil */
 }
 
 .hamburger {
@@ -157,3 +158,26 @@ button { padding: 12px 20px; background-color: #E50914; color: white; border: no
 .legend-list { display: flex; flex-direction: column; gap: 8px; padding: 0; margin: 0; list-style: none; }
 .legend-item { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #ccc; }
 .legend-box { width: 16px; height: 16px; border-radius: 4px; flex-shrink: 0; }
+
+/* Stiluri pentru celulele cu indicii direcționale */
+/* Aliniere text și săgeată pe același rând */
+.cell-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px; /* Creează un spațiu controlat între număr și săgeată */
+    font-size: 13px;
+}
+
+.arrow-indicator {
+    font-size: 14px;
+    font-weight: 900;
+    display: inline-block;
+    animation: bounce 1.5s infinite ease-in-out;
+}
+
+/* Efect discret de mișcare pentru săgeți */
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-2px); }
+}

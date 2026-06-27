@@ -144,7 +144,7 @@ app.get('/', (req, res) => {
 
 server.listen(PORT, () => {
     console.log(`===================================================`);
-    console.log(` 🏎️  F1 GUESSER / PADDOCKDLE DUEL RULEAZĂ ACUM!`);
+    console.log(` 🏎️  F1 GUESSER DUEL RULEAZĂ ACUM!`);
     console.log(` 🌐 Accesează în browser: http://localhost:${PORT}`);
     console.log(`===================================================`);
 });
