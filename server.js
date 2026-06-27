@@ -10,13 +10,7 @@ const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
 
-// 1. Calea către folderul public (unde e index.html)
 app.use(express.static(path.join(__dirname, 'public')));
-
-// 2. Calea către baza de date JSON
-const driversPath = path.join(__dirname, 'drivers.json');
-const driversData = JSON.parse(fs.readFileSync(driversPath, 'utf8'));
-
 
 const rooms = {};
 
@@ -87,19 +81,50 @@ io.on('connection', (socket) => {
 
         const room = rooms[currentRoom];
         if (!room.attempts[socket.id]) room.attempts[socket.id] = 0;
+        
+        // Dacă jocul s-a terminat deja pentru acest jucător, blocăm execuția suplimentară
+        if (room.attempts[socket.id] >= 6) return;
+
         room.attempts[socket.id]++;
 
         const guessDriver = room.driversList.find(d => d.id === driverId);
         if (!guessDriver) return;
 
-        const isWin = guessDriver.id === room.targetDriver.id;
+        const target = room.targetDriver;
         
-        socket.emit('guessResult', {
+        // --- PROCESARE LOGICĂ & CULORI SECURIZAT PE SERVER ---
+        const results = {
+            name: guessDriver.id === target.id ? 'green' : 'red',
+            nat: guessDriver.nat === target.nat ? 'green' : 'red',
+            team: 'red',
+            age: target.age > guessDriver.age ? 'orange' : (target.age < guessDriver.age ? 'purple' : 'green'),
+            debut: target.debut > guessDriver.debut ? 'orange' : (target.debut < guessDriver.debut ? 'purple' : 'green'),
+            wins: target.wins > guessDriver.wins ? 'orange' : (target.wins < guessDriver.wins ? 'purple' : 'green')
+        };
+
+        let currentGuessTeam = guessDriver.team[0];
+        if (target.team.includes(currentGuessTeam)) {
+            results.team = (currentGuessTeam === target.team[0]) ? 'green' : 'yellow';
+        }
+
+        const isCorrect = guessDriver.id === target.id;
+        const isGameOver = isCorrect || room.attempts[socket.id] >= 6;
+
+        // Construim răspunsul securizat
+        const responseData = {
             guess: guessDriver,
-            target: room.targetDriver,
-            isWin: isWin,
-            attempts: room.attempts[socket.id]
-        });
+            results: results,
+            attempts: room.attempts[socket.id],
+            isCorrect: isCorrect,
+            isGameOver: isGameOver
+        };
+
+        // Doar când jocul s-a terminat dezvăluim numele complet al pilotului țintă
+        if (isGameOver) {
+            responseData.target = { name: target.name };
+        }
+
+        socket.emit('guessResult', responseData);
     });
 
     socket.on('restartGame', () => {
@@ -129,7 +154,6 @@ io.on('connection', (socket) => {
     });
 });
 
-// LOGICĂ INTELIGENTĂ DE SERVIRE (Caută în folderul /public)
 app.get('/', (req, res) => {
     const htmlPath = path.join(__dirname, 'public', 'index.html');
     const txtPath = path.join(__dirname, 'public', 'index.txt');

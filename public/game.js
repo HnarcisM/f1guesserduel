@@ -265,15 +265,16 @@ function setupSocketEvents() {
 		if (badge) badge.innerText = `Online: ${data.playerCount}`;
 	});
 
-	socket.on('guessResult', (data) => {
-		const { guess, target, isWin, attempts } = data;
+socket.on('guessResult', (data) => {
+		// Preluăm rezultatele pre-calculate de pe server
+		const { guess, results, attempts, isCorrect, isGameOver, target } = data;
 		let rowIndex = attempts - 1; 
 
 		let c0 = document.getElementById(`cell-${rowIndex}-0`);
 		if (!c0) return; 
 		
 		// --- CELULA 0: PILOT (Nume și ID) ---
-		c0.className = `cell ${guess.id === target.id ? 'green' : 'red'}`;
+		c0.className = `cell ${results.name}`;
 		c0.style.flexDirection = "column";
 		c0.style.lineHeight = "1.3";
 		c0.style.padding = "4px 2px";
@@ -301,7 +302,7 @@ function setupSocketEvents() {
 		// --- CELULA 1: ȚARĂ ---
 		let c1 = document.getElementById(`cell-${rowIndex}-1`);
 		if (c1) { 
-			c1.className = `cell ${guess.nat === target.nat ? 'green' : 'red'}`; 
+			c1.className = `cell ${results.nat}`; 
 			c1.style.position = "relative";
 			c1.style.padding = "0";
 			c1.style.overflow = "hidden";
@@ -332,15 +333,9 @@ function setupSocketEvents() {
 		}
 		
 		// --- CELULA 2: ECHIPĂ ---
-		let currentGuessTeam = guess.team[0];
-		let teamClass = 'red';
-		if (target.team.includes(currentGuessTeam)) {
-			teamClass = (currentGuessTeam === target.team[0]) ? 'green' : 'yellow';
-		}
-		
 		let c2 = document.getElementById(`cell-${rowIndex}-2`);
 		if (c2) { 
-			c2.className = `cell ${teamClass}`; 
+			c2.className = `cell ${results.team}`; 
 			c2.style.position = "relative";
 			c2.style.padding = "0";
 			c2.style.overflow = "hidden";
@@ -349,13 +344,13 @@ function setupSocketEvents() {
 			c2.style.justifyContent = "flex-end";
 			c2.style.alignItems = "stretch";
 
+			let currentGuessTeam = guess.team[0];
 			let cleanTeamName = currentGuessTeam.replace(/\s+/g, '');
 			if (cleanTeamName.toLowerCase() === "sauber") cleanTeamName = "Stake";
 			if (cleanTeamName.toUpperCase() === "RB" || cleanTeamName.toLowerCase() === "racingbulls" || cleanTeamName.toLowerCase() === "alphatauri") {
 				cleanTeamName = "ToroRosso";
 			}
 
-			// Începe implicit cu .png, dacă eșuează se activează managerul centralizat
 			c2.innerHTML = `
 				<img src="/logos/${cleanTeamName}.png" alt="${currentGuessTeam}" 
 					onerror="handleTeamLogoError(this, '${currentGuessTeam}', 0)"
@@ -368,44 +363,43 @@ function setupSocketEvents() {
 		}
 		
 		// --- CELULA 3: VÂRSTĂ ---
-		let ageClass = target.age > guess.age ? 'orange' : (target.age < guess.age ? 'purple' : 'green');
 		let c3 = document.getElementById(`cell-${rowIndex}-3`);
 		if (c3) { 
-			c3.className = `cell ${ageClass} cell-arrow`; 
-			let arrow = target.age > guess.age ? '↑' : (target.age < guess.age ? '↓' : '');
+			c3.className = `cell ${results.age} cell-arrow`; 
+			let arrow = results.age === 'orange' ? '↑' : (results.age === 'purple' ? '↓' : '');
 			c3.innerHTML = `<span>${guess.age}</span>${arrow ? `<span class="arrow-indicator">${arrow}</span>` : ''}`;
 		}
 		
 		// --- CELULA 4: DEBUT ---
-		let debutClass = target.debut > guess.debut ? 'orange' : (target.debut < guess.debut ? 'purple' : 'green');
 		let c4 = document.getElementById(`cell-${rowIndex}-4`);
 		if (c4) { 
-			c4.className = `cell ${debutClass} cell-arrow`; 
-			let arrow = target.debut > guess.debut ? '↑' : (target.debut < guess.debut ? '↓' : '');
+			c4.className = `cell ${results.debut} cell-arrow`; 
+			let arrow = results.debut === 'orange' ? '↑' : (results.debut === 'purple' ? '↓' : '');
 			c4.innerHTML = `<span>${guess.debut}</span>${arrow ? `<span class="arrow-indicator">${arrow}</span>` : ''}`;
 		}
 		
 		// --- CELULA 5: VICTORII ---
-		let winsClass = target.wins > guess.wins ? 'orange' : (target.wins < guess.wins ? 'purple' : 'green');
 		let c5 = document.getElementById(`cell-${rowIndex}-5`);
 		if (c5) { 
-			c5.className = `cell ${winsClass} cell-arrow`; 
-			let arrow = target.wins > guess.wins ? '↑' : (target.wins < guess.wins ? '↓' : '');
+			c5.className = `cell ${results.wins} cell-arrow`; 
+			let arrow = results.wins === 'orange' ? '↑' : (results.wins === 'purple' ? '↓' : '');
 			c5.innerHTML = `<span>${guess.wins}</span>${arrow ? `<span class="arrow-indicator">${arrow}</span>` : ''}`;
 		}
 
 		// --- LOGICĂ FINAL JOC ---
-		if (isWin) {
-			document.getElementById("gameZone").style.display = "none";
-			document.getElementById("status").style.display = "none";
-			document.getElementById("endGameTitle").innerText = "🏆 AI CÂȘTIGAT!";
-			document.getElementById("endGameMessage").innerHTML = `Ai descoperit pilotul misterios în <strong>${attempts}</strong> ${attempts === 1 ? 'încercare' : 'încercări'}!`;
-			document.getElementById("endGameDisplay").className = "end-game-popup show";
-		} else if (attempts >= 6) {
-			document.getElementById("gameZone").style.display = "none";
-			document.getElementById("status").style.display = "none";
-			document.getElementById("endGameTitle").innerText = "💀 AI PIERDUT!";
-			document.getElementById("endGameMessage").innerHTML = `Din păcate nu ai ghicit. Pilotul misterios era: <strong>${target.name}</strong>`;
+		if (isGameOver) {
+			const gz = document.getElementById("gameZone");
+			const st = document.getElementById("status");
+			if (gz) gz.style.display = "none";
+			if (st) st.style.display = "none";
+
+			if (isCorrect) {
+				document.getElementById("endGameTitle").innerText = "🏆 AI CÂȘTIGAT!";
+				document.getElementById("endGameMessage").innerHTML = `Ai descoperit pilotul misterios în <strong>${attempts}</strong> ${attempts === 1 ? 'încercare' : 'încercări'}!`;
+			} else {
+				document.getElementById("endGameTitle").innerText = "💀 AI PIERDUT!";
+				document.getElementById("endGameMessage").innerHTML = `Din păcate nu ai ghicit. Pilotul misterios era: <strong>${target ? target.name : 'Necunoscut'}</strong>`;
+			}
 			document.getElementById("endGameDisplay").className = "end-game-popup show";
 		}
 	});
@@ -413,9 +407,17 @@ function setupSocketEvents() {
 	socket.on('gameRestarted', () => {
 		initializeGridStructure();
 		document.getElementById("endGameDisplay").className = "end-game-popup";
-		document.getElementById("gameZone").style.display = "block";
-		document.getElementById("status").style.display = "block";
-		document.getElementById("status").innerText = "Ghicește noul pilot misterios!";
+		
+		const gz = document.getElementById("gameZone");
+		const st = document.getElementById("status");
+		if (gz) gz.style.display = "block";
+		if (st) st.style.display = "block";
+		if (st) st.innerText = "Ghicește noul pilot misterios!";
+		
+		// Curățăm și inputul la restart
+		const inputEl = document.getElementById("driverInput");
+		if (inputEl) inputEl.value = "";
+
 		selectedDriverId = null;
 		currentFocus = -1;
 	});
