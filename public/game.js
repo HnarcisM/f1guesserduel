@@ -184,13 +184,19 @@ function showPredictions(value) {
 		const li = document.createElement("li");
 		li.innerText = driver.name;
 		li.setAttribute("data-id", driver.id);
+		
+		// MODIFICAREA AICI: Când dai click, se completează ȘI se trimite automat!
 		li.onclick = () => {
 			const inputEl = document.getElementById("driverInput");
 			if (inputEl) inputEl.value = driver.name;
 			selectedDriverId = driver.id;
 			listContainer.innerHTML = "";
 			currentFocus = -1;
+			
+			// Trimite automat ghicirea fără să mai fie nevoie de click pe butonul "Trimite"
+			sendGuess(); 
 		};
+		
 		listContainer.appendChild(li);
 	});
 }
@@ -292,7 +298,7 @@ function setupSocketEvents() {
 			</span>
 		`;
 
-		// --- CELULA 1: ȚARĂ (Prioritate strictă Local -> Online + Opacitate mărită) ---
+		// --- CELULA 1: ȚARĂ ---
 		let c1 = document.getElementById(`cell-${rowIndex}-1`);
 		if (c1) { 
 			c1.className = `cell ${guess.nat === target.nat ? 'green' : 'red'}`; 
@@ -313,42 +319,19 @@ function setupSocketEvents() {
 				"JPN": "jp", "NZL": "nz", "BEL": "be", "SWE": "se", "ARG": "ar"
 			};
 			let isoCode = f1ToIso[guess.nat.toUpperCase()] || guess.nat.substring(0, 2).toLowerCase();
-			
-			let localFlagPng = `/flags/${isoCode}.png`;
-			let localFlagSvg = `/flags/${isoCode}.svg`;
-			let onlineFlagUrl = `https://flagcdn.com/w160/${isoCode}.png`;
 
 			c1.innerHTML = `
-				<img src="${localFlagPng}" alt="${guess.nat}" 
-					onerror="this.onerror=function(){ this.onerror=function(){ this.onerror=null; this.src='${onlineFlagUrl}'; }; this.src='${localFlagSvg}'; }; this.src='${localFlagPng}';"
-					style="
-						position: absolute;
-						top: 0; left: 0; width: 100%; height: 100%;
-						object-fit: cover;
-						opacity: 0.55; /* Am mărit de la 0.35 pentru a fi mult mai vizibil */
-						z-index: 1;
-					"
+				<img src="/flags/${isoCode}.png" alt="${guess.nat}" 
+					onerror="handleFlagError(this, '${isoCode}', 0)"
+					style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.55; z-index: 1;"
 				>
-				<span style="
-					position: relative;
-					z-index: 2;
-					font-size: 10px; 
-					font-weight: 700; 
-					text-transform: uppercase; 
-					color: #ffffff; 
-					background: rgba(0, 0, 0, 0.5); /* Am întunecat fundalul textului pentru contrast */
-					padding: 2px 4px; 
-					border-radius: 4px;
-					margin: 2px;
-					text-align: center;
-				">
+				<span style="position: relative; z-index: 2; font-size: 10px; font-weight: 700; text-transform: uppercase; color: #ffffff; background: rgba(0, 0, 0, 0.5); padding: 2px 4px; border-radius: 4px; margin: 2px; text-align: center;">
 					${guess.nat}
 				</span>
 			`;
 		}
 		
-		
-		// --- CELULA 2: ECHIPĂ (Versiune Universală pentru Modul HARD) ---
+		// --- CELULA 2: ECHIPĂ ---
 		let currentGuessTeam = guess.team[0];
 		let teamClass = 'red';
 		if (target.team.includes(currentGuessTeam)) {
@@ -366,114 +349,19 @@ function setupSocketEvents() {
 			c2.style.justifyContent = "flex-end";
 			c2.style.alignItems = "stretch";
 
-			// Dicționar de bază pentru echipele foarte cunoscute
-			const teamLogosOnline = {
-				"Ferrari": "https://upload.wikimedia.org/wikipedia/sco/d/d4/Ferrari-Logo.svg",
-				"Mercedes": "https://upload.wikimedia.org/wikipedia/commons/9/90/Mercedes-Logo.svg",
-				"Red Bull": "https://upload.wikimedia.org/wikipedia/en/b/b5/Red_Bull_Racing_logo.svg",
-				"McLaren": "https://upload.wikimedia.org/wikipedia/en/6/66/McLaren_Racing_logo.svg",
-				"Alpine": "https://upload.wikimedia.org/wikipedia/commons/7/7e/Alpine_F1_Team_Logo.svg",
-				"Aston Martin": "https://upload.wikimedia.org/wikipedia/commons/2/2b/Aston_Martin_Lagonda_brand_logo.svg",
-				"Williams": "https://upload.wikimedia.org/wikipedia/commons/6/6d/Williams_Racing_2020_Logo.svg",
-				"AlphaTauri": "https://upload.wikimedia.org/wikipedia/commons/e/e4/Scuderia_AlphaTauri_logo.svg",
-				"RB": "https://upload.wikimedia.org/wikipedia/commons/e/e4/Scuderia_AlphaTauri_logo.svg",
-				"Racing Bulls": "https://upload.wikimedia.org/wikipedia/commons/e/e4/Scuderia_AlphaTauri_logo.svg",
-				"Haas": "https://upload.wikimedia.org/wikipedia/commons/e/e2/Haas_F1_Team_logo.svg",
-				"Alfa Romeo": "https://upload.wikimedia.org/wikipedia/commons/2/26/Alfa_Romeo_F1_Team_Orlen_logo.svg",
-				"Sauber": "https://upload.wikimedia.org/wikipedia/commons/c/cc/Stake_F1_Team_Kick_Sauber_logo.svg",
-				"Renault": "https://upload.wikimedia.org/wikipedia/commons/b/b1/Renault_2021.svg",
-				"Racing Point": "https://upload.wikimedia.org/wikipedia/commons/e/e2/Racing_Point_F1_logo.svg",
-				"Force India": "https://upload.wikimedia.org/wikipedia/en/a/a2/Sahara_Force_India_F1_Team_logo.svg",
-				"Toro Rosso": "https://upload.wikimedia.org/wikipedia/en/3/3d/Scuderia_Toro_Rosso_logo.svg",
-				"Lotus": "https://upload.wikimedia.org/wikipedia/commons/c/cf/Lotus_F1_Team_logo.svg"
-			};
-
-			// 1. Curățăm string-ul pentru fișierele locale
-			let checkName = currentGuessTeam.toLowerCase().replace(/\s+/g, '');
-			let cleanTeamName = "";
-
-			// 2. Mapări pentru ce ai deja salvat local pe disc
-			if (checkName.includes("ferrari")) cleanTeamName = "Ferrari";
-			else if (checkName.includes("mercedes")) cleanTeamName = "Mercedes";
-			else if (checkName.includes("redbull")) cleanTeamName = "RedBull";
-			else if (checkName.includes("mclaren")) cleanTeamName = "McLaren";
-			else if (checkName.includes("alpine")) cleanTeamName = "Alpine";
-			else if (checkName.includes("aston")) cleanTeamName = "AstonMartin";
-			else if (checkName.includes("williams")) cleanTeamName = "Williams";
-			else if (checkName.includes("haas")) cleanTeamName = "Haas";
-			else if (checkName.includes("alfa")) cleanTeamName = "AlfaRomeo";
-			else if (checkName.includes("sauber") || checkName.includes("stake")) cleanTeamName = "Stake";
-			else if (checkName.includes("renault")) cleanTeamName = "Renault";
-			else if (checkName.includes("tororosso")) cleanTeamName = "ToroRosso";
-			else if (checkName === "rb" || checkName.includes("racingbulls") || checkName.includes("alphatauri")) {
+			let cleanTeamName = currentGuessTeam.replace(/\s+/g, '');
+			if (cleanTeamName.toLowerCase() === "sauber") cleanTeamName = "Stake";
+			if (cleanTeamName.toUpperCase() === "RB" || cleanTeamName.toLowerCase() === "racingbulls" || cleanTeamName.toLowerCase() === "alphatauri") {
 				cleanTeamName = "ToroRosso";
-			} else {
-				// Pentru echipele de pe Hard care nu sunt listate mai sus, încercăm formatul numelui compactat
-				// Exemplu: "Benetton" devine "Benetton" -> va găsi Benetton.png pe care îl ai în folder!
-				cleanTeamName = currentGuessTeam.replace(/[^a-zA-Z0-9]/g, '');
 			}
 
-			// 3. Generăm link-urile locale
-			let localPng = `/logos/${cleanTeamName}.png`;
-			let localSvg = `/logos/${cleanTeamName}.svg`;
-			let localJpg = `/logos/${cleanTeamName}.jpg`;
-			
-			// 4. Mecanism Inteligent Online pentru Modul Hard:
-			// Dacă echipa nu e în dicționarul nostru, încercăm să construim dinamic un URL probabil de pe Wikipedia
-			let onlineUrl = teamLogosOnline[currentGuessTeam] || teamLogosOnline["RB"];
-			if (!onlineUrl) {
-				let formattedWikiName = encodeURIComponent(currentGuessTeam.replace(/\s+/g, '_'));
-				onlineUrl = `https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/F1_logo_red.svg/320px-F1_logo_red.svg.png`; 
-			}
-
-			// Imaginea de rezervă absolută (un logo F1 generic) în caz că absolut nimic nu funcționează online/local
-			let absoluteFallback = `https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/F1_logo_red.svg/320px-F1_logo_red.svg.png`;
-
-			// 5. Alegem extensia de start
-			let preferredSrc = localPng;
-			if (cleanTeamName === "AstonMartin") preferredSrc = localJpg;
-			else if (["AlfaRomeo", "Alpine", "Haas", "McLaren", "Mercedes", "Minardi", "RacingPoint"].includes(cleanTeamName)) {
-				preferredSrc = localSvg;
-			}
-
+			// Începe implicit cu .png, dacă eșuează se activează managerul centralizat
 			c2.innerHTML = `
-				<img src="${preferredSrc}" alt="${currentGuessTeam}" 
-					onerror="this.onerror=function(){ 
-						this.onerror=function(){ 
-							this.onerror=function(){ 
-								this.onerror=function(){
-									this.onerror=null;
-									this.src='${absoluteFallback}';
-								};
-								this.src='${onlineUrl}'; 
-							}; 
-							this.src='${localJpg}'; 
-						}; 
-						this.src='${localSvg}'; 
-					};"
-					style="
-						position: absolute;
-						top: 50%; left: 50%;
-						transform: translate(-50%, -55%);
-						width: 80%; height: 80%;
-						object-fit: contain;
-						opacity: 0.55;
-						z-index: 1;
-					"
+				<img src="/logos/${cleanTeamName}.png" alt="${currentGuessTeam}" 
+					onerror="handleTeamLogoError(this, '${currentGuessTeam}', 0)"
+					style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -55%); width: 80%; height: 80%; object-fit: contain; opacity: 0.55; z-index: 1;"
 				>
-				<span style="
-					position: relative;
-					z-index: 2;
-					font-size: 10px; 
-					font-weight: 700; 
-					text-transform: uppercase; 
-					color: #ffffff; 
-					background: rgba(0, 0, 0, 0.5); 
-					padding: 2px 4px; 
-					border-radius: 4px;
-					margin: 2px;
-					text-align: center;
-				">
+				<span style="position: relative; z-index: 2; font-size: 10px; font-weight: 700; text-transform: uppercase; color: #ffffff; background: rgba(0, 0, 0, 0.5); padding: 2px 4px; border-radius: 4px; margin: 2px; text-align: center;">
 					${currentGuessTeam.substring(0, 5)}
 				</span>
 			`;
@@ -566,5 +454,67 @@ function getFlagEmoji(countryCode) {
         );
     } catch (e) {
         return "🏳️";
+    }
+}
+
+// Funcție universală de fallback pentru logourile echipelor
+function handleTeamLogoError(imgElement, teamName, currentStep) {
+    // Curățăm numele echipei pentru rutele locale
+    let cleanName = teamName.replace(/\s+/g, '');
+    if (cleanName.toLowerCase() === "sauber") cleanName = "Stake";
+    if (cleanName.toUpperCase() === "RB" || cleanName.toLowerCase() === "racingbulls" || cleanName.toLowerCase() === "alphatauri") {
+        cleanName = "ToroRosso";
+    }
+
+    const onlineLogos = {
+        "Ferrari": "https://upload.wikimedia.org/wikipedia/sco/d/d4/Ferrari-Logo.svg",
+        "Mercedes": "https://upload.wikimedia.org/wikipedia/commons/9/90/Mercedes-Logo.svg",
+        "Red Bull": "https://upload.wikimedia.org/wikipedia/en/b/b5/Red_Bull_Racing_logo.svg",
+        "McLaren": "https://upload.wikimedia.org/wikipedia/en/6/66/McLaren_Racing_logo.svg",
+        "Alpine": "https://upload.wikimedia.org/wikipedia/commons/7/7e/Alpine_F1_Team_Logo.svg",
+        "Aston Martin": "https://upload.wikimedia.org/wikipedia/commons/2/2b/Aston_Martin_Lagonda_brand_logo.svg",
+        "Williams": "https://upload.wikimedia.org/wikipedia/commons/6/6d/Williams_Racing_2020_Logo.svg",
+        "AlphaTauri": "https://upload.wikimedia.org/wikipedia/commons/e/e4/Scuderia_AlphaTauri_logo.svg",
+        "Haas": "https://upload.wikimedia.org/wikipedia/commons/e/e2/Haas_F1_Team_logo.svg",
+        "Alfa Romeo": "https://upload.wikimedia.org/wikipedia/commons/2/26/Alfa_Romeo_F1_Team_Orlen_logo.svg",
+        "Sauber": "https://upload.wikimedia.org/wikipedia/commons/c/cc/Stake_F1_Team_Kick_Sauber_logo.svg",
+        "Renault": "https://upload.wikimedia.org/wikipedia/commons/b/b1/Renault_2021.svg",
+        "Racing Point": "https://upload.wikimedia.org/wikipedia/commons/e/e2/Racing_Point_F1_logo.svg",
+        "Force India": "https://upload.wikimedia.org/wikipedia/en/a/a2/Sahara_Force_India_F1_Team_logo.svg",
+        "Toro Rosso": "https://upload.wikimedia.org/wikipedia/en/3/3d/Scuderia_Toro_Rosso_logo.svg",
+        "Lotus": "https://upload.wikimedia.org/wikipedia/commons/c/cf/Lotus_F1_Team_logo.svg"
+    };
+
+    const absoluteFallback = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/F1_logo_red.svg/320px-F1_logo_red.svg.png";
+
+    // Lanțul logic controlat de pași (0: PNG, 1: SVG, 2: JPG, 3: Online, 4: Generic F1)
+    if (currentStep === 0) {
+        imgElement.setAttribute("onerror", `handleTeamLogoError(this, '${teamName}', 1)`);
+        imgElement.src = `/logos/${cleanName}.svg`;
+    } else if (currentStep === 1) {
+        imgElement.setAttribute("onerror", `handleTeamLogoError(this, '${teamName}', 2)`);
+        imgElement.src = `/logos/${cleanName}.jpg`;
+    } else if (currentStep === 2) {
+        imgElement.setAttribute("onerror", `handleTeamLogoError(this, '${teamName}', 3)`);
+        imgElement.src = onlineLogos[teamName] || absoluteFallback;
+    } else {
+        imgElement.onerror = null;
+        imgElement.src = absoluteFallback;
+    }
+}
+
+// Funcție universală de fallback pentru steaguri
+function handleFlagError(imgElement, isoCode, currentStep) {
+    const absoluteFlagFallback = "https://flagcdn.com/w160/un.png"; // Steagul ONU ca siguranță totală
+
+    if (currentStep === 0) {
+        imgElement.setAttribute("onerror", `handleFlagError(this, '${isoCode}', 1)`);
+        imgElement.src = `/flags/${isoCode}.svg`;
+    } else if (currentStep === 1) {
+        imgElement.setAttribute("onerror", `handleFlagError(this, '${isoCode}', 2)`);
+        imgElement.src = `https://flagcdn.com/w160/${isoCode}.png`;
+    } else {
+        imgElement.onerror = null;
+        imgElement.src = absoluteFlagFallback;
     }
 }
