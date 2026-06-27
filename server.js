@@ -10,8 +10,13 @@ const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
 
-app.use(express.static('public'));
-app.use(express.json());
+// 1. Calea către folderul public (unde e index.html)
+app.use(express.static(path.join(__dirname, 'public')));
+
+// 2. Calea către baza de date JSON
+const driversPath = path.join(__dirname, 'drivers.json');
+const driversData = JSON.parse(fs.readFileSync(driversPath, 'utf8'));
+
 
 const rooms = {};
 
