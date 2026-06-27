@@ -393,20 +393,34 @@ socket.on('guessResult', (data) => {
 			if (gz) gz.style.display = "none";
 			if (st) st.style.display = "none";
 
+			const popup = document.getElementById("endGameDisplay");
+
+			// Resetăm clasele vechi de stil ca să nu se suprapună la meciuri consecutive
+			popup.classList.remove("win-style", "lose-style");
+
 			if (isCorrect) {
 				document.getElementById("endGameTitle").innerText = "🏆 AI CÂȘTIGAT!";
 				document.getElementById("endGameMessage").innerHTML = `Ai descoperit pilotul misterios în <strong>${attempts}</strong> ${attempts === 1 ? 'încercare' : 'încercări'}!`;
+				popup.classList.add("win-style"); // Aplică stilul auriu + pulse
 			} else {
 				document.getElementById("endGameTitle").innerText = "💀 AI PIERDUT!";
 				document.getElementById("endGameMessage").innerHTML = `Din păcate nu ai ghicit. Pilotul misterios era: <strong>${target ? target.name : 'Necunoscut'}</strong>`;
+				popup.classList.add("lose-style"); // Aplică stilul roșu + scuturare
 			}
-			document.getElementById("endGameDisplay").className = "end-game-popup show";
+			
+			// Afișăm popup-ul cu noul efect elastic
+			popup.classList.add("show");
 		}
 	});
 
-	socket.on('gameRestarted', () => {
+		socket.on('gameRestarted', () => {
 		initializeGridStructure();
-		document.getElementById("endGameDisplay").className = "end-game-popup";
+		
+		// Ascundem popup-ul și ștergem stilurile specifice de meci trecut
+		const popup = document.getElementById("endGameDisplay");
+		if (popup) {
+			popup.className = "end-game-popup"; // Revine la clasa de bază curată
+		}
 		
 		const gz = document.getElementById("gameZone");
 		const st = document.getElementById("status");
@@ -414,7 +428,6 @@ socket.on('guessResult', (data) => {
 		if (st) st.style.display = "block";
 		if (st) st.innerText = "Ghicește noul pilot misterios!";
 		
-		// Curățăm și inputul la restart
 		const inputEl = document.getElementById("driverInput");
 		if (inputEl) inputEl.value = "";
 
