@@ -1,20 +1,66 @@
 /* --- CONFIGURARE TEME PRIN VARIABILE CSS --- */
 :root {
+    /* Culori principale */
     --bg-gradient: radial-gradient(circle at top, #1a1a24 0%, #0d0d11 100%);
     --bg-overlay: transparent;
     --text-primary: #f3f4f6;
-    --header-bg: rgba(20, 20, 27, 0.85);
-    --card-bg: #1e1e27;
-    --border-color: #2a2a3a;
-    --accent-f1: #ff1801;
-}
+    --text-secondary: #9ca3af;
+    --text-muted: #6b7280;
+    --text-on-accent: #ffffff;
 
+    /* Suprafețe */
+    --header-bg: rgba(20, 20, 27, 0.85);
+    --surface-main: #14141b;
+    --surface-card: #1e1e27;
+    --surface-elevated: rgba(255, 255, 255, 0.05);
+    --surface-elevated-hover: rgba(255, 255, 255, 0.15);
+    --surface-overlay: rgba(10, 10, 14, 0.95);
+    --surface-media-label: rgba(0, 0, 0, 0.5);
+
+    /* Borduri */
+    --border-color: #2a2a3a;
+    --border-soft: rgba(255, 255, 255, 0.08);
+    --border-subtle: rgba(255, 255, 255, 0.05);
+    --border-muted: rgba(255, 255, 255, 0.03);
+
+    /* Accente */
+    --accent-f1: #ff1801;
+    --accent-f1-hover: #e01200;
+    --success: #10b981;
+    --success-dark: #059669;
+    --danger: #ef4444;
+    --danger-dark: #dc2626;
+    --warning: #eab308;
+    --warning-dark: #ca8a04;
+    --orange: #f97316;
+    --orange-dark: #ea580c;
+    --purple: #a855f7;
+    --purple-dark: #9333ea;
+    --gold: #ffd700;
+
+    /* Dimensiuni reutilizabile */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 10px;
+    --radius-xl: 12px;
+    --radius-2xl: 16px;
+    --radius-pill: 20px;
+
+    /* Umbre și tranziții */
+    --shadow-sm: 0 4px 10px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 10px 25px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 15px 35px rgba(0, 0, 0, 0.7);
+    --shadow-xl: 0 20px 50px rgba(0, 0, 0, 0.6);
+    --transition-fast: 0.2s ease;
+    --transition-medium: 0.3s ease;
+}
 /* 1. TEMA NEON (Night Race - Singapore/Vegas) */
 [data-app-theme="neon"] {
     --bg-gradient: linear-gradient(135deg, #09090e 0%, #120720 100%);
-    --text-primary: #ffffff;
+    --text-primary: var(--text-on-accent);
     --header-bg: rgba(15, 10, 25, 0.85);
-    --card-bg: #1a0f2b;
+    --surface-card: #1a0f2b;
+    --surface-main: #1a0f2b;
     --border-color: #ff007f;
     --accent-f1: #00f0ff; /* Cyan electric în loc de roșu */
 }
@@ -33,9 +79,10 @@
                   linear-gradient(45deg, rgba(255,255,255,0.02) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.02) 75%);
     --text-primary: #f3f4f6;
     --header-bg: rgba(10, 10, 10, 0.9);
-    --card-bg: #1c1c1c;
+    --surface-card: #1c1c1c;
+    --surface-main: #1c1c1c;
     --border-color: #444;
-    --accent-f1: #ffffff; /* Accente albe de steag */
+    --accent-f1: var(--text-on-accent); /* Accente albe de steag */
 }
 
 /* --- ADAPTARE DESIGN LA VARIABILE --- */
@@ -66,16 +113,16 @@ body::before {
 .site-header {
     position: fixed;
     top: 0; left: 0; right: 0; height: 70px;
-    background: rgba(20, 20, 27, 0.85);
+    background: var(--header-bg);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border-bottom: 2px solid #ff1801; /* Roșu oficial F1 racing */
+    border-bottom: 2px solid var(--accent-f1); /* Roșu oficial F1 racing */
     display: flex; 
     align-items: center; 
     justify-content: space-between; 
     padding: 0 30px;
     z-index: 2000; 
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    box-shadow: var(--shadow-md);
 }
 
 .site-header h1 { 
@@ -83,14 +130,14 @@ body::before {
     font-size: 24px; 
     letter-spacing: 3px; 
     font-weight: 900;
-    color: #ffffff;
+    color: var(--text-on-accent);
     text-shadow: 0 0 10px rgba(255, 24, 1, 0.3);
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
     cursor: pointer;
     user-select: none;
-    transition: transform 0.2s ease;
+    transition: transform var(--transition-fast);
 }
 .site-header h1:hover {
     transform: translateX(-50%) scale(1.03);
@@ -99,13 +146,13 @@ body::before {
 .hamburger {
     font-size: 28px;
     cursor: pointer;
-    color: #ffffff;
+    color: var(--text-on-accent);
     z-index: 3000;
     user-select: none;
-    transition: all 0.2s ease;
+    transition: all var(--transition-fast);
 }
 .hamburger:hover { 
-    color: #ff1801;
+    color: var(--accent-f1);
     transform: scale(1.1);
 }
 
@@ -127,17 +174,17 @@ body::before {
     user-select: none;
     position: relative;
     padding: 8px 14px;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--surface-elevated);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
+    border-radius: var(--radius-md);
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    transition: all 0.2s ease;
+    transition: all var(--transition-fast);
 }
 .share-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: var(--surface-elevated-hover);
     border-color: var(--accent-f1);
     transform: scale(1.08);
 }
@@ -148,17 +195,17 @@ body::before {
     top: 125%;
     left: 50%;
     transform: translateX(-50%);
-    background: #10b981; /* Verde fluid succes */
-    color: #fff;
+    background: var(--success); /* Verde fluid succes */
+    color: var(--text-on-accent);
     font-size: 11px;
     font-weight: bold;
     padding: 4px 8px;
-    border-radius: 5px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-sm);
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    transition: opacity 0.2s ease, visibility 0.2s;
+    transition: opacity var(--transition-fast), visibility var(--transition-fast);
     white-space: nowrap;
 }
 .share-tooltip::before {
@@ -169,7 +216,7 @@ body::before {
     transform: translateX(-50%);
     border-width: 5px;
     border-style: solid;
-    border-color: transparent transparent #10b981 transparent;
+    border-color: transparent transparent var(--success) transparent;
 }
 .share-btn.copied .share-tooltip {
     opacity: 1;
@@ -182,15 +229,15 @@ body::before {
     top: 70px; 
     left: 20px;
     z-index: 2500;
-    background: #14141b;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--surface-main);
+    border: 1px solid var(--border-soft);
     border-top: none;
     border-bottom-left-radius: 12px;
     border-bottom-right-radius: 12px;
     padding: 8px 0;
     width: 190px;
     text-align: left;
-    box-shadow: 0 15px 35px rgba(0,0,0,0.7);
+    box-shadow: var(--shadow-lg);
     overflow: hidden;
 }
 .dropdown.hidden { display: none; }
@@ -198,42 +245,42 @@ body::before {
 .menu-item { 
     padding: 14px 20px; 
     cursor: pointer; 
-    color: #9ca3af; 
+    color: var(--text-secondary); 
     font-weight: 600;
     font-size: 14px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.03); 
-    transition: all 0.2s ease;
+    border-bottom: 1px solid var(--border-muted); 
+    transition: all var(--transition-fast);
 }
 .menu-item:last-child { border-bottom: none; }
 .menu-item:hover { 
-    background: linear-gradient(90deg, #ff1801 0%, rgba(255, 24, 1, 0.2) 100%); 
-    color: #ffffff;
+    background: linear-gradient(90deg, var(--accent-f1) 0%, color-mix(in srgb, var(--accent-f1) 20%, transparent) 100%); 
+    color: var(--text-on-accent);
     padding-left: 25px;
 }
 
 .menu-section-title {
     font-size: 10px;
     font-weight: 800;
-    color: #6b7280;
+    color: var(--text-muted);
     padding: 8px 10px 4px 10px;
     text-align: left;
     letter-spacing: 1px;
-    border-top: 1px solid #2a2a3a;
+    border-top: 1px solid var(--border-color);
     margin-top: 5px;
 }
 .menu-section-title:first-child { border-top: none; margin-top: 0; }
 
 /* --- BADGE STATUS ONLINE --- */
 .player-badge {
-    background: rgba(255, 24, 1, 0.15); 
-    color: #ff3e24; 
+    background: color-mix(in srgb, var(--accent-f1) 15%, transparent); 
+    color: var(--accent-f1); 
     font-weight: 700; 
     font-size: 13px;
     padding: 8px 16px; 
-    border-radius: 20px; 
-    border: 1px solid rgba(255, 24, 1, 0.3);
+    border-radius: var(--radius-pill); 
+    border: 1px solid color-mix(in srgb, var(--accent-f1) 30%, transparent);
     letter-spacing: 0.5px;
-    box-shadow: 0 0 15px rgba(255, 24, 1, 0.1);
+    box-shadow: 0 0 15px color-mix(in srgb, var(--accent-f1) 10%, transparent);
 }
 
 /* --- CONTAINER CENTRAL --- */
@@ -244,12 +291,12 @@ body::before {
 }
 
 /* Input-uri reactive la teme */
-input { background: var(--card-bg); color: var(--text-primary); border-color: var(--border-color); }
-button#sendGuessBtn, .restart-inline-btn { background-color: var(--accent-f1); color: #fff; }
-.cell { background-color: var(--card-bg); border-color: var(--border-color); color: var(--text-primary); }
+input { background: var(--surface-card); color: var(--text-primary); border-color: var(--border-color); }
+button#sendGuessBtn, .restart-inline-btn { background-color: var(--accent-f1); color: var(--text-on-accent); }
+.cell { background-color: var(--surface-card); border-color: var(--border-color); color: var(--text-primary); }
 
 /* --- STATUS & ETICHETE --- */
-#status { margin: 20px 0 5px 0; font-size: 20px; font-weight: 600; color: #ffffff; }
+#status { margin: 20px 0 5px 0; font-size: 20px; font-weight: 600; color: var(--text-on-accent); }
 #diff-display-label { font-size: 12px; margin-bottom: 25px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; }
 
 /* --- ZONA DE INPUT & CĂUTARE --- */
@@ -258,40 +305,40 @@ button#sendGuessBtn, .restart-inline-btn { background-color: var(--accent-f1); c
 input { 
     padding: 14px 20px; 
     width: 100%; 
-    border: 1px solid rgba(255,255,255,0.1); 
-    background: #14141b; 
-    color: white; 
+    border: 1px solid rgba(255, 255, 255, 0.1); 
+    background: var(--surface-main); 
+    color: var(--text-on-accent); 
     font-size: 16px; 
     border-radius: 10px 0 0 10px; 
     box-sizing: border-box; 
     outline: none;
-    transition: all 0.2s ease;
+    transition: all var(--transition-fast);
 }
-input:focus { border-color: #ff1801; box-shadow: 0 0 15px rgba(255, 24, 1, 0.15); }
+input:focus { border-color: var(--accent-f1); box-shadow: 0 0 15px color-mix(in srgb, var(--accent-f1) 15%, transparent); }
 
 button#sendGuessBtn { 
     padding: 14px 24px; 
-    background: #ff1801; 
-    color: white; 
+    background: var(--accent-f1); 
+    color: var(--text-on-accent); 
     border: none; 
     font-weight: 700; 
     cursor: pointer; 
     font-size: 16px; 
     border-radius: 0 10px 10px 0; 
     vertical-align: top; 
-    transition: background 0.2s;
+    transition: background var(--transition-fast);
 }
-button#sendGuessBtn:hover { background: #e01200; }
+button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
 
 .suggestions-list { 
     position: absolute; top: 100%; left: 0; right: 0; 
-    background: #14141b; border: 1px solid rgba(255,255,255,0.1); border-top: none; 
+    background: var(--surface-main); border: 1px solid rgba(255, 255, 255, 0.1); border-top: none; 
     border-radius: 0 0 10px 10px; max-height: 220px; overflow-y: auto; 
     z-index: 1000; list-style: none; padding: 0; margin: 0; text-align: left;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+    box-shadow: var(--shadow-md);
 }
-.suggestions-list li { padding: 14px 20px; cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.03); color: #d1d5db; transition: all 0.15s; }
-.suggestions-list li:hover, .suggestions-list li.active { background: #ff1801; color: white; }
+.suggestions-list li { padding: 14px 20px; cursor: pointer; border-bottom: 1px solid var(--border-muted); color: var(--text-primary); transition: all 0.15s; }
+.suggestions-list li:hover, .suggestions-list li.active { background: var(--accent-f1); color: var(--text-on-accent); }
 
 /* --- GRILA DE JOC TABULARĂ --- */
 .grid { 
@@ -304,19 +351,19 @@ button#sendGuessBtn:hover { background: #e01200; }
     padding: 14px 5px; 
     font-weight: 700; 
     font-size: 13px; 
-    border: 1px solid rgba(255, 255, 255, 0.05); 
+    border: 1px solid var(--surface-elevated); 
     text-transform: uppercase; 
     display: flex; 
     align-items: center; 
     justify-content: center; 
     min-height: 48px; 
-    border-radius: 10px; 
-    background: #14141b; 
-    box-shadow: inset 0 1px 2px rgba(255,255,255,0.05);
+    border-radius: var(--radius-lg); 
+    background: var(--surface-main); 
+    box-shadow: inset 0 1px 2px var(--surface-elevated);
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
 }
 .cell.header { 
-    color: #6b7280; 
+    color: var(--text-muted); 
     font-size: 11px; 
     font-weight: 800;
     letter-spacing: 1px;
@@ -329,28 +376,28 @@ button#sendGuessBtn:hover { background: #e01200; }
 
 /* --- PALETA DE CULORI NEON / MODERNIZATĂ --- */
 .green { 
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
-    border-color: #10b981; color: white; 
+    background: linear-gradient(135deg, var(--success) 0%, var(--success-dark) 100%); 
+    border-color: var(--success); color: var(--text-on-accent); 
     box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
 }
 .red { 
-    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); 
-    border-color: #ef4444; color: white; 
+    background: linear-gradient(135deg, var(--danger) 0%, var(--danger-dark) 100%); 
+    border-color: var(--danger); color: var(--text-on-accent); 
     box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
 }
 .orange { 
-    background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); 
-    border-color: #f97316; color: white; 
+    background: linear-gradient(135deg, var(--orange) 0%, var(--orange-dark) 100%); 
+    border-color: var(--orange); color: var(--text-on-accent); 
     box-shadow: 0 0 15px rgba(249, 115, 22, 0.25);
 }
 .purple { 
-    background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%); 
-    border-color: #a855f7; color: white; 
+    background: linear-gradient(135deg, var(--purple) 0%, var(--purple-dark) 100%); 
+    border-color: var(--purple); color: var(--text-on-accent); 
     box-shadow: 0 0 15px rgba(168, 85, 247, 0.25);
 }
 .yellow { 
-    background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%); 
-    border-color: #eab308; color: #111827; 
+    background: linear-gradient(135deg, var(--warning) 0%, var(--warning-dark) 100%); 
+    border-color: var(--warning); color: #111827; 
     box-shadow: 0 0 15px rgba(234, 179, 8, 0.25);
 }
 
@@ -362,30 +409,30 @@ button#sendGuessBtn:hover { background: #e01200; }
 /* --- DIFICULTATE OVERLAY MODAL --- */
 .overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(10, 10, 14, 0.95); backdrop-filter: blur(8px);
+    background-color: var(--surface-overlay); backdrop-filter: blur(8px);
     display: flex; justify-content: center; align-items: center; z-index: 9999; 
 }
 .overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
 .menu-container { text-align: center; max-width: 700px; padding: 30px; }
-.menu-container h2 { font-size: 3.5rem; color: #ffffff; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 4px; font-weight: 900; }
-.subtitle { color: #6b7280; font-size: 1.1rem; margin-bottom: 45px; font-weight: 500; }
+.menu-container h2 { font-size: 3.5rem; color: var(--text-on-accent); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 4px; font-weight: 900; }
+.subtitle { color: var(--text-muted); font-size: 1.1rem; margin-bottom: 45px; font-weight: 500; }
 .difficulty-grid { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; }
 
 .btn-diff {
-    width: 200px; height: 200px; background: #14141b;
-    border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; color: #ffffff;
+    width: 200px; height: 200px; background: var(--surface-main);
+    border: 1px solid var(--surface-elevated); border-radius: var(--radius-2xl); color: var(--text-on-accent);
     cursor: pointer; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    transition: all var(--transition-medium); box-shadow: 0 10px 25px rgba(0,0,0,0.3);
 }
 .diff-title { font-size: 1.5rem; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 1px;}
-.diff-desc { font-size: 0.85rem; color: #9ca3af; line-height: 1.5; }
+.diff-desc { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; }
 
-.btn-diff.easy:hover { border-color: #10b981; box-shadow: 0 0 25px rgba(16, 185, 129, 0.2); transform: translateY(-5px); background: rgba(16, 185, 129, 0.02); }
-.btn-diff.easy .diff-title { color: #10b981; }
-.btn-diff.medium:hover { border-color: #eab308; box-shadow: 0 0 25px rgba(234, 179, 8, 0.2); transform: translateY(-5px); background: rgba(234, 179, 8, 0.02); }
-.btn-diff.medium .diff-title { color: #eab308; }
-.btn-diff.hard:hover { border-color: #ef4444; box-shadow: 0 0 25px rgba(239, 68, 68, 0.2); transform: translateY(-5px); background: rgba(239, 68, 68, 0.02); }
-.btn-diff.hard .diff-title { color: #ef4444; }
+.btn-diff.easy:hover { border-color: var(--success); box-shadow: 0 0 25px rgba(16, 185, 129, 0.2); transform: translateY(-5px); background: rgba(16, 185, 129, 0.02); }
+.btn-diff.easy .diff-title { color: var(--success); }
+.btn-diff.medium:hover { border-color: var(--warning); box-shadow: 0 0 25px rgba(234, 179, 8, 0.2); transform: translateY(-5px); background: rgba(234, 179, 8, 0.02); }
+.btn-diff.medium .diff-title { color: var(--warning); }
+.btn-diff.hard:hover { border-color: var(--danger); box-shadow: 0 0 25px rgba(239, 68, 68, 0.2); transform: translateY(-5px); background: rgba(239, 68, 68, 0.02); }
+.btn-diff.hard .diff-title { color: var(--danger); }
 
 /* --- POPUP FINAL MECI --- */
 .end-game-popup {
@@ -393,13 +440,13 @@ button#sendGuessBtn:hover { background: #e01200; }
     position: fixed;
     top: 50%;
     left: 50%;
-    background: #14141b;
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 16px;
+    background: var(--surface-main);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-2xl);
     padding: 30px;
     margin: 25px auto;
     max-width: 420px;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+    box-shadow: var(--shadow-xl);
     transform: translate(-50%, -50%) scale(0.7);
     opacity: 0;
     visibility: hidden;
@@ -415,29 +462,29 @@ button#sendGuessBtn:hover { background: #e01200; }
 }
 
 .end-game-popup h2 { margin-top: 0; font-size: 24px; font-weight: 800; letter-spacing: 1px; }
-.end-game-popup p { color: #9ca3af; font-size: 15px; margin-bottom: 25px; line-height: 1.5; }
-.end-game-popup .restart-inline-btn { padding: 14px 30px; background: #ff1801; color: white; border: none; font-weight: 700; font-size: 16px; border-radius: 10px; cursor: pointer; transition: background 0.2s; width: 100%; box-sizing: border-box;}
-.end-game-popup .restart-inline-btn:hover { background: #e01200; }
+.end-game-popup p { color: var(--text-secondary); font-size: 15px; margin-bottom: 25px; line-height: 1.5; }
+.end-game-popup .restart-inline-btn { padding: 14px 30px; background: var(--accent-f1); color: var(--text-on-accent); border: none; font-weight: 700; font-size: 16px; border-radius: var(--radius-lg); cursor: pointer; transition: background var(--transition-fast); width: 100%; box-sizing: border-box;}
+.end-game-popup .restart-inline-btn:hover { background: var(--accent-f1-hover); }
 
 /* --- SUB-SOLUL PAGINII (LEGENDĂ) --- */
-.site-footer { margin-top: 60px; background: #14141b; border: 1px solid rgba(255,255,255,0.03); padding: 25px; border-radius: 12px; text-align: left; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
-.site-footer h3 { margin-top: 0; font-size: 15px; color: #ffffff; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px; }
+.site-footer { margin-top: 60px; background: var(--surface-main); border: 1px solid var(--border-muted); padding: 25px; border-radius: var(--radius-xl); text-align: left; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
+.site-footer h3 { margin-top: 0; font-size: 15px; color: var(--text-on-accent); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border-soft); padding-bottom: 10px; }
 .legend-list { display: flex; flex-direction: column; gap: 10px; padding: 0; margin: 0; list-style: none; }
-.legend-item { display: flex; align-items: center; gap: 12px; font-size: 13.5px; color: #9ca3af; line-height: 1.4; }
-.legend-box { width: 16px; height: 16px; border-radius: 5px; flex-shrink: 0; }
+.legend-item { display: flex; align-items: center; gap: 12px; font-size: 13.5px; color: var(--text-secondary); line-height: 1.4; }
+.legend-box { width: 16px; height: 16px; border-radius: var(--radius-sm); flex-shrink: 0; }
 
 /* --- ANIMAȚII POPUP FINAL --- */
 
 /* Stil special și animație de respirație dacă ai CÂȘTIGAT */
 .end-game-popup.win-style {
-    border: 3px solid #ffd700;
+    border: 3px solid var(--gold);
     box-shadow: 0 0 25px rgba(255, 215, 0, 0.5);
     animation: pulseWin 2s infinite alternate;
 }
 
 /* Stil special dacă ai PIERDUT (Am eliminat shake-ul care strica translate-ul) */
 .end-game-popup.lose-style {
-    border: 3px solid #ff3b30;
+    border: 3px solid var(--danger);
     box-shadow: 0 0 25px rgba(255, 59, 48, 0.4);
 }
 
@@ -456,60 +503,37 @@ button#sendGuessBtn:hover { background: #e01200; }
 }
 .dist-label {
     width: 10px;
-    color: #9ca3af;
+    color: var(--text-secondary);
 }
 .dist-bar-container {
     flex-grow: 1;
-    background: #1e1e27;
-    border-radius: 4px;
+    background: var(--surface-card);
+    border-radius: var(--radius-sm);
     height: 16px;
     overflow: hidden;
 }
 .dist-bar {
-    background-color: #ff1801; /* Roșu F1 implicit */
+    background-color: var(--accent-f1); /* Roșu F1 implicit */
     height: 100%;
     width: 0%; /* Va crește din JS */
-    color: white;
+    color: var(--text-on-accent);
     text-align: right;
     padding-right: 5px;
     font-size: 10px;
     line-height: 16px;
     box-sizing: border-box;
     transition: width 0.6s ease;
-    border-radius: 4px;
+    border-radius: var(--radius-sm);
 }
 /* Adaptare automată la variabila de accent dacă se dorește ulterior */
-[data-app-theme="neon"] .dist-bar { background-color: #00f0ff; }
+[data-app-theme="neon"] .dist-bar { background-color: var(--accent-f1); }
 [data-app-theme="light"] .dist-bar-container { background: #e5e7eb; }
-
-/* STIL BUTON PREMIUM DE PARTAJARE CAMERĂ (Actualizat cu suport text) */
-.share-btn {
-    font-size: 13px; /* Redus ușor de la 22px pentru că acum avem text, nu doar emoji */
-    font-weight: 700;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-    cursor: pointer;
-    user-select: none;
-    position: relative;
-    padding: 8px 14px; /* Spațiere interioară tipică unui buton premium */
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-    transition: all 0.2s ease;
-}
 
 /* --- UTILITARE DE STARE --- */
 .is-hidden {
     display: none !important;
 }
 
-.cell-media {
-    display: flex;
-}
 
 /* --- STATISTICI POPUP FINAL --- */
 .game-zone-hidden {
@@ -519,7 +543,7 @@ button#sendGuessBtn:hover { background: #e01200; }
 
 .stats-container {
     margin: 20px 0;
-    border-top: 1px solid #2a2a3a;
+    border-top: 1px solid var(--border-color);
     padding-top: 15px;
     text-align: left;
 }
@@ -530,7 +554,7 @@ button#sendGuessBtn:hover { background: #e01200; }
     text-transform: uppercase;
     letter-spacing: 1px;
     margin-bottom: 12px;
-    color: #ff1801;
+    color: var(--accent-f1);
     font-weight: 800;
 }
 
@@ -548,13 +572,13 @@ button#sendGuessBtn:hover { background: #e01200; }
 
 .stats-label {
     font-size: 11px;
-    color: #9ca3af;
+    color: var(--text-secondary);
 }
 
 .distribution-title {
     font-size: 12px;
     font-weight: 700;
-    color: #9ca3af;
+    color: var(--text-secondary);
     margin-bottom: 5px;
 }
 
@@ -562,4 +586,118 @@ button#sendGuessBtn:hover { background: #e01200; }
     display: flex;
     flex-direction: column;
     gap: 4px;
+}
+
+.fallback-copy-textarea {
+    position: fixed;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+
+/* --- CLASE PENTRU STĂRI ȘI CELULE GENERATE DIN JS --- */
+.diff-display-label.difficulty-easy {
+    color: #00ff88;
+}
+
+.diff-display-label.difficulty-medium {
+    color: #ffaa00;
+}
+
+.diff-display-label.difficulty-hard {
+    color: #ff3333;
+}
+
+.cell-driver {
+    flex-direction: column;
+    line-height: 1.3;
+    padding: 4px 2px;
+    justify-content: space-between;
+    align-items: stretch;
+}
+
+.cell-driver-id {
+    font-size: 14px;
+    font-weight: 800;
+    display: block;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.cell-driver-name {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: none;
+    color: var(--text-on-accent);
+    display: block;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 2px 4px;
+    border-radius: var(--radius-sm);
+    word-break: break-word;
+}
+
+.cell-media {
+    display: flex;
+    position: relative;
+    padding: 0;
+    overflow: hidden;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: stretch;
+}
+
+.cell-country-flag {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.55;
+    z-index: 1;
+}
+
+.cell-team-logo {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -55%);
+    width: 80%;
+    height: 80%;
+    object-fit: contain;
+    opacity: 0.55;
+    z-index: 1;
+}
+
+.cell-media-label {
+    position: relative;
+    z-index: 2;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-on-accent);
+    background: var(--surface-media-label);
+    padding: 2px 4px;
+    border-radius: var(--radius-sm);
+    margin: 2px;
+    text-align: center;
+}
+
+/* --- TEMA CARBON: buton trimitere mai vizibil --- */
+[data-app-theme="carbon"] button#sendGuessBtn {
+    background: linear-gradient(180deg, #5f6368 0%, #3f4347 100%);
+    color: #ffffff;
+    border: 1px solid #7a7f85;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+[data-app-theme="carbon"] button#sendGuessBtn:hover {
+    background: linear-gradient(180deg, #6f747a 0%, #4b5055 100%);
+    border-color: #92989f;
+}
+
+[data-app-theme="carbon"] button#sendGuessBtn:active {
+    background: linear-gradient(180deg, #3c4044 0%, #303337 100%);
 }

@@ -87,10 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		const textArea = document.createElement("textarea");
 		textArea.value = text;
 		// Evităm scroll-ul paginii în timp ce adăugăm temporar elementul în DOM
-		textArea.style.top = "0";
-		textArea.style.left = "0";
-		textArea.style.position = "fixed";
-		textArea.style.opacity = "0";
+		textArea.classList.add("fallback-copy-textarea");
 		document.body.appendChild(textArea);
 		textArea.focus();
 		textArea.select();
@@ -329,9 +326,7 @@ function setupSocketEvents() {
 		const diffLabel = document.getElementById("diff-display-label");
 		if (diffLabel) {
 			diffLabel.innerText = `Mod: ${data.difficulty}`;
-			if(data.difficulty === 'easy') diffLabel.style.color = '#00ff88';
-			if(data.difficulty === 'medium') diffLabel.style.color = '#ffaa00';
-			if(data.difficulty === 'hard') diffLabel.style.color = '#ff3333';
+			diffLabel.className = `diff-display-label difficulty-${data.difficulty}`;
 		}
 
 		const statusEl = document.getElementById("status");
@@ -360,27 +355,12 @@ function setupSocketEvents() {
 		if (!c0) return; 
 		
 		// --- CELULA 0: PILOT (Nume și ID) ---
-		c0.className = `cell ${results.name}`;
-		c0.style.flexDirection = "column";
-		c0.style.lineHeight = "1.3";
-		c0.style.padding = "4px 2px";
-		c0.style.justifyContent = "space-between";
-		c0.style.alignItems = "stretch";
+		c0.className = `cell ${results.name} cell-driver`;
 		c0.innerHTML = `
-			<span style="font-size: 14px; font-weight: 800; display: block; letter-spacing: 0.5px; margin-bottom: 2px;">
+			<span class="cell-driver-id">
 				${guess.id}
 			</span>
-			<span style="
-				font-size: 10px; 
-				font-weight: 700; 
-				text-transform: none; 
-				color: #ffffff; 
-				display: block; 
-				background: rgba(0, 0, 0, 0.4); 
-				padding: 2px 4px; 
-				border-radius: 4px;
-				word-break: break-word;
-			">
+			<span class="cell-driver-name">
 				${guess.name}
 			</span>
 		`;
@@ -388,13 +368,7 @@ function setupSocketEvents() {
 		// --- CELULA 1: ȚARĂ ---
 		let c1 = document.getElementById(`cell-${rowIndex}-1`);
 		if (c1) { 
-			c1.className = `cell ${results.nat} cell-media`; 
-			c1.style.position = "relative";
-			c1.style.padding = "0";
-			c1.style.overflow = "hidden";
-						c1.style.flexDirection = "column";
-			c1.style.justifyContent = "flex-end";
-			c1.style.alignItems = "stretch";
+			c1.className = `cell ${results.nat} cell-media cell-country`; 
 
 			const f1ToIso = {
 				"GBR": "gb", "GER": "de", "NED": "nl", "SUI": "ch", "SPA": "es",
@@ -407,11 +381,10 @@ function setupSocketEvents() {
 			let isoCode = f1ToIso[guess.nat.toUpperCase()] || guess.nat.substring(0, 2).toLowerCase();
 
 			c1.innerHTML = `
-				<img src="/flags/${isoCode}.png" alt="${guess.nat}" 
+				<img class="cell-country-flag" src="/flags/${isoCode}.png" alt="${guess.nat}" 
 					onerror="handleFlagError(this, '${isoCode}', 0)"
-					style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.55; z-index: 1;"
 				>
-				<span style="position: relative; z-index: 2; font-size: 10px; font-weight: 700; text-transform: uppercase; color: #ffffff; background: rgba(0, 0, 0, 0.5); padding: 2px 4px; border-radius: 4px; margin: 2px; text-align: center;">
+				<span class="cell-media-label">
 					${guess.nat}
 				</span>
 			`;
@@ -420,13 +393,7 @@ function setupSocketEvents() {
 		// --- CELULA 2: ECHIPĂ ---
 		let c2 = document.getElementById(`cell-${rowIndex}-2`);
 		if (c2) { 
-			c2.className = `cell ${results.team} cell-media`; 
-			c2.style.position = "relative";
-			c2.style.padding = "0";
-			c2.style.overflow = "hidden";
-						c2.style.flexDirection = "column";
-			c2.style.justifyContent = "flex-end";
-			c2.style.alignItems = "stretch";
+			c2.className = `cell ${results.team} cell-media cell-team`; 
 
 			let currentGuessTeam = guess.team[0];
 			let cleanTeamName = currentGuessTeam.replace(/\s+/g, '');
@@ -436,11 +403,10 @@ function setupSocketEvents() {
 			}
 
 			c2.innerHTML = `
-				<img src="/logos/${cleanTeamName}.png" alt="${currentGuessTeam}" 
+				<img class="cell-team-logo" src="/logos/${cleanTeamName}.png" alt="${currentGuessTeam}" 
 					onerror="handleTeamLogoError(this, '${currentGuessTeam}', 0)"
-					style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -55%); width: 80%; height: 80%; object-fit: contain; opacity: 0.55; z-index: 1;"
 				>
-				<span style="position: relative; z-index: 2; font-size: 10px; font-weight: 700; text-transform: uppercase; color: #ffffff; background: rgba(0, 0, 0, 0.5); padding: 2px 4px; border-radius: 4px; margin: 2px; text-align: center;">
+				<span class="cell-media-label">
 					${currentGuessTeam.substring(0, 5)}
 				</span>
 			`;
