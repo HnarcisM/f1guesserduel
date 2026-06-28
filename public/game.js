@@ -308,12 +308,64 @@ function removeActive(list) {
 
 
 const F1_TO_ISO = {
-	"GBR": "gb", "GER": "de", "NED": "nl", "SUI": "ch", "SPA": "es",
-	"RSA": "za", "MAS": "my", "MON": "mc", "UAE": "ae", "CHI": "cl",
-	"URU": "uy", "DEN": "dk", "POR": "pt", "THA": "th", "MEX": "mx",
-	"BUL": "bg", "CRO": "hr", "FRA": "fr", "ITA": "it", "USA": "us",
-	"CAN": "ca", "AUS": "au", "AUT": "at", "BRA": "br", "FIN": "fi",
-	"JPN": "jp", "NZL": "nz", "BEL": "be", "SWE": "se", "ARG": "ar"
+	"ARG": "ar", "AUS": "au", "AUT": "at", "BEL": "be", "BRA": "br",
+	"CAN": "ca", "CHN": "cn", "COL": "co", "CZE": "cz", "DEN": "dk",
+	"ESP": "es", "SPA": "es", "FIN": "fi", "FRA": "fr", "GBR": "gb",
+	"GER": "de", "HUN": "hu", "IND": "in", "ITA": "it", "JPN": "jp",
+	"MAS": "my", "MEX": "mx", "MON": "mc", "NED": "nl", "NZL": "nz",
+	"POL": "pl", "POR": "pt", "RSA": "za", "RUS": "ru", "SUI": "ch",
+	"SWE": "se", "THA": "th", "USA": "us", "VEN": "ve",
+	"UAE": "ae", "CHI": "cl", "URU": "uy", "BUL": "bg", "CRO": "hr"
+};
+
+const TEAM_LOGO_FILES = {
+	"alfaromeo": "AlfaRomeo.svg",
+	"alphatauri": "AlphaTauri.svg",
+	"alpine": "Alpine.svg",
+	"arrows": "Arrows.svg",
+	"astonmartin": "AstonMartin.svg",
+	"audi": "Audi.svg",
+	"bar": "BAR.png",
+	"benetton": "Benetton.png",
+	"brabham": "Brabham.png",
+	"brawn": "BrawnGP.jpg",
+	"brawngp": "BrawnGP.jpg",
+	"caterham": "Caterham.svg",
+	"f1": "F1.svg",
+	"ferrari": "Ferrari.png",
+	"footwork": "Footwork.png",
+	"forceindia": "Forceindia.png",
+	"haas": "Haas.svg",
+	"honda": "Honda.png",
+	"jaguar": "Jaguar.png",
+	"jordan": "Jordan.png",
+	"lancia": "Lancia.png",
+	"ligier": "Ligier.png",
+	"lotus": "Lotus.png",
+	"manor": "Manor.png",
+	"march": "March.png",
+	"marussia": "Marussia.png",
+	"mclaren": "McLaren.svg",
+	"mercedes": "Mercedes.svg",
+	"minardi": "Minardi.svg",
+	"penske": "Penske.svg",
+	"prost": "Prost.png",
+	"racingpoint": "RacingPoint.svg",
+	"rb": "racingbulls.png",
+	"racingbulls": "racingbulls.png",
+	"redbull": "RedBull.png",
+	"renault": "Renault.png",
+	"sauber": "Stake.png",
+	"stake": "Stake.png",
+	"shadow": "Shadow.png",
+	"spyker": "Spyker.jpg",
+	"stewart": "Stewart.png",
+	"superaguri": "SuperAguri.svg",
+	"tororosso": "ToroRosso.png",
+	"toyota": "Toyota.png",
+	"tyrrell": "Tyrrell.svg",
+	"williams": "Williams.png",
+	"wolf": "Wolf.png"
 };
 
 function getIsoCode(nationality) {
@@ -321,17 +373,15 @@ function getIsoCode(nationality) {
 	return F1_TO_ISO[nationality.toUpperCase()] || nationality.substring(0, 2).toLowerCase();
 }
 
-function normalizeTeamLogoName(teamName) {
-	let cleanTeamName = teamName.replace(/\s+/g, '');
-	if (cleanTeamName.toLowerCase() === "sauber") cleanTeamName = "Stake";
-	if (
-		cleanTeamName.toUpperCase() === "RB" ||
-		cleanTeamName.toLowerCase() === "racingbulls" ||
-		cleanTeamName.toLowerCase() === "alphatauri"
-	) {
-		cleanTeamName = "ToroRosso";
-	}
-	return cleanTeamName;
+function normalizeTeamLogoKey(teamName) {
+	return String(teamName || '')
+		.replace(/\s+/g, '')
+		.toLowerCase();
+}
+
+function getLocalTeamLogoPath(teamName) {
+	const fileName = TEAM_LOGO_FILES[normalizeTeamLogoKey(teamName)];
+	return fileName ? `/logos/${fileName}` : null;
 }
 
 function setCellState(cell, resultClass, extraClasses = []) {
@@ -361,7 +411,7 @@ function renderCountryCell(cell, guess, resultClass) {
 	const isoCode = getIsoCode(guess.nat);
 	const flag = document.createElement("img");
 	flag.className = "cell-country-flag";
-	flag.src = `/flags/${isoCode}.png`;
+	flag.src = `/flags/${isoCode}.svg`;
 	flag.alt = guess.nat;
 	flag.onerror = () => handleFlagError(flag, isoCode, 0);
 
@@ -375,10 +425,9 @@ function renderTeamCell(cell, guess, resultClass) {
 	setCellState(cell, resultClass, ["cell-media", "cell-team"]);
 
 	const currentGuessTeam = guess.team[0];
-	const cleanTeamName = normalizeTeamLogoName(currentGuessTeam);
 	const logo = document.createElement("img");
 	logo.className = "cell-team-logo";
-	logo.src = `/logos/${cleanTeamName}.png`;
+	logo.src = getLocalTeamLogoPath(currentGuessTeam) || "/logos/F1.svg";
 	logo.alt = currentGuessTeam;
 	logo.onerror = () => handleTeamLogoError(logo, currentGuessTeam, 0);
 
@@ -554,64 +603,47 @@ function getFlagEmoji(countryCode) {
 
 // Funcție universală de fallback pentru logourile echipelor
 function handleTeamLogoError(imgElement, teamName, currentStep) {
-    // Curățăm numele echipei pentru rutele locale
-    let cleanName = teamName.replace(/\s+/g, '');
-    if (cleanName.toLowerCase() === "sauber") cleanName = "Stake";
-    if (cleanName.toUpperCase() === "RB" || cleanName.toLowerCase() === "racingbulls" || cleanName.toLowerCase() === "alphatauri") {
-        cleanName = "ToroRosso";
-    }
+	const onlineLogos = {
+		"Ferrari": "https://upload.wikimedia.org/wikipedia/sco/d/d4/Ferrari-Logo.svg",
+		"Mercedes": "https://upload.wikimedia.org/wikipedia/commons/9/90/Mercedes-Logo.svg",
+		"Red Bull": "https://upload.wikimedia.org/wikipedia/en/b/b5/Red_Bull_Racing_logo.svg",
+		"McLaren": "https://upload.wikimedia.org/wikipedia/en/6/66/McLaren_Racing_logo.svg",
+		"Alpine": "https://upload.wikimedia.org/wikipedia/commons/7/7e/Alpine_F1_Team_Logo.svg",
+		"Aston Martin": "https://upload.wikimedia.org/wikipedia/commons/2/2b/Aston_Martin_Lagonda_brand_logo.svg",
+		"Williams": "https://upload.wikimedia.org/wikipedia/commons/6/6d/Williams_Racing_2020_Logo.svg",
+		"AlphaTauri": "https://upload.wikimedia.org/wikipedia/commons/e/e4/Scuderia_AlphaTauri_logo.svg",
+		"Haas": "https://upload.wikimedia.org/wikipedia/commons/e/e2/Haas_F1_Team_logo.svg",
+		"Alfa Romeo": "https://upload.wikimedia.org/wikipedia/commons/2/26/Alfa_Romeo_F1_Team_Orlen_logo.svg",
+		"Sauber": "https://upload.wikimedia.org/wikipedia/commons/c/cc/Stake_F1_Team_Kick_Sauber_logo.svg",
+		"Renault": "https://upload.wikimedia.org/wikipedia/commons/b/b1/Renault_2021.svg",
+		"Racing Point": "https://upload.wikimedia.org/wikipedia/commons/e/e2/Racing_Point_F1_logo.svg",
+		"Force India": "https://upload.wikimedia.org/wikipedia/en/a/a2/Sahara_Force_India_F1_Team_logo.svg",
+		"Toro Rosso": "https://upload.wikimedia.org/wikipedia/en/3/3d/Scuderia_Toro_Rosso_logo.svg",
+		"Lotus": "https://upload.wikimedia.org/wikipedia/commons/c/cf/Lotus_F1_Team_logo.svg"
+	};
 
-    const onlineLogos = {
-        "Ferrari": "https://upload.wikimedia.org/wikipedia/sco/d/d4/Ferrari-Logo.svg",
-        "Mercedes": "https://upload.wikimedia.org/wikipedia/commons/9/90/Mercedes-Logo.svg",
-        "Red Bull": "https://upload.wikimedia.org/wikipedia/en/b/b5/Red_Bull_Racing_logo.svg",
-        "McLaren": "https://upload.wikimedia.org/wikipedia/en/6/66/McLaren_Racing_logo.svg",
-        "Alpine": "https://upload.wikimedia.org/wikipedia/commons/7/7e/Alpine_F1_Team_Logo.svg",
-        "Aston Martin": "https://upload.wikimedia.org/wikipedia/commons/2/2b/Aston_Martin_Lagonda_brand_logo.svg",
-        "Williams": "https://upload.wikimedia.org/wikipedia/commons/6/6d/Williams_Racing_2020_Logo.svg",
-        "AlphaTauri": "https://upload.wikimedia.org/wikipedia/commons/e/e4/Scuderia_AlphaTauri_logo.svg",
-        "Haas": "https://upload.wikimedia.org/wikipedia/commons/e/e2/Haas_F1_Team_logo.svg",
-        "Alfa Romeo": "https://upload.wikimedia.org/wikipedia/commons/2/26/Alfa_Romeo_F1_Team_Orlen_logo.svg",
-        "Sauber": "https://upload.wikimedia.org/wikipedia/commons/c/cc/Stake_F1_Team_Kick_Sauber_logo.svg",
-        "Renault": "https://upload.wikimedia.org/wikipedia/commons/b/b1/Renault_2021.svg",
-        "Racing Point": "https://upload.wikimedia.org/wikipedia/commons/e/e2/Racing_Point_F1_logo.svg",
-        "Force India": "https://upload.wikimedia.org/wikipedia/en/a/a2/Sahara_Force_India_F1_Team_logo.svg",
-        "Toro Rosso": "https://upload.wikimedia.org/wikipedia/en/3/3d/Scuderia_Toro_Rosso_logo.svg",
-        "Lotus": "https://upload.wikimedia.org/wikipedia/commons/c/cf/Lotus_F1_Team_logo.svg"
-    };
+	const onlineLogo = onlineLogos[teamName];
 
-    const absoluteFallback = "https://upload.wikimedia.org/wikipedia/commons/thumb/6/64/F1_logo_red.svg/320px-F1_logo_red.svg.png";
+	if (currentStep === 0 && onlineLogo) {
+		imgElement.onerror = () => handleTeamLogoError(imgElement, teamName, 1);
+		imgElement.src = onlineLogo;
+		return;
+	}
 
-    // Lanțul logic controlat de pași (0: PNG, 1: SVG, 2: JPG, 3: Online, 4: Generic F1)
-    if (currentStep === 0) {
-        imgElement.setAttribute("onerror", `handleTeamLogoError(this, '${teamName}', 1)`);
-        imgElement.src = `/logos/${cleanName}.svg`;
-    } else if (currentStep === 1) {
-        imgElement.setAttribute("onerror", `handleTeamLogoError(this, '${teamName}', 2)`);
-        imgElement.src = `/logos/${cleanName}.jpg`;
-    } else if (currentStep === 2) {
-        imgElement.setAttribute("onerror", `handleTeamLogoError(this, '${teamName}', 3)`);
-        imgElement.src = onlineLogos[teamName] || absoluteFallback;
-    } else {
-        imgElement.onerror = null;
-        imgElement.src = absoluteFallback;
-    }
+	imgElement.onerror = null;
+	imgElement.src = "/logos/F1.svg";
 }
 
 // Funcție universală de fallback pentru steaguri
 function handleFlagError(imgElement, isoCode, currentStep) {
-    const absoluteFlagFallback = "https://flagcdn.com/w160/un.png"; // Steagul ONU ca siguranță totală
+	if (currentStep === 0) {
+		imgElement.onerror = () => handleFlagError(imgElement, isoCode, 1);
+		imgElement.src = `https://flagcdn.com/w160/${isoCode}.png`;
+		return;
+	}
 
-    if (currentStep === 0) {
-        imgElement.setAttribute("onerror", `handleFlagError(this, '${isoCode}', 1)`);
-        imgElement.src = `/flags/${isoCode}.svg`;
-    } else if (currentStep === 1) {
-        imgElement.setAttribute("onerror", `handleFlagError(this, '${isoCode}', 2)`);
-        imgElement.src = `https://flagcdn.com/w160/${isoCode}.png`;
-    } else {
-        imgElement.onerror = null;
-        imgElement.src = absoluteFlagFallback;
-    }
+	imgElement.onerror = null;
+	imgElement.src = "/flags/un.svg";
 }
 
 // --- FUNCȚII PENTRU GESTIONARE LOCALSTORAGE STATS ---
