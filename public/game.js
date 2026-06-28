@@ -134,10 +134,6 @@ document.addEventListener("DOMContentLoaded", () => {
 		roomBtnTextEl.textContent = `🏁 Room: ${roomId}`;
 	}
 
-	if (socket) {
-		socket.emit('joinRoom', roomId);
-}
-
 	const linkTextEl = document.getElementById("linkText");
 	if (linkTextEl) linkTextEl.innerText = window.location.href;
 
@@ -183,22 +179,20 @@ document.addEventListener("DOMContentLoaded", () => {
 			let list = document.getElementById("suggestions");
 			if (list) list = list.getElementsByTagName("li");
 			
-			if (e.keyCode == 40) {
+			if (e.key === "ArrowDown") {
 				currentFocus++;
 				addActive(list);
-			} else if (e.keyCode == 38) {
+			} else if (e.key === "ArrowUp") {
 				currentFocus--;
 				addActive(list);
-			} else if (e.keyCode == 13) {
+			} else if (e.key === "Enter") {
 				e.preventDefault();
 				if (currentFocus > -1 && list && list[currentFocus]) {
 					const driverName = list[currentFocus].innerText;
 					const driverId = list[currentFocus].getAttribute("data-id");
 					driverInput.value = driverName;
 					selectedDriverId = driverId;
-					const sug = document.getElementById("suggestions");
-					if (sug) sug.innerHTML = "";
-					currentFocus = -1;
+					clearSuggestions();
 					sendGuess();
 				} else {
 					sendGuess();
@@ -210,8 +204,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	document.addEventListener("click", function (e) {
 		// Închide sugestiile de piloți dacă dai click în afară
 		if (e.target.id !== "driverInput") {
-			const sug = document.getElementById("suggestions");
-			if (sug) sug.innerHTML = "";
+			clearSuggestions();
 		}
 		// Închide meniul dropdown dacă dai click în afara lui sau a hamburgerului
 		if (menu && !menu.classList.contains("hidden") && e.target.id !== "menu-hamburger"  && !shareBtn.contains(e.target)) {
@@ -223,6 +216,12 @@ document.addEventListener("DOMContentLoaded", () => {
 let driversList = [];
 let selectedDriverId = null;
 let currentFocus = -1;
+
+function clearSuggestions() {
+	const suggestions = document.getElementById("suggestions");
+	if (suggestions) suggestions.innerHTML = "";
+	currentFocus = -1;
+}
 
 function initializeGridStructure() {
 	const grid = document.getElementById("grid");
@@ -288,10 +287,8 @@ function sendGuess() {
 		socket.emit('submitGuess', finalDriver.id);
 	}
 	inputEl.value = "";
-	const sug = document.getElementById("suggestions");
-	if (sug) sug.innerHTML = "";
+	clearSuggestions();
 	selectedDriverId = null;
-	currentFocus = -1;
 }
 
 function addActive(list) {
@@ -306,6 +303,104 @@ function addActive(list) {
 function removeActive(list) {
 	for (let i = 0; i < list.length; i++) {
 		list[i].classList.remove("active");
+	}
+}
+
+
+const F1_TO_ISO = {
+	"GBR": "gb", "GER": "de", "NED": "nl", "SUI": "ch", "SPA": "es",
+	"RSA": "za", "MAS": "my", "MON": "mc", "UAE": "ae", "CHI": "cl",
+	"URU": "uy", "DEN": "dk", "POR": "pt", "THA": "th", "MEX": "mx",
+	"BUL": "bg", "CRO": "hr", "FRA": "fr", "ITA": "it", "USA": "us",
+	"CAN": "ca", "AUS": "au", "AUT": "at", "BRA": "br", "FIN": "fi",
+	"JPN": "jp", "NZL": "nz", "BEL": "be", "SWE": "se", "ARG": "ar"
+};
+
+function getIsoCode(nationality) {
+	if (!nationality) return "un";
+	return F1_TO_ISO[nationality.toUpperCase()] || nationality.substring(0, 2).toLowerCase();
+}
+
+function normalizeTeamLogoName(teamName) {
+	let cleanTeamName = teamName.replace(/\s+/g, '');
+	if (cleanTeamName.toLowerCase() === "sauber") cleanTeamName = "Stake";
+	if (
+		cleanTeamName.toUpperCase() === "RB" ||
+		cleanTeamName.toLowerCase() === "racingbulls" ||
+		cleanTeamName.toLowerCase() === "alphatauri"
+	) {
+		cleanTeamName = "ToroRosso";
+	}
+	return cleanTeamName;
+}
+
+function setCellState(cell, resultClass, extraClasses = []) {
+	if (!cell) return;
+	cell.className = ["cell", resultClass, ...extraClasses].filter(Boolean).join(" ");
+	cell.replaceChildren();
+}
+
+function createTextElement(tagName, className, text) {
+	const element = document.createElement(tagName);
+	if (className) element.className = className;
+	element.textContent = text;
+	return element;
+}
+
+function renderDriverCell(cell, guess, resultClass) {
+	setCellState(cell, resultClass, ["cell-driver"]);
+	cell.append(
+		createTextElement("span", "cell-driver-id", guess.id),
+		createTextElement("span", "cell-driver-name", guess.name)
+	);
+}
+
+function renderCountryCell(cell, guess, resultClass) {
+	setCellState(cell, resultClass, ["cell-media", "cell-country"]);
+
+	const isoCode = getIsoCode(guess.nat);
+	const flag = document.createElement("img");
+	flag.className = "cell-country-flag";
+	flag.src = `/flags/${isoCode}.png`;
+	flag.alt = guess.nat;
+	flag.onerror = () => handleFlagError(flag, isoCode, 0);
+
+	cell.append(
+		flag,
+		createTextElement("span", "cell-media-label", guess.nat)
+	);
+}
+
+function renderTeamCell(cell, guess, resultClass) {
+	setCellState(cell, resultClass, ["cell-media", "cell-team"]);
+
+	const currentGuessTeam = guess.team[0];
+	const cleanTeamName = normalizeTeamLogoName(currentGuessTeam);
+	const logo = document.createElement("img");
+	logo.className = "cell-team-logo";
+	logo.src = `/logos/${cleanTeamName}.png`;
+	logo.alt = currentGuessTeam;
+	logo.onerror = () => handleTeamLogoError(logo, currentGuessTeam, 0);
+
+	cell.append(
+		logo,
+		createTextElement("span", "cell-media-label", currentGuessTeam.substring(0, 5))
+	);
+}
+
+function getArrowSymbol(resultClass) {
+	if (resultClass === "orange") return "↑";
+	if (resultClass === "purple") return "↓";
+	return "";
+}
+
+function renderValueCell(cell, value, resultClass) {
+	setCellState(cell, resultClass, ["cell-arrow"]);
+	cell.appendChild(createTextElement("span", "", value));
+
+	const arrow = getArrowSymbol(resultClass);
+	if (arrow) {
+		cell.appendChild(createTextElement("span", "arrow-indicator", arrow));
 	}
 }
 
@@ -354,87 +449,13 @@ function setupSocketEvents() {
 		let c0 = document.getElementById(`cell-${rowIndex}-0`);
 		if (!c0) return; 
 		
-		// --- CELULA 0: PILOT (Nume și ID) ---
-		c0.className = `cell ${results.name} cell-driver`;
-		c0.innerHTML = `
-			<span class="cell-driver-id">
-				${guess.id}
-			</span>
-			<span class="cell-driver-name">
-				${guess.name}
-			</span>
-		`;
-
-		// --- CELULA 1: ȚARĂ ---
-		let c1 = document.getElementById(`cell-${rowIndex}-1`);
-		if (c1) { 
-			c1.className = `cell ${results.nat} cell-media cell-country`; 
-
-			const f1ToIso = {
-				"GBR": "gb", "GER": "de", "NED": "nl", "SUI": "ch", "SPA": "es",
-				"RSA": "za", "MAS": "my", "MON": "mc", "UAE": "ae", "CHI": "cl",
-				"URU": "uy", "DEN": "dk", "POR": "pt", "THA": "th", "MEX": "mx",
-				"BUL": "bg", "CRO": "hr", "FRA": "fr", "ITA": "it", "USA": "us",
-				"CAN": "ca", "AUS": "au", "AUT": "at", "BRA": "br", "FIN": "fi",
-				"JPN": "jp", "NZL": "nz", "BEL": "be", "SWE": "se", "ARG": "ar"
-			};
-			let isoCode = f1ToIso[guess.nat.toUpperCase()] || guess.nat.substring(0, 2).toLowerCase();
-
-			c1.innerHTML = `
-				<img class="cell-country-flag" src="/flags/${isoCode}.png" alt="${guess.nat}" 
-					onerror="handleFlagError(this, '${isoCode}', 0)"
-				>
-				<span class="cell-media-label">
-					${guess.nat}
-				</span>
-			`;
-		}
-		
-		// --- CELULA 2: ECHIPĂ ---
-		let c2 = document.getElementById(`cell-${rowIndex}-2`);
-		if (c2) { 
-			c2.className = `cell ${results.team} cell-media cell-team`; 
-
-			let currentGuessTeam = guess.team[0];
-			let cleanTeamName = currentGuessTeam.replace(/\s+/g, '');
-			if (cleanTeamName.toLowerCase() === "sauber") cleanTeamName = "Stake";
-			if (cleanTeamName.toUpperCase() === "RB" || cleanTeamName.toLowerCase() === "racingbulls" || cleanTeamName.toLowerCase() === "alphatauri") {
-				cleanTeamName = "ToroRosso";
-			}
-
-			c2.innerHTML = `
-				<img class="cell-team-logo" src="/logos/${cleanTeamName}.png" alt="${currentGuessTeam}" 
-					onerror="handleTeamLogoError(this, '${currentGuessTeam}', 0)"
-				>
-				<span class="cell-media-label">
-					${currentGuessTeam.substring(0, 5)}
-				</span>
-			`;
-		}
-		
-		// --- CELULA 3: VÂRSTĂ ---
-		let c3 = document.getElementById(`cell-${rowIndex}-3`);
-		if (c3) { 
-			c3.className = `cell ${results.age} cell-arrow`; 
-			let arrow = results.age === 'orange' ? '↑' : (results.age === 'purple' ? '↓' : '');
-			c3.innerHTML = `<span>${guess.age}</span>${arrow ? `<span class="arrow-indicator">${arrow}</span>` : ''}`;
-		}
-		
-		// --- CELULA 4: DEBUT ---
-		let c4 = document.getElementById(`cell-${rowIndex}-4`);
-		if (c4) { 
-			c4.className = `cell ${results.debut} cell-arrow`; 
-			let arrow = results.debut === 'orange' ? '↑' : (results.debut === 'purple' ? '↓' : '');
-			c4.innerHTML = `<span>${guess.debut}</span>${arrow ? `<span class="arrow-indicator">${arrow}</span>` : ''}`;
-		}
-		
-		// --- CELULA 5: VICTORII ---
-		let c5 = document.getElementById(`cell-${rowIndex}-5`);
-		if (c5) { 
-			c5.className = `cell ${results.wins} cell-arrow`; 
-			let arrow = results.wins === 'orange' ? '↑' : (results.wins === 'purple' ? '↓' : '');
-			c5.innerHTML = `<span>${guess.wins}</span>${arrow ? `<span class="arrow-indicator">${arrow}</span>` : ''}`;
-		}
+		// --- CELULE REZULTAT ---
+		renderDriverCell(c0, guess, results.name);
+		renderCountryCell(document.getElementById(`cell-${rowIndex}-1`), guess, results.nat);
+		renderTeamCell(document.getElementById(`cell-${rowIndex}-2`), guess, results.team);
+		renderValueCell(document.getElementById(`cell-${rowIndex}-3`), guess.age, results.age);
+		renderValueCell(document.getElementById(`cell-${rowIndex}-4`), guess.debut, results.debut);
+		renderValueCell(document.getElementById(`cell-${rowIndex}-5`), guess.wins, results.wins);
 
 		// --- LOGICĂ FINAL JOC ---
 		if (isGameOver) {
