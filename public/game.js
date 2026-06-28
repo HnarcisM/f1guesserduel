@@ -32,6 +32,7 @@ let isRoundFinished = false;
 let isRematchMode = false;
 // Preferința locală pentru rundele cu timp. Se aplică la următoarea dificultate/restart.
 let isTimedModeEnabled = localStorage.getItem('f1-guesser-timed-mode') === 'on';
+let selectedTimeLimitSeconds = Number(localStorage.getItem('f1-guesser-time-limit')) || 60;
 let currentRoundTimed = false;
 let currentTimeLimitSeconds = 60;
 let roundTimerInterval = null;
@@ -105,6 +106,13 @@ const TEAM_LOGO_FILES = {
 };
 
 const DEFAULT_TIME_LIMIT_SECONDS = 60;
+const ALLOWED_TIME_LIMIT_SECONDS = [60, 90, 120];
+
+/** Normalizează durata timerului la una dintre opțiunile suportate. */
+function normalizeTimeLimitSeconds(value) {
+	const seconds = Number(value);
+	return ALLOWED_TIME_LIMIT_SECONDS.includes(seconds) ? seconds : DEFAULT_TIME_LIMIT_SECONDS;
+}
 
 // ===============================
 // Small DOM utilities
@@ -615,7 +623,7 @@ function buildRoundOptions(level) {
 	return {
 		level,
 		timed: isTimedModeEnabled,
-		timeLimitSeconds: DEFAULT_TIME_LIMIT_SECONDS
+		timeLimitSeconds: selectedTimeLimitSeconds
 	};
 }
 
@@ -623,22 +631,33 @@ function buildRoundOptions(level) {
 function buildRestartOptions() {
 	return {
 		timed: isTimedModeEnabled,
-		timeLimitSeconds: DEFAULT_TIME_LIMIT_SECONDS
+		timeLimitSeconds: selectedTimeLimitSeconds
 	};
 }
 
 /** Actualizează butoanele UI care indică dacă următoarea rundă este cu timp sau fără timp. */
+function getTimerControlValue(control) {
+	return control.dataset.timerMode || control.dataset.timer;
+}
+
 function syncTimerModeControls() {
 	document.querySelectorAll("[data-timer-mode], .timer-item").forEach(control => {
-		const mode = control.dataset.timerMode || control.dataset.timer;
-		control.classList.toggle("active", (isTimedModeEnabled && mode === "on") || (!isTimedModeEnabled && mode === "off"));
+		const value = getTimerControlValue(control);
+		const isOffControl = value === "off";
+		const controlSeconds = normalizeTimeLimitSeconds(value);
+		const isActive = isOffControl
+			? !isTimedModeEnabled
+			: isTimedModeEnabled && controlSeconds === selectedTimeLimitSeconds;
+		control.classList.toggle("active", isActive);
 	});
 }
 
 /** Schimbă preferința locală pentru timer. Noua valoare se aplică la următorul start/rematch. */
-function setTimedMode(enabled) {
+function setTimedMode(enabled, timeLimitSeconds = selectedTimeLimitSeconds) {
 	isTimedModeEnabled = enabled;
+	selectedTimeLimitSeconds = normalizeTimeLimitSeconds(timeLimitSeconds);
 	localStorage.setItem('f1-guesser-timed-mode', enabled ? 'on' : 'off');
+	localStorage.setItem('f1-guesser-time-limit', String(selectedTimeLimitSeconds));
 	syncTimerModeControls();
 
 	// Dacă runda este deja pornită, nu schimbăm timerul curent.
@@ -646,7 +665,7 @@ function setTimedMode(enabled) {
 	const status = document.getElementById("status");
 	if (status && !isRoundFinished && driversList.length > 0) {
 		status.textContent = enabled
-			? "Modul cu timp va fi folosit la următorul joc."
+			? `Modul cu timp (${selectedTimeLimitSeconds}s) va fi folosit la următorul joc.`
 			: "Modul fără timp va fi folosit la următorul joc.";
 	}
 }
@@ -669,16 +688,25 @@ function hideRoundTimer() {
 	if (timerEl) {
 		timerEl.classList.add("is-hidden");
 		timerEl.classList.remove("timer-warning", "timer-danger");
+		timerEl.style.setProperty("--timer-progress", "0%");
 	}
+
+	const timerValue = document.getElementById("roundTimerValue");
+	if (timerValue) timerValue.textContent = `${selectedTimeLimitSeconds}s`;
 }
 
-function updateRoundTimerDisplay(secondsLeft) {
+function updateRoundTimerDisplay(secondsLeft, progressRatio = 0) {
 	const timerEl = getRoundTimerElement();
 	if (!timerEl) return;
 
-	timerEl.textContent = `⏱️ ${Math.max(0, secondsLeft)}s`;
-	timerEl.classList.toggle("timer-warning", secondsLeft <= 15 && secondsLeft > 5);
-	timerEl.classList.toggle("timer-danger", secondsLeft <= 5);
+	const safeSecondsLeft = Math.max(0, secondsLeft);
+	const safeProgress = Math.min(1, Math.max(0, progressRatio));
+	const timerValue = document.getElementById("roundTimerValue");
+
+	if (timerValue) timerValue.textContent = `${safeSecondsLeft}s`;
+	timerEl.style.setProperty("--timer-progress", `${safeProgress * 100}%`);
+	timerEl.classList.toggle("timer-warning", safeSecondsLeft <= 15 && safeSecondsLeft > 5);
+	timerEl.classList.toggle("timer-danger", safeSecondsLeft <= 5);
 }
 
 function startRoundTimer(timeLimitSeconds, roundStartedAt) {
@@ -693,8 +721,10 @@ function startRoundTimer(timeLimitSeconds, roundStartedAt) {
 	if (timerEl) timerEl.classList.remove("is-hidden");
 
 	function tick() {
-		const secondsLeft = Math.max(0, Math.ceil((roundTimerEndsAt - Date.now()) / 1000));
-		updateRoundTimerDisplay(secondsLeft);
+		const msLeft = Math.max(0, roundTimerEndsAt - Date.now());
+		const secondsLeft = Math.ceil(msLeft / 1000);
+		const progressRatio = 1 - (msLeft / (currentTimeLimitSeconds * 1000));
+		updateRoundTimerDisplay(secondsLeft, progressRatio);
 
 		if (secondsLeft <= 0) {
 			stopRoundTimer();
@@ -989,14 +1019,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	document.querySelectorAll("[data-timer-mode]").forEach(button => {
 		button.addEventListener("click", function() {
-			setTimedMode(this.dataset.timerMode === "on");
+			const value = this.dataset.timerMode;
+			setTimedMode(value !== "off", value);
 		});
 	});
 
 	document.querySelectorAll(".timer-item").forEach(item => {
 		item.addEventListener("click", function(e) {
 			e.stopPropagation();
-			setTimedMode(this.dataset.timer === "on");
+			const value = this.dataset.timer;
+			setTimedMode(value !== "off", value);
 			if (menu) menu.classList.add("hidden");
 		});
 	});

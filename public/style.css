@@ -85,6 +85,7 @@
 
     /* Grid joc */
     --game-layout-max-width: 980px;
+    --guess-controls-width: min(840px, 100%);
     --game-grid-gap: var(--space-xl);
     --game-cell-min-height: 58px;
     --game-cell-font-size: 14px;
@@ -450,9 +451,22 @@ button#sendGuessBtn, .restart-inline-btn { background-color: var(--accent-f1); c
 #diff-display-label { font-size: 12px; margin-bottom: var(--space-7xl); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; }
 
 /* --- ZONA DE INPUT & CĂUTARE --- */
-#gameZone { margin-bottom: var(--space-8xl); }
+#gameZone {
+    width: var(--guess-controls-width);
+    margin: 0 auto var(--space-8xl);
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    gap: 0;
+}
 /* Input + autocomplete. Containerul este poziționat relativ pentru lista de sugestii absolută. */
-.search-container { position: relative; width: 70%; display: inline-block; }
+.search-container {
+    position: relative;
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    display: block;
+}
 input { 
     padding: var(--space-2xl) var(--space-5xl); 
     width: 100%; 
@@ -474,9 +488,18 @@ button#sendGuessBtn {
     border: none; 
     font-size: 16px; 
     border-radius: 0 var(--radius-lg) var(--radius-lg) 0; 
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     vertical-align: top; 
 }
 button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
+
+
+#gameZone.game-zone-hidden,
+#gameZone.is-hidden {
+    display: none !important;
+}
 
 /* Lista de autocomplete este suprapusă sub input. */
 .suggestions-list { 
@@ -486,6 +509,10 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
     z-index: 1000; list-style: none; padding: 0; margin: 0; text-align: left;
     box-shadow: var(--shadow-md);
 }
+.suggestions-list:empty {
+    display: none;
+}
+
 .suggestions-list li { padding: var(--space-2xl) var(--space-5xl); border-bottom: 1px solid var(--border-muted); color: var(--text-primary); transition: all 0.15s; }
 .suggestions-list li:hover, .suggestions-list li.active { background: var(--accent-f1); color: var(--text-on-accent); }
 
@@ -1725,10 +1752,14 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
 
 .timer-mode-options {
     display: flex;
+    flex: 1;
+    justify-content: flex-end;
+    flex-wrap: wrap;
     gap: var(--space-sm);
 }
 
 .timer-mode-option {
+    flex: 0 1 auto;
     padding: var(--space-sm) var(--space-xl);
     border: 1px solid var(--border-soft);
     border-radius: var(--radius-pill);
@@ -1745,35 +1776,121 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
     box-shadow: 0 0 18px color-mix(in srgb, var(--accent-f1) 18%, transparent);
 }
 
-/* Timer vizibil doar pentru rundele pe timp. */
+/* Timer vizibil doar pentru rundele pe timp.
+   Este afișat ca un mini race-track: START -> mașinuță -> FINISH + secunde rămase. */
 .round-timer {
-    width: fit-content;
+    --timer-progress: 0%;
+    width: var(--guess-controls-width);
+    box-sizing: border-box;
     margin: var(--space-md) auto var(--space-4xl);
-    padding: var(--space-sm) var(--space-3xl);
-    border: 1px solid color-mix(in srgb, var(--accent-f1) 48%, var(--border-soft));
-    border-radius: var(--radius-pill);
-    background: linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.025));
-    color: var(--text-on-accent);
-    font-size: 0.95rem;
+    padding: var(--space-md) var(--space-xl) var(--space-lg);
+    border: 1px solid color-mix(in srgb, var(--accent-f1) 34%, var(--border-soft));
+    border-radius: var(--radius-xl);
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.078), rgba(255,255,255,0.024)),
+        radial-gradient(circle at 18% 0%, color-mix(in srgb, var(--accent-f1) 10%, transparent), transparent 42%);
+    color: var(--text-main);
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.20), 0 0 18px color-mix(in srgb, var(--accent-f1) 10%, transparent);
+}
+
+.timer-track-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-sm);
+    font-size: 0.72rem;
     font-weight: 900;
-    letter-spacing: 1px;
-    box-shadow: 0 0 18px color-mix(in srgb, var(--accent-f1) 14%, transparent);
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+.timer-track-finish strong {
+    display: inline-flex;
+    min-width: 38px;
+    justify-content: flex-end;
+    margin-left: var(--space-xs);
+    color: var(--text-on-accent);
+    font-size: 0.92rem;
+    letter-spacing: 0.8px;
+}
+
+.timer-track {
+    position: relative;
+    height: 34px;
+    display: flex;
+    align-items: center;
+}
+
+.timer-track-line {
+    position: absolute;
+    inset: 50% 0 auto;
+    height: 8px;
+    transform: translateY(-50%);
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+    background:
+        linear-gradient(90deg, rgba(255,255,255,0.22), rgba(255,255,255,0.06)),
+        repeating-linear-gradient(45deg, rgba(255,255,255,0.11) 0 7px, transparent 7px 14px);
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.35);
+}
+
+.timer-track-line::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--timer-progress);
+    border-radius: inherit;
+    background: linear-gradient(90deg,
+        color-mix(in srgb, var(--accent-f1) 78%, #ffffff 8%),
+        color-mix(in srgb, var(--accent-f1) 34%, transparent));
+    box-shadow: 0 0 18px color-mix(in srgb, var(--accent-f1) 28%, transparent);
+    transition: width 0.22s linear;
+}
+
+.timer-car {
+    position: absolute;
+    left: var(--timer-progress);
+    top: 50%;
+    z-index: 1;
+    transform: translate(-50%, -58%) scaleX(-1);
+    font-size: 1.55rem;
+    line-height: 1;
+    filter: drop-shadow(0 5px 8px rgba(0,0,0,0.42));
+    transition: left 0.22s linear;
 }
 
 .round-timer.timer-warning {
-    border-color: color-mix(in srgb, var(--warning) 70%, var(--border-soft));
+    border-color: color-mix(in srgb, var(--warning) 56%, var(--border-soft));
+}
+
+.round-timer.timer-warning .timer-track-finish strong {
     color: var(--warning);
 }
 
+.round-timer.timer-warning .timer-track-line::before {
+    background: linear-gradient(90deg, var(--warning), color-mix(in srgb, var(--warning) 30%, transparent));
+    box-shadow: 0 0 18px color-mix(in srgb, var(--warning) 30%, transparent);
+}
+
 .round-timer.timer-danger {
-    border-color: color-mix(in srgb, var(--danger) 80%, var(--border-soft));
-    color: var(--danger);
+    border-color: color-mix(in srgb, var(--danger) 72%, var(--border-soft));
     animation: timerPulse 0.65s ease-in-out infinite alternate;
 }
 
+.round-timer.timer-danger .timer-track-finish strong {
+    color: var(--danger);
+}
+
+.round-timer.timer-danger .timer-track-line::before {
+    background: linear-gradient(90deg, var(--danger), color-mix(in srgb, var(--danger) 28%, transparent));
+    box-shadow: 0 0 20px color-mix(in srgb, var(--danger) 34%, transparent);
+}
+
 @keyframes timerPulse {
-    from { transform: scale(1); box-shadow: 0 0 14px rgba(239, 68, 68, 0.18); }
-    to { transform: scale(1.035); box-shadow: 0 0 26px rgba(239, 68, 68, 0.34); }
+    from { transform: scale(1); box-shadow: 0 12px 30px rgba(0,0,0,0.20), 0 0 14px rgba(239, 68, 68, 0.16); }
+    to { transform: scale(1.015); box-shadow: 0 14px 36px rgba(0,0,0,0.24), 0 0 24px rgba(239, 68, 68, 0.30); }
 }
 
 /* --- POPUP FINAL: close button + rematch state --- */
@@ -1845,7 +1962,7 @@ button#sendGuessBtn.rematch-submit-btn {
     }
 
     .timer-mode-option {
-        flex: 1;
+        flex: 1 1 calc(50% - var(--space-sm));
     }
 
     #gameZone.game-zone-rematch button#sendGuessBtn {
@@ -1856,5 +1973,43 @@ button#sendGuessBtn.rematch-submit-btn {
 @media (prefers-reduced-motion: reduce) {
     .round-timer.timer-danger {
         animation: none;
+    }
+}
+
+/* Theme polish pentru noul race timer. */
+[data-app-theme="neon"] .timer-track-line::before {
+    box-shadow: 0 0 22px color-mix(in srgb, var(--accent-f1) 42%, transparent);
+}
+
+[data-app-theme="carbon"] .timer-track-line {
+    background:
+        linear-gradient(90deg, rgba(255,255,255,0.13), rgba(255,255,255,0.035)),
+        repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0 7px, transparent 7px 14px);
+}
+
+[data-app-theme="carbon"] .timer-track-finish strong {
+    color: #f4f6f8;
+}
+
+@media (max-width: 520px) {
+    .round-timer {
+        width: 100%;
+        padding-inline: var(--space-lg);
+    }
+
+    .timer-track-header {
+        font-size: 0.66rem;
+        letter-spacing: 1px;
+    }
+
+    .timer-car {
+        font-size: 1.35rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .timer-car,
+    .timer-track-line::before {
+        transition: none;
     }
 }

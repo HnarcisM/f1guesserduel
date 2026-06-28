@@ -28,7 +28,9 @@
         
         <div class="menu-section-title">⏱️ TIMER</div>
         <div data-timer="off" class="menu-item timer-item">∞ Fără timp</div>
-        <div data-timer="on" class="menu-item timer-item">⏱️ 60 secunde</div>
+        <div data-timer="60" class="menu-item timer-item">⏱️ 60 secunde</div>
+        <div data-timer="90" class="menu-item timer-item">⏱️ 90 secunde</div>
+        <div data-timer="120" class="menu-item timer-item">⏱️ 120 secunde</div>
 
         <div class="menu-section-title">🎨 TEMĂ VIZUALĂ</div>
         <div data-theme="default" class="menu-item theme-item">🌌 F1 Classic (Dark)</div>
@@ -55,7 +57,9 @@
             <span class="timer-mode-label">Mod timp</span>
             <div class="timer-mode-options">
                 <button type="button" class="timer-mode-option active" data-timer-mode="off">∞ Fără timp</button>
-                <button type="button" class="timer-mode-option" data-timer-mode="on">⏱️ 60 sec</button>
+                <button type="button" class="timer-mode-option" data-timer-mode="60">⏱️ 60 sec</button>
+                <button type="button" class="timer-mode-option" data-timer-mode="90">⏱️ 90 sec</button>
+                <button type="button" class="timer-mode-option" data-timer-mode="120">⏱️ 120 sec</button>
             </div>
         </div>
         <div class="difficulty-grid">
@@ -81,7 +85,16 @@
 
     <div id="status">Se așteaptă selectarea dificultății...</div>
     <div id="diff-display-label"></div>
-    <div id="roundTimer" class="round-timer is-hidden" aria-live="polite">⏱️ 60s</div>
+    <div id="roundTimer" class="round-timer is-hidden" aria-live="polite">
+        <div class="timer-track-header">
+            <span class="timer-track-start">START</span>
+            <span class="timer-track-finish">FINISH <strong id="roundTimerValue">60s</strong></span>
+        </div>
+        <div class="timer-track" aria-hidden="true">
+            <div class="timer-track-line"></div>
+            <span id="roundTimerCar" class="timer-car">🏎️</span>
+        </div>
+    </div>
 
     <!-- Zona de input este ascunsă până când serverul inițializează jocul. -->
     <div id="gameZone" class="game-zone-hidden">

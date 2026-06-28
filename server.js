@@ -26,6 +26,13 @@ const io = new Server(server);
 
 // Portul poate fi suprascris din environment; local folosește 3000.
 const PORT = process.env.PORT || 3000;
+const DEFAULT_TIME_LIMIT_SECONDS = 60;
+const ALLOWED_TIME_LIMIT_SECONDS = [60, 90, 120];
+
+function normalizeTimeLimitSeconds(value) {
+    const seconds = Number(value);
+    return ALLOWED_TIME_LIMIT_SECONDS.includes(seconds) ? seconds : DEFAULT_TIME_LIMIT_SECONDS;
+}
 
 // Expune index.html, style.css, game.js, flags și logos din folderul public.
 app.use(express.static(path.join(__dirname, 'public')));
@@ -71,7 +78,7 @@ io.on('connection', (socket) => {
                 driversList: [],
                 attempts: {},
                 timed: false,
-                timeLimitSeconds: 60,
+                timeLimitSeconds: DEFAULT_TIME_LIMIT_SECONDS,
                 roundStartedAt: null
             };
         }
@@ -93,7 +100,7 @@ io.on('connection', (socket) => {
 
         const difficulty = typeof payload === 'object' && payload !== null ? payload.level : payload;
         const timed = Boolean(typeof payload === 'object' && payload !== null && payload.timed);
-        const timeLimitSeconds = Number(payload && payload.timeLimitSeconds) || 60;
+        const timeLimitSeconds = normalizeTimeLimitSeconds(payload && payload.timeLimitSeconds);
         
         rooms[currentRoom].difficulty = difficulty;
         rooms[currentRoom].timed = timed;
@@ -202,7 +209,7 @@ io.on('connection', (socket) => {
 
         if (typeof payload === 'object' && payload !== null) {
             room.timed = Boolean(payload.timed);
-            room.timeLimitSeconds = Number(payload.timeLimitSeconds) || 60;
+            room.timeLimitSeconds = normalizeTimeLimitSeconds(payload.timeLimitSeconds);
         }
         
         if (room.difficulty) {
