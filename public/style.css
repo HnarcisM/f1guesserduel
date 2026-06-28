@@ -67,7 +67,7 @@
     --space-6xl: 24px;
     --space-7xl: 25px;
     --space-8xl: 30px;
-    --space-page-top: 100px;
+    --space-page-top: 88px;
     --space-page-bottom: 60px;
 
     /* Dimensiuni reutilizabile */
@@ -77,6 +77,17 @@
     --radius-xl: 12px;
     --radius-2xl: 16px;
     --radius-pill: 20px;
+
+    /* Grid joc */
+    --game-layout-max-width: 980px;
+    --game-grid-gap: var(--space-xl);
+    --game-cell-min-height: 58px;
+    --game-cell-font-size: 14px;
+
+    /* Header */
+    --header-height: 62px;
+    --header-padding-x: var(--space-6xl);
+    --header-control-size: 40px;
 
     /* Umbre și tranziții */
     --shadow-sm: 0 4px 10px rgba(0, 0, 0, 0.3);
@@ -117,6 +128,30 @@
     --accent-f1: var(--text-on-accent); /* Accente albe de steag */
 }
 
+
+[data-app-theme="carbon"] .site-header h1 {
+    color: #f3f4f6;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.18);
+}
+
+[data-app-theme="carbon"] .hamburger,
+[data-app-theme="carbon"] .share-btn,
+[data-app-theme="carbon"] .player-badge {
+    background: linear-gradient(180deg, #222528 0%, #17191b 100%);
+    border-color: #3f4347;
+}
+
+[data-app-theme="carbon"] .cell {
+    background: linear-gradient(180deg, #2a2d30 0%, #1e2022 100%);
+    border-color: #3f4347;
+}
+
+[data-app-theme="carbon"] .cell.header {
+    background: #17191b;
+    border-color: #33373b;
+    color: #c9ced4;
+}
+
 /* --- Stiluri globale bazate pe variabilele de temă --- */
 body { 
     background: var(--bg-gradient);
@@ -144,46 +179,82 @@ body::before {
 /* --- HEADER DINAMIC ȘI UNIFICAT --- */
 .site-header {
     position: fixed;
-    top: 0; left: 0; right: 0; height: 70px;
-    background: var(--header-bg);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-bottom: 2px solid var(--accent-f1); /* Roșu oficial F1 racing */
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--header-height);
+    background: color-mix(in srgb, var(--header-bg) 92%, transparent);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid color-mix(in srgb, var(--accent-f1) 70%, var(--border-soft));
     display: flex; 
     align-items: center; 
     justify-content: space-between; 
-    padding: 0 var(--space-8xl);
+    padding: 0 var(--header-padding-x);
     z-index: 2000; 
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.38);
+}
+
+.site-header::after {
+    content: "";
+    position: absolute;
+    left: var(--header-padding-x);
+    right: var(--header-padding-x);
+    bottom: -1px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-f1), transparent);
+    opacity: 0.55;
 }
 
 .site-header h1 { 
     margin: 0; 
-    font-size: 24px; 
-    letter-spacing: 3px; 
+    font-size: 20px; 
+    letter-spacing: 2.4px; 
     font-weight: 900;
     color: var(--text-on-accent);
-    text-shadow: 0 0 10px rgba(255, 24, 1, 0.3);
+    text-shadow: 0 0 10px color-mix(in srgb, var(--accent-f1) 35%, transparent);
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
     cursor: pointer;
     user-select: none;
-    transition: transform var(--transition-fast);
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    pointer-events: auto;
+    transition: color var(--transition-fast), text-shadow var(--transition-fast), transform var(--transition-fast);
 }
+
 .site-header h1:hover {
-    transform: translateX(-50%) scale(1.03);
+    color: var(--text-primary);
+    text-shadow: 0 0 14px color-mix(in srgb, var(--accent-f1) 45%, transparent);
+    transform: translateX(-50%) translateY(-1px);
+}
+
+.site-header h1:active {
+    transform: translateX(-50%);
 }
 
 .hamburger {
-    font-size: 28px;
+    width: var(--header-control-size);
+    height: var(--header-control-size);
+    border-radius: var(--radius-xl);
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-soft);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
     color: var(--text-on-accent);
     z-index: 3000;
-    transition: all var(--transition-fast);
+    transition: transform var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
 }
 .hamburger:hover { 
     color: var(--accent-f1);
-    transform: scale(1.1);
+    background: var(--surface-elevated-hover);
+    border-color: color-mix(in srgb, var(--accent-f1) 55%, transparent);
+    transform: translateY(-1px);
 }
 
 /* GRUP STRUCTURAT PENTRU ELEMENTELE DIN DREAPTA HEADERULUI */
@@ -191,30 +262,32 @@ body::before {
 .header-actions {
     display: flex;
     align-items: center;
-    gap: var(--space-3xl);
+    gap: var(--space-lg);
     z-index: 3000;
 }
 
 /* STIL BUTON PREMIUM DE PARTAJARE CAMERĂ */
 /* Butonul de share funcționează ca un control interactiv, dar este stilizat ca badge. */
 .share-btn {
-    font-size: 13px;
-    letter-spacing: 0.5px;
+    min-height: var(--header-control-size);
+    font-size: 12px;
+    letter-spacing: 0.7px;
     text-transform: uppercase;
     position: relative;
-    padding: var(--space-md) var(--space-2xl);
+    padding: 0 var(--space-4xl);
     background: var(--surface-elevated);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: var(--radius-md);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-pill);
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 .share-btn:hover {
     background: var(--surface-elevated-hover);
-    border-color: var(--accent-f1);
-    transform: scale(1.08);
+    border-color: color-mix(in srgb, var(--accent-f1) 60%, transparent);
+    transform: translateY(-1px);
 }
 
 /* TOOLTIP PENTRU CONFIRMARE COPIERE LINK */
@@ -253,65 +326,92 @@ body::before {
 
 /* --- DROPDOWN MENU PREMIUM --- */
 .dropdown {
-    position: absolute; 
-    top: 70px; 
-    left: var(--space-5xl);
+    position: absolute;
+    top: calc(var(--header-height) + var(--space-sm));
+    left: var(--header-padding-x);
     z-index: 2500;
-    background: var(--surface-main);
-    border: 1px solid var(--border-soft);
-    border-top: none;
-    border-bottom-left-radius: var(--radius-xl);
-    border-bottom-right-radius: var(--radius-xl);
-    padding: var(--space-md) 0;
-    width: 190px;
+    width: 230px;
+    padding: var(--space-md);
     text-align: left;
+    background: color-mix(in srgb, var(--surface-main) 92%, #000000 8%);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-2xl);
     box-shadow: var(--shadow-lg);
     overflow: hidden;
 }
 .dropdown.hidden { display: none; }
 
-.menu-item { 
-    padding: var(--space-2xl) var(--space-5xl); 
-    color: var(--text-secondary); 
-    font-weight: 600;
-    font-size: 14px;
-    border-bottom: 1px solid var(--border-muted); 
+.menu-item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 38px;
+    padding: var(--space-md) var(--space-xl);
+    color: var(--text-secondary);
+    font-weight: 700;
+    font-size: 13px;
+    border-radius: var(--radius-lg);
+    border: 1px solid transparent;
 }
-.menu-item:last-child { border-bottom: none; }
-.menu-item:hover { 
-    background: linear-gradient(90deg, var(--accent-f1) 0%, color-mix(in srgb, var(--accent-f1) 20%, transparent) 100%); 
-    color: var(--text-on-accent);
-    padding-left: var(--space-7xl);
+.menu-item + .menu-item { margin-top: var(--space-xs); }
+.menu-item:hover {
+    background: color-mix(in srgb, var(--accent-f1) 14%, transparent);
+    color: var(--text-primary);
+    border-color: color-mix(in srgb, var(--accent-f1) 28%, transparent);
+    transform: translateX(2px);
+}
+.menu-item:hover::before {
+    content: "";
+    position: absolute;
+    left: var(--space-xs);
+    top: 50%;
+    width: 3px;
+    height: 18px;
+    transform: translateY(-50%);
+    border-radius: var(--radius-pill);
+    background: var(--accent-f1);
 }
 
 .menu-section-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
     font-size: 10px;
-    font-weight: 800;
+    font-weight: 900;
     color: var(--text-muted);
-    padding: var(--space-md) var(--space-lg) var(--space-xs) var(--space-lg);
+    padding: var(--space-md) var(--space-xl) var(--space-sm);
     text-align: left;
-    letter-spacing: 1px;
-    border-top: 1px solid var(--border-color);
-    margin-top: var(--space-sm);
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    border-top: 1px solid var(--border-muted);
+    margin: var(--space-md) calc(-1 * var(--space-md)) 0;
 }
-.menu-section-title:first-child { border-top: none; margin-top: 0; }
+.menu-section-title:first-child {
+    border-top: none;
+    margin-top: 0;
+    padding-top: var(--space-xs);
+}
 
 /* --- BADGE STATUS ONLINE --- */
 .player-badge {
-    background: color-mix(in srgb, var(--accent-f1) 15%, transparent); 
+    min-height: var(--header-control-size);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: color-mix(in srgb, var(--accent-f1) 12%, transparent); 
     color: var(--accent-f1); 
-    font-weight: 700; 
-    font-size: 13px;
-    padding: var(--space-md) var(--space-4xl); 
+    font-weight: 800; 
+    font-size: 12px;
+    padding: 0 var(--space-4xl); 
     border-radius: var(--radius-pill); 
-    border: 1px solid color-mix(in srgb, var(--accent-f1) 30%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent-f1) 32%, transparent);
     letter-spacing: 0.5px;
-    box-shadow: 0 0 15px color-mix(in srgb, var(--accent-f1) 10%, transparent);
+    box-shadow: 0 0 15px color-mix(in srgb, var(--accent-f1) 8%, transparent);
 }
 
 /* --- CONTAINER CENTRAL --- */
 .container { 
-    max-width: 750px; 
+    max-width: var(--game-layout-max-width); 
     margin: 0 auto; 
     position: relative; 
 }
@@ -382,34 +482,36 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
 /* Gridul jocului: 6 coloane fixe pentru a păstra structura de tabel F1 Guesser. */
 .grid { 
     display: grid; 
-    grid-template-columns: repeat(6, 1fr); 
-    gap: var(--space-lg); 
+    grid-template-columns: minmax(150px, 1.2fr) minmax(130px, 1fr) minmax(150px, 1.15fr) repeat(3, minmax(105px, 0.85fr)); 
+    gap: var(--game-grid-gap); 
+    width: 100%;
     margin: var(--space-7xl) auto; 
 }
 .cell { 
-    padding: var(--space-2xl) var(--space-sm); 
+    padding: var(--space-3xl) var(--space-xl); 
     font-weight: 700; 
-    font-size: 13px; 
-    border: 1px solid var(--surface-elevated); 
+    font-size: var(--game-cell-font-size); 
+    border: 1px solid var(--border-soft); 
     text-transform: uppercase; 
     display: flex; 
     align-items: center; 
     justify-content: center; 
-    min-height: 48px; 
-    border-radius: var(--radius-lg); 
-    background: var(--surface-main); 
-    box-shadow: inset 0 1px 2px var(--surface-elevated);
+    min-height: var(--game-cell-min-height); 
+    border-radius: var(--radius-xl); 
+    background: color-mix(in srgb, var(--surface-main) 86%, var(--text-on-accent) 14%); 
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), var(--shadow-sm);
     transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
 }
 .cell.header { 
-    color: var(--text-muted); 
+    color: var(--text-secondary); 
     font-size: 11px; 
     font-weight: 800;
-    letter-spacing: 1px;
-    border: none; 
-    background: transparent; 
-    min-height: auto; 
-    padding: var(--space-sm) 0; 
+    letter-spacing: 1.1px;
+    border: 1px solid var(--border-subtle); 
+    background: color-mix(in srgb, var(--surface-card) 78%, transparent); 
+    min-height: 34px; 
+    padding: var(--space-sm) var(--space-md); 
+    border-radius: var(--radius-pill);
     box-shadow: none;
 }
 
@@ -438,6 +540,46 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
     background: linear-gradient(135deg, var(--warning) 0%, var(--warning-dark) 100%); 
     border-color: var(--warning); color: #111827; 
     box-shadow: 0 0 15px rgba(234, 179, 8, 0.25);
+}
+
+
+
+/* --- TEMA CARBON: culori de rezultat cu contrast mai bun ---
+/* Pe fundalul de carbon, culorile standard erau prea apropiate vizual.
+   Aceste override-uri păstrează aceeași semantică, dar fac stările mai ușor de distins. */
+[data-app-theme="carbon"] .green {
+    background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
+    border-color: #4ade80;
+    color: #f8fafc;
+    box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.45), 0 0 18px rgba(34, 197, 94, 0.28);
+}
+
+[data-app-theme="carbon"] .red {
+    background: linear-gradient(135deg, #ef4444 0%, #991b1b 100%);
+    border-color: #f87171;
+    color: #fff7f7;
+    box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.45), 0 0 18px rgba(239, 68, 68, 0.25);
+}
+
+[data-app-theme="carbon"] .yellow {
+    background: linear-gradient(135deg, #facc15 0%, #b45309 100%);
+    border-color: #fde047;
+    color: #111827;
+    box-shadow: 0 0 0 1px rgba(253, 224, 71, 0.5), 0 0 18px rgba(250, 204, 21, 0.28);
+}
+
+[data-app-theme="carbon"] .orange {
+    background: linear-gradient(135deg, #fb923c 0%, #c2410c 100%);
+    border-color: #fdba74;
+    color: #fff7ed;
+    box-shadow: 0 0 0 1px rgba(253, 186, 116, 0.42), 0 0 18px rgba(251, 146, 60, 0.25);
+}
+
+[data-app-theme="carbon"] .purple {
+    background: linear-gradient(135deg, #c084fc 0%, #7e22ce 100%);
+    border-color: #d8b4fe;
+    color: #faf5ff;
+    box-shadow: 0 0 0 1px rgba(216, 180, 254, 0.45), 0 0 18px rgba(192, 132, 252, 0.26);
 }
 
 /* SĂGEȚI ALINIATE ȘI SUBTILE */
@@ -789,7 +931,7 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
 .cell-driver {
     flex-direction: column;
     line-height: 1.3;
-    padding: var(--space-xs) var(--space-2xs);
+    padding: var(--space-md) var(--space-sm);
     justify-content: space-between;
     align-items: stretch;
 }
@@ -803,7 +945,7 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
 }
 
 .cell-driver-name {
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     text-transform: none;
     color: var(--text-on-accent);
@@ -850,7 +992,7 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
 .cell-media-label {
     position: relative;
     z-index: 2;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
     color: var(--text-on-accent);
@@ -921,7 +1063,10 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
 /* Responsive tabletă / telefon mare. Desktop-ul rămâne neatins. */
 @media (max-width: 768px) {
     :root {
-        --space-page-top: 90px;
+        --header-height: 58px;
+        --header-control-size: 36px;
+        --header-padding-x: var(--space-4xl);
+        --space-page-top: 78px;
         --space-page-bottom: 40px;
     }
 
@@ -931,13 +1076,13 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
     }
 
     .site-header {
-        height: 64px;
-        padding: 0 var(--space-4xl);
+        height: var(--header-height);
+        padding: 0 var(--header-padding-x);
     }
 
     .site-header h1 {
-        font-size: 18px;
-        letter-spacing: 1.5px;
+        font-size: 16px;
+        letter-spacing: 1.3px;
         max-width: 55vw;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -945,7 +1090,7 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
     }
 
     .hamburger {
-        font-size: 26px;
+        font-size: 20px;
     }
 
     .header-actions {
@@ -953,17 +1098,17 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
     }
 
     .share-btn {
-        font-size: 11px;
-        padding: var(--space-md) var(--space-lg);
+        font-size: 10px;
+        padding: 0 var(--space-lg);
     }
 
     .player-badge {
-        font-size: 11px;
-        padding: var(--space-sm) var(--space-lg);
+        font-size: 10px;
+        padding: 0 var(--space-lg);
     }
 
     .dropdown {
-        top: 64px;
+        top: var(--header-height);
         left: var(--space-xl);
         width: min(220px, calc(100vw - 24px));
     }
@@ -988,6 +1133,7 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
     }
 
     .grid {
+        grid-template-columns: repeat(6, minmax(98px, 1fr));
         gap: var(--space-md);
         margin: var(--space-5xl) auto;
         overflow-x: auto;
@@ -1036,7 +1182,10 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
 /* Responsive telefon mic. */
 @media (max-width: 520px) {
     :root {
-        --space-page-top: 82px;
+        --header-height: 54px;
+        --header-control-size: 34px;
+        --header-padding-x: var(--space-xl);
+        --space-page-top: 72px;
         --space-page-bottom: 32px;
     }
 
@@ -1046,23 +1195,24 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
     }
 
     .site-header {
-        height: 58px;
-        padding: 0 var(--space-xl);
+        height: var(--header-height);
+        padding: 0 var(--header-padding-x);
     }
 
     .site-header h1 {
-        font-size: 14px;
-        letter-spacing: 1px;
+        font-size: 13px;
+        letter-spacing: 0.8px;
         max-width: 48vw;
     }
 
     .hamburger {
-        font-size: 24px;
+        font-size: 19px;
     }
 
     .share-btn {
+        min-width: var(--header-control-size);
         font-size: 0;
-        padding: var(--space-md) var(--space-lg);
+        padding: 0;
         gap: 0;
     }
 
@@ -1088,7 +1238,7 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
     }
 
     .dropdown {
-        top: 58px;
+        top: var(--header-height);
         left: var(--space-lg);
     }
 
@@ -1217,4 +1367,33 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
     .stats-value {
         font-size: 18px;
     }
+}
+
+
+/* --- TEMA CARBON: dropdown mai curat și mai lizibil --- */
+[data-app-theme="carbon"] .dropdown {
+    background: linear-gradient(180deg, #202326 0%, #151719 100%);
+    border-color: #3f4347;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+[data-app-theme="carbon"] .menu-item:hover {
+    background: linear-gradient(90deg, rgba(111, 116, 122, 0.35) 0%, rgba(63, 67, 71, 0.18) 100%);
+    color: #ffffff;
+    border-color: #5f6368;
+}
+
+[data-app-theme="carbon"] .menu-item:hover::before {
+    background: #92989f;
+}
+
+/* --- TEMA NEON: dropdown cu accent discret, fără încărcare vizuală --- */
+[data-app-theme="neon"] .dropdown {
+    background: rgba(6, 8, 24, 0.94);
+    border-color: rgba(0, 247, 255, 0.24);
+    box-shadow: 0 18px 40px rgba(0, 247, 255, 0.12);
+}
+
+[data-app-theme="neon"] .menu-item:hover {
+    color: #ffffff;
 }
