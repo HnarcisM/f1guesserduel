@@ -61,7 +61,7 @@
     <div id="status">Se așteaptă selectarea dificultății...</div>
     <div id="diff-display-label"></div>
 
-    <div id="gameZone" style="display:none; white-space: nowrap;">
+    <div id="gameZone" class="game-zone-hidden">
         <div class="search-container">
             <input type="text" id="driverInput" placeholder="Scrie prenume sau nume (ex: Ham...)" autocomplete="off">
             <ul class="suggestions-list" id="suggestions"></ul>
@@ -73,25 +73,25 @@
         <h2 id="endGameTitle">🏆 Felicitări!</h2>
         <p id="endGameMessage">Ai ghicit pilotul.</p>
         
-        <div id="stats-container" style="margin: 20px 0; border-top: 1px solid #2a2a3a; padding-top: 15px; text-align: left;">
-            <p style="text-align: center; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; color: #ff1801; font-weight: 800;">📊 STATISTICI REALE</p>
-            <div style="display: flex; justify-content: space-around; text-align: center; margin-bottom: 15px;">
+        <div id="stats-container" class="stats-container">
+            <p class="stats-title">📊 STATISTICI REALE</p>
+            <div class="stats-summary">
                 <div>
-                    <div id="stat-played" style="font-size: 20px; font-weight: 800;">0</div>
-                    <div style="font-size: 11px; color: #9ca3af;">Jucate</div>
+                    <div id="stat-played" class="stats-value">0</div>
+                    <div class="stats-label">Jucate</div>
                 </div>
                 <div>
-                    <div id="stat-winrate" style="font-size: 20px; font-weight: 800;">0%</div>
-                    <div style="font-size: 11px; color: #9ca3af;">Rată Câștig</div>
+                    <div id="stat-winrate" class="stats-value">0%</div>
+                    <div class="stats-label">Rată Câștig</div>
                 </div>
                 <div>
-                    <div id="stat-streak" style="font-size: 20px; font-weight: 800;">0</div>
-                    <div style="font-size: 11px; color: #9ca3af;">Curent Streak</div>
+                    <div id="stat-streak" class="stats-value">0</div>
+                    <div class="stats-label">Curent Streak</div>
                 </div>
             </div>
             
-            <p style="font-size: 12px; font-weight: 700; color: #9ca3af; margin-bottom: 5px;">DISTRIBUȚIE ÎNCERCĂRI:</p>
-            <div id="guess-distribution" style="display: flex; flex-direction: column; gap: 4px;">
+            <p class="distribution-title">DISTRIBUȚIE ÎNCERCĂRI:</p>
+            <div id="guess-distribution" class="guess-distribution">
                 </div>
         </div>
 
