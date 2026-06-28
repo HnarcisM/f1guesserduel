@@ -16,8 +16,13 @@
 /* --- CONFIGURARE TEME PRIN VARIABILE CSS --- */
 :root {
     /* Culori principale */
-    --bg-gradient: radial-gradient(circle at top, #1a1a24 0%, #0d0d11 100%);
+    --bg-gradient:
+        radial-gradient(circle at 50% 0%, rgba(255, 24, 1, 0.10) 0%, transparent 34%),
+        linear-gradient(180deg, #111118 0%, #09090d 100%);
     --bg-overlay: transparent;
+    --bg-size: auto;
+    --bg-overlay-size: auto;
+    --bg-overlay-opacity: 1;
     --text-primary: #f3f4f6;
     --text-secondary: #9ca3af;
     --text-muted: #6b7280;
@@ -99,7 +104,10 @@
 }
 /* 1. TEMA NEON (Night Race - Singapore/Vegas) */
 [data-app-theme="neon"] {
-    --bg-gradient: linear-gradient(135deg, #09090e 0%, #120720 100%);
+    --bg-gradient:
+        radial-gradient(circle at 18% 0%, rgba(0, 240, 255, 0.13) 0%, transparent 32%),
+        radial-gradient(circle at 82% 12%, rgba(255, 0, 127, 0.10) 0%, transparent 30%),
+        linear-gradient(180deg, #080910 0%, #100818 100%);
     --text-primary: var(--text-on-accent);
     --header-bg: rgba(15, 10, 25, 0.85);
     --surface-card: #1a0f2b;
@@ -110,16 +118,18 @@
 
 /* 2. TEMA CARBON & CHECKERS (Fibră de Carbon + Steag Carouri discret) */
 [data-app-theme="carbon"] {
-    /* Textură de fibră de carbon din CSS pur */
-    --bg-gradient: 
-        linear-gradient(45deg, #151515 25%, transparent 25%), 
-        linear-gradient(-45deg, #151515 25%, transparent 25%), 
-        linear-gradient(45deg, transparent 75%, #151515 75%), 
-        linear-gradient(-45deg, transparent 75%, #151515 75%),
-        radial-gradient(circle at top, #222 0%, #0a0a0a 100%);
-    /* Pattern discret de steag în carouri aplicat ca overlay */
-    --bg-overlay: linear-gradient(45deg, rgba(255,255,255,0.02) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.02) 75%), 
-                  linear-gradient(45deg, rgba(255,255,255,0.02) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.02) 75%);
+    /* Fundal carbon mai subtil: păstrăm textura, dar reducem contrastul pattern-ului. */
+    --bg-gradient:
+        linear-gradient(45deg, rgba(255,255,255,0.018) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.018) 75%),
+        linear-gradient(-45deg, rgba(255,255,255,0.014) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.014) 75%),
+        radial-gradient(circle at 50% 0%, #1b1d1f 0%, #08090a 72%);
+    --bg-size: 26px 26px, 26px 26px, 100% 100%;
+    /* Overlay-ul de carouri rămâne prezent, dar mult mai fin. */
+    --bg-overlay:
+        linear-gradient(45deg, rgba(255,255,255,0.012) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.012) 75%),
+        linear-gradient(45deg, rgba(255,255,255,0.012) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.012) 75%);
+    --bg-overlay-size: 56px 56px;
+    --bg-overlay-opacity: 0.45;
     --text-primary: #f3f4f6;
     --header-bg: rgba(10, 10, 10, 0.9);
     --surface-card: #1c1c1c;
@@ -155,7 +165,7 @@
 /* --- Stiluri globale bazate pe variabilele de temă --- */
 body { 
     background: var(--bg-gradient);
-    background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, auto, 30px 30px, 30px 30px; /* pentru textura carbon */
+    background-size: var(--bg-size);
     color: var(--text-primary); 
     font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; 
     text-align: center; 
@@ -171,7 +181,8 @@ body::before {
     content: "";
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: var(--bg-overlay);
-    background-size: 40px 40px;
+    background-size: var(--bg-overlay-size);
+    opacity: var(--bg-overlay-opacity);
     z-index: -1;
     pointer-events: none;
 }
