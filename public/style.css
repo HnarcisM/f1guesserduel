@@ -758,3 +758,291 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
     border-right: 1px solid #92989f;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
+
+/* --- RESPONSIVE POLISH: TABLETĂ ȘI MOBIL --- */
+@media (max-width: 768px) {
+    :root {
+        --space-page-top: 90px;
+        --space-page-bottom: 40px;
+    }
+
+    body {
+        padding-left: var(--space-xl);
+        padding-right: var(--space-xl);
+    }
+
+    .site-header {
+        height: 64px;
+        padding: 0 var(--space-4xl);
+    }
+
+    .site-header h1 {
+        font-size: 18px;
+        letter-spacing: 1.5px;
+        max-width: 55vw;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .hamburger {
+        font-size: 26px;
+    }
+
+    .header-actions {
+        gap: var(--space-md);
+    }
+
+    .share-btn {
+        font-size: 11px;
+        padding: var(--space-md) var(--space-lg);
+    }
+
+    .player-badge {
+        font-size: 11px;
+        padding: var(--space-sm) var(--space-lg);
+    }
+
+    .dropdown {
+        top: 64px;
+        left: var(--space-xl);
+        width: min(220px, calc(100vw - 24px));
+    }
+
+    .container {
+        max-width: 100%;
+    }
+
+    .search-container {
+        width: calc(100% - 96px);
+    }
+
+    input {
+        font-size: 15px;
+        padding: var(--space-xl) var(--space-4xl);
+    }
+
+    button#sendGuessBtn {
+        min-width: 88px;
+        font-size: 15px;
+        padding: var(--space-xl) var(--space-4xl);
+    }
+
+    .grid {
+        gap: var(--space-md);
+        margin: var(--space-5xl) auto;
+        overflow-x: auto;
+        padding-bottom: var(--space-md);
+    }
+
+    .cell {
+        min-width: 88px;
+        min-height: 44px;
+        font-size: 12px;
+        padding: var(--space-xl) var(--space-xs);
+    }
+
+    .cell.header {
+        font-size: 10px;
+    }
+
+    .menu-container {
+        width: 100%;
+        max-width: 620px;
+        padding: var(--space-6xl);
+        box-sizing: border-box;
+    }
+
+    .menu-container h2 {
+        font-size: 2.4rem;
+        letter-spacing: 2px;
+    }
+
+    .subtitle {
+        margin-bottom: var(--space-8xl);
+    }
+
+    .btn-diff {
+        width: 170px;
+        height: 170px;
+    }
+
+    .end-game-popup {
+        width: min(420px, calc(100vw - 32px));
+        padding: var(--space-6xl);
+        box-sizing: border-box;
+    }
+}
+
+@media (max-width: 520px) {
+    :root {
+        --space-page-top: 82px;
+        --space-page-bottom: 32px;
+    }
+
+    body {
+        padding-left: var(--space-lg);
+        padding-right: var(--space-lg);
+    }
+
+    .site-header {
+        height: 58px;
+        padding: 0 var(--space-xl);
+    }
+
+    .site-header h1 {
+        font-size: 14px;
+        letter-spacing: 1px;
+        max-width: 48vw;
+    }
+
+    .hamburger {
+        font-size: 24px;
+    }
+
+    .share-btn {
+        font-size: 0;
+        padding: var(--space-md) var(--space-lg);
+        gap: 0;
+    }
+
+    .share-btn::before {
+        content: "🔗";
+        font-size: 16px;
+    }
+
+    .share-tooltip {
+        right: 0;
+        left: auto;
+        transform: none;
+    }
+
+    .share-tooltip::before {
+        left: auto;
+        right: var(--space-lg);
+        transform: none;
+    }
+
+    .player-badge {
+        display: none;
+    }
+
+    .dropdown {
+        top: 58px;
+        left: var(--space-lg);
+    }
+
+    #status {
+        font-size: 17px;
+    }
+
+    #gameZone {
+        display: flex;
+        gap: var(--space-md);
+        align-items: stretch;
+        margin-bottom: var(--space-6xl);
+    }
+
+    #gameZone.game-zone-hidden,
+    #gameZone.is-hidden {
+        display: none !important;
+    }
+
+    .search-container {
+        width: auto;
+        flex: 1;
+        display: block;
+    }
+
+    input {
+        height: 48px;
+        font-size: 14px;
+        padding: 0 var(--space-xl);
+        border-radius: var(--radius-lg);
+    }
+
+    button#sendGuessBtn {
+        min-width: 76px;
+        height: 48px;
+        font-size: 14px;
+        padding: 0 var(--space-xl);
+        border-radius: var(--radius-lg);
+    }
+
+    .suggestions-list {
+        border-radius: var(--radius-lg);
+    }
+
+    .grid {
+        grid-template-columns: repeat(6, minmax(76px, 1fr));
+        gap: var(--space-sm);
+        margin: var(--space-5xl) auto;
+    }
+
+    .cell {
+        min-width: 76px;
+        min-height: 42px;
+        font-size: 11px;
+        border-radius: var(--radius-md);
+    }
+
+    .cell-driver-id {
+        font-size: 12px;
+    }
+
+    .cell-driver-name,
+    .cell-media-label {
+        font-size: 9px;
+    }
+
+    .menu-container {
+        padding: var(--space-5xl) var(--space-xl);
+    }
+
+    .menu-container h2 {
+        font-size: 1.85rem;
+    }
+
+    .difficulty-grid {
+        gap: var(--space-xl);
+    }
+
+    .btn-diff {
+        width: 100%;
+        max-width: 320px;
+        height: auto;
+        min-height: 118px;
+        padding: var(--space-4xl);
+    }
+
+    .diff-title {
+        font-size: 1.25rem;
+    }
+
+    .site-footer {
+        padding: var(--space-5xl);
+        margin-top: var(--space-8xl);
+    }
+
+    .legend-item {
+        font-size: 12px;
+    }
+
+    .end-game-popup {
+        width: calc(100vw - 24px);
+        padding: var(--space-5xl);
+        border-radius: var(--radius-xl);
+    }
+
+    .end-game-popup h2 {
+        font-size: 20px;
+    }
+
+    .stats-summary {
+        gap: var(--space-md);
+    }
+
+    .stats-value {
+        font-size: 18px;
+    }
+}
