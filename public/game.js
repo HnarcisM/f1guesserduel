@@ -68,6 +68,7 @@ const TEAM_LOGO_FILES = {
 	"brawn": "BrawnGP.jpg",
 	"brawngp": "BrawnGP.jpg",
 	"caterham": "Caterham.svg",
+	"cadillac": "Cadillac.svg",
 	"f1": "F1.svg",
 	"ferrari": "Ferrari.png",
 	"footwork": "Footwork.png",
