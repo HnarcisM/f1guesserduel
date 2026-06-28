@@ -374,3 +374,101 @@ Posibile îmbunătățiri:
 Versiunea curentă este stabilă după refactorizări CSS și JavaScript.
 
 Aplicația este pregătită pentru următoarea etapă: **redesign vizual controlat**, păstrând funcționalitatea existentă.
+
+# F1 Guesser — sistem de dificultate pentru piloți
+
+Acest fișier explică modul în care este ales câmpul `difficulty` din `drivers.hybrid-difficulty.json`.
+
+## De ce nu folosim doar anul de debut?
+
+O sortare strictă după debut nu este suficientă pentru joc. De exemplu:
+
+- Lewis Hamilton a debutat în 2007, dar este încă un pilot actual și foarte ușor de recunoscut.
+- Fernando Alonso a debutat în 2001, dar este încă relevant pentru grila modernă.
+- Ayrton Senna, Alain Prost sau Niki Lauda sunt piloți istorici, dar sunt legende foarte cunoscute și nu ar trebui tratați ca piloți obscuri.
+
+Din acest motiv folosim un sistem hibrid: relevanță actuală + notorietate + epocă.
+
+## Regula generală
+
+### `easy`
+
+Categoria `easy` include:
+
+1. Toți piloții actuali din grila curentă folosită în joc.
+2. Campioni mondiali moderni.
+3. Piloți moderni foarte cunoscuți sau foarte ușor de recunoscut.
+4. Piloți post-2010 cu victorii importante sau notorietate mare.
+
+Exemple:
+
+```text
+Hamilton, Alonso, Verstappen, Leclerc, Norris, Piastri, Russell,
+Sainz, Perez, Bottas, Vettel, Raikkonen, Rosberg, Button,
+Ricciardo, Massa, Webber, Barrichello, Coulthard
+```
+
+### `medium`
+
+Categoria `medium` include:
+
+1. Piloți moderni cunoscuți, dar nu neapărat mainstream.
+2. Piloți din perioada 2000–2010 cu cariere relevante.
+3. Legende istorice foarte cunoscute, care sunt grele pentru un jucător nou, dar nu sunt obscure.
+
+Exemple:
+
+```text
+Kubica, Kovalainen, Trulli, Heidfeld, Fisichella,
+Senna, Prost, Lauda, Fangio, Mansell, Jim Clark, Jackie Stewart
+```
+
+### `hard`
+
+Categoria `hard` include:
+
+1. Piloți istorici mai puțin cunoscuți.
+2. Piloți cu cariere scurte sau foarte puține curse.
+3. Piloți obscuri, chiar dacă sunt relativ moderni.
+4. Piloți greu de identificat după echipă, naționalitate sau statistici.
+
+Exemple:
+
+```text
+Yuji Ide, Gaston Mazzacane, Tarso Marques, Nicolas Kiesa,
+Ralph Firman, Patrick Friesacher, Tomas Enge, Alex Yoong,
+Luciano Burti
+```
+
+## Principiu de întreținere
+
+Când se adaugă un pilot nou:
+
+1. Dacă este pilot actual, intră în `easy`.
+2. Dacă este campion mondial modern sau foarte cunoscut, intră în `easy`.
+3. Dacă este pilot modern secundar, intră în `medium`.
+4. Dacă este legendă istorică foarte cunoscută, intră în `medium`.
+5. Dacă este pilot istoric obscur sau cu carieră foarte scurtă, intră în `hard`.
+
+## Rezumat actual
+
+```text
+Total piloți: 166
+easy: 36
+medium: 86
+hard: 44
+```
+
+## Validare tehnică
+
+```text
+ID-uri duplicate: nu există
+Câmpuri lipsă: nu există
+Difficulty invalide: nu există
+```
+
+## Observație importantă
+
+Fișierul JSON nu conține comentarii la început, deoarece comentariile fac JSON-ul invalid și pot strica încărcarea aplicației.
+Explicația sistemului este păstrată în acest README.
+
