@@ -48,7 +48,10 @@ io.on('connection', (socket) => {
             };
         }
 
-        rooms[roomId].players.push(socket.id);
+        // VERIFICARE CRITICĂ: Împiedică adăugarea aceluiași socket ID de mai multe ori
+		if (!rooms[roomId].players.includes(socket.id)) {
+			rooms[roomId].players.push(socket.id);
+		}
         io.to(roomId).emit('roomUpdate', { playerCount: rooms[roomId].players.length });
 
         if (rooms[roomId].difficulty) {

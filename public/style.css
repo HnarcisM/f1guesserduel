@@ -477,13 +477,20 @@ button#sendGuessBtn:hover { background: #e01200; }
 
 /* STIL BUTON PREMIUM DE PARTAJARE CAMERĂ (Actualizat cu suport text) */
 .share-btn {
-    font-size: 14px; /* Dimensiune optimă pentru text + emoji */
+    font-size: 13px; /* Redus ușor de la 22px pentru că acum avem text, nu doar emoji */
     font-weight: 700;
-    color: #ffffff;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
     cursor: pointer;
     user-select: none;
     position: relative;
-    padding: 8px 14px;
+    padding: 8px 14px; /* Spațiere interioară tipică unui buton premium */
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}

@@ -130,6 +130,16 @@ document.addEventListener("DOMContentLoaded", () => {
 		roomId = Math.random().toString(36).substring(2, 9);
 		window.history.pushState({}, '', `?room=${roomId}`);
 	}
+	
+	// === LINIA NOUĂ: Actualizăm dinamic textul butonului din header în mod securizat ===
+	const roomBtnTextEl = document.getElementById("roomBtnText");
+	if (roomBtnTextEl) {
+		roomBtnTextEl.textContent = `🏁 Room: ${roomId}`;
+	}
+
+	if (socket) {
+		socket.emit('joinRoom', roomId);
+}
 
 	const linkTextEl = document.getElementById("linkText");
 	if (linkTextEl) linkTextEl.innerText = window.location.href;
@@ -303,6 +313,13 @@ function removeActive(list) {
 }
 
 function setupSocketEvents() {
+	
+	// Ștergem orice ascultător activ anterior pentru a preveni dublarea/multiplicarea numărului online
+	socket.off('initGame');
+	socket.off('roomUpdate');
+	socket.off('guessResult');
+	socket.off('gameRestarted');
+	
 	socket.on('initGame', (data) => {
 		const overlay = document.getElementById('difficulty-overlay');
 		if (overlay) overlay.classList.add('hidden');
@@ -328,10 +345,13 @@ function setupSocketEvents() {
 
 	socket.on('roomUpdate', (data) => {
 		const badge = document.getElementById("duelStatus");
-		if (badge) badge.innerText = `Online: ${data.playerCount}`;
+		if (badge) {
+			// Folosim direct valoarea curată trimisă de server
+			badge.innerText = `Online: ${data.playerCount}`;
+		}
 	});
 
-socket.on('guessResult', (data) => {
+	socket.on('guessResult', (data) => {
 		// Preluăm rezultatele pre-calculate de pe server
 		const { guess, results, attempts, isCorrect, isGameOver, target } = data;
 		let rowIndex = attempts - 1; 
