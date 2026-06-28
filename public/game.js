@@ -1,6 +1,601 @@
-// Global, ca să poată fi accesat în siguranță
+// ===============================
+// Global state
+// ===============================
 let socket;
+let driversList = [];
+let selectedDriverId = null;
+let currentFocus = -1;
 
+// ===============================
+// Constants
+// ===============================
+const F1_TO_ISO = {
+	"ARG": "ar", "AUS": "au", "AUT": "at", "BEL": "be", "BRA": "br",
+	"CAN": "ca", "CHN": "cn", "COL": "co", "CZE": "cz", "DEN": "dk",
+	"ESP": "es", "SPA": "es", "FIN": "fi", "FRA": "fr", "GBR": "gb",
+	"GER": "de", "HUN": "hu", "IND": "in", "ITA": "it", "JPN": "jp",
+	"MAS": "my", "MEX": "mx", "MON": "mc", "NED": "nl", "NZL": "nz",
+	"POL": "pl", "POR": "pt", "RSA": "za", "RUS": "ru", "SUI": "ch",
+	"SWE": "se", "THA": "th", "USA": "us", "VEN": "ve",
+	"UAE": "ae", "CHI": "cl", "URU": "uy", "BUL": "bg", "CRO": "hr"
+};
+
+const TEAM_LOGO_FILES = {
+	"alfaromeo": "AlfaRomeo.svg",
+	"alphatauri": "AlphaTauri.svg",
+	"alpine": "Alpine.svg",
+	"arrows": "Arrows.svg",
+	"astonmartin": "AstonMartin.svg",
+	"audi": "Audi.svg",
+	"bar": "BAR.png",
+	"benetton": "Benetton.png",
+	"brabham": "Brabham.png",
+	"brawn": "BrawnGP.jpg",
+	"brawngp": "BrawnGP.jpg",
+	"caterham": "Caterham.svg",
+	"f1": "F1.svg",
+	"ferrari": "Ferrari.png",
+	"footwork": "Footwork.png",
+	"forceindia": "Forceindia.png",
+	"haas": "Haas.svg",
+	"honda": "Honda.png",
+	"jaguar": "Jaguar.png",
+	"jordan": "Jordan.png",
+	"lancia": "Lancia.png",
+	"ligier": "Ligier.png",
+	"lotus": "Lotus.png",
+	"manor": "Manor.png",
+	"march": "March.png",
+	"marussia": "Marussia.png",
+	"mclaren": "McLaren.svg",
+	"mercedes": "Mercedes.svg",
+	"minardi": "Minardi.svg",
+	"penske": "Penske.svg",
+	"prost": "Prost.png",
+	"racingpoint": "RacingPoint.svg",
+	"rb": "racingbulls.png",
+	"racingbulls": "racingbulls.png",
+	"redbull": "RedBull.png",
+	"renault": "Renault.png",
+	"sauber": "Stake.png",
+	"stake": "Stake.png",
+	"shadow": "Shadow.png",
+	"spyker": "Spyker.jpg",
+	"stewart": "Stewart.png",
+	"superaguri": "SuperAguri.svg",
+	"tororosso": "ToroRosso.png",
+	"toyota": "Toyota.png",
+	"tyrrell": "Tyrrell.svg",
+	"williams": "Williams.png",
+	"wolf": "Wolf.png"
+};
+
+// ===============================
+// Small DOM utilities
+// ===============================
+function createTextElement(tagName, className, text) {
+	const element = document.createElement(tagName);
+	if (className) element.className = className;
+	element.textContent = text;
+	return element;
+}
+
+function setTextContentById(elementId, value) {
+	const element = document.getElementById(elementId);
+	if (element) element.textContent = value;
+}
+
+// ===============================
+// Grid initialization
+// ===============================
+function initializeGridStructure() {
+	const grid = document.getElementById("grid");
+	if (!grid) return;
+	let html = `
+		<div class="cell header">PILOT</div><div class="cell header">ȚARĂ</div><div class="cell header">ECHIPĂ</div>
+		<div class="cell header">VÂRSTĂ</div><div class="cell header">DEBUT</div><div class="cell header">WINS</div>
+	`;
+	for (let row = 0; row < 6; row++) {
+		for (let col = 0; col < 6; col++) {
+			html += `<div class="cell" id="cell-${row}-${col}"></div>`;
+		}
+	}
+	grid.innerHTML = html;
+}
+
+// ===============================
+// Autocomplete
+// ===============================
+function getSuggestionsContainer() {
+	return document.getElementById("suggestions");
+}
+
+function getSuggestionItems() {
+	const suggestions = getSuggestionsContainer();
+	return suggestions ? suggestions.getElementsByTagName("li") : null;
+}
+
+function clearSuggestions() {
+	const suggestions = getSuggestionsContainer();
+	if (suggestions) suggestions.replaceChildren();
+	currentFocus = -1;
+}
+
+function showPredictions(value) {
+	selectedDriverId = null;
+	currentFocus = -1;
+	renderSuggestions(filterDriverPredictions(value));
+}
+
+function filterDriverPredictions(value) {
+	const query = value.trim().toLowerCase();
+	if (!query) return [];
+
+	return driversList.filter(driver => {
+		const nameParts = driver.name.toLowerCase().split(" ");
+		return nameParts.some(part => part.startsWith(query));
+	});
+}
+
+function renderSuggestions(drivers) {
+	const listContainer = getSuggestionsContainer();
+	if (!listContainer) return;
+
+	listContainer.replaceChildren();
+	drivers.forEach(driver => {
+		listContainer.appendChild(createSuggestionItem(driver));
+	});
+}
+
+function createSuggestionItem(driver) {
+	const li = document.createElement("li");
+	li.textContent = driver.name;
+	li.dataset.id = driver.id;
+	li.addEventListener("click", () => selectDriverSuggestion(driver));
+	return li;
+}
+
+function selectDriverSuggestion(driver) {
+	const inputEl = document.getElementById("driverInput");
+	if (inputEl) inputEl.value = driver.name;
+	selectedDriverId = driver.id;
+	clearSuggestions();
+	sendGuess();
+}
+
+function selectSuggestionItem(item) {
+	if (!item) return;
+	const inputEl = document.getElementById("driverInput");
+	if (inputEl) inputEl.value = item.textContent;
+	selectedDriverId = item.dataset.id;
+	clearSuggestions();
+	sendGuess();
+}
+
+function handleAutocompleteKeydown(e) {
+	const list = getSuggestionItems();
+
+	if (e.key === "ArrowDown") {
+		currentFocus++;
+		addActive(list);
+	} else if (e.key === "ArrowUp") {
+		currentFocus--;
+		addActive(list);
+	} else if (e.key === "Enter") {
+		e.preventDefault();
+		if (currentFocus > -1 && list && list[currentFocus]) {
+			selectSuggestionItem(list[currentFocus]);
+		} else {
+			sendGuess();
+		}
+	}
+}
+
+function addActive(list) {
+	if (!list || list.length === 0) return;
+	removeActive(list);
+	if (currentFocus >= list.length) currentFocus = 0;
+	if (currentFocus < 0) currentFocus = (list.length - 1);
+	list[currentFocus].classList.add("active");
+	list[currentFocus].scrollIntoView({ block: "nearest" });
+}
+
+function removeActive(list) {
+	for (let i = 0; i < list.length; i++) {
+		list[i].classList.remove("active");
+	}
+}
+
+// ===============================
+// Guess submission
+// ===============================
+function sendGuess() {
+	const inputEl = document.getElementById("driverInput");
+	if (!inputEl) return;
+	const inputVal = inputEl.value.trim();
+	let finalDriver = driversList.find(d => d.id === selectedDriverId || d.name.toLowerCase() === inputVal.toLowerCase());
+	if (!finalDriver) {
+		alert("Te rog selectează un pilot valid din lista de predicții!");
+		return;
+	}
+
+	if (socket) {
+		socket.emit('submitGuess', finalDriver.id);
+	}
+	inputEl.value = "";
+	clearSuggestions();
+	selectedDriverId = null;
+}
+
+// ===============================
+// Asset helpers: flags and team logos
+// ===============================
+function getIsoCode(nationality) {
+	if (!nationality) return "un";
+	return F1_TO_ISO[nationality.toUpperCase()] || nationality.substring(0, 2).toLowerCase();
+}
+
+function normalizeTeamLogoKey(teamName) {
+	return String(teamName || '')
+		.replace(/\s+/g, '')
+		.toLowerCase();
+}
+
+function getLocalTeamLogoPath(teamName) {
+	const fileName = TEAM_LOGO_FILES[normalizeTeamLogoKey(teamName)];
+	return fileName ? `/logos/${fileName}` : null;
+}
+
+function handleTeamLogoError(imgElement, teamName, currentStep) {
+	const onlineLogos = {
+		"Ferrari": "https://upload.wikimedia.org/wikipedia/sco/d/d4/Ferrari-Logo.svg",
+		"Mercedes": "https://upload.wikimedia.org/wikipedia/commons/9/90/Mercedes-Logo.svg",
+		"Red Bull": "https://upload.wikimedia.org/wikipedia/en/b/b5/Red_Bull_Racing_logo.svg",
+		"McLaren": "https://upload.wikimedia.org/wikipedia/en/6/66/McLaren_Racing_logo.svg",
+		"Alpine": "https://upload.wikimedia.org/wikipedia/commons/7/7e/Alpine_F1_Team_Logo.svg",
+		"Aston Martin": "https://upload.wikimedia.org/wikipedia/commons/2/2b/Aston_Martin_Lagonda_brand_logo.svg",
+		"Williams": "https://upload.wikimedia.org/wikipedia/commons/6/6d/Williams_Racing_2020_Logo.svg",
+		"AlphaTauri": "https://upload.wikimedia.org/wikipedia/commons/e/e4/Scuderia_AlphaTauri_logo.svg",
+		"Haas": "https://upload.wikimedia.org/wikipedia/commons/e/e2/Haas_F1_Team_logo.svg",
+		"Alfa Romeo": "https://upload.wikimedia.org/wikipedia/commons/2/26/Alfa_Romeo_F1_Team_Orlen_logo.svg",
+		"Sauber": "https://upload.wikimedia.org/wikipedia/commons/c/cc/Stake_F1_Team_Kick_Sauber_logo.svg",
+		"Renault": "https://upload.wikimedia.org/wikipedia/commons/b/b1/Renault_2021.svg",
+		"Racing Point": "https://upload.wikimedia.org/wikipedia/commons/e/e2/Racing_Point_F1_logo.svg",
+		"Force India": "https://upload.wikimedia.org/wikipedia/en/a/a2/Sahara_Force_India_F1_Team_logo.svg",
+		"Toro Rosso": "https://upload.wikimedia.org/wikipedia/en/3/3d/Scuderia_Toro_Rosso_logo.svg",
+		"Lotus": "https://upload.wikimedia.org/wikipedia/commons/c/cf/Lotus_F1_Team_logo.svg"
+	};
+
+	const onlineLogo = onlineLogos[teamName];
+
+	if (currentStep === 0 && onlineLogo) {
+		imgElement.onerror = () => handleTeamLogoError(imgElement, teamName, 1);
+		imgElement.src = onlineLogo;
+		return;
+	}
+
+	imgElement.onerror = null;
+	imgElement.src = "/logos/F1.svg";
+}
+
+function handleFlagError(imgElement, isoCode, currentStep) {
+	if (currentStep === 0) {
+		imgElement.onerror = () => handleFlagError(imgElement, isoCode, 1);
+		imgElement.src = `https://flagcdn.com/w160/${isoCode}.png`;
+		return;
+	}
+
+	imgElement.onerror = null;
+	imgElement.src = "/flags/un.svg";
+}
+
+function getFlagEmoji(countryCode) {
+    if (!countryCode || countryCode.length !== 3) return "🏳️";
+    
+    // Dicționar pentru excepțiile specifice din F1 (unde codurile FIA diferă de codurile standard de țară ISO)
+    const f1Exceptions = {
+        "GBR": "GB", // Marea Britanie
+        "GER": "DE", // Germania
+        "NED": "NL", // Olanda
+        "SUI": "CH", // Elveția
+        "SPA": "ES", // Spania
+        "RSA": "ZA", // Africa de Sud
+        "MAS": "MY", // Malaezia
+        "MON": "MC", // Monaco
+        "UAE": "AE", // Emiratele Arabe Unite
+        "CHI": "CL", // Chile
+        "URU": "UY", // Uruguay
+        "DEN": "DK", // Danemarca
+        "POR": "PT", // Portugalia
+        "THA": "TH", // Thailanda
+        "MEX": "MX", // Mexic
+        "BUL": "BG", // Bulgaria
+        "CRO": "HR", // Croația
+    };
+
+    let code = f1Exceptions[countryCode.toUpperCase()] || countryCode.substring(0, 2).toUpperCase();
+    
+    try {
+        return code.toUpperCase().replace(/./g, char => 
+            String.fromCodePoint(char.charCodeAt(0) + 127397)
+        );
+    } catch (e) {
+        return "🏳️";
+    }
+}
+
+// ===============================
+// Result cell rendering
+// ===============================
+function setCellState(cell, resultClass, extraClasses = []) {
+	if (!cell) return;
+	cell.className = ["cell", resultClass, ...extraClasses].filter(Boolean).join(" ");
+	cell.replaceChildren();
+}
+
+function renderDriverCell(cell, guess, resultClass) {
+	setCellState(cell, resultClass, ["cell-driver"]);
+	cell.append(
+		createTextElement("span", "cell-driver-id", guess.id),
+		createTextElement("span", "cell-driver-name", guess.name)
+	);
+}
+
+function renderCountryCell(cell, guess, resultClass) {
+	setCellState(cell, resultClass, ["cell-media", "cell-country"]);
+
+	const isoCode = getIsoCode(guess.nat);
+	const flag = document.createElement("img");
+	flag.className = "cell-country-flag";
+	flag.src = `/flags/${isoCode}.svg`;
+	flag.alt = guess.nat;
+	flag.onerror = () => handleFlagError(flag, isoCode, 0);
+
+	cell.append(
+		flag,
+		createTextElement("span", "cell-media-label", guess.nat)
+	);
+}
+
+function renderTeamCell(cell, guess, resultClass) {
+	setCellState(cell, resultClass, ["cell-media", "cell-team"]);
+
+	const currentGuessTeam = guess.team[0];
+	const logo = document.createElement("img");
+	logo.className = "cell-team-logo";
+	logo.src = getLocalTeamLogoPath(currentGuessTeam) || "/logos/F1.svg";
+	logo.alt = currentGuessTeam;
+	logo.onerror = () => handleTeamLogoError(logo, currentGuessTeam, 0);
+
+	cell.append(
+		logo,
+		createTextElement("span", "cell-media-label", currentGuessTeam.substring(0, 5))
+	);
+}
+
+function getArrowSymbol(resultClass) {
+	if (resultClass === "orange") return "↑";
+	if (resultClass === "purple") return "↓";
+	return "";
+}
+
+function renderValueCell(cell, value, resultClass) {
+	setCellState(cell, resultClass, ["cell-arrow"]);
+	cell.appendChild(createTextElement("span", "", value));
+
+	const arrow = getArrowSymbol(resultClass);
+	if (arrow) {
+		cell.appendChild(createTextElement("span", "arrow-indicator", arrow));
+	}
+}
+
+// ===============================
+// Local statistics
+// ===============================
+function getStats() {
+	const defaultStats = {
+		played: 0,
+		won: 0,
+		streak: 0,
+		distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
+	};
+	let stats = JSON.parse(localStorage.getItem('f1-guesser-stats'));
+	if (!stats) return defaultStats;
+	if (!stats.distribution) stats.distribution = defaultStats.distribution;
+	return stats;
+}
+
+function updateStats(isWin, attempts) {
+	let stats = getStats();
+	stats.played += 1;
+	
+	if (isWin) {
+		stats.won += 1;
+		stats.streak += 1;
+		if (attempts >= 1 && attempts <= 6) {
+			stats.distribution[attempts] = (stats.distribution[attempts] || 0) + 1;
+		}
+	} else {
+		stats.streak = 0; // Resetăm streak-ul la înfrângere
+	}
+	
+	localStorage.setItem('f1-guesser-stats', JSON.stringify(stats));
+}
+
+function calculateWinRate(stats) {
+	return stats.played > 0 ? Math.round((stats.won / stats.played) * 100) : 0;
+}
+
+function getMaxDistributionValue(distribution) {
+	return Math.max(...Object.values(distribution), 1);
+}
+
+function calculateDistributionBarWidth(count, maxDistributionValue) {
+	return count > 0 ? Math.max(10, Math.round((count / maxDistributionValue) * 100)) : 8;
+}
+
+function createDistributionRow(attemptNumber, count, barWidth) {
+	const row = document.createElement('div');
+	row.className = 'dist-row';
+
+	const label = createTextElement('div', 'dist-label', attemptNumber);
+	const barContainer = document.createElement('div');
+	barContainer.className = 'dist-bar-container';
+
+	const bar = createTextElement('div', 'dist-bar', count);
+	bar.style.width = `${barWidth}%`;
+
+	barContainer.appendChild(bar);
+	row.append(label, barContainer);
+	return row;
+}
+
+function renderStatsSummary(stats) {
+	setTextContentById('stat-played', stats.played);
+	setTextContentById('stat-winrate', `${calculateWinRate(stats)}%`);
+	setTextContentById('stat-streak', stats.streak);
+}
+
+function renderGuessDistribution(distribution) {
+	const distributionContainer = document.getElementById('guess-distribution');
+	if (!distributionContainer) return;
+
+	distributionContainer.replaceChildren();
+	const maxDistributionValue = getMaxDistributionValue(distribution);
+
+	for (let attemptNumber = 1; attemptNumber <= 6; attemptNumber++) {
+		const count = distribution[attemptNumber] || 0;
+		const barWidth = calculateDistributionBarWidth(count, maxDistributionValue);
+		distributionContainer.appendChild(
+			createDistributionRow(attemptNumber, count, barWidth)
+		);
+	}
+}
+
+function renderStats() {
+	const stats = getStats();
+	renderStatsSummary(stats);
+	renderGuessDistribution(stats.distribution);
+}
+
+// ===============================
+// Socket events
+// ===============================
+function setupSocketEvents() {
+	
+	// Ștergem orice ascultător activ anterior pentru a preveni dublarea/multiplicarea numărului online
+	socket.off('initGame');
+	socket.off('roomUpdate');
+	socket.off('guessResult');
+	socket.off('gameRestarted');
+	
+	socket.on('initGame', (data) => {
+		const overlay = document.getElementById('difficulty-overlay');
+		if (overlay) overlay.classList.add('hidden');
+		
+		driversList = data.drivers;
+		
+		const diffLabel = document.getElementById("diff-display-label");
+		if (diffLabel) {
+			diffLabel.innerText = `Mod: ${data.difficulty}`;
+			diffLabel.className = `diff-display-label difficulty-${data.difficulty}`;
+		}
+
+		const statusEl = document.getElementById("status");
+		if (statusEl) statusEl.innerText = "Ghicește pilotul misterios!";
+		
+		initializeGridStructure();
+		
+		const gameZone = document.getElementById("gameZone");
+		if (gameZone) gameZone.classList.remove("game-zone-hidden");
+	});
+
+	socket.on('roomUpdate', (data) => {
+		const badge = document.getElementById("duelStatus");
+		if (badge) {
+			// Folosim direct valoarea curată trimisă de server
+			badge.innerText = `Online: ${data.playerCount}`;
+		}
+	});
+
+	socket.on('guessResult', (data) => {
+		// Preluăm rezultatele pre-calculate de pe server
+		const { guess, results, attempts, isCorrect, isGameOver, target } = data;
+		let rowIndex = attempts - 1; 
+
+		let c0 = document.getElementById(`cell-${rowIndex}-0`);
+		if (!c0) return; 
+		
+		// --- CELULE REZULTAT ---
+		renderDriverCell(c0, guess, results.name);
+		renderCountryCell(document.getElementById(`cell-${rowIndex}-1`), guess, results.nat);
+		renderTeamCell(document.getElementById(`cell-${rowIndex}-2`), guess, results.team);
+		renderValueCell(document.getElementById(`cell-${rowIndex}-3`), guess.age, results.age);
+		renderValueCell(document.getElementById(`cell-${rowIndex}-4`), guess.debut, results.debut);
+		renderValueCell(document.getElementById(`cell-${rowIndex}-5`), guess.wins, results.wins);
+
+		// --- LOGICĂ FINAL JOC ---
+		if (isGameOver) {
+			const gz = document.getElementById("gameZone");
+			const st = document.getElementById("status");
+			if (gz) gz.classList.add("game-zone-hidden");
+			if (st) st.classList.add("is-hidden");
+
+			const popup = document.getElementById("endGameDisplay");
+
+			// Resetăm clasele vechi de stil ca să nu se suprapună la meciuri consecutive
+			popup.classList.remove("win-style", "lose-style");
+
+			if (isCorrect) {
+				document.getElementById("endGameTitle").innerText = "🏆 AI CÂȘTIGAT!";
+				document.getElementById("endGameMessage").innerHTML = `Ai descoperit pilotul misterios în <strong>${attempts}</strong> ${attempts === 1 ? 'încercare' : 'încercări'}!`;
+				popup.classList.add("win-style"); // Aplică stilul auriu + pulse
+				
+				// [AICI AM ADĂUGAT]: Salvăm meciul câștigat în statistici
+				updateStats(true, attempts);
+			} else {
+				document.getElementById("endGameTitle").innerText = "💀 AI PIERDUT!";
+				document.getElementById("endGameMessage").innerHTML = `Din păcate nu ai ghicit. Pilotul misterios era: <strong>${target ? target.name : 'Necunoscut'}</strong>`;
+				popup.classList.add("lose-style"); // Aplică stilul roșu + scuturare
+				
+				// [AICI AM ADĂUGAT]: Salvăm meciul pierdut în statistici
+				updateStats(false, 0);
+			}
+			
+			// [AICI AM ADĂUGAT]: Calculăm și desenăm graficele în popup
+			renderStats();
+			
+			// Afișăm popup-ul cu noul efect elastic
+			popup.classList.add("show");
+		}
+	});
+
+		socket.on('gameRestarted', () => {
+		initializeGridStructure();
+		
+		// Ascundem popup-ul și ștergem stilurile specifice de meci trecut
+		const popup = document.getElementById("endGameDisplay");
+		if (popup) {
+			popup.className = "end-game-popup"; // Revine la clasa de bază curată
+		}
+		
+		const gz = document.getElementById("gameZone");
+		const st = document.getElementById("status");
+		if (gz) gz.classList.remove("game-zone-hidden");
+		if (st) st.classList.remove("is-hidden");
+		if (st) st.innerText = "Ghicește noul pilot misterios!";
+		
+		const inputEl = document.getElementById("driverInput");
+		if (inputEl) inputEl.value = "";
+
+		selectedDriverId = null;
+		currentFocus = -1;
+	});
+}
+
+// ===============================
+// App bootstrap and UI event binding
+// ===============================
 document.addEventListener("DOMContentLoaded", () => {
 	
 	// Logica pentru meniu hamburger dropdown
@@ -188,573 +783,4 @@ document.addEventListener("DOMContentLoaded", () => {
 			menu.classList.add("hidden");
 		}
 	});
-}); 
-
-let driversList = [];
-let selectedDriverId = null;
-let currentFocus = -1;
-
-function getSuggestionsContainer() {
-	return document.getElementById("suggestions");
-}
-
-function getSuggestionItems() {
-	const suggestions = getSuggestionsContainer();
-	return suggestions ? suggestions.getElementsByTagName("li") : null;
-}
-
-function clearSuggestions() {
-	const suggestions = getSuggestionsContainer();
-	if (suggestions) suggestions.replaceChildren();
-	currentFocus = -1;
-}
-
-function initializeGridStructure() {
-	const grid = document.getElementById("grid");
-	if (!grid) return;
-	let html = `
-		<div class="cell header">PILOT</div><div class="cell header">ȚARĂ</div><div class="cell header">ECHIPĂ</div>
-		<div class="cell header">VÂRSTĂ</div><div class="cell header">DEBUT</div><div class="cell header">WINS</div>
-	`;
-	for (let row = 0; row < 6; row++) {
-		for (let col = 0; col < 6; col++) {
-			html += `<div class="cell" id="cell-${row}-${col}"></div>`;
-		}
-	}
-	grid.innerHTML = html;
-}
-
-function showPredictions(value) {
-	selectedDriverId = null;
-	currentFocus = -1;
-	renderSuggestions(filterDriverPredictions(value));
-}
-
-function filterDriverPredictions(value) {
-	const query = value.trim().toLowerCase();
-	if (!query) return [];
-
-	return driversList.filter(driver => {
-		const nameParts = driver.name.toLowerCase().split(" ");
-		return nameParts.some(part => part.startsWith(query));
-	});
-}
-
-function renderSuggestions(drivers) {
-	const listContainer = getSuggestionsContainer();
-	if (!listContainer) return;
-
-	listContainer.replaceChildren();
-	drivers.forEach(driver => {
-		listContainer.appendChild(createSuggestionItem(driver));
-	});
-}
-
-function createSuggestionItem(driver) {
-	const li = document.createElement("li");
-	li.textContent = driver.name;
-	li.dataset.id = driver.id;
-	li.addEventListener("click", () => selectDriverSuggestion(driver));
-	return li;
-}
-
-function selectDriverSuggestion(driver) {
-	const inputEl = document.getElementById("driverInput");
-	if (inputEl) inputEl.value = driver.name;
-	selectedDriverId = driver.id;
-	clearSuggestions();
-	sendGuess();
-}
-
-function selectSuggestionItem(item) {
-	if (!item) return;
-	const inputEl = document.getElementById("driverInput");
-	if (inputEl) inputEl.value = item.textContent;
-	selectedDriverId = item.dataset.id;
-	clearSuggestions();
-	sendGuess();
-}
-
-function handleAutocompleteKeydown(e) {
-	const list = getSuggestionItems();
-
-	if (e.key === "ArrowDown") {
-		currentFocus++;
-		addActive(list);
-	} else if (e.key === "ArrowUp") {
-		currentFocus--;
-		addActive(list);
-	} else if (e.key === "Enter") {
-		e.preventDefault();
-		if (currentFocus > -1 && list && list[currentFocus]) {
-			selectSuggestionItem(list[currentFocus]);
-		} else {
-			sendGuess();
-		}
-	}
-}
-
-function sendGuess() {
-	const inputEl = document.getElementById("driverInput");
-	if (!inputEl) return;
-	const inputVal = inputEl.value.trim();
-	let finalDriver = driversList.find(d => d.id === selectedDriverId || d.name.toLowerCase() === inputVal.toLowerCase());
-	if (!finalDriver) {
-		alert("Te rog selectează un pilot valid din lista de predicții!");
-		return;
-	}
-
-	if (socket) {
-		socket.emit('submitGuess', finalDriver.id);
-	}
-	inputEl.value = "";
-	clearSuggestions();
-	selectedDriverId = null;
-}
-
-function addActive(list) {
-	if (!list || list.length === 0) return;
-	removeActive(list);
-	if (currentFocus >= list.length) currentFocus = 0;
-	if (currentFocus < 0) currentFocus = (list.length - 1);
-	list[currentFocus].classList.add("active");
-	list[currentFocus].scrollIntoView({ block: "nearest" });
-}
-
-function removeActive(list) {
-	for (let i = 0; i < list.length; i++) {
-		list[i].classList.remove("active");
-	}
-}
-
-
-const F1_TO_ISO = {
-	"ARG": "ar", "AUS": "au", "AUT": "at", "BEL": "be", "BRA": "br",
-	"CAN": "ca", "CHN": "cn", "COL": "co", "CZE": "cz", "DEN": "dk",
-	"ESP": "es", "SPA": "es", "FIN": "fi", "FRA": "fr", "GBR": "gb",
-	"GER": "de", "HUN": "hu", "IND": "in", "ITA": "it", "JPN": "jp",
-	"MAS": "my", "MEX": "mx", "MON": "mc", "NED": "nl", "NZL": "nz",
-	"POL": "pl", "POR": "pt", "RSA": "za", "RUS": "ru", "SUI": "ch",
-	"SWE": "se", "THA": "th", "USA": "us", "VEN": "ve",
-	"UAE": "ae", "CHI": "cl", "URU": "uy", "BUL": "bg", "CRO": "hr"
-};
-
-const TEAM_LOGO_FILES = {
-	"alfaromeo": "AlfaRomeo.svg",
-	"alphatauri": "AlphaTauri.svg",
-	"alpine": "Alpine.svg",
-	"arrows": "Arrows.svg",
-	"astonmartin": "AstonMartin.svg",
-	"audi": "Audi.svg",
-	"bar": "BAR.png",
-	"benetton": "Benetton.png",
-	"brabham": "Brabham.png",
-	"brawn": "BrawnGP.jpg",
-	"brawngp": "BrawnGP.jpg",
-	"caterham": "Caterham.svg",
-	"f1": "F1.svg",
-	"ferrari": "Ferrari.png",
-	"footwork": "Footwork.png",
-	"forceindia": "Forceindia.png",
-	"haas": "Haas.svg",
-	"honda": "Honda.png",
-	"jaguar": "Jaguar.png",
-	"jordan": "Jordan.png",
-	"lancia": "Lancia.png",
-	"ligier": "Ligier.png",
-	"lotus": "Lotus.png",
-	"manor": "Manor.png",
-	"march": "March.png",
-	"marussia": "Marussia.png",
-	"mclaren": "McLaren.svg",
-	"mercedes": "Mercedes.svg",
-	"minardi": "Minardi.svg",
-	"penske": "Penske.svg",
-	"prost": "Prost.png",
-	"racingpoint": "RacingPoint.svg",
-	"rb": "racingbulls.png",
-	"racingbulls": "racingbulls.png",
-	"redbull": "RedBull.png",
-	"renault": "Renault.png",
-	"sauber": "Stake.png",
-	"stake": "Stake.png",
-	"shadow": "Shadow.png",
-	"spyker": "Spyker.jpg",
-	"stewart": "Stewart.png",
-	"superaguri": "SuperAguri.svg",
-	"tororosso": "ToroRosso.png",
-	"toyota": "Toyota.png",
-	"tyrrell": "Tyrrell.svg",
-	"williams": "Williams.png",
-	"wolf": "Wolf.png"
-};
-
-function getIsoCode(nationality) {
-	if (!nationality) return "un";
-	return F1_TO_ISO[nationality.toUpperCase()] || nationality.substring(0, 2).toLowerCase();
-}
-
-function normalizeTeamLogoKey(teamName) {
-	return String(teamName || '')
-		.replace(/\s+/g, '')
-		.toLowerCase();
-}
-
-function getLocalTeamLogoPath(teamName) {
-	const fileName = TEAM_LOGO_FILES[normalizeTeamLogoKey(teamName)];
-	return fileName ? `/logos/${fileName}` : null;
-}
-
-function setCellState(cell, resultClass, extraClasses = []) {
-	if (!cell) return;
-	cell.className = ["cell", resultClass, ...extraClasses].filter(Boolean).join(" ");
-	cell.replaceChildren();
-}
-
-function createTextElement(tagName, className, text) {
-	const element = document.createElement(tagName);
-	if (className) element.className = className;
-	element.textContent = text;
-	return element;
-}
-
-function renderDriverCell(cell, guess, resultClass) {
-	setCellState(cell, resultClass, ["cell-driver"]);
-	cell.append(
-		createTextElement("span", "cell-driver-id", guess.id),
-		createTextElement("span", "cell-driver-name", guess.name)
-	);
-}
-
-function renderCountryCell(cell, guess, resultClass) {
-	setCellState(cell, resultClass, ["cell-media", "cell-country"]);
-
-	const isoCode = getIsoCode(guess.nat);
-	const flag = document.createElement("img");
-	flag.className = "cell-country-flag";
-	flag.src = `/flags/${isoCode}.svg`;
-	flag.alt = guess.nat;
-	flag.onerror = () => handleFlagError(flag, isoCode, 0);
-
-	cell.append(
-		flag,
-		createTextElement("span", "cell-media-label", guess.nat)
-	);
-}
-
-function renderTeamCell(cell, guess, resultClass) {
-	setCellState(cell, resultClass, ["cell-media", "cell-team"]);
-
-	const currentGuessTeam = guess.team[0];
-	const logo = document.createElement("img");
-	logo.className = "cell-team-logo";
-	logo.src = getLocalTeamLogoPath(currentGuessTeam) || "/logos/F1.svg";
-	logo.alt = currentGuessTeam;
-	logo.onerror = () => handleTeamLogoError(logo, currentGuessTeam, 0);
-
-	cell.append(
-		logo,
-		createTextElement("span", "cell-media-label", currentGuessTeam.substring(0, 5))
-	);
-}
-
-function getArrowSymbol(resultClass) {
-	if (resultClass === "orange") return "↑";
-	if (resultClass === "purple") return "↓";
-	return "";
-}
-
-function renderValueCell(cell, value, resultClass) {
-	setCellState(cell, resultClass, ["cell-arrow"]);
-	cell.appendChild(createTextElement("span", "", value));
-
-	const arrow = getArrowSymbol(resultClass);
-	if (arrow) {
-		cell.appendChild(createTextElement("span", "arrow-indicator", arrow));
-	}
-}
-
-function setupSocketEvents() {
-	
-	// Ștergem orice ascultător activ anterior pentru a preveni dublarea/multiplicarea numărului online
-	socket.off('initGame');
-	socket.off('roomUpdate');
-	socket.off('guessResult');
-	socket.off('gameRestarted');
-	
-	socket.on('initGame', (data) => {
-		const overlay = document.getElementById('difficulty-overlay');
-		if (overlay) overlay.classList.add('hidden');
-		
-		driversList = data.drivers;
-		
-		const diffLabel = document.getElementById("diff-display-label");
-		if (diffLabel) {
-			diffLabel.innerText = `Mod: ${data.difficulty}`;
-			diffLabel.className = `diff-display-label difficulty-${data.difficulty}`;
-		}
-
-		const statusEl = document.getElementById("status");
-		if (statusEl) statusEl.innerText = "Ghicește pilotul misterios!";
-		
-		initializeGridStructure();
-		
-		const gameZone = document.getElementById("gameZone");
-		if (gameZone) gameZone.classList.remove("game-zone-hidden");
-	});
-
-	socket.on('roomUpdate', (data) => {
-		const badge = document.getElementById("duelStatus");
-		if (badge) {
-			// Folosim direct valoarea curată trimisă de server
-			badge.innerText = `Online: ${data.playerCount}`;
-		}
-	});
-
-	socket.on('guessResult', (data) => {
-		// Preluăm rezultatele pre-calculate de pe server
-		const { guess, results, attempts, isCorrect, isGameOver, target } = data;
-		let rowIndex = attempts - 1; 
-
-		let c0 = document.getElementById(`cell-${rowIndex}-0`);
-		if (!c0) return; 
-		
-		// --- CELULE REZULTAT ---
-		renderDriverCell(c0, guess, results.name);
-		renderCountryCell(document.getElementById(`cell-${rowIndex}-1`), guess, results.nat);
-		renderTeamCell(document.getElementById(`cell-${rowIndex}-2`), guess, results.team);
-		renderValueCell(document.getElementById(`cell-${rowIndex}-3`), guess.age, results.age);
-		renderValueCell(document.getElementById(`cell-${rowIndex}-4`), guess.debut, results.debut);
-		renderValueCell(document.getElementById(`cell-${rowIndex}-5`), guess.wins, results.wins);
-
-		// --- LOGICĂ FINAL JOC ---
-		if (isGameOver) {
-			const gz = document.getElementById("gameZone");
-			const st = document.getElementById("status");
-			if (gz) gz.classList.add("game-zone-hidden");
-			if (st) st.classList.add("is-hidden");
-
-			const popup = document.getElementById("endGameDisplay");
-
-			// Resetăm clasele vechi de stil ca să nu se suprapună la meciuri consecutive
-			popup.classList.remove("win-style", "lose-style");
-
-			if (isCorrect) {
-				document.getElementById("endGameTitle").innerText = "🏆 AI CÂȘTIGAT!";
-				document.getElementById("endGameMessage").innerHTML = `Ai descoperit pilotul misterios în <strong>${attempts}</strong> ${attempts === 1 ? 'încercare' : 'încercări'}!`;
-				popup.classList.add("win-style"); // Aplică stilul auriu + pulse
-				
-				// [AICI AM ADĂUGAT]: Salvăm meciul câștigat în statistici
-				updateStats(true, attempts);
-			} else {
-				document.getElementById("endGameTitle").innerText = "💀 AI PIERDUT!";
-				document.getElementById("endGameMessage").innerHTML = `Din păcate nu ai ghicit. Pilotul misterios era: <strong>${target ? target.name : 'Necunoscut'}</strong>`;
-				popup.classList.add("lose-style"); // Aplică stilul roșu + scuturare
-				
-				// [AICI AM ADĂUGAT]: Salvăm meciul pierdut în statistici
-				updateStats(false, 0);
-			}
-			
-			// [AICI AM ADĂUGAT]: Calculăm și desenăm graficele în popup
-			renderStats();
-			
-			// Afișăm popup-ul cu noul efect elastic
-			popup.classList.add("show");
-		}
-	});
-
-		socket.on('gameRestarted', () => {
-		initializeGridStructure();
-		
-		// Ascundem popup-ul și ștergem stilurile specifice de meci trecut
-		const popup = document.getElementById("endGameDisplay");
-		if (popup) {
-			popup.className = "end-game-popup"; // Revine la clasa de bază curată
-		}
-		
-		const gz = document.getElementById("gameZone");
-		const st = document.getElementById("status");
-		if (gz) gz.classList.remove("game-zone-hidden");
-		if (st) st.classList.remove("is-hidden");
-		if (st) st.innerText = "Ghicește noul pilot misterios!";
-		
-		const inputEl = document.getElementById("driverInput");
-		if (inputEl) inputEl.value = "";
-
-		selectedDriverId = null;
-		currentFocus = -1;
-	});
-}
-
-// Funcție ajutătoare pentru a converti codul țării (ex: GBR) în Emoji de Steag
-function getFlagEmoji(countryCode) {
-    if (!countryCode || countryCode.length !== 3) return "🏳️";
-    
-    // Dicționar pentru excepțiile specifice din F1 (unde codurile FIA diferă de codurile standard de țară ISO)
-    const f1Exceptions = {
-        "GBR": "GB", // Marea Britanie
-        "GER": "DE", // Germania
-        "NED": "NL", // Olanda
-        "SUI": "CH", // Elveția
-        "SPA": "ES", // Spania
-        "RSA": "ZA", // Africa de Sud
-        "MAS": "MY", // Malaezia
-        "MON": "MC", // Monaco
-        "UAE": "AE", // Emiratele Arabe Unite
-        "CHI": "CL", // Chile
-        "URU": "UY", // Uruguay
-        "DEN": "DK", // Danemarca
-        "POR": "PT", // Portugalia
-        "THA": "TH", // Thailanda
-        "MEX": "MX", // Mexic
-        "BUL": "BG", // Bulgaria
-        "CRO": "HR", // Croația
-    };
-
-    let code = f1Exceptions[countryCode.toUpperCase()] || countryCode.substring(0, 2).toUpperCase();
-    
-    try {
-        return code.toUpperCase().replace(/./g, char => 
-            String.fromCodePoint(char.charCodeAt(0) + 127397)
-        );
-    } catch (e) {
-        return "🏳️";
-    }
-}
-
-// Funcție universală de fallback pentru logourile echipelor
-function handleTeamLogoError(imgElement, teamName, currentStep) {
-	const onlineLogos = {
-		"Ferrari": "https://upload.wikimedia.org/wikipedia/sco/d/d4/Ferrari-Logo.svg",
-		"Mercedes": "https://upload.wikimedia.org/wikipedia/commons/9/90/Mercedes-Logo.svg",
-		"Red Bull": "https://upload.wikimedia.org/wikipedia/en/b/b5/Red_Bull_Racing_logo.svg",
-		"McLaren": "https://upload.wikimedia.org/wikipedia/en/6/66/McLaren_Racing_logo.svg",
-		"Alpine": "https://upload.wikimedia.org/wikipedia/commons/7/7e/Alpine_F1_Team_Logo.svg",
-		"Aston Martin": "https://upload.wikimedia.org/wikipedia/commons/2/2b/Aston_Martin_Lagonda_brand_logo.svg",
-		"Williams": "https://upload.wikimedia.org/wikipedia/commons/6/6d/Williams_Racing_2020_Logo.svg",
-		"AlphaTauri": "https://upload.wikimedia.org/wikipedia/commons/e/e4/Scuderia_AlphaTauri_logo.svg",
-		"Haas": "https://upload.wikimedia.org/wikipedia/commons/e/e2/Haas_F1_Team_logo.svg",
-		"Alfa Romeo": "https://upload.wikimedia.org/wikipedia/commons/2/26/Alfa_Romeo_F1_Team_Orlen_logo.svg",
-		"Sauber": "https://upload.wikimedia.org/wikipedia/commons/c/cc/Stake_F1_Team_Kick_Sauber_logo.svg",
-		"Renault": "https://upload.wikimedia.org/wikipedia/commons/b/b1/Renault_2021.svg",
-		"Racing Point": "https://upload.wikimedia.org/wikipedia/commons/e/e2/Racing_Point_F1_logo.svg",
-		"Force India": "https://upload.wikimedia.org/wikipedia/en/a/a2/Sahara_Force_India_F1_Team_logo.svg",
-		"Toro Rosso": "https://upload.wikimedia.org/wikipedia/en/3/3d/Scuderia_Toro_Rosso_logo.svg",
-		"Lotus": "https://upload.wikimedia.org/wikipedia/commons/c/cf/Lotus_F1_Team_logo.svg"
-	};
-
-	const onlineLogo = onlineLogos[teamName];
-
-	if (currentStep === 0 && onlineLogo) {
-		imgElement.onerror = () => handleTeamLogoError(imgElement, teamName, 1);
-		imgElement.src = onlineLogo;
-		return;
-	}
-
-	imgElement.onerror = null;
-	imgElement.src = "/logos/F1.svg";
-}
-
-// Funcție universală de fallback pentru steaguri
-function handleFlagError(imgElement, isoCode, currentStep) {
-	if (currentStep === 0) {
-		imgElement.onerror = () => handleFlagError(imgElement, isoCode, 1);
-		imgElement.src = `https://flagcdn.com/w160/${isoCode}.png`;
-		return;
-	}
-
-	imgElement.onerror = null;
-	imgElement.src = "/flags/un.svg";
-}
-
-// --- FUNCȚII PENTRU GESTIONARE LOCALSTORAGE STATS ---
-function getStats() {
-	const defaultStats = {
-		played: 0,
-		won: 0,
-		streak: 0,
-		distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
-	};
-	let stats = JSON.parse(localStorage.getItem('f1-guesser-stats'));
-	if (!stats) return defaultStats;
-	if (!stats.distribution) stats.distribution = defaultStats.distribution;
-	return stats;
-}
-
-function updateStats(isWin, attempts) {
-	let stats = getStats();
-	stats.played += 1;
-	
-	if (isWin) {
-		stats.won += 1;
-		stats.streak += 1;
-		if (attempts >= 1 && attempts <= 6) {
-			stats.distribution[attempts] = (stats.distribution[attempts] || 0) + 1;
-		}
-	} else {
-		stats.streak = 0; // Resetăm streak-ul la înfrângere
-	}
-	
-	localStorage.setItem('f1-guesser-stats', JSON.stringify(stats));
-}
-
-function setTextContentById(elementId, value) {
-	const element = document.getElementById(elementId);
-	if (element) element.textContent = value;
-}
-
-function calculateWinRate(stats) {
-	return stats.played > 0 ? Math.round((stats.won / stats.played) * 100) : 0;
-}
-
-function getMaxDistributionValue(distribution) {
-	return Math.max(...Object.values(distribution), 1);
-}
-
-function calculateDistributionBarWidth(count, maxDistributionValue) {
-	return count > 0 ? Math.max(10, Math.round((count / maxDistributionValue) * 100)) : 8;
-}
-
-function createDistributionRow(attemptNumber, count, barWidth) {
-	const row = document.createElement('div');
-	row.className = 'dist-row';
-
-	const label = createTextElement('div', 'dist-label', attemptNumber);
-	const barContainer = document.createElement('div');
-	barContainer.className = 'dist-bar-container';
-
-	const bar = createTextElement('div', 'dist-bar', count);
-	bar.style.width = `${barWidth}%`;
-
-	barContainer.appendChild(bar);
-	row.append(label, barContainer);
-	return row;
-}
-
-function renderStatsSummary(stats) {
-	setTextContentById('stat-played', stats.played);
-	setTextContentById('stat-winrate', `${calculateWinRate(stats)}%`);
-	setTextContentById('stat-streak', stats.streak);
-}
-
-function renderGuessDistribution(distribution) {
-	const distributionContainer = document.getElementById('guess-distribution');
-	if (!distributionContainer) return;
-
-	distributionContainer.replaceChildren();
-	const maxDistributionValue = getMaxDistributionValue(distribution);
-
-	for (let attemptNumber = 1; attemptNumber <= 6; attemptNumber++) {
-		const count = distribution[attemptNumber] || 0;
-		const barWidth = calculateDistributionBarWidth(count, maxDistributionValue);
-		distributionContainer.appendChild(
-			createDistributionRow(attemptNumber, count, barWidth)
-		);
-	}
-}
-
-function renderStats() {
-	const stats = getStats();
-	renderStatsSummary(stats);
-	renderGuessDistribution(stats.distribution);
-}
+});
