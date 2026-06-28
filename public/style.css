@@ -493,7 +493,7 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
 /* Gridul jocului: 6 coloane fixe pentru a păstra structura de tabel F1 Guesser. */
 .grid { 
     display: grid; 
-    grid-template-columns: minmax(150px, 1.2fr) minmax(130px, 1fr) minmax(150px, 1.15fr) repeat(3, minmax(105px, 0.85fr)); 
+    grid-template-columns: minmax(44px, 0.34fr) minmax(150px, 1.2fr) minmax(130px, 1fr) minmax(150px, 1.15fr) repeat(3, minmax(105px, 0.85fr)); 
     gap: var(--game-grid-gap); 
     width: 100%;
     margin: var(--space-7xl) auto; 
@@ -543,6 +543,122 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
     min-height: 34px; 
     padding: var(--space-sm) var(--space-md); 
     border-radius: var(--radius-pill);
+    box-shadow: none;
+}
+
+/* Numerotarea încercărilor este integrată în același rând cu celulele.
+   Nu folosim borduri sau separatoare: numărul este începutul unui fundal discret care face fade spre dreapta. */
+.attempt-header,
+.attempt-index {
+    min-width: 0;
+    padding-left: var(--space-md);
+    padding-right: var(--space-md);
+}
+
+.attempt-index {
+    position: relative;
+    isolation: isolate;
+    color: color-mix(in srgb, var(--text-secondary) 72%, transparent);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.9px;
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    overflow: visible;
+}
+
+/* Fundal continuu: începe sub număr, trece prin spațiul dintre coloane și se pierde peste rând.
+   Fără border, fără marker vertical, fără margini definite clar. */
+.attempt-index::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: min(980px, calc(100vw - 72px));
+    height: calc(100% + 10px);
+    transform: translateY(-50%);
+    border-radius: var(--radius-2xl);
+    background: linear-gradient(90deg,
+        color-mix(in srgb, var(--accent-f1) 13%, transparent) 0%,
+        color-mix(in srgb, var(--accent-f1) 8%, transparent) 18%,
+        color-mix(in srgb, var(--accent-f1) 4%, transparent) 52%,
+        transparent 92%);
+    opacity: 0.48;
+    pointer-events: none;
+    z-index: -1;
+}
+
+.attempt-index::after {
+    content: none;
+}
+
+.attempt-index.attempt-completed {
+    color: var(--text-primary);
+    text-shadow: 0 0 8px color-mix(in srgb, var(--accent-f1) 14%, transparent);
+}
+
+.attempt-index.attempt-completed::before {
+    background: linear-gradient(90deg,
+        color-mix(in srgb, var(--accent-f1) 18%, transparent) 0%,
+        color-mix(in srgb, var(--accent-f1) 11%, transparent) 20%,
+        color-mix(in srgb, var(--accent-f1) 5%, transparent) 55%,
+        transparent 94%);
+    opacity: 0.66;
+}
+
+[data-app-theme="carbon"] .attempt-index {
+    color: #9aa1aa;
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+/* Pe Carbon, numărul încercării nu trebuie să arate ca o celulă separată.
+   Păstrăm doar textul + fade-ul de rând, fără contur/fundal propriu. */
+[data-app-theme="carbon"] .attempt-index.cell {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+[data-app-theme="carbon"] .attempt-index::before {
+    background: linear-gradient(90deg,
+        rgba(146, 152, 159, 0.16) 0%,
+        rgba(111, 116, 122, 0.10) 20%,
+        rgba(63, 67, 71, 0.05) 55%,
+        transparent 94%);
+    opacity: 0.58;
+}
+
+[data-app-theme="carbon"] .attempt-index.attempt-completed {
+    color: #f3f4f6;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.12);
+}
+
+[data-app-theme="carbon"] .attempt-index.attempt-completed::before {
+    background: linear-gradient(90deg,
+        rgba(180, 186, 193, 0.22) 0%,
+        rgba(120, 126, 134, 0.13) 22%,
+        rgba(80, 85, 92, 0.06) 58%,
+        transparent 94%);
+    opacity: 0.72;
+}
+
+[data-app-theme="neon"] .attempt-index::before {
+    background: linear-gradient(90deg,
+        rgba(0, 240, 255, 0.12) 0%,
+        rgba(0, 240, 255, 0.07) 24%,
+        rgba(255, 0, 127, 0.035) 54%,
+        transparent 94%);
+}
+
+[data-app-theme="neon"] .attempt-index.attempt-completed::before {
+    background: linear-gradient(90deg,
+        rgba(0, 240, 255, 0.18) 0%,
+        rgba(0, 240, 255, 0.10) 24%,
+        rgba(255, 0, 127, 0.045) 56%,
+        transparent 94%);
     box-shadow: none;
 }
 
@@ -1279,7 +1395,7 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
     }
 
     .grid {
-        grid-template-columns: repeat(6, minmax(98px, 1fr));
+        grid-template-columns: minmax(36px, 0.34fr) repeat(6, minmax(98px, 1fr));
         gap: var(--space-md);
         margin: var(--space-5xl) auto;
         overflow-x: auto;
@@ -1430,7 +1546,7 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
     }
 
     .grid {
-        grid-template-columns: repeat(6, minmax(76px, 1fr));
+        grid-template-columns: minmax(32px, 0.34fr) repeat(6, minmax(76px, 1fr));
         gap: var(--space-sm);
         margin: var(--space-5xl) auto;
     }
@@ -1542,6 +1658,37 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
 
 [data-app-theme="neon"] .menu-item:hover {
     color: #ffffff;
+}
+
+
+
+@media (max-width: 768px) {
+    .attempt-index,
+    .attempt-header {
+        min-width: 34px;
+        padding-left: var(--space-xs);
+        padding-right: var(--space-xs);
+    }
+
+    .attempt-index::before {
+        left: 0;
+        width: min(780px, calc(100vw - 48px));
+        height: calc(100% + 6px);
+    }
+}
+
+@media (max-width: 520px) {
+    .attempt-index,
+    .attempt-header {
+        min-width: 30px;
+        font-size: 10px;
+    }
+
+    .attempt-index::before {
+        left: 0;
+        width: min(620px, calc(100vw - 36px));
+        opacity: 0.46;
+    }
 }
 
 /* Respectă preferința utilizatorilor care au animațiile reduse în sistem. */

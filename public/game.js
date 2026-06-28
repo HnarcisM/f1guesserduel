@@ -127,10 +127,14 @@ function initializeGridStructure() {
 	const grid = document.getElementById("grid");
 	if (!grid) return;
 	let html = `
+		<div class="cell header attempt-header">#</div>
 		<div class="cell header">PILOT</div><div class="cell header">ȚARĂ</div><div class="cell header">ECHIPĂ</div>
 		<div class="cell header">VÂRSTĂ</div><div class="cell header">DEBUT</div><div class="cell header">WINS</div>
 	`;
 	for (let row = 0; row < 6; row++) {
+		// Prima celulă din fiecare rând indică numărul încercării.
+		// Celulele de rezultat rămân indexate 0-5, deci logica jocului nu se schimbă.
+		html += `<div class="cell attempt-index" id="attempt-${row}" aria-label="Încercarea ${row + 1}">${row + 1}</div>`;
 		for (let col = 0; col < 6; col++) {
 			html += `<div class="cell" id="cell-${row}-${col}"></div>`;
 		}
@@ -635,6 +639,12 @@ function setupSocketEvents() {
 		let c0 = document.getElementById(`cell-${rowIndex}-0`);
 		if (!c0) return; 
 		
+		// Marcăm vizual numărul încercării curente, fără să afectăm rezultatele din cele 6 coloane.
+		const attemptIndexCell = document.getElementById(`attempt-${rowIndex}`);
+		if (attemptIndexCell) {
+			attemptIndexCell.classList.add("attempt-completed", "cell-reveal");
+		}
+
 		// --- CELULE REZULTAT ---
 		renderDriverCell(c0, guess, results.name);
 		renderCountryCell(document.getElementById(`cell-${rowIndex}-1`), guess, results.nat);
