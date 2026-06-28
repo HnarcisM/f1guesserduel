@@ -145,10 +145,8 @@ body::before {
 
 .hamburger {
     font-size: 28px;
-    cursor: pointer;
     color: var(--text-on-accent);
     z-index: 3000;
-    user-select: none;
     transition: all var(--transition-fast);
 }
 .hamburger:hover { 
@@ -167,11 +165,8 @@ body::before {
 /* STIL BUTON PREMIUM DE PARTAJARE CAMERĂ */
 .share-btn {
     font-size: 13px;
-    font-weight: 700;
     letter-spacing: 0.5px;
     text-transform: uppercase;
-    cursor: pointer;
-    user-select: none;
     position: relative;
     padding: 8px 14px;
     background: var(--surface-elevated);
@@ -181,7 +176,6 @@ body::before {
     align-items: center;
     justify-content: center;
     gap: 6px;
-    transition: all var(--transition-fast);
 }
 .share-btn:hover {
     background: var(--surface-elevated-hover);
@@ -244,12 +238,10 @@ body::before {
 
 .menu-item { 
     padding: 14px 20px; 
-    cursor: pointer; 
     color: var(--text-secondary); 
     font-weight: 600;
     font-size: 14px;
     border-bottom: 1px solid var(--border-muted); 
-    transition: all var(--transition-fast);
 }
 .menu-item:last-child { border-bottom: none; }
 .menu-item:hover { 
@@ -290,6 +282,18 @@ body::before {
     position: relative; 
 }
 
+/* --- BAZĂ COMUNĂ PENTRU ELEMENTE INTERACTIVE --- */
+:where(button, .share-btn, .menu-item, .hamburger, .suggestions-list li) {
+    cursor: pointer;
+    user-select: none;
+}
+
+:where(button#sendGuessBtn, .restart-inline-btn, .btn-diff, .share-btn) {
+    font-family: inherit;
+    font-weight: 700;
+    transition: all var(--transition-fast);
+}
+
 /* Input-uri reactive la teme */
 input { background: var(--surface-card); color: var(--text-primary); border-color: var(--border-color); }
 button#sendGuessBtn, .restart-inline-btn { background-color: var(--accent-f1); color: var(--text-on-accent); }
@@ -321,12 +325,9 @@ button#sendGuessBtn {
     background: var(--accent-f1); 
     color: var(--text-on-accent); 
     border: none; 
-    font-weight: 700; 
-    cursor: pointer; 
     font-size: 16px; 
     border-radius: 0 10px 10px 0; 
     vertical-align: top; 
-    transition: background var(--transition-fast);
 }
 button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
 
@@ -337,7 +338,7 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
     z-index: 1000; list-style: none; padding: 0; margin: 0; text-align: left;
     box-shadow: var(--shadow-md);
 }
-.suggestions-list li { padding: 14px 20px; cursor: pointer; border-bottom: 1px solid var(--border-muted); color: var(--text-primary); transition: all 0.15s; }
+.suggestions-list li { padding: 14px 20px; border-bottom: 1px solid var(--border-muted); color: var(--text-primary); transition: all 0.15s; }
 .suggestions-list li:hover, .suggestions-list li.active { background: var(--accent-f1); color: var(--text-on-accent); }
 
 /* --- GRILA DE JOC TABULARĂ --- */
@@ -421,7 +422,7 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
 .btn-diff {
     width: 200px; height: 200px; background: var(--surface-main);
     border: 1px solid var(--surface-elevated); border-radius: var(--radius-2xl); color: var(--text-on-accent);
-    cursor: pointer; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px;
+    display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px;
     transition: all var(--transition-medium); box-shadow: 0 10px 25px rgba(0,0,0,0.3);
 }
 .diff-title { font-size: 1.5rem; font-weight: 800; text-transform: uppercase; margin-bottom: 10px; letter-spacing: 1px;}
@@ -463,7 +464,7 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
 
 .end-game-popup h2 { margin-top: 0; font-size: 24px; font-weight: 800; letter-spacing: 1px; }
 .end-game-popup p { color: var(--text-secondary); font-size: 15px; margin-bottom: 25px; line-height: 1.5; }
-.end-game-popup .restart-inline-btn { padding: 14px 30px; background: var(--accent-f1); color: var(--text-on-accent); border: none; font-weight: 700; font-size: 16px; border-radius: var(--radius-lg); cursor: pointer; transition: background var(--transition-fast); width: 100%; box-sizing: border-box;}
+.end-game-popup .restart-inline-btn { padding: 14px 30px; background: var(--accent-f1); color: var(--text-on-accent); border: none; font-size: 16px; border-radius: var(--radius-lg); width: 100%; box-sizing: border-box;}
 .end-game-popup .restart-inline-btn:hover { background: var(--accent-f1-hover); }
 
 /* --- SUB-SOLUL PAGINII (LEGENDĂ) --- */
@@ -700,4 +701,43 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
 
 [data-app-theme="carbon"] button#sendGuessBtn:active {
     background: linear-gradient(180deg, #3c4044 0%, #303337 100%);
+}
+
+/* --- TEMA CARBON: autocomplete și restart button mai vizibile --- */
+[data-app-theme="carbon"] .suggestions-list li:hover,
+[data-app-theme="carbon"] .suggestions-list li.active {
+    background: linear-gradient(180deg, #5f6368 0%, #3f4347 100%);
+    color: #ffffff;
+}
+
+[data-app-theme="carbon"] .end-game-popup .restart-inline-btn,
+[data-app-theme="carbon"] .restart-inline-btn {
+    background: linear-gradient(180deg, #5f6368 0%, #3f4347 100%);
+    color: #ffffff;
+    border: 1px solid #7a7f85;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+[data-app-theme="carbon"] .end-game-popup .restart-inline-btn:hover,
+[data-app-theme="carbon"] .restart-inline-btn:hover {
+    background: linear-gradient(180deg, #6f747a 0%, #4b5055 100%);
+    border-color: #92989f;
+}
+
+[data-app-theme="carbon"] .end-game-popup .restart-inline-btn:active,
+[data-app-theme="carbon"] .restart-inline-btn:active {
+    background: linear-gradient(180deg, #3c4044 0%, #303337 100%);
+}
+
+/* --- TEMA CARBON: bare statistici mai vizibile --- */
+[data-app-theme="carbon"] .dist-bar-container {
+    background: #232629;
+    border: 1px solid #3f4347;
+}
+
+[data-app-theme="carbon"] .dist-bar {
+    background: linear-gradient(180deg, #6f747a 0%, #4b5055 100%);
+    color: #ffffff;
+    border-right: 1px solid #92989f;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
