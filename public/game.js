@@ -645,39 +645,63 @@ function updateStats(isWin, attempts) {
 	localStorage.setItem('f1-guesser-stats', JSON.stringify(stats));
 }
 
+function setTextContentById(elementId, value) {
+	const element = document.getElementById(elementId);
+	if (element) element.textContent = value;
+}
+
+function calculateWinRate(stats) {
+	return stats.played > 0 ? Math.round((stats.won / stats.played) * 100) : 0;
+}
+
+function getMaxDistributionValue(distribution) {
+	return Math.max(...Object.values(distribution), 1);
+}
+
+function calculateDistributionBarWidth(count, maxDistributionValue) {
+	return count > 0 ? Math.max(10, Math.round((count / maxDistributionValue) * 100)) : 8;
+}
+
+function createDistributionRow(attemptNumber, count, barWidth) {
+	const row = document.createElement('div');
+	row.className = 'dist-row';
+
+	const label = createTextElement('div', 'dist-label', attemptNumber);
+	const barContainer = document.createElement('div');
+	barContainer.className = 'dist-bar-container';
+
+	const bar = createTextElement('div', 'dist-bar', count);
+	bar.style.width = `${barWidth}%`;
+
+	barContainer.appendChild(bar);
+	row.append(label, barContainer);
+	return row;
+}
+
+function renderStatsSummary(stats) {
+	setTextContentById('stat-played', stats.played);
+	setTextContentById('stat-winrate', `${calculateWinRate(stats)}%`);
+	setTextContentById('stat-streak', stats.streak);
+}
+
+function renderGuessDistribution(distribution) {
+	const distributionContainer = document.getElementById('guess-distribution');
+	if (!distributionContainer) return;
+
+	distributionContainer.replaceChildren();
+	const maxDistributionValue = getMaxDistributionValue(distribution);
+
+	for (let attemptNumber = 1; attemptNumber <= 6; attemptNumber++) {
+		const count = distribution[attemptNumber] || 0;
+		const barWidth = calculateDistributionBarWidth(count, maxDistributionValue);
+		distributionContainer.appendChild(
+			createDistributionRow(attemptNumber, count, barWidth)
+		);
+	}
+}
+
 function renderStats() {
 	const stats = getStats();
-	
-	// Calculare rată de câștig (%)
-	const winRate = stats.played > 0 ? Math.round((stats.won / stats.played) * 100) : 0;
-	
-	// Afișăm numerele în căsuțele din popup
-	if(document.getElementById('stat-played')) document.getElementById('stat-played').innerText = stats.played;
-	if(document.getElementById('stat-winrate')) document.getElementById('stat-winrate').innerText = winRate + "%";
-	if(document.getElementById('stat-streak')) document.getElementById('stat-streak').innerText = stats.streak;
-	
-	// Generăm graficul cu bare pentru încercări
-	const distributionContainer = document.getElementById('guess-distribution');
-	if (distributionContainer) {
-		distributionContainer.innerHTML = '';
-		
-		// Găsim valoarea maximă pentru a scala barele vizual corect
-		const maxDistributionValue = Math.max(...Object.values(stats.distribution), 1);
-		
-		for (let i = 1; i <= 6; i++) {
-			const count = stats.distribution[i] || 0;
-			// Lățimea barei în procente
-			const barWidth = count > 0 ? Math.max(10, Math.round((count / maxDistributionValue) * 100)) : 8;
-			
-			const row = document.createElement('div');
-			row.className = 'dist-row';
-			row.innerHTML = `
-				<div class="dist-label">${i}</div>
-				<div class="dist-bar-container">
-					<div class="dist-bar" style="width: ${barWidth}%;"> ${count} </div>
-				</div>
-			`;
-			distributionContainer.appendChild(row);
-		}
-	}
+	renderStatsSummary(stats);
+	renderGuessDistribution(stats.distribution);
 }
