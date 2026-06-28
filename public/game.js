@@ -340,7 +340,7 @@ function setupSocketEvents() {
 		initializeGridStructure();
 		
 		const gameZone = document.getElementById("gameZone");
-		if (gameZone) gameZone.style.display = "block";
+		if (gameZone) gameZone.classList.remove("game-zone-hidden");
 	});
 
 	socket.on('roomUpdate', (data) => {
@@ -388,12 +388,11 @@ function setupSocketEvents() {
 		// --- CELULA 1: ȚARĂ ---
 		let c1 = document.getElementById(`cell-${rowIndex}-1`);
 		if (c1) { 
-			c1.className = `cell ${results.nat}`; 
+			c1.className = `cell ${results.nat} cell-media`; 
 			c1.style.position = "relative";
 			c1.style.padding = "0";
 			c1.style.overflow = "hidden";
-			c1.style.display = "flex";
-			c1.style.flexDirection = "column";
+						c1.style.flexDirection = "column";
 			c1.style.justifyContent = "flex-end";
 			c1.style.alignItems = "stretch";
 
@@ -421,12 +420,11 @@ function setupSocketEvents() {
 		// --- CELULA 2: ECHIPĂ ---
 		let c2 = document.getElementById(`cell-${rowIndex}-2`);
 		if (c2) { 
-			c2.className = `cell ${results.team}`; 
+			c2.className = `cell ${results.team} cell-media`; 
 			c2.style.position = "relative";
 			c2.style.padding = "0";
 			c2.style.overflow = "hidden";
-			c2.style.display = "flex";
-			c2.style.flexDirection = "column";
+						c2.style.flexDirection = "column";
 			c2.style.justifyContent = "flex-end";
 			c2.style.alignItems = "stretch";
 
@@ -476,8 +474,8 @@ function setupSocketEvents() {
 		if (isGameOver) {
 			const gz = document.getElementById("gameZone");
 			const st = document.getElementById("status");
-			if (gz) gz.style.display = "none";
-			if (st) st.style.display = "none";
+			if (gz) gz.classList.add("game-zone-hidden");
+			if (st) st.classList.add("is-hidden");
 
 			const popup = document.getElementById("endGameDisplay");
 
@@ -519,8 +517,8 @@ function setupSocketEvents() {
 		
 		const gz = document.getElementById("gameZone");
 		const st = document.getElementById("status");
-		if (gz) gz.style.display = "block";
-		if (st) st.style.display = "block";
+		if (gz) gz.classList.remove("game-zone-hidden");
+		if (st) st.classList.remove("is-hidden");
 		if (st) st.innerText = "Ghicește noul pilot misterios!";
 		
 		const inputEl = document.getElementById("driverInput");

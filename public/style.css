@@ -501,6 +501,16 @@ button#sendGuessBtn:hover { background: #e01200; }
     gap: 6px;
     transition: all 0.2s ease;
 }
+
+/* --- UTILITARE DE STARE --- */
+.is-hidden {
+    display: none !important;
+}
+
+.cell-media {
+    display: flex;
+}
+
 /* --- STATISTICI POPUP FINAL --- */
 .game-zone-hidden {
     display: none;
