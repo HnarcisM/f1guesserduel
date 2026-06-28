@@ -175,30 +175,7 @@ document.addEventListener("DOMContentLoaded", () => {
 			showPredictions(e.target.value);
 		});
 
-		driverInput.addEventListener("keydown", function(e) {
-			let list = document.getElementById("suggestions");
-			if (list) list = list.getElementsByTagName("li");
-			
-			if (e.key === "ArrowDown") {
-				currentFocus++;
-				addActive(list);
-			} else if (e.key === "ArrowUp") {
-				currentFocus--;
-				addActive(list);
-			} else if (e.key === "Enter") {
-				e.preventDefault();
-				if (currentFocus > -1 && list && list[currentFocus]) {
-					const driverName = list[currentFocus].innerText;
-					const driverId = list[currentFocus].getAttribute("data-id");
-					driverInput.value = driverName;
-					selectedDriverId = driverId;
-					clearSuggestions();
-					sendGuess();
-				} else {
-					sendGuess();
-				}
-			}
-		});
+		driverInput.addEventListener("keydown", handleAutocompleteKeydown);
 	}
 
 	document.addEventListener("click", function (e) {
@@ -217,9 +194,18 @@ let driversList = [];
 let selectedDriverId = null;
 let currentFocus = -1;
 
+function getSuggestionsContainer() {
+	return document.getElementById("suggestions");
+}
+
+function getSuggestionItems() {
+	const suggestions = getSuggestionsContainer();
+	return suggestions ? suggestions.getElementsByTagName("li") : null;
+}
+
 function clearSuggestions() {
-	const suggestions = document.getElementById("suggestions");
-	if (suggestions) suggestions.innerHTML = "";
+	const suggestions = getSuggestionsContainer();
+	if (suggestions) suggestions.replaceChildren();
 	currentFocus = -1;
 }
 
@@ -239,38 +225,73 @@ function initializeGridStructure() {
 }
 
 function showPredictions(value) {
-	const listContainer = document.getElementById("suggestions");
-	if (!listContainer) return;
-	listContainer.innerHTML = "";
 	selectedDriverId = null;
 	currentFocus = -1;
-	const query = value.trim().toLowerCase();
-	if (!query) return;
+	renderSuggestions(filterDriverPredictions(value));
+}
 
-	const filtered = driversList.filter(driver => {
+function filterDriverPredictions(value) {
+	const query = value.trim().toLowerCase();
+	if (!query) return [];
+
+	return driversList.filter(driver => {
 		const nameParts = driver.name.toLowerCase().split(" ");
 		return nameParts.some(part => part.startsWith(query));
 	});
+}
 
-	filtered.forEach((driver) => {
-		const li = document.createElement("li");
-		li.innerText = driver.name;
-		li.setAttribute("data-id", driver.id);
-		
-		// MODIFICAREA AICI: Când dai click, se completează ȘI se trimite automat!
-		li.onclick = () => {
-			const inputEl = document.getElementById("driverInput");
-			if (inputEl) inputEl.value = driver.name;
-			selectedDriverId = driver.id;
-			listContainer.innerHTML = "";
-			currentFocus = -1;
-			
-			// Trimite automat ghicirea fără să mai fie nevoie de click pe butonul "Trimite"
-			sendGuess(); 
-		};
-		
-		listContainer.appendChild(li);
+function renderSuggestions(drivers) {
+	const listContainer = getSuggestionsContainer();
+	if (!listContainer) return;
+
+	listContainer.replaceChildren();
+	drivers.forEach(driver => {
+		listContainer.appendChild(createSuggestionItem(driver));
 	});
+}
+
+function createSuggestionItem(driver) {
+	const li = document.createElement("li");
+	li.textContent = driver.name;
+	li.dataset.id = driver.id;
+	li.addEventListener("click", () => selectDriverSuggestion(driver));
+	return li;
+}
+
+function selectDriverSuggestion(driver) {
+	const inputEl = document.getElementById("driverInput");
+	if (inputEl) inputEl.value = driver.name;
+	selectedDriverId = driver.id;
+	clearSuggestions();
+	sendGuess();
+}
+
+function selectSuggestionItem(item) {
+	if (!item) return;
+	const inputEl = document.getElementById("driverInput");
+	if (inputEl) inputEl.value = item.textContent;
+	selectedDriverId = item.dataset.id;
+	clearSuggestions();
+	sendGuess();
+}
+
+function handleAutocompleteKeydown(e) {
+	const list = getSuggestionItems();
+
+	if (e.key === "ArrowDown") {
+		currentFocus++;
+		addActive(list);
+	} else if (e.key === "ArrowUp") {
+		currentFocus--;
+		addActive(list);
+	} else if (e.key === "Enter") {
+		e.preventDefault();
+		if (currentFocus > -1 && list && list[currentFocus]) {
+			selectSuggestionItem(list[currentFocus]);
+		} else {
+			sendGuess();
+		}
+	}
 }
 
 function sendGuess() {
