@@ -509,11 +509,143 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
 .end-game-popup .restart-inline-btn:hover { background: var(--accent-f1-hover); }
 
 /* --- SUB-SOLUL PAGINII (LEGENDĂ) --- */
-.site-footer { margin-top: 60px; background: var(--surface-main); border: 1px solid var(--border-muted); padding: var(--space-7xl); border-radius: var(--radius-xl); text-align: left; box-shadow: 0 4px 20px rgba(0,0,0,0.15); }
-.site-footer h3 { margin-top: 0; font-size: 15px; color: var(--text-on-accent); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border-soft); padding-bottom: var(--space-lg); }
-.legend-list { display: flex; flex-direction: column; gap: var(--space-lg); padding: 0; margin: 0; list-style: none; }
-.legend-item { display: flex; align-items: center; gap: var(--space-xl); font-size: 13.5px; color: var(--text-secondary); line-height: 1.4; }
-.legend-box { width: 16px; height: 16px; border-radius: var(--radius-sm); flex-shrink: 0; }
+.site-footer {
+    margin-top: 60px;
+    text-align: left;
+}
+
+/* Card premium pentru legenda culorilor din grid.
+   Nu schimbă logica jocului, doar face explicațiile mai clare și mai ușor de scanat. */
+.legend-card {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, rgba(255,255,255,0.075), rgba(255,255,255,0.025));
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-6xl);
+    box-shadow: var(--shadow-md);
+    backdrop-filter: blur(14px);
+}
+
+.legend-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--success), var(--warning), var(--orange), var(--purple), var(--danger));
+}
+
+.legend-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xl);
+    margin-bottom: var(--space-5xl);
+    padding-bottom: var(--space-4xl);
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.legend-icon {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius-xl);
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-soft);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.legend-eyebrow {
+    margin: 0 0 var(--space-xs) 0;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+}
+
+.site-footer h3 {
+    margin: 0;
+    color: var(--text-on-accent);
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+}
+
+.legend-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-xl);
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.legend-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-xl);
+    min-height: 56px;
+    padding: var(--space-xl);
+    color: var(--text-secondary);
+    line-height: 1.4;
+    background: rgba(255,255,255,0.035);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    transition: transform var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.legend-item:hover {
+    transform: translateY(-2px);
+    background: var(--surface-elevated);
+    border-color: var(--border-soft);
+}
+
+.legend-box {
+    width: 18px;
+    height: 18px;
+    margin-top: var(--space-2xs);
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+}
+
+.legend-copy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    font-size: 13px;
+}
+
+.legend-copy strong {
+    color: var(--text-primary);
+    font-size: 13.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.legend-copy span {
+    color: var(--text-secondary);
+}
+
+[data-app-theme="carbon"] .legend-card {
+    background: linear-gradient(135deg, rgba(255,255,255,0.065), rgba(255,255,255,0.02));
+    border-color: rgba(255,255,255,0.12);
+}
+
+[data-app-theme="carbon"] .legend-icon,
+[data-app-theme="carbon"] .legend-item {
+    background: rgba(255,255,255,0.045);
+}
+
+[data-app-theme="neon"] .legend-card {
+    box-shadow: 0 0 24px rgba(0, 240, 255, 0.08), var(--shadow-md);
+}
+
 
 /* --- ANIMAȚII POPUP FINAL --- */
 
@@ -1048,11 +1180,23 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
     }
 
     .site-footer {
-        padding: var(--space-5xl);
         margin-top: var(--space-8xl);
     }
 
+    .legend-card {
+        padding: var(--space-5xl);
+    }
+
+    .legend-list {
+        grid-template-columns: 1fr;
+    }
+
     .legend-item {
+        min-height: auto;
+        padding: var(--space-lg) var(--space-xl);
+    }
+
+    .legend-copy {
         font-size: 12px;
     }
 
