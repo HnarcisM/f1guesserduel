@@ -62,6 +62,55 @@ document.addEventListener("DOMContentLoaded", () => {
 		});
 	});
 	
+		// --- IMPLEMENTARE BUTON PARTAJARE COMBINATĂ (FINISH FLAG) ---
+	const shareBtn = document.getElementById("shareRoomBtn");
+	if (shareBtn) {
+		shareBtn.addEventListener("click", () => {
+			const currentUrl = window.location.href;
+
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				// Calea nativă, optimizată securizat
+				navigator.clipboard.writeText(currentUrl).then(() => {
+					triggerTooltip();
+				}).catch(err => {
+					console.error("Eroare la copiere nativă:", err);
+					fallbackCopyText(currentUrl);
+				});
+			} else {
+				// Fallback în caz că API-ul este restricționat (non-HTTPS / browsere vechi)
+				fallbackCopyText(currentUrl);
+			}
+		});
+	}
+
+	function fallbackCopyText(text) {
+		const textArea = document.createElement("textarea");
+		textArea.value = text;
+		// Evităm scroll-ul paginii în timp ce adăugăm temporar elementul în DOM
+		textArea.style.top = "0";
+		textArea.style.left = "0";
+		textArea.style.position = "fixed";
+		textArea.style.opacity = "0";
+		document.body.appendChild(textArea);
+		textArea.focus();
+		textArea.select();
+		try {
+			document.execCommand('copy');
+			triggerTooltip();
+		} catch (err) {
+			console.error('Fallback eșuat completely:', err);
+			alert("Nu s-a putut copia automat. Link-ul tău este: " + text);
+		}
+		document.body.removeChild(textArea);
+	}
+
+	function triggerTooltip() {
+		shareBtn.classList.add("copied");
+		setTimeout(() => {
+			shareBtn.classList.remove("copied");
+		}, 2000);
+	}
+	
 	// Încercăm să conectăm socket-ul în siguranță
 	try {
 		if (typeof io !== 'undefined') {
@@ -158,33 +207,11 @@ document.addEventListener("DOMContentLoaded", () => {
 			if (sug) sug.innerHTML = "";
 		}
 		// Închide meniul dropdown dacă dai click în afara lui sau a hamburgerului
-		if (menu && !menu.classList.contains("hidden") && e.target.id !== "menu-hamburger") {
+		if (menu && !menu.classList.contains("hidden") && e.target.id !== "menu-hamburger"  && !shareBtn.contains(e.target)) {
 			menu.classList.add("hidden");
 		}
 	});
 }); 
-
-	// --- LOGICĂ SCHIMBARE TEME VIZUALE ---
-	// Încărcăm tema salvată anterior (dacă există)
-	const savedTheme = localStorage.getItem('f1-guesser-theme') || 'default';
-	document.body.setAttribute('data-app-theme', savedTheme);
-
-	document.querySelectorAll(".theme-item").forEach(item => {
-		item.addEventListener("click", function(e) {
-			e.stopPropagation();
-			const selectedTheme = this.getAttribute("data-theme");
-			
-			// Aplicăm tema pe body
-			document.body.setAttribute('data-app-theme', selectedTheme);
-			
-			// Salvăm opțiunea în memoria browserului
-			localStorage.setItem('f1-guesser-theme', selectedTheme);
-			
-			// Închidem meniul
-			if (menu) menu.classList.add("hidden");
-			console.log(`Tema vizuală schimbată la: ${selectedTheme}`);
-		});
-	});
 
 let driversList = [];
 let selectedDriverId = null;

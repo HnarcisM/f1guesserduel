@@ -62,32 +62,6 @@ body::before {
     pointer-events: none;
 }
 
-.site-header {
-    background: var(--header-bg);
-    border-bottom: 2px solid var(--accent-f1);
-    transition: all 0.5s ease;
-}
-
-/* Stiluri suplimentare pentru meniuri */
-.menu-section-title {
-    font-size: 10px;
-    font-weight: 800;
-    color: #6b7280;
-    padding: 8px 10px 4px 10px;
-    text-align: left;
-    letter-spacing: 1px;
-    border-top: 1px solid #2a2a3a;
-    margin-top: 5px;
-}
-.menu-section-title:first-child { border-top: none; margin-top: 0; }
-
-/* Actualizări butoane și input-uri să asculte de temă */
-.invite-box { background-color: var(--card-bg); border-left: 5px solid var(--accent-f1); color: var(--text-primary); }
-input { background: var(--card-bg); color: var(--text-primary); border-color: var(--border-color); }
-button#sendGuessBtn, .restart-inline-btn { background-color: var(--accent-f1); color: var(--accent-f1) === '#ffffff' ? '#000' : '#fff'; }
-.cell { background-color: var(--card-bg); border-color: var(--border-color); color: var(--text-primary); }
-
-
 /* --- HEADER DINAMIC ȘI UNIFICAT --- */
 .site-header {
     position: fixed;
@@ -135,6 +109,69 @@ button#sendGuessBtn, .restart-inline-btn { background-color: var(--accent-f1); c
     transform: scale(1.1);
 }
 
+/* GRUP STRUCTURAT PENTRU ELEMENTELE DIN DREAPTA HEADERULUI */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    z-index: 3000;
+}
+
+/* STIL BUTON PREMIUM DE PARTAJARE CAMERĂ */
+.share-btn {
+    font-size: 22px;
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    padding: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+.share-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: var(--accent-f1);
+    transform: scale(1.08);
+}
+
+/* TOOLTIP PENTRU CONFIRMARE COPIERE LINK */
+.share-tooltip {
+    position: absolute;
+    top: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #10b981; /* Verde fluid succes */
+    color: #fff;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 4px 8px;
+    border-radius: 5px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.2s ease, visibility 0.2s;
+    white-space: nowrap;
+}
+.share-tooltip::before {
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent transparent #10b981 transparent;
+}
+.share-btn.copied .share-tooltip {
+    opacity: 1;
+    visibility: visible;
+}
+
 /* --- DROPDOWN MENU PREMIUM --- */
 .dropdown {
     position: absolute; 
@@ -170,6 +207,18 @@ button#sendGuessBtn, .restart-inline-btn { background-color: var(--accent-f1); c
     padding-left: 25px;
 }
 
+.menu-section-title {
+    font-size: 10px;
+    font-weight: 800;
+    color: #6b7280;
+    padding: 8px 10px 4px 10px;
+    text-align: left;
+    letter-spacing: 1px;
+    border-top: 1px solid #2a2a3a;
+    margin-top: 5px;
+}
+.menu-section-title:first-child { border-top: none; margin-top: 0; }
+
 /* --- BADGE STATUS ONLINE --- */
 .player-badge {
     background: rgba(255, 24, 1, 0.15); 
@@ -190,18 +239,10 @@ button#sendGuessBtn, .restart-inline-btn { background-color: var(--accent-f1); c
     position: relative; 
 }
 
-/* --- INVITE BOX --- */
-.invite-box { 
-    background: #14141b; 
-    padding: 18px; 
-    border-radius: 12px; 
-    margin-bottom: 25px; 
-    border-left: 4px solid #ff1801; 
-    text-align: left; 
-    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-}
-.invite-box strong { color: #9ca3af; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;}
-.invite-link { color: #38bdf8; word-break: break-all; font-weight: 600; margin-top: 6px; font-family: monospace; font-size: 14px;}
+/* Input-uri reactive la teme */
+input { background: var(--card-bg); color: var(--text-primary); border-color: var(--border-color); }
+button#sendGuessBtn, .restart-inline-btn { background-color: var(--accent-f1); color: #fff; }
+.cell { background-color: var(--card-bg); border-color: var(--border-color); color: var(--text-primary); }
 
 /* --- STATUS & ETICHETE --- */
 #status { margin: 20px 0 5px 0; font-size: 20px; font-weight: 600; color: #ffffff; }
@@ -433,3 +474,16 @@ button#sendGuessBtn:hover { background: #e01200; }
 /* Adaptare automată la variabila de accent dacă se dorește ulterior */
 [data-app-theme="neon"] .dist-bar { background-color: #00f0ff; }
 [data-app-theme="light"] .dist-bar-container { background: #e5e7eb; }
+
+/* STIL BUTON PREMIUM DE PARTAJARE CAMERĂ (Actualizat cu suport text) */
+.share-btn {
+    font-size: 14px; /* Dimensiune optimă pentru text + emoji */
+    font-weight: 700;
+    color: #ffffff;
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    padding: 8px 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px
