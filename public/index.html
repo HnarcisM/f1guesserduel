@@ -80,8 +80,11 @@
         <button id="sendGuessBtn">Trimite</button>
     </div>
 
+	<!-- Overlay-ul se afișează în spatele popup-ului final, pentru focus vizual și blocarea fundalului. -->
+	<div class="end-game-backdrop" id="endGameBackdrop" aria-hidden="true"></div>
+
 	<!-- Popup final: rezultat joc + statistici locale + restart. -->
-	<div class="end-game-popup" id="endGameDisplay">
+	<div class="end-game-popup" id="endGameDisplay" role="dialog" aria-modal="true" aria-labelledby="endGameTitle">
         <h2 id="endGameTitle">🏆 Felicitări!</h2>
         <p id="endGameMessage">Ai ghicit pilotul.</p>
         

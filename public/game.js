@@ -651,6 +651,7 @@ function setupSocketEvents() {
 			if (st) st.classList.add("is-hidden");
 
 			const popup = document.getElementById("endGameDisplay");
+			const backdrop = document.getElementById("endGameBackdrop");
 
 			// Resetăm clasele vechi de stil ca să nu se suprapună la meciuri consecutive
 			popup.classList.remove("win-style", "lose-style");
@@ -674,7 +675,8 @@ function setupSocketEvents() {
 			// Calculăm și desenăm graficele în popup
 			renderStats();
 			
-			// Afișăm popup-ul cu noul efect elastic
+			// Afișăm overlay-ul și popup-ul cu efect elastic
+			if (backdrop) backdrop.classList.add("show");
 			popup.classList.add("show");
 		}
 	});
@@ -686,6 +688,11 @@ function setupSocketEvents() {
 		const popup = document.getElementById("endGameDisplay");
 		if (popup) {
 			popup.className = "end-game-popup"; // Revine la clasa de bază curată
+		}
+
+		const backdrop = document.getElementById("endGameBackdrop");
+		if (backdrop) {
+			backdrop.classList.remove("show");
 		}
 		
 		const gz = document.getElementById("gameZone");
