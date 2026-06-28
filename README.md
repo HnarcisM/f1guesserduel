@@ -2,7 +2,23 @@
 
 Un joc web interactiv de tip Wordle inspirat din Formula 1, unde te poți duela în timp real cu un prieten pentru a ghici pilotul misterios. Proiectul folosește **Node.js**, **Express** și **Socket.io** pentru sincronizarea multiplayer și actualizări instantanee în grilă.
 
----
+🛠️ Tehnologii Utilizate
+Backend: Node.js și Express Framework pentru rutare și servirea fișierelor statice.
+
+Sincronizare în timp real: Socket.io pentru gestionarea camerelor și comunicarea bidirecțională rapidă.
+
+Frontend: HTML5 pur, CSS3 (folosind proprietăți personalizate --variables pentru teme) și JavaScript (Vanilla JS cu WebSockets și LocalStorage).
+
+⚙️ Instalare și Pornire Rapidă
+Metoda 1: Lansare Rapidă pe Windows (Recomandat)
+Dacă ești pe Windows, tot ce trebuie să faci este să rulezi fișierul .bat din folderul rădăcină:
+
+Dublu-clic pe F1GuesserDuel.bat.
+
+Scriptul va verifica automat dacă folderul node_modules există. Dacă nu, va descărca automat dependințele rulând npm install.
+
+Serverul va porni singur pe portul 3000.
+
 
 ## 🚀 Funcționalități
 
@@ -27,12 +43,6 @@ Un joc web interactiv de tip Wordle inspirat din Formula 1, unde te poți duela 
  └── [public]             # Folderul pentru fișierele statice accesate de browser
       ├── index.html      # Interfața vizuală a jocului
       └── game.js         # Logica din browser și legarea evenimentelor
-
-⚙️ Instalare și Pornire
-Run F1GuesserDuel.bat
-
-Accesare:
-Deschide browserul la http://localhost:3000.
 
 💡 Legendă Culori (Indicii)
 🟩 Verde: Potrivire perfectă.
