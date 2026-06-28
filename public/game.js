@@ -411,7 +411,7 @@ function getFlagEmoji(countryCode) {
  */
 function setCellState(cell, resultClass, extraClasses = []) {
 	if (!cell) return;
-	cell.className = ["cell", resultClass, ...extraClasses].filter(Boolean).join(" ");
+	cell.className = ["cell", "cell-reveal", resultClass, ...extraClasses].filter(Boolean).join(" ");
 	cell.replaceChildren();
 }
 
