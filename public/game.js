@@ -610,10 +610,18 @@ function renderStats() {
 // ===============================
 // End game popup, rematch and timer helpers
 // ===============================
-/** Construiește payload-ul trimis la server când pornim o rundă nouă. */
+/** Construiește payload-ul trimis la server când pornim o rundă nouă cu dificultate aleasă. */
 function buildRoundOptions(level) {
 	return {
 		level,
+		timed: isTimedModeEnabled,
+		timeLimitSeconds: DEFAULT_TIME_LIMIT_SECONDS
+	};
+}
+
+/** Construiește payload-ul pentru rematch. Folosește preferința curentă de timer din UI. */
+function buildRestartOptions() {
+	return {
 		timed: isTimedModeEnabled,
 		timeLimitSeconds: DEFAULT_TIME_LIMIT_SECONDS
 	};
@@ -632,6 +640,15 @@ function setTimedMode(enabled) {
 	isTimedModeEnabled = enabled;
 	localStorage.setItem('f1-guesser-timed-mode', enabled ? 'on' : 'off');
 	syncTimerModeControls();
+
+	// Dacă runda este deja pornită, nu schimbăm timerul curent.
+	// Preferința este folosită la următorul Rematch / joc nou.
+	const status = document.getElementById("status");
+	if (status && !isRoundFinished && driversList.length > 0) {
+		status.textContent = enabled
+			? "Modul cu timp va fi folosit la următorul joc."
+			: "Modul fără timp va fi folosit la următorul joc.";
+	}
 }
 
 function getRoundTimerElement() {
@@ -729,7 +746,7 @@ function exitRematchMode() {
 }
 
 function requestRematch() {
-	if (socket) socket.emit('restartGame');
+	if (socket) socket.emit('restartGame', buildRestartOptions());
 }
 
 function hideEndGamePopup(keepRematchAvailable = true) {

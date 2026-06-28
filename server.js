@@ -192,11 +192,18 @@ io.on('connection', (socket) => {
         });
     });
 
-    // Restartul păstrează dificultatea, dar alege un nou pilot țintă și resetează încercările.
-    socket.on('restartGame', () => {
+    // Restartul păstrează dificultatea, dar poate primi opțiuni noi pentru următoarea rundă.
+    // Astfel, dacă utilizatorul schimbă timerul din dropdown în timpul unei runde,
+    // noua preferință se aplică la primul Rematch / joc nou, nu rundei curente.
+    socket.on('restartGame', (payload = {}) => {
         if (!currentRoom || !rooms[currentRoom]) return;
         const room = rooms[currentRoom];
         room.attempts = {};
+
+        if (typeof payload === 'object' && payload !== null) {
+            room.timed = Boolean(payload.timed);
+            room.timeLimitSeconds = Number(payload.timeLimitSeconds) || 60;
+        }
         
         if (room.difficulty) {
             getDriversByDifficulty(room.difficulty, (err, drivers) => {
