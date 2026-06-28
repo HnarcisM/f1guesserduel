@@ -1697,3 +1697,164 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
         animation: none;
     }
 }
+
+/* --- MOD TIMER: selector din overlay și dropdown --- */
+.timer-mode-card {
+    width: min(640px, 100%);
+    box-sizing: border-box;
+    margin: 0 auto var(--space-6xl);
+    padding: var(--space-md);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    background: linear-gradient(135deg, rgba(255,255,255,0.075), rgba(255,255,255,0.025));
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-sm);
+}
+
+.timer-mode-label {
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.timer-mode-options {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.timer-mode-option {
+    padding: var(--space-sm) var(--space-xl);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-pill);
+    background: rgba(255,255,255,0.04);
+    color: var(--text-secondary);
+    font-size: 0.86rem;
+}
+
+.timer-mode-option.active,
+.timer-item.active {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--accent-f1) 24%, transparent), color-mix(in srgb, var(--accent-f1) 10%, transparent));
+    border-color: color-mix(in srgb, var(--accent-f1) 70%, var(--border-soft));
+    color: var(--text-on-accent);
+    box-shadow: 0 0 18px color-mix(in srgb, var(--accent-f1) 18%, transparent);
+}
+
+/* Timer vizibil doar pentru rundele pe timp. */
+.round-timer {
+    width: fit-content;
+    margin: var(--space-md) auto var(--space-4xl);
+    padding: var(--space-sm) var(--space-3xl);
+    border: 1px solid color-mix(in srgb, var(--accent-f1) 48%, var(--border-soft));
+    border-radius: var(--radius-pill);
+    background: linear-gradient(180deg, rgba(255,255,255,0.075), rgba(255,255,255,0.025));
+    color: var(--text-on-accent);
+    font-size: 0.95rem;
+    font-weight: 900;
+    letter-spacing: 1px;
+    box-shadow: 0 0 18px color-mix(in srgb, var(--accent-f1) 14%, transparent);
+}
+
+.round-timer.timer-warning {
+    border-color: color-mix(in srgb, var(--warning) 70%, var(--border-soft));
+    color: var(--warning);
+}
+
+.round-timer.timer-danger {
+    border-color: color-mix(in srgb, var(--danger) 80%, var(--border-soft));
+    color: var(--danger);
+    animation: timerPulse 0.65s ease-in-out infinite alternate;
+}
+
+@keyframes timerPulse {
+    from { transform: scale(1); box-shadow: 0 0 14px rgba(239, 68, 68, 0.18); }
+    to { transform: scale(1.035); box-shadow: 0 0 26px rgba(239, 68, 68, 0.34); }
+}
+
+/* --- POPUP FINAL: close button + rematch state --- */
+.end-game-close {
+    position: absolute;
+    top: var(--space-lg);
+    right: var(--space-lg);
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-soft);
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+    color: var(--text-secondary);
+    font-size: 22px;
+    line-height: 1;
+}
+
+.end-game-close:hover {
+    color: var(--text-on-accent);
+    background: rgba(255,255,255,0.11);
+    transform: scale(1.04);
+}
+
+#gameZone.game-zone-rematch {
+    display: flex;
+    justify-content: center;
+    gap: 0;
+}
+
+#gameZone.game-zone-rematch .search-container {
+    display: none;
+}
+
+#gameZone.game-zone-rematch button#sendGuessBtn {
+    border-radius: var(--radius-lg);
+    min-width: 220px;
+}
+
+button#sendGuessBtn.rematch-submit-btn {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--accent-f1) 92%, white), var(--accent-f1));
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--accent-f1) 24%, transparent);
+}
+
+[data-app-theme="carbon"] .timer-mode-card,
+[data-app-theme="carbon"] .round-timer {
+    background: linear-gradient(180deg, #24272a 0%, #191b1d 100%);
+    border-color: #3f4347;
+}
+
+[data-app-theme="carbon"] .timer-mode-option.active,
+[data-app-theme="carbon"] .timer-item.active,
+[data-app-theme="carbon"] button#sendGuessBtn.rematch-submit-btn {
+    background: linear-gradient(180deg, #5f6368 0%, #3f4347 100%);
+    border-color: #7a7f85;
+    color: #ffffff;
+}
+
+@media (max-width: 520px) {
+    .timer-mode-card {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .timer-mode-options {
+        width: 100%;
+    }
+
+    .timer-mode-option {
+        flex: 1;
+    }
+
+    #gameZone.game-zone-rematch button#sendGuessBtn {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .round-timer.timer-danger {
+        animation: none;
+    }
+}

@@ -26,6 +26,10 @@
         <div data-level="medium" class="menu-item">🟡 Medium</div>
         <div data-level="hard" class="menu-item">🔴 Hard</div>
         
+        <div class="menu-section-title">⏱️ TIMER</div>
+        <div data-timer="off" class="menu-item timer-item">∞ Fără timp</div>
+        <div data-timer="on" class="menu-item timer-item">⏱️ 60 secunde</div>
+
         <div class="menu-section-title">🎨 TEMĂ VIZUALĂ</div>
         <div data-theme="default" class="menu-item theme-item">🌌 F1 Classic (Dark)</div>
         <div data-theme="neon" class="menu-item theme-item">✨ Night Race (Neon)</div>
@@ -47,6 +51,13 @@
     <div class="menu-container">
         <h2>F1 Guesser</h2>
         <p class="subtitle">Selectează dificultatea grilei pentru acest duel:</p>
+        <div class="timer-mode-card" aria-label="Selectare mod cu sau fără timp">
+            <span class="timer-mode-label">Mod timp</span>
+            <div class="timer-mode-options">
+                <button type="button" class="timer-mode-option active" data-timer-mode="off">∞ Fără timp</button>
+                <button type="button" class="timer-mode-option" data-timer-mode="on">⏱️ 60 sec</button>
+            </div>
+        </div>
         <div class="difficulty-grid">
             <button class="btn-diff easy" data-level="easy">
                 <span class="diff-title">Easy</span>
@@ -70,6 +81,7 @@
 
     <div id="status">Se așteaptă selectarea dificultății...</div>
     <div id="diff-display-label"></div>
+    <div id="roundTimer" class="round-timer is-hidden" aria-live="polite">⏱️ 60s</div>
 
     <!-- Zona de input este ascunsă până când serverul inițializează jocul. -->
     <div id="gameZone" class="game-zone-hidden">
@@ -85,6 +97,7 @@
 
 	<!-- Popup final: rezultat joc + statistici locale + restart. -->
 	<div class="end-game-popup" id="endGameDisplay" role="dialog" aria-modal="true" aria-labelledby="endGameTitle">
+        <button type="button" class="end-game-close" id="closeEndGamePopup" aria-label="Închide popup-ul">×</button>
         <h2 id="endGameTitle">🏆 Felicitări!</h2>
         <p id="endGameMessage">Ai ghicit pilotul.</p>
         

@@ -69,7 +69,10 @@ io.on('connection', (socket) => {
                 targetDriver: null,
                 difficulty: null,
                 driversList: [],
-                attempts: {}
+                attempts: {},
+                timed: false,
+                timeLimitSeconds: 60,
+                roundStartedAt: null
             };
         }
 
@@ -80,15 +83,22 @@ io.on('connection', (socket) => {
         io.to(roomId).emit('roomUpdate', { playerCount: rooms[roomId].players.length });
 
         if (rooms[roomId].difficulty) {
-            socket.emit('initGame', { drivers: rooms[roomId].driversList, difficulty: rooms[roomId].difficulty });
+            socket.emit('initGame', { drivers: rooms[roomId].driversList, difficulty: rooms[roomId].difficulty, timed: rooms[roomId].timed, timeLimitSeconds: rooms[roomId].timeLimitSeconds, roundStartedAt: rooms[roomId].roundStartedAt });
         }
     });
 
     // Setarea dificultății pornește o rundă nouă pentru toți jucătorii din cameră.
-    socket.on('setDifficulty', (difficulty) => {
+    socket.on('setDifficulty', (payload) => {
         if (!currentRoom || !rooms[currentRoom]) return;
+
+        const difficulty = typeof payload === 'object' && payload !== null ? payload.level : payload;
+        const timed = Boolean(typeof payload === 'object' && payload !== null && payload.timed);
+        const timeLimitSeconds = Number(payload && payload.timeLimitSeconds) || 60;
         
         rooms[currentRoom].difficulty = difficulty;
+        rooms[currentRoom].timed = timed;
+        rooms[currentRoom].timeLimitSeconds = timeLimitSeconds;
+        rooms[currentRoom].roundStartedAt = Date.now();
         rooms[currentRoom].attempts = {};
 
         getDriversByDifficulty(difficulty, (err, drivers) => {
@@ -101,7 +111,7 @@ io.on('connection', (socket) => {
             const randomIdx = Math.floor(Math.random() * drivers.length);
             rooms[currentRoom].targetDriver = drivers[randomIdx];
 
-            io.to(currentRoom).emit('initGame', { drivers: drivers, difficulty: difficulty });
+            io.to(currentRoom).emit('initGame', { drivers: drivers, difficulty: difficulty, timed: rooms[currentRoom].timed, timeLimitSeconds: rooms[currentRoom].timeLimitSeconds, roundStartedAt: rooms[currentRoom].roundStartedAt });
         });
     });
 
@@ -110,6 +120,13 @@ io.on('connection', (socket) => {
         if (!currentRoom || !rooms[currentRoom] || !rooms[currentRoom].targetDriver) return;
 
         const room = rooms[currentRoom];
+
+        if (room.timed && room.roundStartedAt && Date.now() - room.roundStartedAt >= room.timeLimitSeconds * 1000) {
+            room.attempts[socket.id] = 6;
+            socket.emit('gameTimedOut', { target: { name: room.targetDriver.name }, attempts: 6 });
+            return;
+        }
+
         if (!room.attempts[socket.id]) room.attempts[socket.id] = 0;
         
         // Dacă jocul s-a terminat deja pentru acest jucător, blocăm execuția suplimentară
@@ -157,6 +174,24 @@ io.on('connection', (socket) => {
         socket.emit('guessResult', responseData);
     });
 
+
+    // Timer expirat pe client: serverul confirmă finalul și dezvăluie pilotul țintă.
+    socket.on('timeExpired', () => {
+        if (!currentRoom || !rooms[currentRoom] || !rooms[currentRoom].targetDriver) return;
+
+        const room = rooms[currentRoom];
+        if (!room.timed || !room.roundStartedAt) return;
+
+        const elapsedMs = Date.now() - room.roundStartedAt;
+        if (elapsedMs < room.timeLimitSeconds * 1000 - 500) return;
+
+        room.attempts[socket.id] = 6;
+        socket.emit('gameTimedOut', {
+            target: { name: room.targetDriver.name },
+            attempts: 6
+        });
+    });
+
     // Restartul păstrează dificultatea, dar alege un nou pilot țintă și resetează încercările.
     socket.on('restartGame', () => {
         if (!currentRoom || !rooms[currentRoom]) return;
@@ -168,7 +203,12 @@ io.on('connection', (socket) => {
                 if (!err && drivers.length > 0) {
                     const randomIdx = Math.floor(Math.random() * drivers.length);
                     room.targetDriver = drivers[randomIdx];
-                    io.to(currentRoom).emit('gameRestarted');
+                    room.roundStartedAt = Date.now();
+                    io.to(currentRoom).emit('gameRestarted', {
+                        timed: room.timed,
+                        timeLimitSeconds: room.timeLimitSeconds,
+                        roundStartedAt: room.roundStartedAt
+                    });
                 }
             });
         }
