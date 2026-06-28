@@ -9,6 +9,14 @@
 </head>
 <body>
 
+<!--
+    Structura paginii este împărțită în zone clare:
+    1. Header: meniu, share room și status online;
+    2. Overlay dificultate: primul ecran de alegere mod;
+    3. Game area: input, grid, popup final și legendă.
+-->
+
+<!-- Header fix: acces rapid la meniu, cameră și număr jucători online. -->
 <header class="site-header">
     <div id="menu-hamburger" class="hamburger">☰</div>
    <div id="dropdown-menu" class="dropdown hidden">
@@ -34,6 +42,7 @@
 	</div>
 </header>
 
+<!-- Overlay inițial: se ascunde când este aleasă dificultatea. -->
 <div id="difficulty-overlay" class="overlay">
     <div class="menu-container">
         <h2>F1 Guesser</h2>
@@ -55,12 +64,14 @@
     </div>
 </div>
 
+<!-- Containerul principal al jocului. -->
 <div class="container">
     <!-- Secțiunea invite-box a fost ștearsă complet de aici pentru un layout curat -->
 
     <div id="status">Se așteaptă selectarea dificultății...</div>
     <div id="diff-display-label"></div>
 
+    <!-- Zona de input este ascunsă până când serverul inițializează jocul. -->
     <div id="gameZone" class="game-zone-hidden">
         <div class="search-container">
             <input type="text" id="driverInput" placeholder="Scrie prenume sau nume (ex: Ham...)" autocomplete="off">
@@ -69,6 +80,7 @@
         <button id="sendGuessBtn">Trimite</button>
     </div>
 
+	<!-- Popup final: rezultat joc + statistici locale + restart. -->
 	<div class="end-game-popup" id="endGameDisplay">
         <h2 id="endGameTitle">🏆 Felicitări!</h2>
         <p id="endGameMessage">Ai ghicit pilotul.</p>
@@ -98,8 +110,10 @@
         <button class="restart-inline-btn" id="restartGameBtn">🔄 Joacă din nou</button>
     </div>
 
+    <!-- Gridul este construit dinamic în game.js pentru fiecare rundă. -->
     <div class="grid" id="grid"></div>
 
+    <!-- Legendă pentru culorile rezultatului. -->
     <footer class="site-footer">
         <h3>💡 Legendă Culori</h3>
         <ul class="legend-list">

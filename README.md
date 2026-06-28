@@ -1,52 +1,376 @@
-# 🏎️ F1 Guesser - Duel Multiplayer
+# F1 Guesser Duel
 
-Un joc web interactiv de tip Wordle inspirat din Formula 1, unde te poți duela în timp real cu un prieten pentru a ghici pilotul misterios. Proiectul folosește **Node.js**, **Express** și **Socket.io** pentru sincronizarea multiplayer și actualizări instantanee în grilă.
+**F1 Guesser Duel** este o aplicație web multiplayer, inspirată de jocurile de tip „guesser”, în care jucătorii trebuie să ghicească pilotul de Formula 1 corect pe baza indiciilor primite după fiecare încercare.
 
-🛠️ Tehnologii Utilizate
-Backend: Node.js și Express Framework pentru rutare și servirea fișierelor statice.
-
-Sincronizare în timp real: Socket.io pentru gestionarea camerelor și comunicarea bidirecțională rapidă.
-
-Frontend: HTML5 pur, CSS3 (folosind proprietăți personalizate --variables pentru teme) și JavaScript (Vanilla JS cu WebSockets și LocalStorage).
-
-⚙️ Instalare și Pornire Rapidă
-Metoda 1: Lansare Rapidă pe Windows (Recomandat)
-Dacă ești pe Windows, tot ce trebuie să faci este să rulezi fișierul .bat din folderul rădăcină:
-
-Dublu-clic pe F1GuesserDuel.bat.
-
-Scriptul va verifica automat dacă folderul node_modules există. Dacă nu, va descărca automat dependințele rulând npm install.
-
-Serverul va porni singur pe portul 3000.
-
-
-## 🚀 Funcționalități
-
-* **Duel în timp real:** Creează o cameră de joc, trimite link-ul unui prieten și jucați simultan.
-* **Trei niveluri de dificultate:**
-  * **Easy:** Piloți activi sau recenți după anul 2010.
-  * **Medium:** Epoca motoarelor V10 și V8 (anii 2000 - 2010).
-  * **Hard:** Panteonul istoric al Formulei 1 (anii 1950 - 2000).
-* **Sugestii inteligente:** Sistem de autocompletare la tastare pentru a asigura selectarea unui pilot valid din baza de date.
-* **Sistem de indicii pe culori:** Fiecare încercare oferă indicii vizuale despre țară, echipă, vârstă, anul debutului și numărul de victorii ale pilotului țintă.
+Aplicația rulează cu **Node.js**, **Express** și **Socket.IO**, iar interfața este construită cu **HTML**, **CSS** și **JavaScript vanilla**.
 
 ---
 
-## 📂 Structura Proiectului
+## Cuprins
+
+- [Funcționalități](#funcționalități)
+- [Cum funcționează jocul](#cum-funcționează-jocul)
+- [Tehnologii folosite](#tehnologii-folosite)
+- [Structura proiectului](#structura-proiectului)
+- [Instalare și rulare locală](#instalare-și-rulare-locală)
+- [Testare pe telefon](#testare-pe-telefon)
+- [Moduri de dificultate](#moduri-de-dificultate)
+- [Teme vizuale](#teme-vizuale)
+- [Legendă culori](#legendă-culori)
+- [Statistici locale](#statistici-locale)
+- [Arhitectură](#arhitectură)
+- [Optimizări implementate](#optimizări-implementate)
+- [Direcții viitoare](#direcții-viitoare)
+
+---
+
+## Funcționalități
+
+- Joc de ghicit piloți de Formula 1.
+- Suport pentru camere multiplayer / duel prin link de room.
+- Alegere dificultate înainte de începerea rundei.
+- Autocomplete pentru numele piloților.
+- Feedback vizual după fiecare încercare.
+- Maximum 6 încercări per rundă.
+- Popup final pentru câștig sau pierdere.
+- Restart rundă fără schimbarea camerei.
+- Statistici locale salvate în browser.
+- Teme vizuale multiple.
+- Layout responsive pentru desktop și telefon.
+- Asset-uri locale pentru steaguri și logo-uri de echipe.
+
+---
+
+## Cum funcționează jocul
+
+1. Utilizatorul intră într-o cameră de joc.
+2. Dacă nu există o cameră în URL, aplicația generează automat una.
+3. Jucătorul alege dificultatea.
+4. Serverul selectează aleator un pilot țintă din `drivers.json`.
+5. Utilizatorul introduce un pilot și trimite ghicirea.
+6. Serverul compară pilotul ales cu pilotul țintă.
+7. Clientul primește doar rezultatul comparației, nu și răspunsul complet.
+8. Jocul se termină când:
+   - pilotul este ghicit corect; sau
+   - sunt epuizate cele 6 încercări.
+9. La final se afișează popup-ul de rezultat și statisticile locale.
+
+Răspunsul corect este ținut pe server până la finalul jocului, pentru a evita citirea lui directă din codul client-side.
+
+---
+
+## Tehnologii folosite
+
+- **Node.js** – runtime JavaScript pentru server.
+- **Express** – server HTTP și servire fișiere statice.
+- **Socket.IO** – comunicare real-time între client și server.
+- **HTML5** – structura aplicației.
+- **CSS3** – layout, teme, responsive design și animații.
+- **JavaScript vanilla** – logica din browser.
+- **LocalStorage** – salvarea statisticilor locale.
+
+---
+
+## Structura proiectului
 
 ```text
-[Folderul_Proiectului]
- ├── server.js            # Serverul principal Node.js / Socket.io
- ├── drivers.json         # Baza de date cu piloții F1 și atributele lor
- ├── .gitignore           # Fișierul care ascunde node_modules de GitHub
- ├── README.md            # Documentația proiectului (acest fișier)
- └── [public]             # Folderul pentru fișierele statice accesate de browser
-      ├── index.html      # Interfața vizuală a jocului
-      └── game.js         # Logica din browser și legarea evenimentelor
+f1guesserduel/
+├── public/
+│   ├── flags/              # Steaguri locale în format SVG
+│   ├── logos/              # Logo-uri locale pentru echipe F1
+│   ├── game.js             # Logica aplicației client-side
+│   ├── index.html          # Structura paginii
+│   └── style.css           # Stiluri, teme și responsive CSS
+├── drivers.json            # Baza de date cu piloți
+├── server.js               # Server Express + Socket.IO
+├── package.json            # Scripturi și dependențe Node.js
+├── package-lock.json       # Versiuni exacte pentru dependențe
+├── F1GuesserDuel.bat       # Script Windows pentru pornire rapidă
+├── CODEOWNERS              # Config GitHub pentru ownership
+├── .gitignore              # Fișiere ignorate de Git
+└── README.md               # Documentația proiectului
+```
 
-💡 Legendă Culori (Indicii)
-🟩 Verde: Potrivire perfectă.
-🟨 Galben: Echipa introdusă se află în istoricul fostelor echipe ale pilotului.
-🟧 Portocaliu: Valoarea corectă este mai mare decât cea introdusă.
-🟪 Violet: Valoarea corectă este mai mică decât cea introdusă.
-🟥 Roșu: Lipsă totală de potrivire.
+---
+
+## Instalare și rulare locală
+
+### 1. Clonează repository-ul
+
+```bash
+git clone https://github.com/HnarcisM/f1guesserduel.git
+cd f1guesserduel
+```
+
+### 2. Instalează dependențele
+
+```bash
+npm install
+```
+
+### 3. Pornește aplicația
+
+```bash
+npm start
+```
+
+sau direct:
+
+```bash
+node server.js
+```
+
+### 4. Deschide aplicația în browser
+
+```text
+http://localhost:3000
+```
+
+---
+
+## Testare pe telefon
+
+Pentru testare pe telefon real:
+
+1. Pornește aplicația pe PC/laptop.
+2. Asigură-te că telefonul și PC-ul sunt în aceeași rețea Wi-Fi.
+3. Află IP-ul PC-ului.
+
+Pe Windows:
+
+```bash
+ipconfig
+```
+
+Caută adresa IPv4, de exemplu:
+
+```text
+192.168.1.50
+```
+
+4. Intră de pe telefon în browser la:
+
+```text
+http://192.168.1.50:3000
+```
+
+Înlocuiește IP-ul cu adresa reală a calculatorului tău.
+
+Dacă pagina nu se deschide, verifică firewall-ul Windows și permisiunile pentru Node.js.
+
+---
+
+## Moduri de dificultate
+
+Aplicația include trei niveluri principale:
+
+| Dificultate | Descriere |
+| --- | --- |
+| Easy | Piloți moderni, în general după 2010 |
+| Medium | Piloți din perioada 2000–2010 |
+| Hard | Piloți istorici, aproximativ 1950–2000 |
+
+Dificultatea este trimisă către server, iar serverul filtrează lista din `drivers.json`.
+
+---
+
+## Teme vizuale
+
+Aplicația include trei teme:
+
+| Temă | Descriere |
+| --- | --- |
+| F1 Classic | Temă dark clasică |
+| Night Race | Temă neon, inspirată de curse nocturne |
+| Carbon & Checkers | Temă carbon, cu accente gri/antracit |
+
+Tema Carbon a fost ajustată pentru contrast mai bun pe:
+
+- butonul `Trimite`;
+- sugestiile autocomplete;
+- butonul `Joacă din nou`;
+- barele de statistici.
+
+---
+
+## Legendă culori
+
+După fiecare ghicire, jocul afișează indicii vizuale:
+
+| Culoare | Semnificație |
+| --- | --- |
+| Verde | Potrivire perfectă |
+| Galben | Echipa introdusă se află în istoricul pilotului țintă |
+| Portocaliu | Valoarea corectă este mai mare |
+| Violet | Valoarea corectă este mai mică |
+| Roșu | Nu există potrivire |
+
+Pentru câmpurile numerice precum vârsta, anul debutului și victoriile, săgețile indică dacă valoarea corectă este mai mare sau mai mică decât cea introdusă.
+
+---
+
+## Statistici locale
+
+Statisticile sunt salvate local în browser, folosind `localStorage`.
+
+Sunt urmărite:
+
+- numărul total de jocuri;
+- rata de câștig;
+- streak-ul curent;
+- distribuția încercărilor.
+
+Aceste statistici sunt locale pentru fiecare browser/dispozitiv și nu sunt sincronizate între jucători.
+
+---
+
+## Arhitectură
+
+### Server
+
+Fișier principal: `server.js`
+
+Responsabilități:
+
+- servește aplicația din folderul `public`;
+- creează și gestionează camerele de joc;
+- ține pilotul țintă pe server;
+- filtrează piloții după dificultate;
+- validează ghicirile;
+- trimite către client rezultatul comparației;
+- gestionează restartul și deconectarea jucătorilor.
+
+### Client
+
+Fișier principal: `public/game.js`
+
+Responsabilități:
+
+- generează sau citește room-ul din URL;
+- gestionează UI-ul de dificultate;
+- gestionează autocomplete-ul;
+- trimite ghicirile către server;
+- randează gridul de rezultate;
+- afișează popup-ul final;
+- actualizează statisticile locale;
+- gestionează temele și link-ul de share.
+
+### Stiluri
+
+Fișier principal: `public/style.css`
+
+Responsabilități:
+
+- layout general;
+- teme vizuale;
+- grid de joc;
+- autocomplete;
+- popup final;
+- statistici;
+- responsive design pentru telefon și tabletă.
+
+---
+
+## Optimizări implementate
+
+### CSS
+
+- Eliminare reguli duplicate.
+- Mutare stiluri inline din HTML în CSS.
+- Introducere variabile CSS pentru culori, spațieri, radius, umbre și tranziții.
+- Uniformizare butoane.
+- Uniformizare spacing și border-radius.
+- Fixuri de contrast pentru tema Carbon.
+- Responsive design pentru ecrane mici.
+
+### JavaScript
+
+- Eliminare `joinRoom` duplicat.
+- Înlocuire `keyCode` cu `e.key`.
+- Mutare stiluri directe în clase CSS.
+- Reducere utilizare `innerHTML` unde nu era necesar.
+- Helper-e pentru:
+  - autocomplete;
+  - randarea celulelor;
+  - asset-uri flag/logo;
+  - statistici locale.
+- Organizare internă a fișierului `game.js` pe secțiuni clare.
+
+### Asset-uri
+
+- Flag-urile locale se încarcă direct ca `.svg`.
+- Logo-urile echipelor folosesc extensia corectă când există local.
+- Fallback-uri mai clare pentru flag-uri și logo-uri.
+
+---
+
+## Datele despre piloți
+
+Piloții sunt definiți în `drivers.json`.
+
+Fiecare pilot include informații precum:
+
+- `id` – identificator unic;
+- `name` – numele afișat;
+- `nat` – naționalitatea;
+- `team` – echipa sau istoricul echipelor;
+- `age` – vârsta;
+- `debut` – anul debutului;
+- `wins` – numărul de victorii;
+- `difficulty` – dificultatea în care apare pilotul.
+
+Dacă se adaugă piloți noi, trebuie verificat ca valorile pentru naționalitate și echipă să aibă asset-uri corespunzătoare sau fallback corect.
+
+---
+
+## Recomandări pentru dezvoltare
+
+Înainte de modificări majore:
+
+```bash
+git add .
+git commit -m "Stable version before new changes"
+```
+
+După fiecare modificare importantă:
+
+- testează o rundă câștigată;
+- testează o rundă pierdută;
+- testează restartul;
+- verifică autocomplete-ul;
+- verifică tema Carbon;
+- verifică aplicația pe mobil;
+- verifică consola browserului pentru erori.
+
+Pentru verificare rapidă a sintaxei JavaScript:
+
+```bash
+node --check server.js
+node --check public/game.js
+```
+
+---
+
+## Direcții viitoare
+
+Posibile îmbunătățiri:
+
+- redesign vizual premium inspirat de interfețe F1 / timing screen;
+- modernizare header;
+- carduri de dificultate mai elegante;
+- grid de joc mai apropiat de stilul broadcast F1;
+- animații subtile pentru celule;
+- leaderboard per cameră;
+- mod single-player separat;
+- istoric runde;
+- scor pentru duel;
+- separarea `game.js` în module mai mici;
+- teste automate pentru logica serverului.
+
+---
+
+## Status proiect
+
+Versiunea curentă este stabilă după refactorizări CSS și JavaScript.
+
+Aplicația este pregătită pentru următoarea etapă: **redesign vizual controlat**, păstrând funcționalitatea existentă.

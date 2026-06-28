@@ -1,14 +1,36 @@
+/**
+ * F1 Guesser Duel - client-side application logic.
+ *
+ * Responsabilități principale:
+ * - inițializează conexiunea Socket.IO cu serverul;
+ * - gestionează camera de duel și dificultatea selectată;
+ * - afișează autocomplete-ul pentru piloți;
+ * - trimite ghicirile către server;
+ * - randează rezultatele primite de la server în grid;
+ * - salvează și afișează statisticile locale în browser;
+ * - gestionează tema vizuală, share link și restart.
+ *
+ * Notă de arhitectură:
+ * Clientul afișează UI-ul, dar validarea rezultatului se face pe server.
+ * Astfel, pilotul țintă nu este dezvăluit în browser până la finalul jocului.
+ */
+
 // ===============================
 // Global state
 // ===============================
+// Conexiunea Socket.IO este inițializată la DOMContentLoaded.
 let socket;
+// Lista de piloți disponibilă pentru dificultatea curentă, primită de la server.
 let driversList = [];
+// ID-ul pilotului ales din autocomplete; evită ambiguități între nume similare.
 let selectedDriverId = null;
+// Indexul sugestiei active când utilizatorul navighează cu săgețile.
 let currentFocus = -1;
 
 // ===============================
 // Constants
 // ===============================
+// Mapare coduri FIA/F1 către coduri ISO folosite de fișierele SVG din /flags.
 const F1_TO_ISO = {
 	"ARG": "ar", "AUS": "au", "AUT": "at", "BEL": "be", "BRA": "br",
 	"CAN": "ca", "CHN": "cn", "COL": "co", "CZE": "cz", "DEN": "dk",
@@ -20,6 +42,8 @@ const F1_TO_ISO = {
 	"UAE": "ae", "CHI": "cl", "URU": "uy", "BUL": "bg", "CRO": "hr"
 };
 
+// Mapare nume echipă normalizat -> fișier logo local.
+// Folosim această listă pentru a evita request-uri inutile către extensii greșite.
 const TEAM_LOGO_FILES = {
 	"alfaromeo": "AlfaRomeo.svg",
 	"alphatauri": "AlphaTauri.svg",
@@ -73,6 +97,10 @@ const TEAM_LOGO_FILES = {
 // ===============================
 // Small DOM utilities
 // ===============================
+/**
+ * Creează un element text sigur.
+ * Folosește textContent, nu innerHTML, pentru a evita inserarea de HTML nedorit.
+ */
 function createTextElement(tagName, className, text) {
 	const element = document.createElement(tagName);
 	if (className) element.className = className;
@@ -80,6 +108,9 @@ function createTextElement(tagName, className, text) {
 	return element;
 }
 
+/**
+ * Setează rapid textul unui element căutat după ID, doar dacă elementul există.
+ */
 function setTextContentById(elementId, value) {
 	const element = document.getElementById(elementId);
 	if (element) element.textContent = value;
@@ -88,6 +119,10 @@ function setTextContentById(elementId, value) {
 // ===============================
 // Grid initialization
 // ===============================
+/**
+ * Construiește gridul principal al jocului: header + 6 rânduri x 6 coloane.
+ * Se apelează la începutul jocului și după restart.
+ */
 function initializeGridStructure() {
 	const grid = document.getElementById("grid");
 	if (!grid) return;
@@ -106,27 +141,39 @@ function initializeGridStructure() {
 // ===============================
 // Autocomplete
 // ===============================
+/** Returnează containerul listei de autocomplete. */
 function getSuggestionsContainer() {
 	return document.getElementById("suggestions");
 }
 
+/** Returnează elementele <li> din autocomplete, sau null dacă lista nu există. */
 function getSuggestionItems() {
 	const suggestions = getSuggestionsContainer();
 	return suggestions ? suggestions.getElementsByTagName("li") : null;
 }
 
+/**
+ * Golește lista de sugestii și resetează navigarea cu tastatura.
+ */
 function clearSuggestions() {
 	const suggestions = getSuggestionsContainer();
 	if (suggestions) suggestions.replaceChildren();
 	currentFocus = -1;
 }
 
+/**
+ * Punctul de intrare pentru autocomplete când utilizatorul scrie în input.
+ */
 function showPredictions(value) {
 	selectedDriverId = null;
 	currentFocus = -1;
 	renderSuggestions(filterDriverPredictions(value));
 }
 
+/**
+ * Filtrează piloții după începutul prenumelui sau numelui.
+ * Exemplu: "ham" va găsi "Lewis Hamilton".
+ */
 function filterDriverPredictions(value) {
 	const query = value.trim().toLowerCase();
 	if (!query) return [];
@@ -137,6 +184,9 @@ function filterDriverPredictions(value) {
 	});
 }
 
+/**
+ * Randează sugestiile în listă folosind elemente DOM reale, nu HTML string.
+ */
 function renderSuggestions(drivers) {
 	const listContainer = getSuggestionsContainer();
 	if (!listContainer) return;
@@ -147,6 +197,9 @@ function renderSuggestions(drivers) {
 	});
 }
 
+/**
+ * Creează o sugestie individuală. Click-ul pe sugestie selectează pilotul și trimite ghicirea.
+ */
 function createSuggestionItem(driver) {
 	const li = document.createElement("li");
 	li.textContent = driver.name;
@@ -155,6 +208,7 @@ function createSuggestionItem(driver) {
 	return li;
 }
 
+/** Selectează un pilot dintr-un obiect driver primit din lista filtrată. */
 function selectDriverSuggestion(driver) {
 	const inputEl = document.getElementById("driverInput");
 	if (inputEl) inputEl.value = driver.name;
@@ -163,6 +217,7 @@ function selectDriverSuggestion(driver) {
 	sendGuess();
 }
 
+/** Selectează un pilot pornind de la elementul <li> activ în autocomplete. */
 function selectSuggestionItem(item) {
 	if (!item) return;
 	const inputEl = document.getElementById("driverInput");
@@ -172,6 +227,9 @@ function selectSuggestionItem(item) {
 	sendGuess();
 }
 
+/**
+ * Gestionează navigarea în autocomplete cu ArrowUp / ArrowDown / Enter.
+ */
 function handleAutocompleteKeydown(e) {
 	const list = getSuggestionItems();
 
@@ -191,6 +249,7 @@ function handleAutocompleteKeydown(e) {
 	}
 }
 
+/** Marchează vizual sugestia activă și se asigură că rămâne vizibilă în listă. */
 function addActive(list) {
 	if (!list || list.length === 0) return;
 	removeActive(list);
@@ -200,6 +259,7 @@ function addActive(list) {
 	list[currentFocus].scrollIntoView({ block: "nearest" });
 }
 
+/** Elimină clasa active de pe toate sugestiile. */
 function removeActive(list) {
 	for (let i = 0; i < list.length; i++) {
 		list[i].classList.remove("active");
@@ -209,6 +269,10 @@ function removeActive(list) {
 // ===============================
 // Guess submission
 // ===============================
+/**
+ * Validează inputul curent și trimite ID-ul pilotului către server.
+ * Serverul decide dacă ghicirea este corectă și trimite înapoi culorile celulelor.
+ */
 function sendGuess() {
 	const inputEl = document.getElementById("driverInput");
 	if (!inputEl) return;
@@ -230,22 +294,29 @@ function sendGuess() {
 // ===============================
 // Asset helpers: flags and team logos
 // ===============================
+/** Transformă codul de naționalitate F1/FIA în cod ISO pentru fișierul SVG local. */
 function getIsoCode(nationality) {
 	if (!nationality) return "un";
 	return F1_TO_ISO[nationality.toUpperCase()] || nationality.substring(0, 2).toLowerCase();
 }
 
+/** Normalizează numele echipei pentru a-l putea căuta în TEAM_LOGO_FILES. */
 function normalizeTeamLogoKey(teamName) {
 	return String(teamName || '')
 		.replace(/\s+/g, '')
 		.toLowerCase();
 }
 
+/** Returnează calea către logo-ul local al echipei, dacă există în mapare. */
 function getLocalTeamLogoPath(teamName) {
 	const fileName = TEAM_LOGO_FILES[normalizeTeamLogoKey(teamName)];
 	return fileName ? `/logos/${fileName}` : null;
 }
 
+/**
+ * Fallback pentru logo-uri de echipe.
+ * Ordine: fișier local -> logo online cunoscut -> logo generic F1.
+ */
 function handleTeamLogoError(imgElement, teamName, currentStep) {
 	const onlineLogos = {
 		"Ferrari": "https://upload.wikimedia.org/wikipedia/sco/d/d4/Ferrari-Logo.svg",
@@ -278,6 +349,10 @@ function handleTeamLogoError(imgElement, teamName, currentStep) {
 	imgElement.src = "/logos/F1.svg";
 }
 
+/**
+ * Fallback pentru steaguri.
+ * Ordine: SVG local -> FlagCDN PNG -> steag generic UN.
+ */
 function handleFlagError(imgElement, isoCode, currentStep) {
 	if (currentStep === 0) {
 		imgElement.onerror = () => handleFlagError(imgElement, isoCode, 1);
@@ -289,6 +364,10 @@ function handleFlagError(imgElement, isoCode, currentStep) {
 	imgElement.src = "/flags/un.svg";
 }
 
+/**
+ * Generează emoji de steag din cod de țară.
+ * Momentan este păstrată ca utilitar fallback, chiar dacă UI-ul principal folosește imagini SVG.
+ */
 function getFlagEmoji(countryCode) {
     if (!countryCode || countryCode.length !== 3) return "🏳️";
     
@@ -327,12 +406,16 @@ function getFlagEmoji(countryCode) {
 // ===============================
 // Result cell rendering
 // ===============================
+/**
+ * Resetează conținutul unei celule și aplică clasele CSS care indică starea rezultatului.
+ */
 function setCellState(cell, resultClass, extraClasses = []) {
 	if (!cell) return;
 	cell.className = ["cell", resultClass, ...extraClasses].filter(Boolean).join(" ");
 	cell.replaceChildren();
 }
 
+/** Randează celula cu ID-ul și numele pilotului ghicit. */
 function renderDriverCell(cell, guess, resultClass) {
 	setCellState(cell, resultClass, ["cell-driver"]);
 	cell.append(
@@ -341,6 +424,7 @@ function renderDriverCell(cell, guess, resultClass) {
 	);
 }
 
+/** Randează celula de țară: steag local + cod naționalitate. */
 function renderCountryCell(cell, guess, resultClass) {
 	setCellState(cell, resultClass, ["cell-media", "cell-country"]);
 
@@ -357,6 +441,7 @@ function renderCountryCell(cell, guess, resultClass) {
 	);
 }
 
+/** Randează celula de echipă: logo + nume scurt. */
 function renderTeamCell(cell, guess, resultClass) {
 	setCellState(cell, resultClass, ["cell-media", "cell-team"]);
 
@@ -373,12 +458,17 @@ function renderTeamCell(cell, guess, resultClass) {
 	);
 }
 
+/**
+ * Pentru valorile numerice, întoarce săgeata care indică direcția valorii corecte.
+ * orange = valoarea corectă este mai mare; purple = valoarea corectă este mai mică.
+ */
 function getArrowSymbol(resultClass) {
 	if (resultClass === "orange") return "↑";
 	if (resultClass === "purple") return "↓";
 	return "";
 }
 
+/** Randează o celulă numerică: valoare + săgeată de ghidaj, dacă este cazul. */
 function renderValueCell(cell, value, resultClass) {
 	setCellState(cell, resultClass, ["cell-arrow"]);
 	cell.appendChild(createTextElement("span", "", value));
@@ -392,6 +482,10 @@ function renderValueCell(cell, value, resultClass) {
 // ===============================
 // Local statistics
 // ===============================
+/**
+ * Citește statisticile locale din localStorage.
+ * Dacă nu există statistici salvate, întoarce structura default.
+ */
 function getStats() {
 	const defaultStats = {
 		played: 0,
@@ -405,6 +499,10 @@ function getStats() {
 	return stats;
 }
 
+/**
+ * Actualizează statisticile după finalul unui joc.
+ * Pentru înfrângere se resetează streak-ul, iar pentru victorie se actualizează distribuția încercărilor.
+ */
 function updateStats(isWin, attempts) {
 	let stats = getStats();
 	stats.played += 1;
@@ -422,18 +520,22 @@ function updateStats(isWin, attempts) {
 	localStorage.setItem('f1-guesser-stats', JSON.stringify(stats));
 }
 
+/** Calculează procentul de victorii, rotunjit la cel mai apropiat întreg. */
 function calculateWinRate(stats) {
 	return stats.played > 0 ? Math.round((stats.won / stats.played) * 100) : 0;
 }
 
+/** Returnează valoarea maximă din distribuție; minim 1 pentru a evita împărțirea la zero. */
 function getMaxDistributionValue(distribution) {
 	return Math.max(...Object.values(distribution), 1);
 }
 
+/** Calculează lățimea barei de distribuție în procente. */
 function calculateDistributionBarWidth(count, maxDistributionValue) {
 	return count > 0 ? Math.max(10, Math.round((count / maxDistributionValue) * 100)) : 8;
 }
 
+/** Creează un rând din graficul de distribuție a încercărilor. */
 function createDistributionRow(attemptNumber, count, barWidth) {
 	const row = document.createElement('div');
 	row.className = 'dist-row';
@@ -450,12 +552,14 @@ function createDistributionRow(attemptNumber, count, barWidth) {
 	return row;
 }
 
+/** Actualizează sumarul statisticilor: jucate, win rate și streak. */
 function renderStatsSummary(stats) {
 	setTextContentById('stat-played', stats.played);
 	setTextContentById('stat-winrate', `${calculateWinRate(stats)}%`);
 	setTextContentById('stat-streak', stats.streak);
 }
 
+/** Randează toate cele 6 bare din distribuția încercărilor. */
 function renderGuessDistribution(distribution) {
 	const distributionContainer = document.getElementById('guess-distribution');
 	if (!distributionContainer) return;
@@ -472,6 +576,7 @@ function renderGuessDistribution(distribution) {
 	}
 }
 
+/** Funcție centrală pentru redesenarea statisticilor din popup-ul de final. */
 function renderStats() {
 	const stats = getStats();
 	renderStatsSummary(stats);
@@ -481,6 +586,10 @@ function renderStats() {
 // ===============================
 // Socket events
 // ===============================
+/**
+ * Leagă toate evenimentele Socket.IO primite de la server.
+ * Se apelează o singură dată după conectarea socket-ului.
+ */
 function setupSocketEvents() {
 	
 	// Ștergem orice ascultător activ anterior pentru a preveni dublarea/multiplicarea numărului online
@@ -551,18 +660,18 @@ function setupSocketEvents() {
 				document.getElementById("endGameMessage").innerHTML = `Ai descoperit pilotul misterios în <strong>${attempts}</strong> ${attempts === 1 ? 'încercare' : 'încercări'}!`;
 				popup.classList.add("win-style"); // Aplică stilul auriu + pulse
 				
-				// [AICI AM ADĂUGAT]: Salvăm meciul câștigat în statistici
+				// Salvăm meciul câștigat în statisticile locale
 				updateStats(true, attempts);
 			} else {
 				document.getElementById("endGameTitle").innerText = "💀 AI PIERDUT!";
 				document.getElementById("endGameMessage").innerHTML = `Din păcate nu ai ghicit. Pilotul misterios era: <strong>${target ? target.name : 'Necunoscut'}</strong>`;
 				popup.classList.add("lose-style"); // Aplică stilul roșu + scuturare
 				
-				// [AICI AM ADĂUGAT]: Salvăm meciul pierdut în statistici
+				// Salvăm meciul pierdut în statisticile locale
 				updateStats(false, 0);
 			}
 			
-			// [AICI AM ADĂUGAT]: Calculăm și desenăm graficele în popup
+			// Calculăm și desenăm graficele în popup
 			renderStats();
 			
 			// Afișăm popup-ul cu noul efect elastic
@@ -570,7 +679,7 @@ function setupSocketEvents() {
 		}
 	});
 
-		socket.on('gameRestarted', () => {
+	socket.on('gameRestarted', () => {
 		initializeGridStructure();
 		
 		// Ascundem popup-ul și ștergem stilurile specifice de meci trecut
@@ -596,6 +705,10 @@ function setupSocketEvents() {
 // ===============================
 // App bootstrap and UI event binding
 // ===============================
+/**
+ * Bootstrap UI.
+ * Tot ce ține de accesarea DOM-ului și event listeners se leagă după încărcarea documentului.
+ */
 document.addEventListener("DOMContentLoaded", () => {
 	
 	// Logica pentru meniu hamburger dropdown
@@ -617,7 +730,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		});
 	}
 
-	// --- LOGICĂ SCHIMBARE DIFICULTATE (DOAR PENTRU EX, MED, HARD, HOME) ---
+	// --- Schimbare dificultate din dropdown ---
 	document.querySelectorAll(".menu-item:not(.theme-item)").forEach(item => {
 		item.addEventListener("click", function() {
 			const choice = this.getAttribute("data-level");
@@ -636,7 +749,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		});
 	});
 
-	// --- LOGICĂ SCHIMBARE TEME VIZUALE (SEPARATĂ COMPLET) ---
+	// --- Schimbare teme vizuale, local în browser ---
 	const savedTheme = localStorage.getItem('f1-guesser-theme') || 'default';
 	document.body.setAttribute('data-app-theme', savedTheme);
 
@@ -657,7 +770,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		});
 	});
 	
-		// --- IMPLEMENTARE BUTON PARTAJARE COMBINATĂ (FINISH FLAG) ---
+		// --- Buton share: copiază linkul camerei curente ---
 	const shareBtn = document.getElementById("shareRoomBtn");
 	if (shareBtn) {
 		shareBtn.addEventListener("click", () => {
@@ -678,6 +791,9 @@ document.addEventListener("DOMContentLoaded", () => {
 		});
 	}
 
+	/**
+	 * Fallback pentru copierea linkului camerei când Clipboard API nu este disponibil.
+	 */
 	function fallbackCopyText(text) {
 		const textArea = document.createElement("textarea");
 		textArea.value = text;
@@ -696,6 +812,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		document.body.removeChild(textArea);
 	}
 
+	/** Afișează temporar tooltip-ul "Copiat!" de pe butonul de share. */
 	function triggerTooltip() {
 		shareBtn.classList.add("copied");
 		setTimeout(() => {
@@ -723,7 +840,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		window.history.pushState({}, '', `?room=${roomId}`);
 	}
 	
-	// === LINIA NOUĂ: Actualizăm dinamic textul butonului din header în mod securizat ===
+	// Actualizăm dinamic textul butonului din header cu ID-ul camerei curente
 	const roomBtnTextEl = document.getElementById("roomBtnText");
 	if (roomBtnTextEl) {
 		roomBtnTextEl.textContent = `🏁 Room: ${roomId}`;

@@ -1,19 +1,42 @@
+/**
+ * F1 Guesser Duel - server Node.js + Express + Socket.IO.
+ *
+ * Responsabilități principale:
+ * - servește fișierele statice din /public;
+ * - gestionează camerele de joc prin Socket.IO;
+ * - alege pilotul țintă pentru fiecare cameră;
+ * - validează ghicirile pe server și trimite clientului doar rezultatul calculat;
+ * - ține evidența încercărilor per jucător/socket.
+ *
+ * Important pentru securitate:
+ * Pilotul țintă rămâne pe server până la finalul jocului, astfel încât clientul
+ * să nu poată citi răspunsul corect din JavaScript înainte de terminarea rundei.
+ */
+
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const { Server } = require('socket.io');
 
+// Inițializare Express + server HTTP necesar pentru Socket.IO.
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// Portul poate fi suprascris din environment; local folosește 3000.
 const PORT = process.env.PORT || 3000;
 
+// Expune index.html, style.css, game.js, flags și logos din folderul public.
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Starea camerelor active. Cheia este roomId-ul din URL.
 const rooms = {};
 
+/**
+ * Încarcă piloții din drivers.json și filtrează lista după dificultate.
+ * Fișierul permite comentarii bloc /* ... *\/ pe care le eliminăm înainte de JSON.parse.
+ */
 function getDriversByDifficulty(difficulty, callback) {
     const filePath = path.join(__dirname, 'drivers.json');
     fs.readFile(filePath, 'utf8', (err, data) => {
@@ -31,9 +54,11 @@ function getDriversByDifficulty(difficulty, callback) {
     });
 }
 
+// Pentru fiecare client conectat, păstrăm local camera curentă a socket-ului.
 io.on('connection', (socket) => {
     let currentRoom = null;
 
+    // Clientul intră într-o cameră. Dacă aceasta nu există, o creăm.
     socket.on('joinRoom', (roomId) => {
         currentRoom = roomId;
         socket.join(roomId);
@@ -59,6 +84,7 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Setarea dificultății pornește o rundă nouă pentru toți jucătorii din cameră.
     socket.on('setDifficulty', (difficulty) => {
         if (!currentRoom || !rooms[currentRoom]) return;
         
@@ -79,6 +105,7 @@ io.on('connection', (socket) => {
         });
     });
 
+    // Primește ghicirea clientului, calculează rezultatele și răspunde doar acelui jucător.
     socket.on('submitGuess', (driverId) => {
         if (!currentRoom || !rooms[currentRoom] || !rooms[currentRoom].targetDriver) return;
 
@@ -130,6 +157,7 @@ io.on('connection', (socket) => {
         socket.emit('guessResult', responseData);
     });
 
+    // Restartul păstrează dificultatea, dar alege un nou pilot țintă și resetează încercările.
     socket.on('restartGame', () => {
         if (!currentRoom || !rooms[currentRoom]) return;
         const room = rooms[currentRoom];
@@ -146,6 +174,7 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Curățare la deconectare: scoatem jucătorul din cameră și ștergem camera dacă devine goală.
     socket.on('disconnect', () => {
         if (currentRoom && rooms[currentRoom]) {
             rooms[currentRoom].players = rooms[currentRoom].players.filter(id => id !== socket.id);
@@ -157,6 +186,7 @@ io.on('connection', (socket) => {
     });
 });
 
+// Rută explicită pentru homepage; fallback-ul index.txt există doar ca plasă de siguranță.
 app.get('/', (req, res) => {
     const htmlPath = path.join(__dirname, 'public', 'index.html');
     const txtPath = path.join(__dirname, 'public', 'index.txt');
@@ -170,6 +200,7 @@ app.get('/', (req, res) => {
     }
 });
 
+// Pornirea serverului.
 server.listen(PORT, () => {
     console.log(`===================================================`);
     console.log(` 🏎️  F1 GUESSER DUEL RULEAZĂ ACUM!`);
