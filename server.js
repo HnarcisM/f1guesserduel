@@ -28,10 +28,29 @@ const io = new Server(server);
 const PORT = process.env.PORT || 3000;
 const DEFAULT_TIME_LIMIT_SECONDS = 60;
 const ALLOWED_TIME_LIMIT_SECONDS = [60, 90, 120];
+const ALLOWED_DIFFICULTIES = ['easy', 'medium', 'hard', 'all'];
+const MAX_PLAYERS_PER_ROOM = 2;
+const MAX_ATTEMPTS = 6;
+const ROOM_ID_PATTERN = /^[a-zA-Z0-9_-]{3,20}$/;
 
 function normalizeTimeLimitSeconds(value) {
     const seconds = Number(value);
     return ALLOWED_TIME_LIMIT_SECONDS.includes(seconds) ? seconds : DEFAULT_TIME_LIMIT_SECONDS;
+}
+
+function isValidDifficulty(difficulty) {
+    return ALLOWED_DIFFICULTIES.includes(difficulty);
+}
+
+function isValidRoomId(roomId) {
+    return typeof roomId === 'string' && ROOM_ID_PATTERN.test(roomId);
+}
+
+function buildPublicRoomState(room) {
+    return {
+        playerCount: room.players.length,
+        maxPlayers: MAX_PLAYERS_PER_ROOM
+    };
 }
 
 // Expune index.html, style.css, game.js, flags și logos din folderul public.
@@ -41,56 +60,182 @@ app.use(express.static(path.join(__dirname, 'public')));
 const rooms = {};
 
 /**
- * Încarcă piloții din drivers.json și filtrează lista după dificultate.
+ * Încarcă piloții o singură dată la pornirea serverului.
  * Fișierul permite comentarii bloc /* ... *\/ pe care le eliminăm înainte de JSON.parse.
  */
-function getDriversByDifficulty(difficulty, callback) {
+function loadDrivers() {
     const filePath = path.join(__dirname, 'drivers.json');
-    fs.readFile(filePath, 'utf8', (err, data) => {
-        if (err) return callback(err, null);
-        try {
-            let cleanData = data.replace(/\/\*[\s\S]*?\*\//g, ""); 
-            let drivers = JSON.parse(cleanData);
-            if (difficulty && difficulty !== 'all') {
-                drivers = drivers.filter(d => d.difficulty === difficulty);
-            }
-            callback(null, drivers);
-        } catch (e) {
-            callback(e, null);
-        }
+    const data = fs.readFileSync(filePath, 'utf8');
+    const cleanData = data.replace(/\/\*[\s\S]*?\*\//g, '');
+    const drivers = JSON.parse(cleanData);
+
+    if (!Array.isArray(drivers) || drivers.length === 0) {
+        throw new Error('drivers.json nu conține o listă validă de piloți.');
+    }
+
+    return drivers;
+}
+
+const allDrivers = loadDrivers();
+
+function getDriversByDifficulty(difficulty) {
+    if (!isValidDifficulty(difficulty)) return [];
+    if (difficulty === 'all') return allDrivers;
+    return allDrivers.filter(driver => driver.difficulty === difficulty);
+}
+
+function createRoom(roomId, hostSocketId) {
+    return {
+        roomId,
+        hostId: hostSocketId,
+        players: [],
+        targetDriver: null,
+        difficulty: null,
+        driversList: [],
+        attempts: {},
+        timed: false,
+        timeLimitSeconds: DEFAULT_TIME_LIMIT_SECONDS,
+        roundStartedAt: null,
+        roundState: 'waiting'
+    };
+}
+
+function addPlayerToRoom(room, socketId) {
+    if (room.players.includes(socketId)) return true;
+    if (room.players.length >= MAX_PLAYERS_PER_ROOM) return false;
+
+    room.players.push(socketId);
+    room.attempts[socketId] = 0;
+    return true;
+}
+
+function removePlayerFromRoom(room, socketId) {
+    room.players = room.players.filter(id => id !== socketId);
+    delete room.attempts[socketId];
+
+    if (room.hostId === socketId) {
+        room.hostId = room.players[0] || null;
+    }
+}
+
+function emitRoomUpdate(roomId) {
+    const room = rooms[roomId];
+    if (!room) return;
+    io.to(roomId).emit('roomUpdate', buildPublicRoomState(room));
+}
+
+function startNewRound(roomId, options) {
+    const room = rooms[roomId];
+    if (!room) return false;
+
+    const difficulty = options && options.difficulty;
+    if (!isValidDifficulty(difficulty)) return false;
+
+    const drivers = getDriversByDifficulty(difficulty);
+    if (drivers.length === 0) return false;
+
+    room.difficulty = difficulty;
+    room.driversList = drivers;
+    room.targetDriver = drivers[Math.floor(Math.random() * drivers.length)];
+    room.attempts = Object.fromEntries(room.players.map(socketId => [socketId, 0]));
+    room.timed = Boolean(options.timed);
+    room.timeLimitSeconds = normalizeTimeLimitSeconds(options.timeLimitSeconds);
+    room.roundStartedAt = Date.now();
+    room.roundState = 'playing';
+
+    io.to(roomId).emit('initGame', {
+        drivers,
+        difficulty,
+        timed: room.timed,
+        timeLimitSeconds: room.timeLimitSeconds,
+        roundStartedAt: room.roundStartedAt
     });
+
+    return true;
+}
+
+function restartRound(roomId, options = {}) {
+    const room = rooms[roomId];
+    if (!room || !room.difficulty) return false;
+
+    const drivers = getDriversByDifficulty(room.difficulty);
+    if (drivers.length === 0) return false;
+
+    room.driversList = drivers;
+    room.targetDriver = drivers[Math.floor(Math.random() * drivers.length)];
+    room.attempts = Object.fromEntries(room.players.map(socketId => [socketId, 0]));
+    room.timed = Boolean(options.timed);
+    room.timeLimitSeconds = normalizeTimeLimitSeconds(options.timeLimitSeconds);
+    room.roundStartedAt = Date.now();
+    room.roundState = 'playing';
+
+    io.to(roomId).emit('gameRestarted', {
+        timed: room.timed,
+        timeLimitSeconds: room.timeLimitSeconds,
+        roundStartedAt: room.roundStartedAt
+    });
+
+    return true;
+}
+
+function getCurrentTeam(driver) {
+    return Array.isArray(driver.team) ? driver.team[0] : driver.team;
+}
+
+function compareGuess(guessDriver, target) {
+    const currentGuessTeam = getCurrentTeam(guessDriver);
+
+    const results = {
+        name: guessDriver.id === target.id ? 'green' : 'red',
+        nat: guessDriver.nat === target.nat ? 'green' : 'red',
+        team: 'red',
+        age: target.age > guessDriver.age ? 'orange' : (target.age < guessDriver.age ? 'purple' : 'green'),
+        debut: target.debut > guessDriver.debut ? 'orange' : (target.debut < guessDriver.debut ? 'purple' : 'green'),
+        wins: target.wins > guessDriver.wins ? 'orange' : (target.wins < guessDriver.wins ? 'purple' : 'green')
+    };
+
+    if (Array.isArray(target.team) && target.team.includes(currentGuessTeam)) {
+        results.team = currentGuessTeam === target.team[0] ? 'green' : 'yellow';
+    }
+
+    return results;
 }
 
 // Pentru fiecare client conectat, păstrăm local camera curentă a socket-ului.
 io.on('connection', (socket) => {
     let currentRoom = null;
 
-    // Clientul intră într-o cameră. Dacă aceasta nu există, o creăm.
     socket.on('joinRoom', (roomId) => {
-        currentRoom = roomId;
-        socket.join(roomId);
-
-        if (!rooms[roomId]) {
-            rooms[roomId] = {
-                players: [],
-                targetDriver: null,
-                difficulty: null,
-                driversList: [],
-                attempts: {},
-                timed: false,
-                timeLimitSeconds: DEFAULT_TIME_LIMIT_SECONDS,
-                roundStartedAt: null
-            };
+        if (!isValidRoomId(roomId)) {
+            socket.emit('errorMessage', 'Camera este invalidă. Folosește un room ID de 3-20 caractere.');
+            return;
         }
 
-        // VERIFICARE CRITICĂ: Împiedică adăugarea aceluiași socket ID de mai multe ori
-		if (!rooms[roomId].players.includes(socket.id)) {
-			rooms[roomId].players.push(socket.id);
-		}
-        io.to(roomId).emit('roomUpdate', { playerCount: rooms[roomId].players.length });
+        if (!rooms[roomId]) {
+            rooms[roomId] = createRoom(roomId, socket.id);
+        }
 
-        if (rooms[roomId].difficulty) {
-            socket.emit('initGame', { drivers: rooms[roomId].driversList, difficulty: rooms[roomId].difficulty, timed: rooms[roomId].timed, timeLimitSeconds: rooms[roomId].timeLimitSeconds, roundStartedAt: rooms[roomId].roundStartedAt });
+        const room = rooms[roomId];
+        const wasAdded = addPlayerToRoom(room, socket.id);
+
+        if (!wasAdded) {
+            socket.emit('roomFull', { maxPlayers: MAX_PLAYERS_PER_ROOM });
+            return;
+        }
+
+        currentRoom = roomId;
+        socket.join(roomId);
+        socket.emit('hostStatus', { isHost: room.hostId === socket.id });
+        emitRoomUpdate(roomId);
+
+        if (room.difficulty && room.roundState === 'playing') {
+            socket.emit('initGame', {
+                drivers: room.driversList,
+                difficulty: room.difficulty,
+                timed: room.timed,
+                timeLimitSeconds: room.timeLimitSeconds,
+                roundStartedAt: room.roundStartedAt
+            });
         }
     });
 
@@ -98,82 +243,64 @@ io.on('connection', (socket) => {
     socket.on('setDifficulty', (payload) => {
         if (!currentRoom || !rooms[currentRoom]) return;
 
+        const room = rooms[currentRoom];
+        if (room.hostId !== socket.id) {
+            socket.emit('errorMessage', 'Doar hostul camerei poate schimba dificultatea.');
+            return;
+        }
+
         const difficulty = typeof payload === 'object' && payload !== null ? payload.level : payload;
         const timed = Boolean(typeof payload === 'object' && payload !== null && payload.timed);
         const timeLimitSeconds = normalizeTimeLimitSeconds(payload && payload.timeLimitSeconds);
-        
-        rooms[currentRoom].difficulty = difficulty;
-        rooms[currentRoom].timed = timed;
-        rooms[currentRoom].timeLimitSeconds = timeLimitSeconds;
-        rooms[currentRoom].roundStartedAt = Date.now();
-        rooms[currentRoom].attempts = {};
 
-        getDriversByDifficulty(difficulty, (err, drivers) => {
-            if (err || drivers.length === 0) {
-                console.error("Eroare la încărcarea piloților:", err);
-                return;
-            }
-            
-            rooms[currentRoom].driversList = drivers;
-            const randomIdx = Math.floor(Math.random() * drivers.length);
-            rooms[currentRoom].targetDriver = drivers[randomIdx];
+        if (!isValidDifficulty(difficulty)) {
+            socket.emit('errorMessage', 'Dificultatea selectată nu este validă.');
+            return;
+        }
 
-            io.to(currentRoom).emit('initGame', { drivers: drivers, difficulty: difficulty, timed: rooms[currentRoom].timed, timeLimitSeconds: rooms[currentRoom].timeLimitSeconds, roundStartedAt: rooms[currentRoom].roundStartedAt });
-        });
+        const didStart = startNewRound(currentRoom, { difficulty, timed, timeLimitSeconds });
+        if (!didStart) {
+            socket.emit('errorMessage', 'Nu am putut porni runda pentru dificultatea selectată.');
+        }
     });
 
     // Primește ghicirea clientului, calculează rezultatele și răspunde doar acelui jucător.
     socket.on('submitGuess', (driverId) => {
-        if (!currentRoom || !rooms[currentRoom] || !rooms[currentRoom].targetDriver) return;
+        if (!currentRoom || !rooms[currentRoom]) return;
 
         const room = rooms[currentRoom];
+        if (!room.players.includes(socket.id) || !room.targetDriver || room.roundState !== 'playing') return;
 
         if (room.timed && room.roundStartedAt && Date.now() - room.roundStartedAt >= room.timeLimitSeconds * 1000) {
-            room.attempts[socket.id] = 6;
-            socket.emit('gameTimedOut', { target: { name: room.targetDriver.name }, attempts: 6 });
+            room.attempts[socket.id] = MAX_ATTEMPTS;
+            socket.emit('gameTimedOut', { target: { name: room.targetDriver.name }, attempts: MAX_ATTEMPTS });
             return;
         }
 
-        if (!room.attempts[socket.id]) room.attempts[socket.id] = 0;
-        
-        // Dacă jocul s-a terminat deja pentru acest jucător, blocăm execuția suplimentară
-        if (room.attempts[socket.id] >= 6) return;
+        if (typeof room.attempts[socket.id] !== 'number') room.attempts[socket.id] = 0;
+        if (room.attempts[socket.id] >= MAX_ATTEMPTS) return;
+
+        const guessDriver = room.driversList.find(driver => driver.id === driverId);
+        if (!guessDriver) {
+            socket.emit('errorMessage', 'Pilotul ales nu este valid pentru runda curentă.');
+            return;
+        }
 
         room.attempts[socket.id]++;
 
-        const guessDriver = room.driversList.find(d => d.id === driverId);
-        if (!guessDriver) return;
-
         const target = room.targetDriver;
-        
-        // --- PROCESARE LOGICĂ & CULORI SECURIZAT PE SERVER ---
-        const results = {
-            name: guessDriver.id === target.id ? 'green' : 'red',
-            nat: guessDriver.nat === target.nat ? 'green' : 'red',
-            team: 'red',
-            age: target.age > guessDriver.age ? 'orange' : (target.age < guessDriver.age ? 'purple' : 'green'),
-            debut: target.debut > guessDriver.debut ? 'orange' : (target.debut < guessDriver.debut ? 'purple' : 'green'),
-            wins: target.wins > guessDriver.wins ? 'orange' : (target.wins < guessDriver.wins ? 'purple' : 'green')
-        };
-
-        let currentGuessTeam = guessDriver.team[0];
-        if (target.team.includes(currentGuessTeam)) {
-            results.team = (currentGuessTeam === target.team[0]) ? 'green' : 'yellow';
-        }
-
+        const results = compareGuess(guessDriver, target);
         const isCorrect = guessDriver.id === target.id;
-        const isGameOver = isCorrect || room.attempts[socket.id] >= 6;
+        const isGameOver = isCorrect || room.attempts[socket.id] >= MAX_ATTEMPTS;
 
-        // Construim răspunsul securizat
         const responseData = {
             guess: guessDriver,
-            results: results,
+            results,
             attempts: room.attempts[socket.id],
-            isCorrect: isCorrect,
-            isGameOver: isGameOver
+            isCorrect,
+            isGameOver
         };
 
-        // Doar când jocul s-a terminat dezvăluim numele complet al pilotului țintă
         if (isGameOver) {
             responseData.target = { name: target.name };
         }
@@ -181,62 +308,53 @@ io.on('connection', (socket) => {
         socket.emit('guessResult', responseData);
     });
 
-
     // Timer expirat pe client: serverul confirmă finalul și dezvăluie pilotul țintă.
     socket.on('timeExpired', () => {
-        if (!currentRoom || !rooms[currentRoom] || !rooms[currentRoom].targetDriver) return;
+        if (!currentRoom || !rooms[currentRoom]) return;
 
         const room = rooms[currentRoom];
-        if (!room.timed || !room.roundStartedAt) return;
+        if (!room.players.includes(socket.id) || !room.targetDriver || !room.timed || !room.roundStartedAt) return;
 
         const elapsedMs = Date.now() - room.roundStartedAt;
         if (elapsedMs < room.timeLimitSeconds * 1000 - 500) return;
 
-        room.attempts[socket.id] = 6;
+        room.attempts[socket.id] = MAX_ATTEMPTS;
         socket.emit('gameTimedOut', {
             target: { name: room.targetDriver.name },
-            attempts: 6
+            attempts: MAX_ATTEMPTS
         });
     });
 
     // Restartul păstrează dificultatea, dar poate primi opțiuni noi pentru următoarea rundă.
-    // Astfel, dacă utilizatorul schimbă timerul din dropdown în timpul unei runde,
-    // noua preferință se aplică la primul Rematch / joc nou, nu rundei curente.
     socket.on('restartGame', (payload = {}) => {
         if (!currentRoom || !rooms[currentRoom]) return;
-        const room = rooms[currentRoom];
-        room.attempts = {};
 
-        if (typeof payload === 'object' && payload !== null) {
-            room.timed = Boolean(payload.timed);
-            room.timeLimitSeconds = normalizeTimeLimitSeconds(payload.timeLimitSeconds);
+        const room = rooms[currentRoom];
+        if (room.hostId !== socket.id) {
+            socket.emit('errorMessage', 'Doar hostul camerei poate porni un rematch.');
+            return;
         }
-        
-        if (room.difficulty) {
-            getDriversByDifficulty(room.difficulty, (err, drivers) => {
-                if (!err && drivers.length > 0) {
-                    const randomIdx = Math.floor(Math.random() * drivers.length);
-                    room.targetDriver = drivers[randomIdx];
-                    room.roundStartedAt = Date.now();
-                    io.to(currentRoom).emit('gameRestarted', {
-                        timed: room.timed,
-                        timeLimitSeconds: room.timeLimitSeconds,
-                        roundStartedAt: room.roundStartedAt
-                    });
-                }
-            });
+
+        const didRestart = restartRound(currentRoom, payload);
+        if (!didRestart) {
+            socket.emit('errorMessage', 'Nu am putut reporni runda. Alege mai întâi o dificultate.');
         }
     });
 
     // Curățare la deconectare: scoatem jucătorul din cameră și ștergem camera dacă devine goală.
     socket.on('disconnect', () => {
-        if (currentRoom && rooms[currentRoom]) {
-            rooms[currentRoom].players = rooms[currentRoom].players.filter(id => id !== socket.id);
-            io.to(currentRoom).emit('roomUpdate', { playerCount: rooms[currentRoom].players.length });
-            if (rooms[currentRoom].players.length === 0) {
-                delete rooms[currentRoom];
-            }
+        if (!currentRoom || !rooms[currentRoom]) return;
+
+        const room = rooms[currentRoom];
+        removePlayerFromRoom(room, socket.id);
+
+        if (room.players.length === 0) {
+            delete rooms[currentRoom];
+            return;
         }
+
+        emitRoomUpdate(currentRoom);
+        io.to(room.hostId).emit('hostStatus', { isHost: true });
     });
 });
 
@@ -250,7 +368,7 @@ app.get('/', (req, res) => {
     } else if (fs.existsSync(txtPath)) {
         res.sendFile(txtPath);
     } else {
-        res.status(404).send("<h2>Eroare: Nu am găsit 'index.html' în folderul /public! Asegură-te că fișierul se află acolo.</h2>");
+        res.status(404).send("<h2>Eroare: Nu am găsit 'index.html' în folderul /public! Asigură-te că fișierul se află acolo.</h2>");
     }
 });
 

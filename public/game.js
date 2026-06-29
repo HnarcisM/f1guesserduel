@@ -37,6 +37,7 @@ let currentRoundTimed = false;
 let currentTimeLimitSeconds = 60;
 let roundTimerInterval = null;
 let roundTimerEndsAt = null;
+let isCurrentRoomHost = false;
 
 // ===============================
 // Constants
@@ -672,10 +673,45 @@ function syncTimerModeControls() {
 			: isTimedModeEnabled && controlSeconds === selectedTimeLimitSeconds;
 		control.classList.toggle("active", isActive);
 	});
+	updateTimerControlsLock();
+}
+
+/** Blochează selectorul de timer pentru jucătorii care nu sunt host. */
+function updateTimerControlsLock() {
+	const isLocked = !isCurrentRoomHost;
+	document.querySelectorAll("[data-timer-mode], .timer-item").forEach(control => {
+		control.classList.toggle("is-locked", isLocked);
+		control.setAttribute("aria-disabled", String(isLocked));
+
+		if ("disabled" in control) {
+			control.disabled = isLocked;
+		}
+
+		control.title = isLocked
+			? "Doar hostul camerei poate modifica timerul."
+			: "";
+	});
+
+	document.querySelectorAll(".timer-mode-card").forEach(card => {
+		card.classList.toggle("timer-locked", isLocked);
+	});
+}
+
+function showHostOnlyTimerMessage() {
+	const status = document.getElementById("status");
+	if (status) {
+		status.textContent = "Doar hostul camerei poate modifica timerul.";
+	}
 }
 
 /** Schimbă preferința locală pentru timer. Noua valoare se aplică la următorul start/rematch. */
 function setTimedMode(enabled, timeLimitSeconds = selectedTimeLimitSeconds) {
+	if (!isCurrentRoomHost) {
+		showHostOnlyTimerMessage();
+		syncTimerModeControls();
+		return;
+	}
+
 	isTimedModeEnabled = enabled;
 	selectedTimeLimitSeconds = normalizeTimeLimitSeconds(timeLimitSeconds);
 	localStorage.setItem('f1-guesser-timed-mode', enabled ? 'on' : 'off');
@@ -862,7 +898,10 @@ function setupSocketEvents() {
 	socket.off('roomUpdate');
 	socket.off('guessResult');
 	socket.off('gameRestarted');
-		socket.off('gameTimedOut');
+	socket.off('gameTimedOut');
+	socket.off('errorMessage');
+	socket.off('roomFull');
+	socket.off('hostStatus');
 	
 	socket.on('initGame', (data) => {
 		const overlay = document.getElementById('difficulty-overlay');
@@ -896,9 +935,31 @@ function setupSocketEvents() {
 	socket.on('roomUpdate', (data) => {
 		const badge = document.getElementById("duelStatus");
 		if (badge) {
-			// Folosim direct valoarea curată trimisă de server
-			badge.innerText = `Online: ${data.playerCount}`;
+			const maxPlayers = data.maxPlayers || 2;
+			const roleLabel = isCurrentRoomHost ? ' · Host' : '';
+			badge.innerText = `Online: ${data.playerCount}/${maxPlayers}${roleLabel}`;
 		}
+	});
+
+	socket.on('hostStatus', (data) => {
+		isCurrentRoomHost = Boolean(data && data.isHost);
+		updateTimerControlsLock();
+
+		const badge = document.getElementById("duelStatus");
+		if (badge) {
+			badge.innerText = badge.innerText.replace(/ · Host/g, '');
+			if (isCurrentRoomHost) {
+				badge.innerText = `${badge.innerText} · Host`;
+			}
+		}
+	});
+
+	socket.on('roomFull', (data = {}) => {
+		alert(`Camera este plină. Maxim ${data.maxPlayers || 2} jucători pot intra într-un duel.`);
+	});
+
+	socket.on('errorMessage', (message) => {
+		if (message) alert(message);
 	});
 
 	socket.on('guessResult', (data) => {
@@ -1041,6 +1102,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	document.querySelectorAll("[data-timer-mode]").forEach(button => {
 		button.addEventListener("click", function() {
+			if (!isCurrentRoomHost) {
+				showHostOnlyTimerMessage();
+				return;
+			}
 			const value = this.dataset.timerMode;
 			setTimedMode(value !== "off", value);
 		});
@@ -1049,6 +1114,10 @@ document.addEventListener("DOMContentLoaded", () => {
 	document.querySelectorAll(".timer-item").forEach(item => {
 		item.addEventListener("click", function(e) {
 			e.stopPropagation();
+			if (!isCurrentRoomHost) {
+				showHostOnlyTimerMessage();
+				return;
+			}
 			const value = this.dataset.timer;
 			setTimedMode(value !== "off", value);
 			if (menu) menu.classList.add("hidden");

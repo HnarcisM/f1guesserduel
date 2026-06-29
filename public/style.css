@@ -1776,6 +1776,27 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
     box-shadow: 0 0 18px color-mix(in srgb, var(--accent-f1) 18%, transparent);
 }
 
+
+.timer-mode-card.timer-locked {
+    opacity: 0.72;
+}
+
+.timer-mode-option:disabled,
+.timer-mode-option.is-locked,
+.timer-item.is-locked {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: grayscale(0.35);
+}
+
+.timer-mode-option:disabled {
+    pointer-events: none;
+}
+
+.timer-item.is-locked {
+    pointer-events: none;
+}
+
 /* Timer vizibil doar pentru rundele pe timp.
    Este afișat ca un mini race-track: START -> mașinuță -> FINISH + secunde rămase. */
 .round-timer {
