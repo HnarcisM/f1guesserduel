@@ -1,12 +1,9 @@
 const { normalizeTimeLimitSeconds, isValidDifficulty } = require('../config/constants');
+const { resetPlayersForNewRound } = require('../rooms/roomService');
 
 function createGameService(driversRepository) {
     function pickRandomDriver(drivers) {
         return drivers[Math.floor(Math.random() * drivers.length)];
-    }
-
-    function resetAttemptsForPlayers(room) {
-        room.attempts = Object.fromEntries(room.players.map(socketId => [socketId, 0]));
     }
 
     function startNewRound(room, options) {
@@ -19,7 +16,7 @@ function createGameService(driversRepository) {
         room.difficulty = difficulty;
         room.driversList = drivers;
         room.targetDriver = pickRandomDriver(drivers);
-        resetAttemptsForPlayers(room);
+        resetPlayersForNewRound(room);
         room.timed = Boolean(options.timed);
         room.timeLimitSeconds = normalizeTimeLimitSeconds(options.timeLimitSeconds);
         room.roundStartedAt = Date.now();
@@ -42,7 +39,7 @@ function createGameService(driversRepository) {
 
         room.driversList = drivers;
         room.targetDriver = pickRandomDriver(drivers);
-        resetAttemptsForPlayers(room);
+        resetPlayersForNewRound(room);
         room.timed = Boolean(options.timed);
         room.timeLimitSeconds = normalizeTimeLimitSeconds(options.timeLimitSeconds);
         room.roundStartedAt = Date.now();

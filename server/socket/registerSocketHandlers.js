@@ -10,6 +10,10 @@ const {
     createRoom,
     addPlayerToRoom,
     removePlayerFromRoom,
+    getPlayer,
+    hasPlayer,
+    isHost,
+    getPlayerCount,
     buildPublicRoomState
 } = require('../rooms/roomService');
 
@@ -20,6 +24,13 @@ function registerSocketHandlers(io, dependencies) {
         const room = roomStore.get(roomId);
         if (!room) return;
         io.to(roomId).emit('roomUpdate', buildPublicRoomState(room));
+    }
+
+    function emitHostStatus(socket, room) {
+        socket.emit('hostStatus', {
+            isHost: isHost(room, socket.id),
+            username: getPlayer(room, socket.id)?.username || 'Guest'
+        });
     }
 
     io.on('connection', (socket) => {
@@ -45,7 +56,7 @@ function registerSocketHandlers(io, dependencies) {
 
             currentRoom = roomId;
             socket.join(roomId);
-            socket.emit('hostStatus', { isHost: room.hostId === socket.id });
+            emitHostStatus(socket, room);
             emitRoomUpdate(roomId);
 
             if (room.difficulty && room.roundState === 'playing') {
@@ -65,7 +76,7 @@ function registerSocketHandlers(io, dependencies) {
             const room = roomStore.get(currentRoom);
             if (!room) return;
 
-            if (room.hostId !== socket.id) {
+            if (!isHost(room, socket.id)) {
                 socket.emit('errorMessage', 'Doar hostul camerei poate schimba dificultatea.');
                 return;
             }
@@ -86,6 +97,7 @@ function registerSocketHandlers(io, dependencies) {
             }
 
             io.to(currentRoom).emit('initGame', initPayload);
+            emitRoomUpdate(currentRoom);
         });
 
         socket.on('submitGuess', (driverId) => {
@@ -93,16 +105,21 @@ function registerSocketHandlers(io, dependencies) {
 
             const room = roomStore.get(currentRoom);
             if (!room) return;
-            if (!room.players.includes(socket.id) || !room.targetDriver || room.roundState !== 'playing') return;
+
+            const player = getPlayer(room, socket.id);
+            if (!player || !room.targetDriver || room.roundState !== 'playing') return;
+            if (player.finished) return;
 
             if (room.timed && room.roundStartedAt && Date.now() - room.roundStartedAt >= room.timeLimitSeconds * 1000) {
-                room.attempts[socket.id] = MAX_ATTEMPTS;
+                player.attempts = MAX_ATTEMPTS;
+                player.finished = true;
                 socket.emit('gameTimedOut', { target: { name: room.targetDriver.name }, attempts: MAX_ATTEMPTS });
+                emitRoomUpdate(currentRoom);
                 return;
             }
 
-            if (typeof room.attempts[socket.id] !== 'number') room.attempts[socket.id] = 0;
-            if (room.attempts[socket.id] >= MAX_ATTEMPTS) return;
+            if (typeof player.attempts !== 'number') player.attempts = 0;
+            if (player.attempts >= MAX_ATTEMPTS) return;
 
             const guessDriver = room.driversList.find(driver => driver.id === driverId);
             if (!guessDriver) {
@@ -110,18 +127,22 @@ function registerSocketHandlers(io, dependencies) {
                 return;
             }
 
-            room.attempts[socket.id]++;
+            player.attempts++;
 
             const target = room.targetDriver;
             const results = compareGuess(guessDriver, target);
-            const isCorrect = guessDriver.id === target.id;
-            const isGameOver = isCorrect || room.attempts[socket.id] >= MAX_ATTEMPTS;
+            const isCorrectGuess = guessDriver.id === target.id;
+            const isGameOver = isCorrectGuess || player.attempts >= MAX_ATTEMPTS;
+
+            if (isGameOver) {
+                player.finished = true;
+            }
 
             const responseData = {
                 guess: guessDriver,
                 results,
-                attempts: room.attempts[socket.id],
-                isCorrect,
+                attempts: player.attempts,
+                isCorrect: isCorrectGuess,
                 isGameOver
             };
 
@@ -130,6 +151,10 @@ function registerSocketHandlers(io, dependencies) {
             }
 
             socket.emit('guessResult', responseData);
+
+            if (isGameOver) {
+                emitRoomUpdate(currentRoom);
+            }
         });
 
         socket.on('timeExpired', () => {
@@ -137,16 +162,21 @@ function registerSocketHandlers(io, dependencies) {
 
             const room = roomStore.get(currentRoom);
             if (!room) return;
-            if (!room.players.includes(socket.id) || !room.targetDriver || !room.timed || !room.roundStartedAt) return;
+
+            const player = getPlayer(room, socket.id);
+            if (!player || !room.targetDriver || !room.timed || !room.roundStartedAt) return;
+            if (player.finished) return;
 
             const elapsedMs = Date.now() - room.roundStartedAt;
             if (elapsedMs < room.timeLimitSeconds * 1000 - 500) return;
 
-            room.attempts[socket.id] = MAX_ATTEMPTS;
+            player.attempts = MAX_ATTEMPTS;
+            player.finished = true;
             socket.emit('gameTimedOut', {
                 target: { name: room.targetDriver.name },
                 attempts: MAX_ATTEMPTS
             });
+            emitRoomUpdate(currentRoom);
         });
 
         socket.on('restartGame', (payload = {}) => {
@@ -155,7 +185,7 @@ function registerSocketHandlers(io, dependencies) {
             const room = roomStore.get(currentRoom);
             if (!room) return;
 
-            if (room.hostId !== socket.id) {
+            if (!isHost(room, socket.id)) {
                 socket.emit('errorMessage', 'Doar hostul camerei poate porni un rematch.');
                 return;
             }
@@ -167,6 +197,7 @@ function registerSocketHandlers(io, dependencies) {
             }
 
             io.to(currentRoom).emit('gameRestarted', restartPayload);
+            emitRoomUpdate(currentRoom);
         });
 
         socket.on('disconnect', () => {
@@ -174,16 +205,20 @@ function registerSocketHandlers(io, dependencies) {
 
             const room = roomStore.get(currentRoom);
             if (!room) return;
+            if (!hasPlayer(room, socket.id)) return;
 
             removePlayerFromRoom(room, socket.id);
 
-            if (room.players.length === 0) {
+            if (getPlayerCount(room) === 0) {
                 roomStore.remove(currentRoom);
                 return;
             }
 
             emitRoomUpdate(currentRoom);
-            io.to(room.hostId).emit('hostStatus', { isHost: true });
+            const newHostSocket = room.hostId ? io.sockets.sockets.get(room.hostId) : null;
+            if (newHostSocket) {
+                emitHostStatus(newHostSocket, room);
+            }
         });
     });
 }

@@ -3,44 +3,110 @@ const {
     MAX_PLAYERS_PER_ROOM
 } = require('../config/constants');
 
-function createRoom(roomId, hostSocketId) {
+function getPlayerIds(room) {
+    return Object.keys(room.players || {});
+}
+
+function getPlayerCount(room) {
+    return getPlayerIds(room).length;
+}
+
+function buildGuestUsername(room) {
+    return `Guest ${getPlayerCount(room) + 1}`;
+}
+
+function createPlayer(room, socketId) {
     return {
+        socketId,
+        userId: null,
+        username: buildGuestUsername(room),
+        isHost: room.hostId === socketId,
+        attempts: 0,
+        finished: false,
+        connected: true
+    };
+}
+
+function syncHostFlags(room) {
+    for (const player of Object.values(room.players)) {
+        player.isHost = player.socketId === room.hostId;
+    }
+}
+
+function createRoom(roomId, hostSocketId) {
+    const room = {
         roomId,
         hostId: hostSocketId,
-        players: [],
+        players: {},
         targetDriver: null,
         difficulty: null,
         driversList: [],
-        attempts: {},
         timed: false,
         timeLimitSeconds: DEFAULT_TIME_LIMIT_SECONDS,
         roundStartedAt: null,
         roundState: 'waiting'
     };
+
+    room.players[hostSocketId] = createPlayer(room, hostSocketId);
+    syncHostFlags(room);
+
+    return room;
 }
 
 function addPlayerToRoom(room, socketId) {
-    if (room.players.includes(socketId)) return true;
-    if (room.players.length >= MAX_PLAYERS_PER_ROOM) return false;
+    if (room.players[socketId]) {
+        room.players[socketId].connected = true;
+        syncHostFlags(room);
+        return true;
+    }
 
-    room.players.push(socketId);
-    room.attempts[socketId] = 0;
+    if (getPlayerCount(room) >= MAX_PLAYERS_PER_ROOM) return false;
+
+    room.players[socketId] = createPlayer(room, socketId);
+    syncHostFlags(room);
     return true;
 }
 
 function removePlayerFromRoom(room, socketId) {
-    room.players = room.players.filter(id => id !== socketId);
-    delete room.attempts[socketId];
+    delete room.players[socketId];
 
     if (room.hostId === socketId) {
-        room.hostId = room.players[0] || null;
+        room.hostId = getPlayerIds(room)[0] || null;
+    }
+
+    syncHostFlags(room);
+}
+
+function getPlayer(room, socketId) {
+    return room.players[socketId] || null;
+}
+
+function hasPlayer(room, socketId) {
+    return Boolean(getPlayer(room, socketId));
+}
+
+function isHost(room, socketId) {
+    return room.hostId === socketId;
+}
+
+function resetPlayersForNewRound(room) {
+    for (const player of Object.values(room.players)) {
+        player.attempts = 0;
+        player.finished = false;
     }
 }
 
 function buildPublicRoomState(room) {
     return {
-        playerCount: room.players.length,
-        maxPlayers: MAX_PLAYERS_PER_ROOM
+        playerCount: getPlayerCount(room),
+        maxPlayers: MAX_PLAYERS_PER_ROOM,
+        players: Object.values(room.players).map(player => ({
+            socketId: player.socketId,
+            username: player.username,
+            isHost: player.isHost,
+            connected: player.connected,
+            finished: player.finished
+        }))
     };
 }
 
@@ -48,5 +114,10 @@ module.exports = {
     createRoom,
     addPlayerToRoom,
     removePlayerFromRoom,
+    getPlayer,
+    hasPlayer,
+    isHost,
+    getPlayerCount,
+    resetPlayersForNewRound,
     buildPublicRoomState
 };
