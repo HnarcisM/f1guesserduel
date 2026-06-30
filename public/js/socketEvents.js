@@ -3,7 +3,6 @@ export function registerSocketEvents(socket, app) {
 	[
 		'initGame',
 		'roomStateUpdate',
-		'roomUpdate',
 		'guessResult',
 		'gameRestarted',
 		'gameTimedOut',
@@ -83,9 +82,6 @@ export function registerSocketEvents(socket, app) {
 	});
 
 	socket.on('roomStateUpdate', handleRoomStateUpdate);
-
-	// Compatibilitate defensivă pentru versiuni mai vechi de server/arhive intermediare.
-	socket.on('roomUpdate', handleRoomStateUpdate);
 
 	socket.on('hostStatus', (data) => {
 		const wasSpectator = Boolean(app.isSpectator?.());

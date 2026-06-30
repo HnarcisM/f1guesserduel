@@ -37,11 +37,33 @@ const db = createDatabase({
 const sessionService = createSessionService(db);
 const authService = createAuthService(db, sessionService);
 
+function setStaticCacheHeaders(res, filePath) {
+    const extension = path.extname(filePath).toLowerCase();
+
+    if (extension === '.html' || extension === '.txt') {
+        res.setHeader('Cache-Control', 'no-cache');
+        return;
+    }
+
+    if (['.js', '.css'].includes(extension)) {
+        res.setHeader('Cache-Control', 'public, max-age=3600');
+        return;
+    }
+
+    if (['.svg', '.png', '.jpg', '.jpeg', '.webp', '.gif', '.ico', '.woff', '.woff2'].includes(extension)) {
+        res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
+    }
+}
+
 app.use(express.json({ limit: '32kb' }));
 app.use(cookieParser());
 app.use(createAuthMiddleware(sessionService));
 app.use('/api/auth', createAuthRoutes({ authService, sessionService }));
-app.use(express.static(path.join(__dirname, '..', 'public')));
+app.use(express.static(path.join(__dirname, '..', 'public'), {
+    etag: true,
+    lastModified: true,
+    setHeaders: setStaticCacheHeaders
+}));
 
 registerSocketHandlers(io, {
     roomStore,
