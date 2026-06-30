@@ -1,1 +1,11 @@
 node_modules/
+*.bak
+*.backup
+*.old
+.env
+.DS_Store
+
+# Local SQLite database
+/data/*.sqlite
+/data/*.sqlite-shm
+/data/*.sqlite-wal
