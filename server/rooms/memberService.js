@@ -100,7 +100,6 @@ function recordPlayerGuess(player, guessDriver, results, isCorrectGuess, isGameO
     const entry = {
         attempt: player.attempts,
         guess: {
-            id: guessDriver.id,
             name: guessDriver.name,
             nat: guessDriver.nat,
             team: Array.isArray(guessDriver.team) ? [...guessDriver.team] : guessDriver.team,
@@ -110,8 +109,7 @@ function recordPlayerGuess(player, guessDriver, results, isCorrectGuess, isGameO
         },
         results,
         isCorrect: Boolean(isCorrectGuess),
-        isGameOver: Boolean(isGameOver),
-        createdAt: Date.now()
+        isGameOver: Boolean(isGameOver)
     };
 
     player.guesses.push(entry);

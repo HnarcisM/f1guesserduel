@@ -6,19 +6,15 @@ function serializeGuessEntry(entry) {
         guess: entry.guess,
         results: entry.results,
         isCorrect: entry.isCorrect,
-        isGameOver: entry.isGameOver,
-        createdAt: entry.createdAt
+        isGameOver: entry.isGameOver
     };
 }
 
 function serializeRoomMember(member, options = {}) {
     const serialized = {
-        socketId: member.socketId,
-        userId: member.userId,
         username: member.username,
         role: member.role,
         isHost: member.isHost,
-        connected: member.connected,
         attempts: typeof member.attempts === 'number' ? member.attempts : 0,
         finished: Boolean(member.finished),
         timedOut: Boolean(member.timedOut)
@@ -31,6 +27,15 @@ function serializeRoomMember(member, options = {}) {
     return serialized;
 }
 
+function serializeRoomMemberSummary(member) {
+    return {
+        username: member.username,
+        role: member.role,
+        isHost: member.isHost,
+        finished: Boolean(member.finished)
+    };
+}
+
 function buildLiveBoardState(room) {
     return {
         roundState: room.roundState,
@@ -39,8 +44,8 @@ function buildLiveBoardState(room) {
 }
 
 function buildPublicRoomState(room) {
-    const players = Object.values(room.players || {}).map(serializeRoomMember);
-    const spectators = Object.values(room.spectators || {}).map(serializeRoomMember);
+    const players = Object.values(room.players || {}).map(serializeRoomMemberSummary);
+    const spectators = Object.values(room.spectators || {}).map(serializeRoomMemberSummary);
 
     return {
         playerCount: players.length,
@@ -55,6 +60,7 @@ function buildPublicRoomState(room) {
 module.exports = {
     serializeGuessEntry,
     serializeRoomMember,
+    serializeRoomMemberSummary,
     buildLiveBoardState,
     buildPublicRoomState
 };
