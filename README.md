@@ -472,3 +472,19 @@ Difficulty invalide: nu există
 Fișierul JSON nu conține comentarii la început, deoarece comentariile fac JSON-ul invalid și pot strica încărcarea aplicației.
 Explicația sistemului este păstrată în acest README.
 
+
+## Teste automate
+
+Pentru rularea testelor backend + E2E cu browser real pe Windows, folosește:
+
+```bat
+F1GuesserDuel_Tests.bat
+```
+
+Pentru CachyOS / Arch Linux:
+
+```bash
+./F1GuesserDuel_Tests_cachyos.sh
+```
+
+Launcher-ul normal al jocului instalează doar dependențele necesare serverului. Dependențele pentru testele E2E și browserul Playwright Chromium sunt pregătite de scripturile de test.

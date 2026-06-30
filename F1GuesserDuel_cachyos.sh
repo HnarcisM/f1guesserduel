@@ -37,9 +37,10 @@ Utilizare:
 Ce face:
   - verifică pacman, Node.js, npm, Python și uneltele de build C/C++
   - instalează pachetele lipsă cu pacman
-  - rulează npm install când node_modules lipsește sau package.json s-a schimbat
-  - instalează/verifică automat Chromium pentru testele Playwright E2E
+  - rulează npm install --omit=dev când node_modules lipsește sau package.json s-a schimbat
   - pornește serverul cu npm start
+
+Pentru teste E2E folosește scriptul separat: ./F1GuesserDuel_Tests_cachyos.sh
 
 Opțiuni:
   --update-system   Rulează întâi sudo pacman -Syu pentru actualizarea sistemului.
@@ -106,19 +107,14 @@ elif [[ -f "package-lock.json" && "package-lock.json" -nt "node_modules" ]]; the
 fi
 
 if (( NEED_NPM_INSTALL == 1 )); then
-  log "Instalez dependențele Node.js cu npm install..."
-  if ! npm install; then
-    warn "npm install a eșuat. Încerc rebuild pentru better-sqlite3 din sursă..."
+  log "Instalez dependențele Node.js pentru server cu npm install --omit=dev..."
+  if ! npm install --omit=dev; then
+    warn "npm install --omit=dev a eșuat. Încerc rebuild pentru better-sqlite3 din sursă..."
     npm rebuild better-sqlite3 --build-from-source
-    npm install
+    npm install --omit=dev
   fi
 else
   log "node_modules există și pare actualizat. Sar peste npm install."
-fi
-
-log "Verific/instalez automat Chromium pentru testele E2E Playwright..."
-if ! npm run e2e:install; then
-  warn "Instalarea automată Playwright Chromium a eșuat. Serverul pornește în continuare, dar testele E2E vor necesita: npm run e2e:install"
 fi
 
 log "Verific rapid sintaxa fișierelor JavaScript principale..."
