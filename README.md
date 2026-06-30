@@ -473,18 +473,36 @@ Fișierul JSON nu conține comentarii la început, deoarece comentariile fac JSO
 Explicația sistemului este păstrată în acest README.
 
 
-## Teste automate
+## Pornire server și teste
 
-Pentru rularea testelor backend + E2E cu browser real pe Windows, folosește:
+### Windows
+
+Pentru pornirea jocului/serverului:
+
+```bat
+F1GuesserDuel.bat
+```
+
+Pentru rularea testelor backend + E2E cu browser real:
 
 ```bat
 F1GuesserDuel_Tests.bat
 ```
 
-Pentru CachyOS / Arch Linux:
+### CachyOS / Arch Linux
+
+Pentru pornirea jocului/serverului:
+
+```bash
+./F1GuesserDuel_cachyos.sh
+```
+
+Pentru rularea testelor backend + E2E cu browser real:
 
 ```bash
 ./F1GuesserDuel_Tests_cachyos.sh
 ```
 
-Launcher-ul normal al jocului instalează doar dependențele necesare serverului. Dependențele pentru testele E2E și browserul Playwright Chromium sunt pregătite de scripturile de test.
+Launcher-ul normal al jocului instalează doar dependențele necesare serverului. Dependențele pentru testele E2E și browserul Playwright Chromium sunt pregătite doar de scripturile de test, ca pornirea jocului să nu fie blocată de testele E2E.
+
+În timpul testelor E2E apar mesaje de progres de forma `[E2E ora] ...`, ca să fie clar dacă testul încă lucrează sau la ce pas s-a oprit.

@@ -7,6 +7,9 @@ echo ============================================================
 echo  F1 Guesser Duel - verificare dependinte si rulare teste
 echo ============================================================
 echo.
+echo Acest fisier ruleaza testele backend si E2E cu browser real.
+echo Testele E2E pot dura 1-3 minute la prima rulare deoarece verifica Chromium.
+echo.
 
 where node >nul 2>nul
 if errorlevel 1 (
@@ -28,7 +31,8 @@ for /f "tokens=*" %%v in ('node -v 2^>nul') do set "NODE_VERSION=%%v"
 echo Node.js detectat: %NODE_VERSION%
 echo.
 
-echo [1/4] Instalez/verific dependentele complete pentru teste...
+echo [1/5] Instalez/verific dependentele complete pentru teste...
+echo       Daca apare un warning de tip deprecated, nu este neaparat eroare.
 call npm.cmd install
 if errorlevel 1 (
     echo.
@@ -46,7 +50,7 @@ if errorlevel 1 (
 )
 
 echo.
-echo [2/4] Verific dependentele necesare pentru teste...
+echo [2/5] Verific dependentele necesare pentru teste...
 node -e "require.resolve('express'); require.resolve('socket.io'); require.resolve('better-sqlite3'); require.resolve('cookie-parser'); require.resolve('playwright'); console.log('Dependinte teste OK.')"
 if errorlevel 1 (
     echo.
@@ -56,7 +60,9 @@ if errorlevel 1 (
 )
 
 echo.
-echo [3/4] Verific/instalez Chromium pentru Playwright...
+echo [3/5] Verific/instalez Chromium pentru Playwright...
+echo       Daca Chromium lipseste, descarcarea poate dura cateva minute.
+echo       Daca este deja instalat, acest pas se termina repede.
 call npm.cmd run e2e:install
 if errorlevel 1 (
     echo.
@@ -67,11 +73,24 @@ if errorlevel 1 (
 )
 
 echo.
-echo [4/4] Rulez testele backend + E2E browser...
-call npm.cmd run test:all
+echo [4/5] Rulez testele backend...
+call npm.cmd test
 if errorlevel 1 (
     echo.
-    echo EROARE: Unele teste au esuat.
+    echo EROARE: Testele backend au esuat.
+    pause
+    exit /b 1
+)
+
+echo.
+echo [5/5] Rulez testele E2E cu browser real...
+echo       Se deschid intern 3 taburi: Player 1, Player 2 si Spectator.
+echo       Vei vedea mesaje [E2E ora] pentru fiecare pas important.
+call npm.cmd run test:e2e
+if errorlevel 1 (
+    echo.
+    echo EROARE: Testele E2E au esuat.
+    echo Cauta in mesajele de mai sus ultima linie [E2E ...] ca sa vezi la ce pas s-a oprit.
     pause
     exit /b 1
 )
@@ -87,6 +106,10 @@ exit /b 0
 if exist "node_modules" (
     echo Sterg node_modules...
     rmdir /s /q "node_modules" 2>nul
+    if exist "node_modules" (
+        echo Nu am putut sterge complet node_modules. Incerc cu PowerShell...
+        powershell -NoProfile -ExecutionPolicy Bypass -Command "Remove-Item -LiteralPath 'node_modules' -Recurse -Force -ErrorAction SilentlyContinue"
+    )
 )
 if exist "package-lock.json" (
     echo Sterg package-lock.json pentru reinstalare curata...

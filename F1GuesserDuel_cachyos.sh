@@ -1,135 +1,46 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-APP_NAME="F1 Guesser Duel"
+APP_NAME="F1 Guesser Duel - Teste"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-log() {
-  printf '\n[INFO] %s\n' "$1"
-}
-
-warn() {
-  printf '\n[WARN] %s\n' "$1"
-}
-
-fail() {
-  printf '\n[ERROR] %s\n' "$1" >&2
-  exit 1
-}
-
-on_error() {
-  local exit_code=$?
-  printf '\n[ERROR] Scriptul s-a oprit cu codul %s.\n' "$exit_code" >&2
-  printf 'Dacă eroarea este de la better-sqlite3/node-gyp, rulează din nou scriptul după instalarea dependențelor.\n' >&2
-  printf 'Pentru diagnostic: node -v && npm -v && python --version && gcc --version\n' >&2
-}
-trap on_error ERR
-
-if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
-  cat <<HELP
-$APP_NAME - launcher pentru CachyOS / Arch Linux
-
-Utilizare:
-  ./F1GuesserDuel_cachyos.sh
-  ./F1GuesserDuel_cachyos.sh --update-system
-
-Ce face:
-  - verifică pacman, Node.js, npm, Python și uneltele de build C/C++
-  - instalează pachetele lipsă cu pacman
-  - rulează npm install --omit=dev când node_modules lipsește sau package.json s-a schimbat
-  - pornește serverul cu npm start
-
-Pentru teste E2E folosește scriptul separat: ./F1GuesserDuel_Tests_cachyos.sh
-
-Opțiuni:
-  --update-system   Rulează întâi sudo pacman -Syu pentru actualizarea sistemului.
-HELP
-  exit 0
-fi
+log() { printf '\n[INFO] %s\n' "$1"; }
+warn() { printf '\n[WARN] %s\n' "$1"; }
+fail() { printf '\n[ERROR] %s\n' "$1" >&2; exit 1; }
 
 log "Pornire $APP_NAME pe CachyOS / Arch Linux..."
+printf 'Acest script rulează testele backend și E2E cu browser real.\n'
+printf 'Testele E2E pot dura 1-3 minute la prima rulare deoarece verifică Chromium.\n'
 
-if ! command -v pacman >/dev/null 2>&1; then
-  fail "Acest script este pentru CachyOS/Arch Linux și are nevoie de pacman."
-fi
-
-if [[ "${1:-}" == "--update-system" ]]; then
-  log "Actualizez sistemul cu pacman -Syu..."
-  sudo pacman -Syu --noconfirm
-fi
-
-REQUIRED_PACKAGES=(
-  nodejs
-  npm
-  python
-  base-devel
-  pkgconf
-)
-
-MISSING_PACKAGES=()
-for package_name in "${REQUIRED_PACKAGES[@]}"; do
-  if ! pacman -Q "$package_name" >/dev/null 2>&1; then
-    MISSING_PACKAGES+=("$package_name")
-  fi
-done
-
-if (( ${#MISSING_PACKAGES[@]} > 0 )); then
-  log "Instalez pachetele lipsă: ${MISSING_PACKAGES[*]}"
-  sudo pacman -Syu --needed --noconfirm "${MISSING_PACKAGES[@]}"
-else
-  log "Dependențele de sistem sunt deja instalate."
-fi
-
-command -v node >/dev/null 2>&1 || fail "Node.js nu este disponibil după instalare."
-command -v npm >/dev/null 2>&1 || fail "npm nu este disponibil după instalare."
-command -v python >/dev/null 2>&1 || fail "Python nu este disponibil după instalare."
-command -v gcc >/dev/null 2>&1 || fail "gcc nu este disponibil. Verifică pachetul base-devel."
-command -v make >/dev/null 2>&1 || fail "make nu este disponibil. Verifică pachetul base-devel."
+command -v node >/dev/null 2>&1 || fail "Node.js nu este disponibil. Rulează mai întâi ./F1GuesserDuel_cachyos.sh."
+command -v npm >/dev/null 2>&1 || fail "npm nu este disponibil. Rulează mai întâi ./F1GuesserDuel_cachyos.sh."
 
 log "Versiuni detectate:"
 node -v
 npm -v
-python --version
-gcc --version | head -n 1
 
-PYTHON_BIN="$(command -v python)"
-log "Configurez npm/node-gyp să folosească Python: $PYTHON_BIN"
-npm config set python "$PYTHON_BIN" >/dev/null 2>&1 || true
-
-NEED_NPM_INSTALL=0
-if [[ ! -d "node_modules" ]]; then
-  NEED_NPM_INSTALL=1
-elif [[ "package.json" -nt "node_modules" ]]; then
-  NEED_NPM_INSTALL=1
-elif [[ -f "package-lock.json" && "package-lock.json" -nt "node_modules" ]]; then
-  NEED_NPM_INSTALL=1
+log "[1/5] Instalez/verific dependențele complete pentru teste..."
+printf 'Dacă apare un warning de tip deprecated, nu este neapărat eroare.\n'
+if ! npm install; then
+  warn "npm install a eșuat. Încerc reinstall curat o singură dată..."
+  rm -rf node_modules package-lock.json
+  npm install
 fi
 
-if (( NEED_NPM_INSTALL == 1 )); then
-  log "Instalez dependențele Node.js pentru server cu npm install --omit=dev..."
-  if ! npm install --omit=dev; then
-    warn "npm install --omit=dev a eșuat. Încerc rebuild pentru better-sqlite3 din sursă..."
-    npm rebuild better-sqlite3 --build-from-source
-    npm install --omit=dev
-  fi
-else
-  log "node_modules există și pare actualizat. Sar peste npm install."
-fi
+log "[2/5] Verific dependențele necesare pentru teste..."
+node -e "require.resolve('express'); require.resolve('socket.io'); require.resolve('better-sqlite3'); require.resolve('cookie-parser'); require.resolve('playwright'); console.log('Dependențe teste OK.')"
 
-log "Verific rapid sintaxa fișierelor JavaScript principale..."
-node --check server.js
-if [[ -d server ]]; then
-  while IFS= read -r -d '' file; do
-    node --check "$file"
-  done < <(find server -name '*.js' -print0)
-fi
-node --check public/game.js
-if [[ -d public/js ]]; then
-  while IFS= read -r -d '' file; do
-    node --check "$file"
-  done < <(find public/js -name '*.js' -print0)
-fi
+log "[3/5] Verific/instalez Chromium pentru Playwright..."
+printf 'Dacă Chromium lipsește, descărcarea poate dura câteva minute.\n'
+npm run e2e:install
 
-log "Pornesc serverul..."
-npm start
+log "[4/5] Rulez testele backend..."
+npm test
+
+log "[5/5] Rulez testele E2E cu browser real..."
+printf 'Se deschid intern 3 taburi: Player 1, Player 2 și Spectator.\n'
+printf 'Vei vedea mesaje [E2E ora] pentru fiecare pas important.\n'
+npm run test:e2e
+
+log "Toate testele au trecut cu succes."

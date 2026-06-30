@@ -53,9 +53,16 @@ function requirePlaywright() {
     }
 }
 
+function logE2E(message) {
+    const now = new Date().toLocaleTimeString('ro-RO', { hour12: false });
+    console.log(`[E2E ${now}] ${message}`);
+}
+
 async function startAppServer() {
+    logE2E('Caut port liber pentru serverul de test...');
     const port = await getFreePort();
     const dataDir = path.join(os.tmpdir(), `f1guesser-e2e-${process.pid}-${Date.now()}`);
+    logE2E(`Pornesc serverul de test pe portul ${port}...`);
     const child = spawn(process.execPath, ['server.js'], {
         cwd: path.join(__dirname, '..', '..'),
         env: {
@@ -77,11 +84,13 @@ async function startAppServer() {
         }
     });
 
+    logE2E('Aștept ca serverul de test să fie gata...');
     await waitForUrl(`http://127.0.0.1:${port}/`).catch(error => {
         child.kill('SIGTERM');
         throw new Error(`${error.message}\nServer output:\n${output}`);
     });
 
+    logE2E('Serverul de test este gata.');
     return {
         baseUrl: `http://127.0.0.1:${port}`,
         stop: async () => {
@@ -111,41 +120,56 @@ async function pickFirstSuggestion(page, query) {
 }
 
 test('2 players can play while a third browser tab watches live as spectator', async () => {
+    logE2E('Verific Playwright și pornesc browserul Chromium...');
     const { chromium } = requirePlaywright();
     const app = await startAppServer();
     const browser = await chromium.launch({ headless: process.env.E2E_HEADED !== '1' });
+    logE2E('Browserul Chromium a pornit.');
 
     try {
         const context = await browser.newContext({ viewport: { width: 1366, height: 900 } });
         const roomId = `e2e-${Date.now()}`;
 
+        logE2E('Deschid 3 taburi: Player 1, Player 2 și Spectator...');
         const playerOne = await openRoomPage(context, app.baseUrl, roomId);
+        logE2E('Player 1 conectat.');
         const playerTwo = await openRoomPage(context, app.baseUrl, roomId);
+        logE2E('Player 2 conectat.');
         const spectator = await openRoomPage(context, app.baseUrl, roomId);
+        logE2E('Al treilea tab conectat. Verific modul spectator...');
 
         await spectator.locator('body.spectator-active').waitFor({ timeout: 7000 });
+        logE2E('Spectator confirmat.');
         await expectText(spectator.locator('#duelStatus'), /Spectator/);
         await assertElementHidden(playerOne.locator('#liveDuelBoard'));
         await assertElementHidden(playerTwo.locator('#liveDuelBoard'));
 
+        logE2E('Hostul pornește runda pe Easy...');
         await playerOne.locator('.btn-diff.easy').click();
 
+        logE2E('Aștept inițializarea jocului pentru playeri și spectator...');
         await playerOne.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
         await playerTwo.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
         await spectator.locator('#liveDuelBoard:not(.is-hidden)').waitFor({ timeout: 7000 });
         await assertElementHidden(spectator.locator('#grid'));
 
+        logE2E('Player 1 trimite prima încercare...');
         const firstGuess = await pickFirstSuggestion(playerOne, 'Arvid');
         await spectator.locator('#liveDuelPlayers').getByText(firstGuess, { exact: false }).waitFor({ timeout: 7000 });
+        logE2E(`Spectatorul vede încercarea Player 1: ${firstGuess}.`);
         await expectText(spectator.locator('#liveDuelSummary'), /1 încercări/);
 
+        logE2E('Player 2 trimite a doua încercare...');
         const secondGuess = await pickFirstSuggestion(playerTwo, 'Andrea');
         await spectator.locator('#liveDuelPlayers').getByText(secondGuess, { exact: false }).waitFor({ timeout: 7000 });
+        logE2E(`Spectatorul vede încercarea Player 2: ${secondGuess}.`);
         await expectText(spectator.locator('#liveDuelSummary'), /2 încercări/);
 
         await assertElementHidden(playerOne.locator('#liveDuelBoard'));
         await assertElementHidden(playerTwo.locator('#liveDuelBoard'));
+        logE2E('Testul E2E s-a terminat cu succes.');
     } finally {
+        logE2E('Închid browserul și serverul de test...');
         await browser.close();
         await app.stop();
     }

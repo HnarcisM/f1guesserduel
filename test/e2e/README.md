@@ -8,18 +8,38 @@ Aceste teste pornesc serverul local pe un port liber și deschid 3 taburi reale 
 
 Testul verifică faptul că spectatorul vede live board-ul, iar playerii nu îl văd.
 
-## Setup inițial
+## Rulare rapidă pe Windows
+
+Rulează fișierul:
+
+```bat
+F1GuesserDuel_Tests.bat
+```
+
+Acesta instalează/verifică dependențele complete, instalează Chromium pentru Playwright și rulează testele backend + E2E. În timpul E2E vei vedea mesaje `[E2E ora] ...` pentru pașii importanți: pornire server, deschidere taburi, confirmare spectator și verificare live board.
+
+## Rulare rapidă pe CachyOS / Arch
+
+```bash
+./F1GuesserDuel_Tests_cachyos.sh
+```
+
+## Rulare manuală
+
+Setup inițial:
 
 ```bash
 npm install
 npm run e2e:install
 ```
 
-## Rulare
+Teste E2E:
 
 ```bash
 npm run test:e2e
 ```
+
+Testele E2E au timeout de siguranță de 60 de secunde, ca să nu rămână blocate fără rezultat.
 
 Pentru toate testele:
 
