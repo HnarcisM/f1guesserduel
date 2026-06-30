@@ -10,6 +10,8 @@ if (!command) {
 
 const startTime = Date.now();
 let lastHeartbeat = 0;
+const timeoutSeconds = Number.parseInt(process.env.F1_PROGRESS_TIMEOUT_SECONDS || '0', 10);
+const timeoutMs = Number.isFinite(timeoutSeconds) && timeoutSeconds > 0 ? timeoutSeconds * 1000 : 0;
 
 function formatElapsed(ms) {
     const totalSeconds = Math.floor(ms / 1000);
@@ -27,21 +29,35 @@ function heartbeat(force = false) {
 }
 
 console.log(`[progress] Pornesc: ${label}`);
+if (timeoutMs > 0) {
+    console.log(`[progress] Limita maxima pentru ${label}: ${formatElapsed(timeoutMs)}.`);
+}
 const intervalId = setInterval(() => heartbeat(true), 15000);
+let timeoutId = null;
 
 const child = spawn(command, args, {
     stdio: 'inherit',
     shell: process.platform === 'win32'
 });
 
+if (timeoutMs > 0) {
+    timeoutId = setTimeout(() => {
+        const elapsed = formatElapsed(Date.now() - startTime);
+        console.error(`[progress] ${label} a depasit limita de ${formatElapsed(timeoutMs)} dupa ${elapsed}. Oprește comanda.`);
+        child.kill('SIGTERM');
+    }, timeoutMs);
+}
+
 child.on('error', error => {
     clearInterval(intervalId);
+    if (timeoutId) clearTimeout(timeoutId);
     console.error(`[progress] Nu am putut porni ${label}: ${error.message}`);
     process.exit(1);
 });
 
 child.on('exit', (code, signal) => {
     clearInterval(intervalId);
+    if (timeoutId) clearTimeout(timeoutId);
     const elapsed = formatElapsed(Date.now() - startTime);
     if (signal) {
         console.error(`[progress] ${label} oprit cu semnalul ${signal} dupa ${elapsed}.`);

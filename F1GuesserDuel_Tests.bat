@@ -8,7 +8,7 @@ echo  F1 Guesser Duel - verificare dependinte si rulare teste
 echo ============================================================
 echo.
 echo Acest fisier ruleaza testele backend si E2E cu browser real.
-echo Testele E2E pot dura 1-3 minute la prima rulare deoarece verifica Chromium.
+echo Testele E2E pot dura 1-4 minute la prima rulare deoarece verifica Chromium.
 echo.
 
 where node >nul 2>nul
@@ -33,13 +33,17 @@ echo.
 
 echo [1/5] Instalez/verific dependentele complete pentru teste...
 echo       Daca apare un warning de tip deprecated, nu este neaparat eroare.
+set F1_PROGRESS_TIMEOUT_SECONDS=240
 call node scripts\run-with-progress.js "npm install pentru testele complete" npm.cmd install
+set F1_PROGRESS_TIMEOUT_SECONDS=
 if errorlevel 1 (
     echo.
     echo EROARE: npm install a esuat.
     echo Incerc o reinstalare curata o singura data...
     call :removeNodeModules
+    set F1_PROGRESS_TIMEOUT_SECONDS=240
     call node scripts\run-with-progress.js "npm install pentru testele complete" npm.cmd install
+    set F1_PROGRESS_TIMEOUT_SECONDS=
     if errorlevel 1 (
         echo.
         echo EROARE: Nu am putut instala dependentele pentru teste.
@@ -64,7 +68,9 @@ echo [3/5] Verific/instalez Chromium pentru Playwright...
 echo       Daca Chromium lipseste, descarcarea poate dura cateva minute.
 echo       Daca este deja instalat, acest pas se termina repede.
 set F1_STRICT_PLAYWRIGHT_INSTALL=1
+set F1_PROGRESS_TIMEOUT_SECONDS=240
 call node scripts\run-with-progress.js "instalare/verificare Chromium Playwright" npm.cmd run e2e:install
+set F1_PROGRESS_TIMEOUT_SECONDS=
 set F1_STRICT_PLAYWRIGHT_INSTALL=
 if errorlevel 1 (
     echo.
