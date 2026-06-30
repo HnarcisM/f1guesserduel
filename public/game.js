@@ -455,7 +455,7 @@ function setupGameControls() {
 }
 
 
-function handleAuthChangeWithoutLeavingRoom() {
+function handleAuthChangeWithoutLeavingRoom(currentUser) {
 	if (!authReadyOnce) {
 		authReadyOnce = true;
 		return;
@@ -465,8 +465,11 @@ function handleAuthChangeWithoutLeavingRoom() {
 	 * Nu reconectăm socket-ul după login/logout.
 	 * Player-ul este legat de socket.id pe server, iar reconectarea în mijlocul
 	 * unei runde scoate player-ul din cameră și poate șterge runda dacă era singur.
-	 * Păstrăm socket-ul curent ca să poți continua jocul imediat după login.
+	 * Sincronizăm doar datele de profil ale socket-ului curent.
 	 */
+	if (socket && socket.connected) {
+		socket.emit('refreshAuthUser', currentUser || null);
+	}
 }
 
 function setupAuth() {

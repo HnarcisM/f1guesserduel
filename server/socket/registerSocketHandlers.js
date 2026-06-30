@@ -10,137 +10,30 @@ const {
     createRoom,
     addPlayerToRoom,
     removePlayerFromRoom,
-    removeInactiveRoomMembers,
     getPlayer,
-    getRoomMember,
     hasRoomMember,
     isHost,
     isSpectator,
     getRoomMemberCount,
     recordPlayerGuess,
     markPlayerTimedOut,
-    buildLiveBoardState,
-    buildPublicRoomState
+    buildLiveBoardState
 } = require('../rooms/roomService');
-
-function parseCookieHeader(cookieHeader) {
-    return String(cookieHeader || '')
-        .split(';')
-        .map(part => part.trim())
-        .filter(Boolean)
-        .reduce((cookies, part) => {
-            const separatorIndex = part.indexOf('=');
-            if (separatorIndex === -1) return cookies;
-            const key = decodeURIComponent(part.slice(0, separatorIndex));
-            const value = decodeURIComponent(part.slice(separatorIndex + 1));
-            cookies[key] = value;
-            return cookies;
-        }, {});
-}
+const { attachSocketAuth } = require('./socketAuth');
+const { createRoomStateEmitter } = require('./roomStateEmitter');
 
 function registerSocketHandlers(io, dependencies) {
     const { roomStore, gameService, sessionService } = dependencies;
 
-    io.use((socket, next) => {
-        if (!sessionService) return next();
+    attachSocketAuth(io, sessionService);
 
-        const cookies = parseCookieHeader(socket.handshake.headers.cookie);
-        const token = cookies[sessionService.cookieName];
-        socket.user = sessionService.getUserByToken(token);
-        return next();
-    });
-
-    function isSocketActive(socketId) {
-        return io.sockets.sockets.has(socketId);
-    }
-
-    function cleanupInactiveMembers(roomId, room) {
-        if (!room) return false;
-        const changed = removeInactiveRoomMembers(room, isSocketActive);
-
-        if (getRoomMemberCount(room) === 0) {
-            roomStore.remove(roomId);
-            return true;
-        }
-
-        return changed;
-    }
-
-    function getActiveRoomSockets(room) {
-        const socketIds = new Set([
-            ...Object.keys(room.players || {}),
-            ...Object.keys(room.spectators || {})
-        ]);
-
-        return [...socketIds]
-            .map(socketId => io.sockets.sockets.get(socketId))
-            .filter(Boolean);
-    }
-
-    function buildRoomStatePayload(room, reason = 'sync', recipientSocketId = null) {
-        const payload = {
-            reason,
-            room: buildPublicRoomState(room)
-        };
-
-        if (recipientSocketId && isSpectator(room, recipientSocketId)) {
-            payload.liveBoard = buildLiveBoardState(room);
-        }
-
-        return payload;
-    }
-
-    function emitRoomStateUpdate(roomId, reason = 'sync') {
-        const room = roomStore.get(roomId);
-        if (!room) return;
-
-        const roomWasRemoved = cleanupInactiveMembers(roomId, room);
-        if (roomWasRemoved && !roomStore.has(roomId)) return;
-
-        for (const memberSocket of getActiveRoomSockets(room)) {
-            memberSocket.emit('roomStateUpdate', buildRoomStatePayload(room, reason, memberSocket.id));
-        }
-    }
-
-    function emitGameStateToActiveRoomMembers(roomId, eventName, payload, options = {}) {
-        const room = roomStore.get(roomId);
-        if (!room) return;
-
-        const roomWasRemoved = cleanupInactiveMembers(roomId, room);
-        if (roomWasRemoved && !roomStore.has(roomId)) return;
-
-        for (const memberSocket of getActiveRoomSockets(room)) {
-            const recipientPayload = { ...payload };
-
-            if (options.includeLiveBoardForSpectators && isSpectator(room, memberSocket.id)) {
-                recipientPayload.liveBoard = buildLiveBoardState(room);
-            }
-
-            memberSocket.emit(eventName, recipientPayload);
-        }
-    }
-
-    function emitHostStatus(socket, room) {
-        const member = getRoomMember(room, socket.id);
-        const role = member?.role || (isSpectator(room, socket.id) ? 'spectator' : 'player');
-
-        socket.emit('hostStatus', {
-            isHost: isHost(room, socket.id),
-            isSpectator: role === 'spectator',
-            role,
-            username: member?.username || socket.user?.username || 'Guest',
-            user: socket.user || null
-        });
-    }
-
-    function emitRoomRoleStatuses(room) {
-        for (const member of [...Object.values(room.players || {}), ...Object.values(room.spectators || {})]) {
-            const memberSocket = io.sockets.sockets.get(member.socketId);
-            if (memberSocket) {
-                emitHostStatus(memberSocket, room);
-            }
-        }
-    }
+    const {
+        cleanupInactiveMembers,
+        emitGameStateToActiveRoomMembers,
+        emitHostStatus,
+        emitRoomRoleStatuses,
+        emitRoomStateUpdate
+    } = createRoomStateEmitter(io, roomStore);
 
     io.on('connection', (socket) => {
         let currentRoom = null;

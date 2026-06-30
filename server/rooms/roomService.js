@@ -34,10 +34,13 @@ function buildGuestUsername(room) {
 }
 
 function createRoomMember(room, socketId, authUser = null, role = 'player') {
+    const guestUsername = buildGuestUsername(room);
+
     return {
         socketId,
         userId: authUser ? authUser.id : null,
-        username: authUser ? authUser.username : buildGuestUsername(room),
+        username: authUser ? authUser.username : guestUsername,
+        guestUsername,
         role,
         isHost: role === 'player' && room.hostId === socketId,
         attempts: 0,
@@ -58,12 +61,29 @@ function createSpectator(room, socketId, authUser = null) {
     return spectator;
 }
 
-function updateRoomMemberAuth(member, authUser = null) {
+function updateRoomMemberAuth(member, authUser = null, room = null) {
     member.connected = true;
+
     if (authUser) {
         member.userId = authUser.id;
         member.username = authUser.username;
+        return;
     }
+
+    member.userId = null;
+    if (!member.guestUsername) {
+        member.guestUsername = room ? buildGuestUsername(room) : 'Guest';
+    }
+    member.username = member.guestUsername;
+}
+
+function refreshRoomMemberAuth(room, socketId, authUser = null) {
+    const member = getRoomMember(room, socketId);
+    if (!member) return null;
+
+    updateRoomMemberAuth(member, authUser, room);
+    syncHostFlags(room);
+    return member;
 }
 
 function syncHostFlags(room) {
@@ -104,13 +124,13 @@ function addPlayerToRoom(room, socketId, authUser = null) {
     if (!room.spectators) room.spectators = {};
 
     if (room.players[socketId]) {
-        updateRoomMemberAuth(room.players[socketId], authUser);
+        updateRoomMemberAuth(room.players[socketId], authUser, room);
         syncHostFlags(room);
         return { joined: true, role: 'player' };
     }
 
     if (room.spectators[socketId]) {
-        updateRoomMemberAuth(room.spectators[socketId], authUser);
+        updateRoomMemberAuth(room.spectators[socketId], authUser, room);
         syncHostFlags(room);
         return { joined: true, role: 'spectator' };
     }
@@ -343,6 +363,7 @@ module.exports = {
     addPlayerToRoom,
     removePlayerFromRoom,
     removeInactiveRoomMembers,
+    refreshRoomMemberAuth,
     getPlayer,
     getSpectator,
     getRoomMember,
