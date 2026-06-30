@@ -11,9 +11,16 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
-    "test": "node --test"
+    "test": "node --test test/*.test.js",
+    "test:e2e": "node --test test/e2e/*.test.js",
+    "test:all": "npm test && npm run test:e2e",
+    "e2e:install": "node scripts/ensure-playwright-browser.js",
+    "postinstall": "node scripts/ensure-playwright-browser.js"
   },
   "engines": {
     "node": "22.x"
+  },
+  "devDependencies": {
+    "playwright": "^1.61.1"
   }
 }

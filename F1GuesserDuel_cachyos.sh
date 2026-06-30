@@ -38,6 +38,7 @@ Ce face:
   - verifică pacman, Node.js, npm, Python și uneltele de build C/C++
   - instalează pachetele lipsă cu pacman
   - rulează npm install când node_modules lipsește sau package.json s-a schimbat
+  - instalează/verifică automat Chromium pentru testele Playwright E2E
   - pornește serverul cu npm start
 
 Opțiuni:
@@ -113,6 +114,11 @@ if (( NEED_NPM_INSTALL == 1 )); then
   fi
 else
   log "node_modules există și pare actualizat. Sar peste npm install."
+fi
+
+log "Verific/instalez automat Chromium pentru testele E2E Playwright..."
+if ! npm run e2e:install; then
+  warn "Instalarea automată Playwright Chromium a eșuat. Serverul pornește în continuare, dar testele E2E vor necesita: npm run e2e:install"
 fi
 
 log "Verific rapid sintaxa fișierelor JavaScript principale..."

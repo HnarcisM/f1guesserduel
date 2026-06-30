@@ -29,7 +29,7 @@ if errorlevel 1 goto :manualSetupRequired
 call :configureNpmPython
 
 echo.
-echo [5/6] Curat instalari npm incomplete daca este nevoie...
+echo [5/7] Curat instalari npm incomplete daca este nevoie...
 if exist "node_modules\better-sqlite3" (
     node -e "require.resolve('better-sqlite3')" >nul 2>nul
     if errorlevel 1 (
@@ -39,7 +39,7 @@ if exist "node_modules\better-sqlite3" (
 )
 
 if exist "node_modules" (
-    node -e "require.resolve('express'); require.resolve('socket.io'); require.resolve('better-sqlite3'); require.resolve('cookie-parser')" >nul 2>nul
+    node -e "require.resolve('express'); require.resolve('socket.io'); require.resolve('better-sqlite3'); require.resolve('cookie-parser'); require.resolve('playwright')" >nul 2>nul
     if errorlevel 1 (
         echo Unele dependinte lipsesc. Sterg node_modules pentru reinstalare curata...
         call :removeNodeModules
@@ -47,7 +47,7 @@ if exist "node_modules" (
 )
 
 echo.
-echo [5/6] Instalez/verific dependentele proiectului npm...
+echo [5/7] Instalez/verific dependentele proiectului npm...
 call npm.cmd install
 if errorlevel 1 (
     echo.
@@ -73,7 +73,7 @@ if errorlevel 1 (
     )
 )
 
-node -e "require.resolve('express'); require.resolve('socket.io'); require.resolve('better-sqlite3'); require.resolve('cookie-parser'); console.log('Dependinte npm OK.')"
+node -e "require.resolve('express'); require.resolve('socket.io'); require.resolve('better-sqlite3'); require.resolve('cookie-parser'); require.resolve('playwright'); console.log('Dependinte npm OK.')"
 if errorlevel 1 (
     echo.
     echo EROARE: npm install s-a terminat, dar dependintele nu pot fi gasite.
@@ -83,7 +83,17 @@ if errorlevel 1 (
 )
 
 echo.
-echo [6/6] Pornesc serverul...
+echo [6/7] Verific/instalez automat Chromium pentru testele E2E Playwright...
+call npm.cmd run e2e:install
+if errorlevel 1 (
+    echo.
+    echo ATENTIE: Instalarea automata Playwright Chromium a esuat.
+    echo Serverul poate porni in continuare, dar testele E2E nu vor rula pana cand executi manual:
+    echo npm run e2e:install
+)
+
+echo.
+echo [7/7] Pornesc serverul...
 echo Aplicatia va fi disponibila de obicei la: http://localhost:3000
 echo.
 node server.js
@@ -91,7 +101,7 @@ pause
 exit /b 0
 
 :ensureWinget
-echo [1/6] Verific winget...
+echo [1/7] Verific winget...
 where winget >nul 2>nul
 if errorlevel 1 (
     echo winget nu este disponibil pe acest Windows.
@@ -103,7 +113,7 @@ exit /b 0
 
 :ensureCompatibleNode
 echo.
-echo [2/6] Verific Node.js compatibil cu better-sqlite3...
+echo [2/7] Verific Node.js compatibil cu better-sqlite3...
 call :refreshNvmPath
 where node >nul 2>nul
 if errorlevel 1 (
@@ -191,7 +201,7 @@ exit /b 0
 
 :ensurePython
 echo.
-echo [3/6] Verific Python pentru node-gyp...
+echo [3/7] Verific Python pentru node-gyp...
 py -3 --version >nul 2>nul
 if not errorlevel 1 (
     for /f "tokens=*" %%v in ('py -3 --version 2^>^&1') do echo Python detectat: %%v
@@ -211,7 +221,7 @@ exit /b 0
 
 :ensureBuildTools
 echo.
-echo [4/6] Verific Visual Studio Build Tools / C++ compiler...
+echo [4/7] Verific Visual Studio Build Tools / C++ compiler...
 set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
 if exist "%VSWHERE%" (
     "%VSWHERE%" -products * -requires Microsoft.VisualStudio.Workload.VCTools -property installationPath >nul 2>nul
