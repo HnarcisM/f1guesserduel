@@ -168,6 +168,52 @@ function removePlayerFromRoom(room, socketId) {
     syncHostFlags(room);
 }
 
+
+function removeInactiveRoomMembers(room, isSocketActive) {
+    if (!room || typeof isSocketActive !== 'function') return false;
+    if (!room.players) room.players = {};
+    if (!room.spectators) room.spectators = {};
+
+    let changed = false;
+    let removedActivePlayer = false;
+
+    for (const socketId of getPlayerIds(room)) {
+        if (!isSocketActive(socketId)) {
+            delete room.players[socketId];
+            changed = true;
+            removedActivePlayer = true;
+
+            if (room.hostId === socketId) {
+                room.hostId = null;
+            }
+        }
+    }
+
+    for (const socketId of getSpectatorIds(room)) {
+        if (!isSocketActive(socketId)) {
+            delete room.spectators[socketId];
+            changed = true;
+        }
+    }
+
+    if (!room.hostId) {
+        room.hostId = getPlayerIds(room)[0] || null;
+    }
+
+    while (removedActivePlayer && getPlayerCount(room) < MAX_PLAYERS_PER_ROOM && getSpectatorCount(room) > 0) {
+        const promoted = promoteNextSpectatorToPlayer(room);
+        if (!promoted) break;
+        changed = true;
+    }
+
+    if (!room.hostId) {
+        room.hostId = getPlayerIds(room)[0] || null;
+    }
+
+    syncHostFlags(room);
+    return changed;
+}
+
 function getPlayer(room, socketId) {
     return room.players[socketId] || null;
 }
@@ -233,6 +279,7 @@ module.exports = {
     createRoom,
     addPlayerToRoom,
     removePlayerFromRoom,
+    removeInactiveRoomMembers,
     getPlayer,
     getSpectator,
     getRoomMember,

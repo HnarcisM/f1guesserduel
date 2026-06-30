@@ -10,10 +10,13 @@ const {
     createRoom,
     addPlayerToRoom,
     removePlayerFromRoom,
+    removeInactiveRoomMembers,
     getPlayer,
-    hasPlayer,
+    getRoomMember,
+    hasRoomMember,
     isHost,
-    getPlayerCount,
+    isSpectator,
+    getRoomMemberCount,
     buildPublicRoomState
 } = require('../rooms/roomService');
 
@@ -44,18 +47,52 @@ function registerSocketHandlers(io, dependencies) {
         return next();
     });
 
+    function isSocketActive(socketId) {
+        return io.sockets.sockets.has(socketId);
+    }
+
+    function cleanupInactiveMembers(roomId, room) {
+        if (!room) return false;
+        const changed = removeInactiveRoomMembers(room, isSocketActive);
+
+        if (getRoomMemberCount(room) === 0) {
+            roomStore.remove(roomId);
+            return true;
+        }
+
+        return changed;
+    }
+
     function emitRoomUpdate(roomId) {
         const room = roomStore.get(roomId);
         if (!room) return;
+
+        const roomWasRemoved = cleanupInactiveMembers(roomId, room);
+        if (roomWasRemoved && !roomStore.has(roomId)) return;
+
         io.to(roomId).emit('roomUpdate', buildPublicRoomState(room));
     }
 
     function emitHostStatus(socket, room) {
+        const member = getRoomMember(room, socket.id);
+        const role = member?.role || (isSpectator(room, socket.id) ? 'spectator' : 'player');
+
         socket.emit('hostStatus', {
             isHost: isHost(room, socket.id),
-            username: getPlayer(room, socket.id)?.username || socket.user?.username || 'Guest',
+            isSpectator: role === 'spectator',
+            role,
+            username: member?.username || socket.user?.username || 'Guest',
             user: socket.user || null
         });
+    }
+
+    function emitRoomRoleStatuses(room) {
+        for (const member of [...Object.values(room.players || {}), ...Object.values(room.spectators || {})]) {
+            const memberSocket = io.sockets.sockets.get(member.socketId);
+            if (memberSocket) {
+                emitHostStatus(memberSocket, room);
+            }
+        }
     }
 
     io.on('connection', (socket) => {
@@ -72,9 +109,10 @@ function registerSocketHandlers(io, dependencies) {
             }
 
             const room = roomStore.get(roomId);
-            const wasAdded = addPlayerToRoom(room, socket.id, socket.user || null);
+            cleanupInactiveMembers(roomId, room);
+            const joinResult = addPlayerToRoom(room, socket.id, socket.user || null);
 
-            if (!wasAdded) {
+            if (!joinResult || !joinResult.joined) {
                 socket.emit('roomFull', { maxPlayers: MAX_PLAYERS_PER_ROOM });
                 return;
             }
@@ -100,6 +138,11 @@ function registerSocketHandlers(io, dependencies) {
 
             const room = roomStore.get(currentRoom);
             if (!room) return;
+
+            if (isSpectator(room, socket.id)) {
+                socket.emit('errorMessage', 'Ești în modul spectator. Doar cei 2 jucători activi pot controla jocul.');
+                return;
+            }
 
             if (!isHost(room, socket.id)) {
                 socket.emit('errorMessage', 'Doar hostul camerei poate schimba dificultatea.');
@@ -130,6 +173,11 @@ function registerSocketHandlers(io, dependencies) {
 
             const room = roomStore.get(currentRoom);
             if (!room) return;
+
+            if (isSpectator(room, socket.id)) {
+                socket.emit('errorMessage', 'Ești spectator în această cameră. Poți urmări jocul, dar nu poți trimite încercări.');
+                return;
+            }
 
             const player = getPlayer(room, socket.id);
             if (!player || !room.targetDriver || room.roundState !== 'playing') return;
@@ -188,6 +236,8 @@ function registerSocketHandlers(io, dependencies) {
             const room = roomStore.get(currentRoom);
             if (!room) return;
 
+            if (isSpectator(room, socket.id)) return;
+
             const player = getPlayer(room, socket.id);
             if (!player || !room.targetDriver || !room.timed || !room.roundStartedAt) return;
             if (player.finished) return;
@@ -210,6 +260,11 @@ function registerSocketHandlers(io, dependencies) {
             const room = roomStore.get(currentRoom);
             if (!room) return;
 
+            if (isSpectator(room, socket.id)) {
+                socket.emit('errorMessage', 'Ești în modul spectator. Doar hostul poate porni un rematch.');
+                return;
+            }
+
             if (!isHost(room, socket.id)) {
                 socket.emit('errorMessage', 'Doar hostul camerei poate porni un rematch.');
                 return;
@@ -225,26 +280,32 @@ function registerSocketHandlers(io, dependencies) {
             emitRoomUpdate(currentRoom);
         });
 
-        socket.on('disconnect', () => {
+        function leaveCurrentRoom() {
             if (!currentRoom) return;
 
-            const room = roomStore.get(currentRoom);
+            const roomId = currentRoom;
+            const room = roomStore.get(roomId);
+            currentRoom = null;
+
             if (!room) return;
-            if (!hasPlayer(room, socket.id)) return;
 
-            removePlayerFromRoom(room, socket.id);
+            if (hasRoomMember(room, socket.id)) {
+                removePlayerFromRoom(room, socket.id);
+            }
 
-            if (getPlayerCount(room) === 0) {
-                roomStore.remove(currentRoom);
+            cleanupInactiveMembers(roomId, room);
+
+            if (getRoomMemberCount(room) === 0) {
+                roomStore.remove(roomId);
                 return;
             }
 
-            emitRoomUpdate(currentRoom);
-            const newHostSocket = room.hostId ? io.sockets.sockets.get(room.hostId) : null;
-            if (newHostSocket) {
-                emitHostStatus(newHostSocket, room);
-            }
-        });
+            emitRoomUpdate(roomId);
+            emitRoomRoleStatuses(room);
+        }
+
+        socket.on('disconnecting', leaveCurrentRoom);
+        socket.on('disconnect', leaveCurrentRoom);
     });
 }
 

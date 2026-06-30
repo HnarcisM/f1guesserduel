@@ -17,7 +17,10 @@ const { createAuthMiddleware } = require('./middleware/authMiddleware');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+    pingInterval: 10000,
+    pingTimeout: 5000
+});
 
 const PORT = process.env.PORT || 3000;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
