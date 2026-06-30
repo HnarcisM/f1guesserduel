@@ -39,6 +39,8 @@ function serializeRoomMemberSummary(member) {
 function buildLiveBoardState(room) {
     return {
         roundState: room.roundState,
+        isDailyChallenge: Boolean(room.isDailyChallenge),
+        dailyDate: room.dailyDate || null,
         players: Object.values(room.players || {}).map(member => serializeRoomMember(member, { includeGuesses: true }))
     };
 }
@@ -52,6 +54,10 @@ function buildPublicRoomState(room) {
         spectatorCount: spectators.length,
         totalCount: players.length + spectators.length,
         maxPlayers: MAX_PLAYERS_PER_ROOM,
+        roundState: room.roundState,
+        difficulty: room.difficulty || null,
+        isDailyChallenge: Boolean(room.isDailyChallenge),
+        dailyDate: room.dailyDate || null,
         players,
         spectators
     };

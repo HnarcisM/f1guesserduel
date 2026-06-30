@@ -506,3 +506,23 @@ Pentru rularea testelor backend + E2E cu browser real:
 Launcher-ul normal al jocului instalează doar dependențele necesare serverului. Dependențele pentru testele E2E și browserul Playwright Chromium sunt pregătite doar de scripturile de test, ca pornirea jocului să nu fie blocată de testele E2E.
 
 În timpul testelor E2E apar mesaje de progres de forma `[E2E ora] ...`, ca să fie clar dacă testul încă lucrează sau la ce pas s-a oprit.
+
+
+## Daily Challenge
+
+Daily Challenge adaugă o provocare zilnică separată pe dificultate:
+
+- `Daily Easy`
+- `Daily Medium`
+- `Daily Hard`
+
+Pentru fiecare dificultate, serverul alege determinist același pilot pentru aceeași zi calendaristică UTC. Nu este nevoie de bază de date pentru prima versiune: seed-ul este calculat din dată și dificultate. Hostul poate porni Daily Challenge din overlay-ul principal sau din meniul hamburger. Spectatorii văd în continuare live board-ul, dar nu pot porni provocarea sau trimite încercări.
+
+
+## Daily Challenge reset
+
+Daily Challenge se resetează la miezul nopții local al browserului și este blocat separat per cont, dificultate și zi.
+
+## Test launcher progress
+
+`F1GuesserDuel_Tests.bat` afișează mesaje `[progress]` pentru comenzile lungi, inclusiv `npm install`, instalarea Chromium Playwright și testele E2E.

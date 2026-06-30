@@ -22,10 +22,10 @@ npm -v
 
 log "[1/5] Instalez/verific dependențele complete pentru teste..."
 printf 'Dacă apare un warning de tip deprecated, nu este neapărat eroare.\n'
-if ! npm install; then
+if ! node scripts/run-with-progress.js "npm install pentru testele complete" npm install; then
   warn "npm install a eșuat. Încerc reinstall curat o singură dată..."
   rm -rf node_modules package-lock.json
-  npm install
+  node scripts/run-with-progress.js "npm install pentru testele complete" npm install
 fi
 
 log "[2/5] Verific dependențele necesare pentru teste..."
@@ -33,14 +33,14 @@ node -e "require.resolve('express'); require.resolve('socket.io'); require.resol
 
 log "[3/5] Verific/instalez Chromium pentru Playwright..."
 printf 'Dacă Chromium lipsește, descărcarea poate dura câteva minute.\n'
-npm run e2e:install
+F1_STRICT_PLAYWRIGHT_INSTALL=1 node scripts/run-with-progress.js "instalare/verificare Chromium Playwright" npm run e2e:install
 
 log "[4/5] Rulez testele backend..."
-npm test
+node scripts/run-with-progress.js "teste backend" npm test
 
 log "[5/5] Rulez testele E2E cu browser real..."
 printf 'Se deschid intern 3 taburi: Player 1, Player 2 și Spectator.\n'
 printf 'Vei vedea mesaje [E2E ora] pentru fiecare pas important.\n'
-npm run test:e2e
+node scripts/run-with-progress.js "teste E2E cu browser real" npm run test:e2e
 
 log "Toate testele au trecut cu succes."

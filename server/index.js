@@ -46,7 +46,7 @@ function setStaticCacheHeaders(res, filePath) {
     }
 
     if (['.js', '.css'].includes(extension)) {
-        res.setHeader('Cache-Control', 'public, max-age=3600');
+        res.setHeader('Cache-Control', 'no-cache');
         return;
     }
 

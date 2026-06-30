@@ -33,13 +33,13 @@ echo.
 
 echo [1/5] Instalez/verific dependentele complete pentru teste...
 echo       Daca apare un warning de tip deprecated, nu este neaparat eroare.
-call npm.cmd install
+call node scripts\run-with-progress.js "npm install pentru testele complete" npm.cmd install
 if errorlevel 1 (
     echo.
     echo EROARE: npm install a esuat.
     echo Incerc o reinstalare curata o singura data...
     call :removeNodeModules
-    call npm.cmd install
+    call node scripts\run-with-progress.js "npm install pentru testele complete" npm.cmd install
     if errorlevel 1 (
         echo.
         echo EROARE: Nu am putut instala dependentele pentru teste.
@@ -63,7 +63,9 @@ echo.
 echo [3/5] Verific/instalez Chromium pentru Playwright...
 echo       Daca Chromium lipseste, descarcarea poate dura cateva minute.
 echo       Daca este deja instalat, acest pas se termina repede.
-call npm.cmd run e2e:install
+set F1_STRICT_PLAYWRIGHT_INSTALL=1
+call node scripts\run-with-progress.js "instalare/verificare Chromium Playwright" npm.cmd run e2e:install
+set F1_STRICT_PLAYWRIGHT_INSTALL=
 if errorlevel 1 (
     echo.
     echo EROARE: Nu am putut instala Chromium pentru Playwright.
@@ -74,7 +76,7 @@ if errorlevel 1 (
 
 echo.
 echo [4/5] Rulez testele backend...
-call npm.cmd test
+call node scripts\run-with-progress.js "teste backend" npm.cmd test
 if errorlevel 1 (
     echo.
     echo EROARE: Testele backend au esuat.
@@ -86,7 +88,7 @@ echo.
 echo [5/5] Rulez testele E2E cu browser real...
 echo       Se deschid intern 3 taburi: Player 1, Player 2 si Spectator.
 echo       Vei vedea mesaje [E2E ora] pentru fiecare pas important.
-call npm.cmd run test:e2e
+call node scripts\run-with-progress.js "teste E2E cu browser real" npm.cmd run test:e2e
 if errorlevel 1 (
     echo.
     echo EROARE: Testele E2E au esuat.

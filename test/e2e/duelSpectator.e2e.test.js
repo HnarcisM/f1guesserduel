@@ -155,13 +155,13 @@ test('2 players can play while a third browser tab watches live as spectator', a
 
         logE2E('Player 1 trimite prima încercare...');
         const firstGuess = await pickFirstSuggestion(playerOne, 'Arvid');
-        await spectator.locator('#liveDuelPlayers').getByText(firstGuess, { exact: false }).waitFor({ timeout: 7000 });
+        await spectator.locator('#liveDuelPlayers .live-guess-driver-name').filter({ hasText: firstGuess }).first().waitFor({ timeout: 7000 });
         logE2E(`Spectatorul vede încercarea Player 1: ${firstGuess}.`);
         await expectText(spectator.locator('#liveDuelSummary'), /1 încercări/);
 
         logE2E('Player 2 trimite a doua încercare...');
         const secondGuess = await pickFirstSuggestion(playerTwo, 'Andrea');
-        await spectator.locator('#liveDuelPlayers').getByText(secondGuess, { exact: false }).waitFor({ timeout: 7000 });
+        await spectator.locator('#liveDuelPlayers .live-guess-driver-name').filter({ hasText: secondGuess }).first().waitFor({ timeout: 7000 });
         logE2E(`Spectatorul vede încercarea Player 2: ${secondGuess}.`);
         await expectText(spectator.locator('#liveDuelSummary'), /2 încercări/);
 

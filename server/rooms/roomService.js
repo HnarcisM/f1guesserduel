@@ -34,7 +34,10 @@ function createRoom(roomId, hostSocketId, authUser = null) {
         timed: false,
         timeLimitSeconds: DEFAULT_TIME_LIMIT_SECONDS,
         roundStartedAt: null,
-        roundState: 'waiting'
+        roundState: 'waiting',
+        isDailyChallenge: false,
+        dailyDate: null,
+        dailyChallengeId: null
     };
 
     room.players[hostSocketId] = createPlayer(room, hostSocketId, authUser);

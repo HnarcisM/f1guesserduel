@@ -8,7 +8,10 @@ export function registerSocketEvents(socket, app) {
 		'gameTimedOut',
 		'errorMessage',
 		'roomFull',
-		'hostStatus'
+		'hostStatus',
+		'initDailyChallenge',
+		'dailyGuessResult',
+		'dailyChallengeError'
 	].forEach(eventName => socket.off(eventName));
 
 	function renderLiveBoardForSpectator(board, options = {}) {
@@ -36,15 +39,60 @@ export function registerSocketEvents(socket, app) {
 	}
 
 	function handleRoomStateUpdate(payload = {}) {
+		if (app.isDailyMode?.() || app.isDailyStartPending?.()) return;
+
 		const roomState = payload.room || payload;
 		updateRoomBadge(roomState);
 		renderLiveBoardForSpectator(payload.liveBoard || roomState.liveBoard);
 	}
 
-	socket.on('initGame', (data) => {
+
+
+	socket.on('initDailyChallenge', (data) => {
 		const overlay = document.getElementById('difficulty-overlay');
 		if (overlay) overlay.classList.add('hidden');
 
+		app.setDailyStartPending?.(false);
+		app.setDailyMode?.(true, {
+			difficulty: data.difficulty,
+			dailyDate: data.dailyDate,
+			dailyChallengeId: data.dailyChallengeId
+		});
+		app.setDriversList(data.drivers);
+		app.setRoundFinished(false);
+		app.exitRematchMode();
+		app.resetLiveBoard?.();
+		app.timer.hideRoundTimer();
+
+		const diffLabel = document.getElementById("diff-display-label");
+		if (diffLabel) {
+			const dailyDate = data.dailyDate ? ` · ${data.dailyDate}` : '';
+			diffLabel.innerText = `Daily Challenge · Mod: ${data.difficulty}${dailyDate}`;
+			diffLabel.className = `diff-display-label difficulty-${data.difficulty} daily-mode`;
+		}
+
+		const statusEl = document.getElementById("status");
+		if (statusEl) {
+			statusEl.classList.remove("is-hidden");
+			statusEl.innerText = "Daily Challenge individual: ghicește pilotul zilei. După finalizare, revine la următorul reset.";
+		}
+
+		app.initializeGridStructure();
+
+		const gameZone = document.getElementById("gameZone");
+		if (gameZone) gameZone.classList.remove("game-zone-hidden");
+
+		const badge = document.getElementById("duelStatus");
+		if (badge) badge.innerText = "Daily Challenge · Individual";
+	});
+
+	socket.on('initGame', (data) => {
+		if (app.isDailyMode?.() || app.isDailyStartPending?.()) return;
+
+		const overlay = document.getElementById('difficulty-overlay');
+		if (overlay) overlay.classList.add('hidden');
+
+		app.setDailyMode?.(false);
 		app.setDriversList(data.drivers);
 		app.setRoundFinished(false);
 		app.exitRematchMode();
@@ -65,12 +113,18 @@ export function registerSocketEvents(socket, app) {
 
 		const diffLabel = document.getElementById("diff-display-label");
 		if (diffLabel) {
-			diffLabel.innerText = `Mod: ${data.difficulty}`;
-			diffLabel.className = `diff-display-label difficulty-${data.difficulty}`;
+			const dailyPrefix = data.isDailyChallenge ? 'Daily Challenge · ' : '';
+			const dailyDate = data.isDailyChallenge && data.dailyDate ? ` · ${data.dailyDate}` : '';
+			diffLabel.innerText = `${dailyPrefix}Mod: ${data.difficulty}${dailyDate}`;
+			diffLabel.className = `diff-display-label difficulty-${data.difficulty}${data.isDailyChallenge ? ' daily-mode' : ''}`;
 		}
 
 		const statusEl = document.getElementById("status");
-		if (statusEl && !app.isSpectator?.()) statusEl.innerText = "Ghicește pilotul misterios!";
+		if (statusEl && !app.isSpectator?.()) {
+			statusEl.innerText = data.isDailyChallenge
+				? "Daily Challenge: ghicește pilotul zilei!"
+				: "Ghicește pilotul misterios!";
+		}
 
 		app.initializeGridStructure();
 		renderLiveBoardForSpectator(data.liveBoard);
@@ -84,6 +138,8 @@ export function registerSocketEvents(socket, app) {
 	socket.on('roomStateUpdate', handleRoomStateUpdate);
 
 	socket.on('hostStatus', (data) => {
+		if (app.isDailyMode?.() || app.isDailyStartPending?.()) return;
+
 		const wasSpectator = Boolean(app.isSpectator?.());
 		const isSpectator = Boolean(data && data.isSpectator);
 		app.setSpectatorMode?.(isSpectator);
@@ -119,6 +175,31 @@ export function registerSocketEvents(socket, app) {
 		}
 	});
 
+
+
+	socket.on('dailyGuessResult', (data) => {
+		const { guess, results, attempts, isCorrect, isGameOver, target } = data;
+		const rendered = app.renderGuessResult({ guess, results, attempts });
+		if (!rendered) return;
+
+		if (isGameOver) {
+			app.completeDailyChallenge?.(data);
+			app.showEndGamePopup({
+				isCorrect,
+				attempts,
+				target,
+				isDailyChallenge: true
+			});
+		}
+	});
+
+	socket.on('dailyChallengeError', (message) => {
+		app.setDailyStartPending?.(false);
+		app.setDailyMode?.(false);
+		const overlay = document.getElementById('difficulty-overlay');
+		if (overlay) overlay.classList.remove('hidden');
+		if (message) alert(message);
+	});
 	socket.on('gameTimedOut', (data) => {
 		app.showEndGamePopup({
 			isCorrect: false,
@@ -129,6 +210,7 @@ export function registerSocketEvents(socket, app) {
 	});
 
 	socket.on('gameRestarted', (data = {}) => {
+		app.setDailyMode?.(false);
 		app.setRoundFinished(false);
 		app.exitRematchMode();
 		app.initializeGridStructure();
@@ -146,9 +228,12 @@ export function registerSocketEvents(socket, app) {
 		if (gz) gz.classList.toggle("game-zone-hidden", Boolean(app.isSpectator?.()));
 		if (st) st.classList.remove("is-hidden");
 		if (st) {
+			const playerMessage = data.isDailyChallenge
+				? "Daily Challenge: ghicește din nou pilotul zilei."
+				: "Ghicește noul pilot misterios!";
 			st.innerText = app.isSpectator?.()
 				? "Mod spectator: urmărești noua rundă."
-				: "Ghicește noul pilot misterios!";
+				: playerMessage;
 		}
 
 		if (data.timed) {

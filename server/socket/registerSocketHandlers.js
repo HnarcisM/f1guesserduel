@@ -29,6 +29,7 @@ const {
 
 function registerSocketHandlers(io, dependencies) {
     const { roomStore, gameService, sessionService } = dependencies;
+    const dailySessions = new Map();
 
     attachSocketAuth(io, sessionService);
 
@@ -73,7 +74,9 @@ function registerSocketHandlers(io, dependencies) {
                     difficulty: room.difficulty,
                     timed: room.timed,
                     timeLimitSeconds: room.timeLimitSeconds,
-                    roundStartedAt: room.roundStartedAt
+                    roundStartedAt: room.roundStartedAt,
+                    isDailyChallenge: Boolean(room.isDailyChallenge),
+                    dailyDate: room.dailyDate || null
                 };
 
                 if (isSpectator(room, socket.id)) {
@@ -238,6 +241,90 @@ function registerSocketHandlers(io, dependencies) {
         });
 
 
+        socket.on('startDailyChallenge', (payload) => {
+            const dailyOptions = normalizeRoundOptions(payload);
+            if (!dailyOptions) {
+                socket.emit('dailyChallengeError', 'Dificultatea Daily Challenge nu este validă.');
+                return;
+            }
+
+            const dailyPayload = gameService.startDailyChallenge(dailyOptions.difficulty, dailyOptions.dailyDate || new Date());
+            if (!dailyPayload) {
+                socket.emit('dailyChallengeError', 'Nu am putut porni Daily Challenge pentru dificultatea selectată.');
+                return;
+            }
+
+            dailySessions.set(socket.id, {
+                difficulty: dailyPayload.difficulty,
+                driversList: dailyPayload.drivers,
+                targetDriver: dailyPayload.targetDriver,
+                attempts: 0,
+                finished: false,
+                dailyDate: dailyPayload.dailyDate,
+                dailyChallengeId: dailyPayload.dailyChallengeId
+            });
+
+            socket.emit('initDailyChallenge', {
+                drivers: dailyPayload.drivers,
+                difficulty: dailyPayload.difficulty,
+                timed: false,
+                timeLimitSeconds: null,
+                roundStartedAt: dailyPayload.roundStartedAt,
+                isDailyChallenge: true,
+                dailyDate: dailyPayload.dailyDate,
+                dailyChallengeId: dailyPayload.dailyChallengeId
+            });
+        });
+
+        socket.on('submitDailyGuess', (driverId) => {
+            const dailySession = dailySessions.get(socket.id);
+            if (!dailySession || dailySession.finished) return;
+
+            if (dailySession.attempts >= MAX_ATTEMPTS) return;
+
+            const normalizedDriverId = normalizeDriverId(driverId);
+            if (!normalizedDriverId) {
+                socket.emit('errorMessage', 'Pilotul ales nu este valid pentru Daily Challenge.');
+                return;
+            }
+
+            const guessDriver = dailySession.driversList.find(driver => driver.id === normalizedDriverId);
+            if (!guessDriver) {
+                socket.emit('errorMessage', 'Pilotul ales nu este valid pentru Daily Challenge.');
+                return;
+            }
+
+            dailySession.attempts++;
+
+            const target = dailySession.targetDriver;
+            const results = compareGuess(guessDriver, target);
+            const isCorrectGuess = guessDriver.id === target.id;
+            const isGameOver = isCorrectGuess || dailySession.attempts >= MAX_ATTEMPTS;
+
+            if (isGameOver) {
+                dailySession.finished = true;
+            }
+
+            const responseData = {
+                guess: guessDriver,
+                results,
+                attempts: dailySession.attempts,
+                isCorrect: isCorrectGuess,
+                isGameOver,
+                isDailyChallenge: true,
+                dailyDate: dailySession.dailyDate,
+                dailyChallengeId: dailySession.dailyChallengeId,
+                difficulty: dailySession.difficulty
+            };
+
+            if (isGameOver) {
+                responseData.target = { name: target.name };
+            }
+
+            socket.emit('dailyGuessResult', responseData);
+        });
+
+
         socket.on('refreshAuthUser', (userPayload = null) => {
             const room = currentRoom ? roomStore.get(currentRoom) : null;
             const authUser = normalizeClientAuthUser(userPayload);
@@ -254,6 +341,7 @@ function registerSocketHandlers(io, dependencies) {
         });
 
         function leaveCurrentRoom() {
+            dailySessions.delete(socket.id);
             if (!currentRoom) return;
 
             const roomId = currentRoom;

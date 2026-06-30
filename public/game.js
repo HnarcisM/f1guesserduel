@@ -6,6 +6,7 @@ import { registerSocketEvents } from './js/socketEvents.js';
 import { createAuthView } from './js/authView.js';
 import { renderLiveBoard, resetLiveBoard } from './js/liveBoardView.js';
 import { createRoleState } from './js/roleState.js';
+import { createDailyChallengeState } from './js/dailyChallengeState.js';
 
 /**
  * F1 Guesser Duel - frontend entry point.
@@ -24,6 +25,13 @@ let isRoundFinished = false;
 let isRematchMode = false;
 let authView;
 let authReadyOnce = false;
+let isDailyMode = false;
+let isDailyStartPending = false;
+let currentDailyChallenge = null;
+
+const dailyChallengeState = createDailyChallengeState({
+	getCurrentUser: () => authView?.getCurrentUser?.() || null
+});
 
 const roleState = createRoleState({
 	onSpectatorModeChanged(isSpectator) {
@@ -41,6 +49,51 @@ function setDriversList(drivers) {
 
 function setRoundFinished(value) {
 	isRoundFinished = Boolean(value);
+}
+
+
+function setDailyStartPending(value) {
+	isDailyStartPending = Boolean(value);
+}
+
+function setDailyMode(value, challenge = null) {
+	isDailyMode = Boolean(value);
+	if (isDailyMode) isDailyStartPending = false;
+	currentDailyChallenge = isDailyMode ? challenge : null;
+	document.body.classList.toggle('daily-active', isDailyMode);
+
+	if (isDailyMode) {
+		roleState.setSpectatorMode(false);
+		resetLiveBoard();
+	}
+}
+
+function getDailyLevelLabel(level) {
+	const labels = {
+		easy: 'Easy',
+		medium: 'Medium',
+		hard: 'Hard'
+	};
+	return labels[level] || level;
+}
+
+function showDailyBlockedMessage(level) {
+	const message = dailyChallengeState.getBlockedMessage(level);
+	const status = document.getElementById('status');
+	if (status) {
+		status.classList.remove('is-hidden');
+		status.textContent = message;
+	}
+	alert(message);
+}
+
+function completeDailyChallenge(data = {}) {
+	if (!isDailyMode) return;
+	dailyChallengeState.markCompleted({
+		level: data.difficulty || currentDailyChallenge?.difficulty,
+		challengeId: data.dailyChallengeId || currentDailyChallenge?.dailyChallengeId,
+		dailyDate: data.dailyDate || currentDailyChallenge?.dailyDate
+	});
 }
 
 function showHostOnlyTimerMessage() {
@@ -101,6 +154,15 @@ function exitRematchMode() {
 }
 
 function requestRematch() {
+	if (isDailyMode) {
+		const status = document.getElementById("status");
+		if (status) {
+			status.classList.remove("is-hidden");
+			status.textContent = `Daily Challenge este disponibil din nou în ${dailyChallengeState.getCountdownText()}.`;
+		}
+		return;
+	}
+
 	if (!roleState.requirePlayer("Ești spectator. Doar hostul poate porni un rematch.")) return;
 
 	if (socket) socket.emit('restartGame', timer.buildRestartOptions());
@@ -112,10 +174,17 @@ function hideEndGamePopup(keepRematchAvailable = true) {
 
 	if (popup) popup.classList.remove("show");
 	if (backdrop) backdrop.classList.remove("show");
-	if (keepRematchAvailable && isRoundFinished) enterRematchMode();
+	if (keepRematchAvailable && isRoundFinished && !isDailyMode) enterRematchMode();
+	if (isDailyMode) {
+		const status = document.getElementById("status");
+		if (status) {
+			status.classList.remove("is-hidden");
+			status.textContent = `Daily Challenge completat. Următorul Daily este disponibil în ${dailyChallengeState.getCountdownText()}.`;
+		}
+	}
 }
 
-function showEndGamePopup({ isCorrect, attempts, target, isTimedOut = false }) {
+function showEndGamePopup({ isCorrect, attempts, target, isTimedOut = false, isDailyChallenge = false }) {
 	if (isRoundFinished) return;
 	isRoundFinished = true;
 	isRematchMode = false;
@@ -149,6 +218,21 @@ function showEndGamePopup({ isCorrect, attempts, target, isTimedOut = false }) {
 		updateStats(false, 0);
 	}
 
+	const restartBtn = document.getElementById("restartGameBtn");
+	if (restartBtn) {
+		restartBtn.classList.toggle("is-hidden", Boolean(isDailyChallenge));
+	}
+
+	if (isDailyChallenge) {
+		const countdown = dailyChallengeState.getCountdownText();
+		const messageEl = document.getElementById("endGameMessage");
+		if (messageEl) {
+			messageEl.innerHTML += `<br><small>Daily Challenge poate fi refăcut după reset: <strong>${countdown}</strong>.</small>`;
+		}
+	} else if (restartBtn) {
+		restartBtn.classList.remove("is-hidden");
+	}
+
 	renderStats();
 	if (backdrop) backdrop.classList.add("show");
 	popup.classList.add("show");
@@ -175,7 +259,7 @@ function sendGuess() {
 	}
 
 	if (socket) {
-		socket.emit('submitGuess', finalDriver.id);
+		socket.emit(isDailyMode ? 'submitDailyGuess' : 'submitGuess', finalDriver.id);
 	}
 	inputEl.value = "";
 	autocomplete.clearSuggestions();
@@ -187,6 +271,11 @@ function setupSocketEvents() {
 		setDriversList,
 		setRoundFinished,
 		setSpectatorMode: roleState.setSpectatorMode,
+		setDailyMode,
+		setDailyStartPending,
+		completeDailyChallenge,
+		isDailyMode: () => isDailyMode,
+		isDailyStartPending: () => isDailyStartPending,
 		isSpectator: roleState.isSpectator,
 		getRoleBadgeLabel: roleState.getRoleBadgeLabel,
 		exitRematchMode,
@@ -243,6 +332,72 @@ function setupShareButton() {
 	});
 }
 
+
+function startDailyChallenge(level) {
+	if (!level) return;
+	if (!dailyChallengeState.canStart(level)) {
+		showDailyBlockedMessage(level);
+		return;
+	}
+
+	isDailyStartPending = true;
+	setDailyMode(true, { difficulty: level });
+
+	const overlay = document.getElementById('difficulty-overlay');
+	if (overlay) overlay.classList.add('hidden');
+
+	const status = document.getElementById('status');
+	if (status) {
+		status.classList.remove('is-hidden');
+		status.textContent = `Se pornește Daily Challenge ${getDailyLevelLabel(level)}...`;
+	}
+
+	const badge = document.getElementById('duelStatus');
+	if (badge) badge.innerText = 'Daily Challenge · Individual';
+
+	if (socket) {
+		socket.emit('startDailyChallenge', {
+			level,
+			dailyDate: dailyChallengeState.getTodayDateKey()
+		});
+	} else {
+		isDailyStartPending = false;
+		setDailyMode(false);
+		alert("Butonul funcționează, dar nu ești conectat la server! Porneste 'node server.js'");
+	}
+}
+
+function startRoundFromSelection(level) {
+	isDailyStartPending = false;
+	setDailyMode(false);
+	if (!roleState.requirePlayer("Ești spectator. Doar hostul poate porni jocul.")) return;
+
+	const overlay = document.getElementById('difficulty-overlay');
+	if (overlay) overlay.classList.add('hidden');
+
+	if (socket) {
+		socket.emit('setDifficulty', timer.buildRoundOptions(level));
+	} else {
+		alert("Butonul funcționează, dar nu ești conectat la server! Porneste 'node server.js'");
+	}
+}
+
+function setupDailyChallengeControls() {
+	document.addEventListener('click', (event) => {
+		const dailyControl = event.target.closest('[data-daily-level]');
+		if (!dailyControl || dailyControl.disabled) return;
+
+		event.preventDefault();
+		event.stopPropagation();
+		event.stopImmediatePropagation();
+
+		const menu = document.getElementById('dropdown-menu');
+		if (menu) menu.classList.add('hidden');
+
+		startDailyChallenge(dailyControl.dataset.dailyLevel);
+	}, true);
+}
+
 function setupMenu() {
 	const menuBtn = document.getElementById("menu-hamburger");
 	const menu = document.getElementById("dropdown-menu");
@@ -259,7 +414,7 @@ function setupMenu() {
 		siteTitle.addEventListener("click", () => window.location.reload());
 	}
 
-	document.querySelectorAll(".menu-item:not(.theme-item):not(.timer-item)").forEach(item => {
+	document.querySelectorAll(".menu-item:not(.theme-item):not(.timer-item):not(.daily-item)").forEach(item => {
 		item.addEventListener("click", function() {
 			const choice = this.getAttribute("data-level");
 			if (menu) menu.classList.add("hidden");
@@ -267,12 +422,16 @@ function setupMenu() {
 			if (choice === "home") {
 				window.location.reload();
 			} else if (choice) {
-				if (!roleState.requirePlayer("Ești spectator. Doar hostul poate schimba dificultatea.")) return;
-
-				const overlay = document.getElementById('difficulty-overlay');
-				if (overlay) overlay.classList.add('hidden');
-				if (socket) socket.emit('setDifficulty', timer.buildRoundOptions(choice));
+				startRoundFromSelection(choice);
 			}
+		});
+	});
+
+	document.querySelectorAll(".daily-item").forEach(item => {
+		item.addEventListener("click", function() {
+			const level = this.getAttribute("data-daily-level");
+			if (menu) menu.classList.add("hidden");
+			if (level) startDailyChallenge(level);
 		});
 	});
 
@@ -367,16 +526,16 @@ function setupGameControls() {
 	document.querySelectorAll(".btn-diff").forEach(button => {
 		button.addEventListener("click", function() {
 			const level = this.getAttribute("data-level");
-			if (!roleState.requirePlayer("Ești spectator. Doar hostul poate porni jocul.")) return;
+			startRoundFromSelection(level);
+		});
+	});
 
-			const overlay = document.getElementById('difficulty-overlay');
-			if (overlay) overlay.classList.add('hidden');
-
-			if (socket) {
-				socket.emit('setDifficulty', timer.buildRoundOptions(level));
-			} else {
-				alert("Butonul funcționează, dar nu ești conectat la server! Porneste 'node server.js'");
-			}
+	document.querySelectorAll(".daily-challenge-btn").forEach(button => {
+		button.addEventListener("click", function(e) {
+			e.preventDefault();
+			e.stopPropagation();
+			const level = this.getAttribute("data-daily-level");
+			startDailyChallenge(level);
 		});
 	});
 
@@ -413,6 +572,8 @@ function handleAuthChangeWithoutLeavingRoom(currentUser) {
 	 * unei runde scoate player-ul din cameră și poate șterge runda dacă era singur.
 	 * Sincronizăm doar datele de profil ale socket-ului curent.
 	 */
+	dailyChallengeState.updateControls();
+
 	if (socket && socket.connected) {
 		socket.emit('refreshAuthUser', currentUser || null);
 	}
@@ -459,8 +620,10 @@ document.addEventListener("DOMContentLoaded", () => {
 		onSubmitGuess: sendGuess
 	});
 
+	setupDailyChallengeControls();
 	const menu = setupMenu();
 	setupThemeMenu(menu);
+	dailyChallengeState.startCountdown();
 	setupTimerControls(menu);
 	setupShareButton();
 	setupAuth();

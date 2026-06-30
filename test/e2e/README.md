@@ -58,3 +58,12 @@ Pe Windows PowerShell:
 ```powershell
 $env:E2E_HEADED="1"; npm run test:e2e
 ```
+
+
+## Daily Challenge reset
+
+Daily Challenge se resetează la miezul nopții local al browserului și este blocat separat per cont, dificultate și zi.
+
+## Test launcher progress
+
+`F1GuesserDuel_Tests.bat` afișează mesaje `[progress]` pentru comenzile lungi, inclusiv `npm install`, instalarea Chromium Playwright și testele E2E.

@@ -1,0 +1,57 @@
+const test = require('node:test');
+const assert = require('node:assert/strict');
+
+const { pickDailyDriver, getDailyDateKey } = require('../server/game/dailyChallenge');
+const { createGameService } = require('../server/game/gameService');
+
+const drivers = [
+    { id: 'a', name: 'Driver A', difficulty: 'easy' },
+    { id: 'b', name: 'Driver B', difficulty: 'easy' },
+    { id: 'c', name: 'Driver C', difficulty: 'easy' }
+];
+
+test('getDailyDateKey accepts explicit browser local date key', () => {
+    assert.equal(getDailyDateKey('2026-07-01'), '2026-07-01');
+});
+
+test('pickDailyDriver returns same driver for same date and difficulty', () => {
+    const first = pickDailyDriver(drivers, 'easy', new Date('2026-06-30T10:00:00.000Z'));
+    const second = pickDailyDriver(drivers, 'easy', new Date('2026-06-30T22:00:00.000Z'));
+
+    assert.equal(first.driver.id, second.driver.id);
+    assert.equal(first.dateKey, '2026-06-30');
+});
+
+test('gameService daily challenge is deterministic and independent from duel rooms', () => {
+    const repository = {
+        getDriversByDifficulty: difficulty => difficulty === 'easy' ? drivers : []
+    };
+    const gameService = createGameService(repository);
+
+    const dailyA = gameService.startDailyChallenge('easy', '2026-06-30');
+    const dailyB = gameService.startDailyChallenge('easy', '2026-06-30');
+
+    assert.equal(dailyA.isDailyChallenge, true);
+    assert.equal(dailyA.dailyDate, '2026-06-30');
+    assert.equal(dailyA.targetDriver.id, dailyB.targetDriver.id);
+    assert.equal(dailyA.dailyChallengeId, 'f1-daily-v1:2026-06-30:easy');
+});
+
+test('duel rounds ignore daily flags and remain normal multiplayer rounds', () => {
+    const repository = {
+        getDriversByDifficulty: difficulty => difficulty === 'easy' ? drivers : []
+    };
+    const gameService = createGameService(repository);
+    const room = { players: {}, difficulty: null };
+
+    const payload = gameService.startNewRound(room, {
+        difficulty: 'easy',
+        daily: true,
+        dailyDate: new Date('2026-06-30T09:00:00.000Z')
+    });
+
+    assert.equal(payload.isDailyChallenge, false);
+    assert.equal(payload.dailyDate, null);
+    assert.equal(room.isDailyChallenge, false);
+    assert.equal(room.dailyChallengeId, null);
+});

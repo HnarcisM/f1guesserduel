@@ -5,7 +5,8 @@ const {
     normalizeClientAuthUser,
     normalizeDriverId,
     normalizeRoundOptions,
-    normalizeRestartOptions
+    normalizeRestartOptions,
+    normalizeDailyDateKey
 } = require('../server/socket/socketPayloadValidators');
 
 test('normalizeDriverId accepts safe driver ids', () => {
@@ -22,8 +23,20 @@ test('normalizeDriverId rejects unsafe or empty values', () => {
 test('normalizeRoundOptions accepts valid difficulty payload', () => {
     assert.deepEqual(normalizeRoundOptions({ level: 'easy', timed: true, timeLimitSeconds: 90 }), {
         difficulty: 'easy',
+        daily: false,
+        dailyDate: null,
         timed: true,
         timeLimitSeconds: 90
+    });
+});
+
+test('normalizeRoundOptions accepts daily challenge flag', () => {
+    assert.deepEqual(normalizeRoundOptions({ level: 'medium', daily: true, timed: false }), {
+        difficulty: 'medium',
+        daily: true,
+        dailyDate: null,
+        timed: false,
+        timeLimitSeconds: 60
     });
 });
 
@@ -34,7 +47,8 @@ test('normalizeRoundOptions rejects invalid difficulty', () => {
 test('normalizeRestartOptions falls back to safe timer values', () => {
     assert.deepEqual(normalizeRestartOptions({ timed: true, timeLimitSeconds: 999 }), {
         timed: true,
-        timeLimitSeconds: 60
+        timeLimitSeconds: 60,
+        dailyDate: null
     });
 });
 
@@ -48,4 +62,14 @@ test('normalizeClientAuthUser sanitizes basic user data', () => {
 
 test('normalizeClientAuthUser rejects invalid username', () => {
     assert.equal(normalizeClientAuthUser({ id: 123, username: '   ' }), null);
+});
+
+
+test('normalizeDailyDateKey accepts valid local date key', () => {
+    assert.equal(normalizeDailyDateKey('2026-07-01'), '2026-07-01');
+});
+
+test('normalizeDailyDateKey rejects invalid date key', () => {
+    assert.equal(normalizeDailyDateKey('2026-02-31'), null);
+    assert.equal(normalizeDailyDateKey('bad-date'), null);
 });

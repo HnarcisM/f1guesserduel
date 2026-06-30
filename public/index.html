@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>F1 Guesser</title>
-    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/style.css?v=daily-individual-fix-2">
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
@@ -26,6 +26,11 @@
         <div data-level="medium" class="menu-item">🟡 Medium</div>
         <div data-level="hard" class="menu-item">🔴 Hard</div>
         
+        <div class="menu-section-title">🌅 DAILY CHALLENGE</div>
+        <div data-daily-level="easy" class="menu-item daily-item">🟢 Daily Easy</div>
+        <div data-daily-level="medium" class="menu-item daily-item">🟡 Daily Medium</div>
+        <div data-daily-level="hard" class="menu-item daily-item">🔴 Daily Hard</div>
+
         <div class="menu-section-title">⏱️ TIMER</div>
         <div data-timer="off" class="menu-item timer-item">∞ Fără timp</div>
         <div data-timer="60" class="menu-item timer-item">⏱️ 60 secunde</div>
@@ -63,6 +68,19 @@
                 <button type="button" class="timer-mode-option" data-timer-mode="120">⏱️ 120 sec</button>
             </div>
         </div>
+        <div class="daily-challenge-card">
+            <div class="daily-challenge-copy">
+                <span class="daily-eyebrow">Provocarea zilei</span>
+                <strong>Daily Challenge</strong>
+                <small id="dailyResetInfo">Mod individual, o dată pe zi per dificultate.</small>
+            </div>
+            <div class="daily-challenge-actions">
+                <button type="button" class="daily-challenge-btn easy" data-daily-level="easy">Daily Easy</button>
+                <button type="button" class="daily-challenge-btn medium" data-daily-level="medium">Daily Medium</button>
+                <button type="button" class="daily-challenge-btn hard" data-daily-level="hard">Daily Hard</button>
+            </div>
+        </div>
+
         <div class="difficulty-grid">
             <button class="btn-diff easy" data-level="easy">
                 <span class="diff-title">Easy</span>
@@ -223,6 +241,6 @@
     </div>
 </div>
 
-<script type="module" src="/game.js"></script>
+<script type="module" src="/game.js?v=daily-individual-fix-2"></script>
 </body>
 </html>

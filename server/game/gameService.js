@@ -1,9 +1,45 @@
 const { normalizeTimeLimitSeconds, isValidDifficulty } = require('../config/constants');
 const { resetPlayersForNewRound } = require('../rooms/roomService');
+const { pickDailyDriver } = require('./dailyChallenge');
 
 function createGameService(driversRepository) {
     function pickRandomDriver(drivers) {
         return drivers[Math.floor(Math.random() * drivers.length)];
+    }
+
+    function buildDailyChallenge(difficulty, date = new Date()) {
+        if (!isValidDifficulty(difficulty)) return null;
+
+        const drivers = driversRepository.getDriversByDifficulty(difficulty);
+        if (drivers.length === 0) return null;
+
+        const dailyChallenge = pickDailyDriver(drivers, difficulty, date);
+        if (!dailyChallenge) return null;
+
+        return {
+            drivers,
+            difficulty,
+            targetDriver: dailyChallenge.driver,
+            dailyDate: dailyChallenge.dateKey,
+            dailyChallengeId: dailyChallenge.challengeId
+        };
+    }
+
+    function startDailyChallenge(difficulty, date = new Date()) {
+        const dailyChallenge = buildDailyChallenge(difficulty, date);
+        if (!dailyChallenge) return null;
+
+        return {
+            drivers: dailyChallenge.drivers,
+            difficulty: dailyChallenge.difficulty,
+            targetDriver: dailyChallenge.targetDriver,
+            dailyDate: dailyChallenge.dailyDate,
+            dailyChallengeId: dailyChallenge.dailyChallengeId,
+            timed: false,
+            timeLimitSeconds: null,
+            roundStartedAt: Date.now(),
+            isDailyChallenge: true
+        };
     }
 
     function startNewRound(room, options) {
@@ -16,6 +52,9 @@ function createGameService(driversRepository) {
         room.difficulty = difficulty;
         room.driversList = drivers;
         room.targetDriver = pickRandomDriver(drivers);
+        room.isDailyChallenge = false;
+        room.dailyDate = null;
+        room.dailyChallengeId = null;
         resetPlayersForNewRound(room);
         room.timed = Boolean(options.timed);
         room.timeLimitSeconds = normalizeTimeLimitSeconds(options.timeLimitSeconds);
@@ -27,7 +66,9 @@ function createGameService(driversRepository) {
             difficulty,
             timed: room.timed,
             timeLimitSeconds: room.timeLimitSeconds,
-            roundStartedAt: room.roundStartedAt
+            roundStartedAt: room.roundStartedAt,
+            isDailyChallenge: false,
+            dailyDate: null
         };
     }
 
@@ -39,6 +80,9 @@ function createGameService(driversRepository) {
 
         room.driversList = drivers;
         room.targetDriver = pickRandomDriver(drivers);
+        room.isDailyChallenge = false;
+        room.dailyDate = null;
+        room.dailyChallengeId = null;
         resetPlayersForNewRound(room);
         room.timed = Boolean(options.timed);
         room.timeLimitSeconds = normalizeTimeLimitSeconds(options.timeLimitSeconds);
@@ -48,13 +92,16 @@ function createGameService(driversRepository) {
         return {
             timed: room.timed,
             timeLimitSeconds: room.timeLimitSeconds,
-            roundStartedAt: room.roundStartedAt
+            roundStartedAt: room.roundStartedAt,
+            isDailyChallenge: false,
+            dailyDate: null
         };
     }
 
     return {
         startNewRound,
-        restartRound
+        restartRound,
+        startDailyChallenge
     };
 }
 
