@@ -2368,3 +2368,11 @@ button#sendGuessBtn.rematch-submit-btn {
 [data-app-theme="carbon"] .auth-open-btn:active {
     background: linear-gradient(180deg, #3c4044 0%, #303337 100%);
 }
+
+/* Spectator mode: utilizatorul poate urmări camera, dar nu poate trimite încercări. */
+#gameZone.spectator-mode input,
+#gameZone.spectator-mode button,
+#gameZone.spectator-mode button:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+}

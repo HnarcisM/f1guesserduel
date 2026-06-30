@@ -22,6 +22,7 @@ let isRoundFinished = false;
 let isRematchMode = false;
 let authView;
 let authReadyOnce = false;
+let isSpectatorMode = false;
 
 function setDriversList(drivers) {
 	driversList = Array.isArray(drivers) ? drivers : [];
@@ -31,10 +32,42 @@ function setRoundFinished(value) {
 	isRoundFinished = Boolean(value);
 }
 
+function setSpectatorMode(value) {
+	isSpectatorMode = Boolean(value);
+	const gameZone = document.getElementById("gameZone");
+	const status = document.getElementById("status");
+	const sendBtn = document.getElementById("sendGuessBtn");
+	const inputEl = document.getElementById("driverInput");
+
+	if (gameZone) {
+		gameZone.classList.toggle("spectator-mode", isSpectatorMode);
+		if (isSpectatorMode) gameZone.classList.add("game-zone-hidden");
+	}
+
+	if (sendBtn) {
+		sendBtn.disabled = isSpectatorMode;
+		sendBtn.title = isSpectatorMode ? "Spectatorii pot urmări jocul, dar nu pot trimite încercări." : "";
+	}
+
+	if (inputEl) {
+		inputEl.disabled = isSpectatorMode;
+		inputEl.placeholder = isSpectatorMode
+			? "Mod spectator - urmărești duelul"
+			: "Scrie prenume sau nume (ex: Ham...)";
+	}
+
+	if (status && isSpectatorMode) {
+		status.classList.remove("is-hidden");
+		status.textContent = "Ești spectator în această cameră. Primii 2 participanți sunt jucători activi.";
+	}
+}
+
 function showHostOnlyTimerMessage() {
 	const status = document.getElementById("status");
 	if (status) {
-		status.textContent = "Doar hostul camerei poate modifica timerul.";
+		status.textContent = isSpectatorMode
+			? "Ești spectator. Doar hostul poate modifica timerul."
+			: "Doar hostul camerei poate modifica timerul.";
 	}
 }
 
@@ -61,6 +94,7 @@ function setSubmitButtonMode(mode) {
 }
 
 function enterRematchMode() {
+	if (isSpectatorMode) return;
 	isRematchMode = true;
 	const gameZone = document.getElementById("gameZone");
 	const status = document.getElementById("status");
@@ -86,6 +120,15 @@ function exitRematchMode() {
 }
 
 function requestRematch() {
+	if (isSpectatorMode) {
+		const status = document.getElementById("status");
+		if (status) {
+			status.classList.remove("is-hidden");
+			status.textContent = "Ești spectator. Doar hostul poate porni un rematch.";
+		}
+		return;
+	}
+
 	if (socket) socket.emit('restartGame', timer.buildRestartOptions());
 }
 
@@ -138,6 +181,15 @@ function showEndGamePopup({ isCorrect, attempts, target, isTimedOut = false }) {
 }
 
 function sendGuess() {
+	if (isSpectatorMode) {
+		const status = document.getElementById("status");
+		if (status) {
+			status.classList.remove("is-hidden");
+			status.textContent = "Ești spectator. Poți urmări jocul, dar nu poți trimite încercări.";
+		}
+		return;
+	}
+
 	if (isRematchMode) {
 		requestRematch();
 		return;
@@ -167,6 +219,8 @@ function setupSocketEvents() {
 	registerSocketEvents(socket, {
 		setDriversList,
 		setRoundFinished,
+		setSpectatorMode,
+		isSpectator: () => isSpectatorMode,
 		exitRematchMode,
 		initializeGridStructure,
 		renderGuessResult,
@@ -243,6 +297,15 @@ function setupMenu() {
 			if (choice === "home") {
 				window.location.reload();
 			} else if (choice) {
+				if (isSpectatorMode) {
+					const status = document.getElementById("status");
+					if (status) {
+						status.classList.remove("is-hidden");
+						status.textContent = "Ești spectator. Doar hostul poate schimba dificultatea.";
+					}
+					return;
+				}
+
 				const overlay = document.getElementById('difficulty-overlay');
 				if (overlay) overlay.classList.add('hidden');
 				if (socket) socket.emit('setDifficulty', timer.buildRoundOptions(choice));
@@ -341,6 +404,15 @@ function setupGameControls() {
 	document.querySelectorAll(".btn-diff").forEach(button => {
 		button.addEventListener("click", function() {
 			const level = this.getAttribute("data-level");
+			if (isSpectatorMode) {
+				const status = document.getElementById("status");
+				if (status) {
+					status.classList.remove("is-hidden");
+					status.textContent = "Ești spectator. Doar hostul poate porni jocul.";
+				}
+				return;
+			}
+
 			const overlay = document.getElementById('difficulty-overlay');
 			if (overlay) overlay.classList.add('hidden');
 

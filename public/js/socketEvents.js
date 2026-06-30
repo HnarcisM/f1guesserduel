@@ -19,6 +19,14 @@ export function registerSocketEvents(socket, app) {
 		app.setRoundFinished(false);
 		app.exitRematchMode();
 
+		if (app.isSpectator?.()) {
+			const statusEl = document.getElementById("status");
+			if (statusEl) {
+				statusEl.classList.remove("is-hidden");
+				statusEl.innerText = "Mod spectator: urmărești duelul, dar nu poți trimite încercări.";
+			}
+		}
+
 		if (data.timed) {
 			app.timer.startRoundTimer(data.timeLimitSeconds, data.roundStartedAt);
 		} else {
@@ -32,30 +40,38 @@ export function registerSocketEvents(socket, app) {
 		}
 
 		const statusEl = document.getElementById("status");
-		if (statusEl) statusEl.innerText = "Ghicește pilotul misterios!";
+		if (statusEl && !app.isSpectator?.()) statusEl.innerText = "Ghicește pilotul misterios!";
 
 		app.initializeGridStructure();
 
 		const gameZone = document.getElementById("gameZone");
-		if (gameZone) gameZone.classList.remove("game-zone-hidden");
+		if (gameZone) {
+			gameZone.classList.toggle("game-zone-hidden", Boolean(app.isSpectator?.()));
+		}
 	});
 
 	socket.on('roomUpdate', (data) => {
 		const badge = document.getElementById("duelStatus");
 		if (badge) {
 			const maxPlayers = data.maxPlayers || 2;
-			const roleLabel = app.timer.isHost() ? ' · Host' : '';
-			badge.innerText = `Online: ${data.playerCount}/${maxPlayers}${roleLabel}`;
+			const playerCount = data.playerCount || 0;
+			const spectatorCount = data.spectatorCount || 0;
+			const roleLabel = app.isSpectator?.() ? ' · Spectator' : (app.timer.isHost() ? ' · Host' : '');
+			const spectatorLabel = spectatorCount > 0 ? ` · Spectatori: ${spectatorCount}` : '';
+			badge.innerText = `Jucători: ${playerCount}/${maxPlayers}${spectatorLabel}${roleLabel}`;
 		}
 	});
 
 	socket.on('hostStatus', (data) => {
+		app.setSpectatorMode?.(Boolean(data && data.isSpectator));
 		app.timer.setHostStatus(Boolean(data && data.isHost));
 
 		const badge = document.getElementById("duelStatus");
 		if (badge) {
-			badge.innerText = badge.innerText.replace(/ · Host/g, '');
-			if (app.timer.isHost()) {
+			badge.innerText = badge.innerText.replace(/ · Host| · Spectator/g, '');
+			if (app.isSpectator?.()) {
+				badge.innerText = `${badge.innerText} · Spectator`;
+			} else if (app.timer.isHost()) {
 				badge.innerText = `${badge.innerText} · Host`;
 			}
 		}
@@ -102,9 +118,13 @@ export function registerSocketEvents(socket, app) {
 
 		const gz = document.getElementById("gameZone");
 		const st = document.getElementById("status");
-		if (gz) gz.classList.remove("game-zone-hidden");
+		if (gz) gz.classList.toggle("game-zone-hidden", Boolean(app.isSpectator?.()));
 		if (st) st.classList.remove("is-hidden");
-		if (st) st.innerText = "Ghicește noul pilot misterios!";
+		if (st) {
+			st.innerText = app.isSpectator?.()
+				? "Mod spectator: urmărești noua rundă."
+				: "Ghicește noul pilot misterios!";
+		}
 
 		if (data.timed) {
 			app.timer.startRoundTimer(data.timeLimitSeconds, data.roundStartedAt);

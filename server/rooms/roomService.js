@@ -7,29 +7,72 @@ function getPlayerIds(room) {
     return Object.keys(room.players || {});
 }
 
+function getSpectatorIds(room) {
+    return Object.keys(room.spectators || {});
+}
+
 function getPlayerCount(room) {
     return getPlayerIds(room).length;
 }
 
-function buildGuestUsername(room) {
-    return `Guest ${getPlayerCount(room) + 1}`;
+function getSpectatorCount(room) {
+    return getSpectatorIds(room).length;
 }
 
-function createPlayer(room, socketId, authUser = null) {
+function getRoomMemberCount(room) {
+    return getPlayerCount(room) + getSpectatorCount(room);
+}
+
+function buildGuestUsername(room) {
+    if (typeof room.nextGuestNumber !== 'number') {
+        room.nextGuestNumber = getRoomMemberCount(room) + 1;
+    }
+
+    const guestNumber = room.nextGuestNumber;
+    room.nextGuestNumber += 1;
+    return `Guest ${guestNumber}`;
+}
+
+function createRoomMember(room, socketId, authUser = null, role = 'player') {
     return {
         socketId,
         userId: authUser ? authUser.id : null,
         username: authUser ? authUser.username : buildGuestUsername(room),
-        isHost: room.hostId === socketId,
+        role,
+        isHost: role === 'player' && room.hostId === socketId,
         attempts: 0,
         finished: false,
         connected: true
     };
 }
 
+function createPlayer(room, socketId, authUser = null) {
+    return createRoomMember(room, socketId, authUser, 'player');
+}
+
+function createSpectator(room, socketId, authUser = null) {
+    const spectator = createRoomMember(room, socketId, authUser, 'spectator');
+    spectator.isHost = false;
+    return spectator;
+}
+
+function updateRoomMemberAuth(member, authUser = null) {
+    member.connected = true;
+    if (authUser) {
+        member.userId = authUser.id;
+        member.username = authUser.username;
+    }
+}
+
 function syncHostFlags(room) {
-    for (const player of Object.values(room.players)) {
+    for (const player of Object.values(room.players || {})) {
+        player.role = 'player';
         player.isHost = player.socketId === room.hostId;
+    }
+
+    for (const spectator of Object.values(room.spectators || {})) {
+        spectator.role = 'spectator';
+        spectator.isHost = false;
     }
 }
 
@@ -38,6 +81,8 @@ function createRoom(roomId, hostSocketId, authUser = null) {
         roomId,
         hostId: hostSocketId,
         players: {},
+        spectators: {},
+        nextGuestNumber: 1,
         targetDriver: null,
         difficulty: null,
         driversList: [],
@@ -54,27 +99,69 @@ function createRoom(roomId, hostSocketId, authUser = null) {
 }
 
 function addPlayerToRoom(room, socketId, authUser = null) {
+    if (!room.spectators) room.spectators = {};
+
     if (room.players[socketId]) {
-        room.players[socketId].connected = true;
-        if (authUser) {
-            room.players[socketId].userId = authUser.id;
-            room.players[socketId].username = authUser.username;
-        }
+        updateRoomMemberAuth(room.players[socketId], authUser);
         syncHostFlags(room);
-        return true;
+        return { joined: true, role: 'player' };
     }
 
-    if (getPlayerCount(room) >= MAX_PLAYERS_PER_ROOM) return false;
+    if (room.spectators[socketId]) {
+        updateRoomMemberAuth(room.spectators[socketId], authUser);
+        syncHostFlags(room);
+        return { joined: true, role: 'spectator' };
+    }
+
+    if (getPlayerCount(room) >= MAX_PLAYERS_PER_ROOM) {
+        room.spectators[socketId] = createSpectator(room, socketId, authUser);
+        syncHostFlags(room);
+        return { joined: true, role: 'spectator' };
+    }
 
     room.players[socketId] = createPlayer(room, socketId, authUser);
     syncHostFlags(room);
-    return true;
+    return { joined: true, role: 'player' };
+}
+
+function promoteNextSpectatorToPlayer(room) {
+    if (getPlayerCount(room) >= MAX_PLAYERS_PER_ROOM) return null;
+
+    const nextSpectatorId = getSpectatorIds(room)[0];
+    if (!nextSpectatorId) return null;
+
+    const spectator = room.spectators[nextSpectatorId];
+    delete room.spectators[nextSpectatorId];
+
+    spectator.role = 'player';
+    spectator.attempts = 0;
+    spectator.finished = false;
+    room.players[nextSpectatorId] = spectator;
+
+    if (!room.hostId) {
+        room.hostId = nextSpectatorId;
+    }
+
+    syncHostFlags(room);
+    return spectator;
 }
 
 function removePlayerFromRoom(room, socketId) {
+    if (!room.spectators) room.spectators = {};
+
+    const wasPlayer = Boolean(room.players[socketId]);
     delete room.players[socketId];
+    delete room.spectators[socketId];
 
     if (room.hostId === socketId) {
+        room.hostId = getPlayerIds(room)[0] || null;
+    }
+
+    if (wasPlayer) {
+        promoteNextSpectatorToPlayer(room);
+    }
+
+    if (!room.hostId) {
         room.hostId = getPlayerIds(room)[0] || null;
     }
 
@@ -85,12 +172,28 @@ function getPlayer(room, socketId) {
     return room.players[socketId] || null;
 }
 
+function getSpectator(room, socketId) {
+    return (room.spectators || {})[socketId] || null;
+}
+
+function getRoomMember(room, socketId) {
+    return getPlayer(room, socketId) || getSpectator(room, socketId);
+}
+
 function hasPlayer(room, socketId) {
     return Boolean(getPlayer(room, socketId));
 }
 
+function hasRoomMember(room, socketId) {
+    return Boolean(getRoomMember(room, socketId));
+}
+
 function isHost(room, socketId) {
     return room.hostId === socketId;
+}
+
+function isSpectator(room, socketId) {
+    return Boolean(getSpectator(room, socketId));
 }
 
 function resetPlayersForNewRound(room) {
@@ -100,18 +203,29 @@ function resetPlayersForNewRound(room) {
     }
 }
 
-function buildPublicRoomState(room) {
+function serializeRoomMember(member) {
     return {
-        playerCount: getPlayerCount(room),
+        socketId: member.socketId,
+        userId: member.userId,
+        username: member.username,
+        role: member.role,
+        isHost: member.isHost,
+        connected: member.connected,
+        finished: member.finished
+    };
+}
+
+function buildPublicRoomState(room) {
+    const players = Object.values(room.players || {}).map(serializeRoomMember);
+    const spectators = Object.values(room.spectators || {}).map(serializeRoomMember);
+
+    return {
+        playerCount: players.length,
+        spectatorCount: spectators.length,
+        totalCount: players.length + spectators.length,
         maxPlayers: MAX_PLAYERS_PER_ROOM,
-        players: Object.values(room.players).map(player => ({
-            socketId: player.socketId,
-            userId: player.userId,
-            username: player.username,
-            isHost: player.isHost,
-            connected: player.connected,
-            finished: player.finished
-        }))
+        players,
+        spectators
     };
 }
 
@@ -120,9 +234,15 @@ module.exports = {
     addPlayerToRoom,
     removePlayerFromRoom,
     getPlayer,
+    getSpectator,
+    getRoomMember,
     hasPlayer,
+    hasRoomMember,
     isHost,
+    isSpectator,
     getPlayerCount,
+    getSpectatorCount,
+    getRoomMemberCount,
     resetPlayersForNewRound,
     buildPublicRoomState
 };
