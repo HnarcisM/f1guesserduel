@@ -6,10 +6,24 @@ export function registerSocketEvents(socket, app) {
 		'guessResult',
 		'gameRestarted',
 		'gameTimedOut',
+		'liveBoardUpdate',
+		'duelStateUpdate',
 		'errorMessage',
 		'roomFull',
 		'hostStatus'
 	].forEach(eventName => socket.off(eventName));
+
+	function renderLiveBoardForSpectator(board, options = {}) {
+		if (!app.isSpectator?.()) {
+			app.resetLiveBoard?.();
+			return;
+		}
+
+		app.renderLiveBoard?.(board, {
+			...options,
+			forceVisible: true
+		});
+	}
 
 	socket.on('initGame', (data) => {
 		const overlay = document.getElementById('difficulty-overlay');
@@ -43,6 +57,8 @@ export function registerSocketEvents(socket, app) {
 		if (statusEl && !app.isSpectator?.()) statusEl.innerText = "Ghicește pilotul misterios!";
 
 		app.initializeGridStructure();
+		renderLiveBoardForSpectator(data.liveBoard);
+		if (app.isSpectator?.()) socket.emit('requestLiveBoard');
 
 		const gameZone = document.getElementById("gameZone");
 		if (gameZone) {
@@ -51,6 +67,8 @@ export function registerSocketEvents(socket, app) {
 	});
 
 	socket.on('roomUpdate', (data) => {
+		if (data.liveBoard) renderLiveBoardForSpectator(data.liveBoard);
+
 		const badge = document.getElementById("duelStatus");
 		if (badge) {
 			const maxPlayers = data.maxPlayers || 2;
@@ -63,8 +81,17 @@ export function registerSocketEvents(socket, app) {
 	});
 
 	socket.on('hostStatus', (data) => {
-		app.setSpectatorMode?.(Boolean(data && data.isSpectator));
+		const wasSpectator = Boolean(app.isSpectator?.());
+		const isSpectator = Boolean(data && data.isSpectator);
+		app.setSpectatorMode?.(isSpectator);
 		app.timer.setHostStatus(Boolean(data && data.isHost));
+
+		// Când un client devine spectator, cerem explicit starea live board-ului.
+		// Asta acoperă cazurile în care spectatorul intră după startul rundei
+		// sau primește hostStatus înaintea initGame/roomUpdate.
+		if (isSpectator && !wasSpectator) {
+			socket.emit('requestLiveBoard');
+		}
 
 		const badge = document.getElementById("duelStatus");
 		if (badge) {
@@ -95,6 +122,19 @@ export function registerSocketEvents(socket, app) {
 		}
 	});
 
+	socket.on('liveBoardUpdate', (data) => {
+		renderLiveBoardForSpectator(data);
+	});
+
+	socket.on('duelStateUpdate', (data = {}) => {
+		renderLiveBoardForSpectator(data.liveBoard);
+	});
+
+	socket.on('connect', () => {
+		// Re-sincronizare defensivă după reconnect automat Socket.IO.
+		socket.emit('requestLiveBoard');
+	});
+
 	socket.on('gameTimedOut', (data) => {
 		app.showEndGamePopup({
 			isCorrect: false,
@@ -109,6 +149,8 @@ export function registerSocketEvents(socket, app) {
 		app.exitRematchMode();
 		app.initializeGridStructure();
 		app.hideEndGamePopup(false);
+		renderLiveBoardForSpectator(data.liveBoard);
+		if (app.isSpectator?.()) socket.emit('requestLiveBoard');
 
 		const popup = document.getElementById("endGameDisplay");
 		if (popup) popup.className = "end-game-popup";

@@ -4,6 +4,7 @@ import { initializeGridStructure, renderGuessResult } from './js/gridView.js';
 import { createTimerView } from './js/timerView.js';
 import { registerSocketEvents } from './js/socketEvents.js';
 import { createAuthView } from './js/authView.js';
+import { renderLiveBoard, resetLiveBoard } from './js/liveBoardView.js';
 
 /**
  * F1 Guesser Duel - frontend entry point.
@@ -34,6 +35,7 @@ function setRoundFinished(value) {
 
 function setSpectatorMode(value) {
 	isSpectatorMode = Boolean(value);
+	document.body.classList.toggle('spectator-active', isSpectatorMode);
 	const gameZone = document.getElementById("gameZone");
 	const status = document.getElementById("status");
 	const sendBtn = document.getElementById("sendGuessBtn");
@@ -58,7 +60,13 @@ function setSpectatorMode(value) {
 
 	if (status && isSpectatorMode) {
 		status.classList.remove("is-hidden");
-		status.textContent = "Ești spectator în această cameră. Primii 2 participanți sunt jucători activi.";
+		status.textContent = "Ești spectator în această cameră. Urmărești încercările celor 2 jucători în board-ul de duel.";
+	}
+
+	if (isSpectatorMode) {
+		renderLiveBoard({ roundState: 'playing', players: [] }, { forceVisible: true });
+	} else {
+		resetLiveBoard();
 	}
 }
 
@@ -226,6 +234,8 @@ function setupSocketEvents() {
 		renderGuessResult,
 		showEndGamePopup,
 		hideEndGamePopup,
+		renderLiveBoard,
+		resetLiveBoard,
 		timer,
 		autocomplete
 	});

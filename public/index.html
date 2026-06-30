@@ -106,6 +106,18 @@
         <button id="sendGuessBtn">Trimite</button>
     </div>
 
+    <!-- Duel live: afișează în timp real încercările celor doi jucători pentru spectatori și pentru playeri. -->
+    <section id="liveDuelBoard" class="live-duel-board is-hidden" aria-live="polite">
+        <div class="live-duel-header">
+            <div>
+                <p class="live-duel-eyebrow">Spectator mode</p>
+                <h2>Duel în timp real</h2>
+            </div>
+            <span id="liveDuelSummary" class="live-duel-summary">Așteaptă încercări...</span>
+        </div>
+        <div id="liveDuelPlayers" class="live-duel-players"></div>
+    </section>
+
 	<!-- Overlay-ul se afișează în spatele popup-ului final, pentru focus vizual și blocarea fundalului. -->
 	<div class="end-game-backdrop" id="endGameBackdrop" aria-hidden="true"></div>
 

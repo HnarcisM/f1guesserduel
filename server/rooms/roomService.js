@@ -42,6 +42,8 @@ function createRoomMember(room, socketId, authUser = null, role = 'player') {
         isHost: role === 'player' && room.hostId === socketId,
         attempts: 0,
         finished: false,
+        timedOut: false,
+        guesses: [],
         connected: true
     };
 }
@@ -136,6 +138,8 @@ function promoteNextSpectatorToPlayer(room) {
     spectator.role = 'player';
     spectator.attempts = 0;
     spectator.finished = false;
+    spectator.timedOut = false;
+    spectator.guesses = [];
     room.players[nextSpectatorId] = spectator;
 
     if (!room.hostId) {
@@ -246,7 +250,51 @@ function resetPlayersForNewRound(room) {
     for (const player of Object.values(room.players)) {
         player.attempts = 0;
         player.finished = false;
+        player.timedOut = false;
+        player.guesses = [];
     }
+}
+
+function recordPlayerGuess(player, guessDriver, results, isCorrectGuess, isGameOver) {
+    if (!player) return null;
+    if (!Array.isArray(player.guesses)) player.guesses = [];
+
+    const entry = {
+        attempt: player.attempts,
+        guess: {
+            id: guessDriver.id,
+            name: guessDriver.name,
+            nat: guessDriver.nat,
+            team: Array.isArray(guessDriver.team) ? [...guessDriver.team] : guessDriver.team,
+            age: guessDriver.age,
+            debut: guessDriver.debut,
+            wins: guessDriver.wins
+        },
+        results,
+        isCorrect: Boolean(isCorrectGuess),
+        isGameOver: Boolean(isGameOver),
+        createdAt: Date.now()
+    };
+
+    player.guesses.push(entry);
+    return entry;
+}
+
+function markPlayerTimedOut(player) {
+    if (!player) return;
+    player.finished = true;
+    player.timedOut = true;
+}
+
+function serializeGuessEntry(entry) {
+    return {
+        attempt: entry.attempt,
+        guess: entry.guess,
+        results: entry.results,
+        isCorrect: entry.isCorrect,
+        isGameOver: entry.isGameOver,
+        createdAt: entry.createdAt
+    };
 }
 
 function serializeRoomMember(member) {
@@ -257,7 +305,17 @@ function serializeRoomMember(member) {
         role: member.role,
         isHost: member.isHost,
         connected: member.connected,
-        finished: member.finished
+        attempts: typeof member.attempts === 'number' ? member.attempts : 0,
+        finished: Boolean(member.finished),
+        timedOut: Boolean(member.timedOut),
+        guesses: Array.isArray(member.guesses) ? member.guesses.map(serializeGuessEntry) : []
+    };
+}
+
+function buildLiveBoardState(room) {
+    return {
+        roundState: room.roundState,
+        players: Object.values(room.players || {}).map(serializeRoomMember)
     };
 }
 
@@ -271,7 +329,8 @@ function buildPublicRoomState(room) {
         totalCount: players.length + spectators.length,
         maxPlayers: MAX_PLAYERS_PER_ROOM,
         players,
-        spectators
+        spectators,
+        liveBoard: buildLiveBoardState(room)
     };
 }
 
@@ -291,5 +350,8 @@ module.exports = {
     getSpectatorCount,
     getRoomMemberCount,
     resetPlayersForNewRound,
+    recordPlayerGuess,
+    markPlayerTimedOut,
+    buildLiveBoardState,
     buildPublicRoomState
 };
