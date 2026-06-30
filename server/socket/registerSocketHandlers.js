@@ -77,7 +77,20 @@ function registerSocketHandlers(io, dependencies) {
             .filter(Boolean);
     }
 
-    function emitToActiveRoomMembers(roomId, eventName, payload) {
+    function buildRoomStatePayload(room, reason = 'sync', recipientSocketId = null) {
+        const payload = {
+            reason,
+            room: buildPublicRoomState(room)
+        };
+
+        if (recipientSocketId && isSpectator(room, recipientSocketId)) {
+            payload.liveBoard = buildLiveBoardState(room);
+        }
+
+        return payload;
+    }
+
+    function emitRoomStateUpdate(roomId, reason = 'sync') {
         const room = roomStore.get(roomId);
         if (!room) return;
 
@@ -85,27 +98,26 @@ function registerSocketHandlers(io, dependencies) {
         if (roomWasRemoved && !roomStore.has(roomId)) return;
 
         for (const memberSocket of getActiveRoomSockets(room)) {
-            memberSocket.emit(eventName, payload);
+            memberSocket.emit('roomStateUpdate', buildRoomStatePayload(room, reason, memberSocket.id));
         }
     }
 
-    function buildRoomStatePayload(room, reason = 'sync') {
-        return {
-            reason,
-            room: buildPublicRoomState(room),
-            liveBoard: buildLiveBoardState(room)
-        };
-    }
-
-    function emitRoomStateUpdate(roomId, reason = 'sync') {
+    function emitGameStateToActiveRoomMembers(roomId, eventName, payload, options = {}) {
         const room = roomStore.get(roomId);
         if (!room) return;
 
-        emitToActiveRoomMembers(roomId, 'roomStateUpdate', buildRoomStatePayload(room, reason));
-    }
+        const roomWasRemoved = cleanupInactiveMembers(roomId, room);
+        if (roomWasRemoved && !roomStore.has(roomId)) return;
 
-    function emitGameStateToActiveRoomMembers(roomId, eventName, payload) {
-        emitToActiveRoomMembers(roomId, eventName, payload);
+        for (const memberSocket of getActiveRoomSockets(room)) {
+            const recipientPayload = { ...payload };
+
+            if (options.includeLiveBoardForSpectators && isSpectator(room, memberSocket.id)) {
+                recipientPayload.liveBoard = buildLiveBoardState(room);
+            }
+
+            memberSocket.emit(eventName, recipientPayload);
+        }
     }
 
     function emitHostStatus(socket, room) {
@@ -158,14 +170,19 @@ function registerSocketHandlers(io, dependencies) {
             emitRoomStateUpdate(roomId, 'join');
 
             if (room.difficulty && room.roundState === 'playing') {
-                socket.emit('initGame', {
+                const initPayload = {
                     drivers: room.driversList,
                     difficulty: room.difficulty,
                     timed: room.timed,
                     timeLimitSeconds: room.timeLimitSeconds,
-                    roundStartedAt: room.roundStartedAt,
-                    liveBoard: buildLiveBoardState(room)
-                });
+                    roundStartedAt: room.roundStartedAt
+                };
+
+                if (isSpectator(room, socket.id)) {
+                    initPayload.liveBoard = buildLiveBoardState(room);
+                }
+
+                socket.emit('initGame', initPayload);
             }
         });
 
@@ -200,9 +217,8 @@ function registerSocketHandlers(io, dependencies) {
                 return;
             }
 
-            emitGameStateToActiveRoomMembers(currentRoom, 'initGame', {
-                ...initPayload,
-                liveBoard: buildLiveBoardState(room)
+            emitGameStateToActiveRoomMembers(currentRoom, 'initGame', initPayload, {
+                includeLiveBoardForSpectators: true
             });
             emitRoomStateUpdate(currentRoom, 'round-started');
         });
@@ -314,9 +330,8 @@ function registerSocketHandlers(io, dependencies) {
                 return;
             }
 
-            emitGameStateToActiveRoomMembers(currentRoom, 'gameRestarted', {
-                ...restartPayload,
-                liveBoard: buildLiveBoardState(room)
+            emitGameStateToActiveRoomMembers(currentRoom, 'gameRestarted', restartPayload, {
+                includeLiveBoardForSpectators: true
             });
             emitRoomStateUpdate(currentRoom, 'restart');
         });

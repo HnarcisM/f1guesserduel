@@ -297,8 +297,8 @@ function serializeGuessEntry(entry) {
     };
 }
 
-function serializeRoomMember(member) {
-    return {
+function serializeRoomMember(member, options = {}) {
+    const serialized = {
         socketId: member.socketId,
         userId: member.userId,
         username: member.username,
@@ -307,15 +307,20 @@ function serializeRoomMember(member) {
         connected: member.connected,
         attempts: typeof member.attempts === 'number' ? member.attempts : 0,
         finished: Boolean(member.finished),
-        timedOut: Boolean(member.timedOut),
-        guesses: Array.isArray(member.guesses) ? member.guesses.map(serializeGuessEntry) : []
+        timedOut: Boolean(member.timedOut)
     };
+
+    if (options.includeGuesses) {
+        serialized.guesses = Array.isArray(member.guesses) ? member.guesses.map(serializeGuessEntry) : [];
+    }
+
+    return serialized;
 }
 
 function buildLiveBoardState(room) {
     return {
         roundState: room.roundState,
-        players: Object.values(room.players || {}).map(serializeRoomMember)
+        players: Object.values(room.players || {}).map(member => serializeRoomMember(member, { includeGuesses: true }))
     };
 }
 
