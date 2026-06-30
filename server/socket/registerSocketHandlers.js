@@ -1,8 +1,6 @@
 const {
     MAX_ATTEMPTS,
     MAX_PLAYERS_PER_ROOM,
-    normalizeTimeLimitSeconds,
-    isValidDifficulty,
     isValidRoomId
 } = require('../config/constants');
 const { compareGuess } = require('../game/compareDriver');
@@ -10,6 +8,7 @@ const {
     createRoom,
     addPlayerToRoom,
     removePlayerFromRoom,
+    refreshRoomMemberAuth,
     getPlayer,
     hasRoomMember,
     isHost,
@@ -21,6 +20,12 @@ const {
 } = require('../rooms/roomService');
 const { attachSocketAuth } = require('./socketAuth');
 const { createRoomStateEmitter } = require('./roomStateEmitter');
+const {
+    normalizeClientAuthUser,
+    normalizeDriverId,
+    normalizeRoundOptions,
+    normalizeRestartOptions
+} = require('./socketPayloadValidators');
 
 function registerSocketHandlers(io, dependencies) {
     const { roomStore, gameService, sessionService } = dependencies;
@@ -95,16 +100,13 @@ function registerSocketHandlers(io, dependencies) {
                 return;
             }
 
-            const difficulty = typeof payload === 'object' && payload !== null ? payload.level : payload;
-            const timed = Boolean(typeof payload === 'object' && payload !== null && payload.timed);
-            const timeLimitSeconds = normalizeTimeLimitSeconds(payload && payload.timeLimitSeconds);
-
-            if (!isValidDifficulty(difficulty)) {
+            const roundOptions = normalizeRoundOptions(payload);
+            if (!roundOptions) {
                 socket.emit('errorMessage', 'Dificultatea selectată nu este validă.');
                 return;
             }
 
-            const initPayload = gameService.startNewRound(room, { difficulty, timed, timeLimitSeconds });
+            const initPayload = gameService.startNewRound(room, roundOptions);
             if (!initPayload) {
                 socket.emit('errorMessage', 'Nu am putut porni runda pentru dificultatea selectată.');
                 return;
@@ -142,7 +144,13 @@ function registerSocketHandlers(io, dependencies) {
             if (typeof player.attempts !== 'number') player.attempts = 0;
             if (player.attempts >= MAX_ATTEMPTS) return;
 
-            const guessDriver = room.driversList.find(driver => driver.id === driverId);
+            const normalizedDriverId = normalizeDriverId(driverId);
+            if (!normalizedDriverId) {
+                socket.emit('errorMessage', 'Pilotul ales nu este valid pentru runda curentă.');
+                return;
+            }
+
+            const guessDriver = room.driversList.find(driver => driver.id === normalizedDriverId);
             if (!guessDriver) {
                 socket.emit('errorMessage', 'Pilotul ales nu este valid pentru runda curentă.');
                 return;
@@ -217,7 +225,7 @@ function registerSocketHandlers(io, dependencies) {
                 return;
             }
 
-            const restartPayload = gameService.restartRound(room, payload);
+            const restartPayload = gameService.restartRound(room, normalizeRestartOptions(payload));
             if (!restartPayload) {
                 socket.emit('errorMessage', 'Nu am putut reporni runda. Alege mai întâi o dificultate.');
                 return;
@@ -227,6 +235,22 @@ function registerSocketHandlers(io, dependencies) {
                 includeLiveBoardForSpectators: true
             });
             emitRoomStateUpdate(currentRoom, 'restart');
+        });
+
+
+        socket.on('refreshAuthUser', (userPayload = null) => {
+            const room = currentRoom ? roomStore.get(currentRoom) : null;
+            const authUser = normalizeClientAuthUser(userPayload);
+            socket.user = authUser;
+
+            if (!room) return;
+
+            const member = refreshRoomMemberAuth(room, socket.id, authUser);
+            if (!member) return;
+
+            emitHostStatus(socket, room);
+            emitRoomStateUpdate(currentRoom, 'auth-updated');
+            emitRoomRoleStatuses(room);
         });
 
         function leaveCurrentRoom() {
