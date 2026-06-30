@@ -2,101 +2,24 @@ const {
     DEFAULT_TIME_LIMIT_SECONDS,
     MAX_PLAYERS_PER_ROOM
 } = require('../config/constants');
-
-function getPlayerIds(room) {
-    return Object.keys(room.players || {});
-}
-
-function getSpectatorIds(room) {
-    return Object.keys(room.spectators || {});
-}
-
-function getPlayerCount(room) {
-    return getPlayerIds(room).length;
-}
-
-function getSpectatorCount(room) {
-    return getSpectatorIds(room).length;
-}
-
-function getRoomMemberCount(room) {
-    return getPlayerCount(room) + getSpectatorCount(room);
-}
-
-function buildGuestUsername(room) {
-    if (typeof room.nextGuestNumber !== 'number') {
-        room.nextGuestNumber = getRoomMemberCount(room) + 1;
-    }
-
-    const guestNumber = room.nextGuestNumber;
-    room.nextGuestNumber += 1;
-    return `Guest ${guestNumber}`;
-}
-
-function createRoomMember(room, socketId, authUser = null, role = 'player') {
-    const guestUsername = buildGuestUsername(room);
-
-    return {
-        socketId,
-        userId: authUser ? authUser.id : null,
-        username: authUser ? authUser.username : guestUsername,
-        guestUsername,
-        role,
-        isHost: role === 'player' && room.hostId === socketId,
-        attempts: 0,
-        finished: false,
-        timedOut: false,
-        guesses: [],
-        connected: true
-    };
-}
-
-function createPlayer(room, socketId, authUser = null) {
-    return createRoomMember(room, socketId, authUser, 'player');
-}
-
-function createSpectator(room, socketId, authUser = null) {
-    const spectator = createRoomMember(room, socketId, authUser, 'spectator');
-    spectator.isHost = false;
-    return spectator;
-}
-
-function updateRoomMemberAuth(member, authUser = null, room = null) {
-    member.connected = true;
-
-    if (authUser) {
-        member.userId = authUser.id;
-        member.username = authUser.username;
-        return;
-    }
-
-    member.userId = null;
-    if (!member.guestUsername) {
-        member.guestUsername = room ? buildGuestUsername(room) : 'Guest';
-    }
-    member.username = member.guestUsername;
-}
-
-function refreshRoomMemberAuth(room, socketId, authUser = null) {
-    const member = getRoomMember(room, socketId);
-    if (!member) return null;
-
-    updateRoomMemberAuth(member, authUser, room);
-    syncHostFlags(room);
-    return member;
-}
-
-function syncHostFlags(room) {
-    for (const player of Object.values(room.players || {})) {
-        player.role = 'player';
-        player.isHost = player.socketId === room.hostId;
-    }
-
-    for (const spectator of Object.values(room.spectators || {})) {
-        spectator.role = 'spectator';
-        spectator.isHost = false;
-    }
-}
+const {
+    getPlayerIds,
+    getSpectatorIds,
+    getPlayerCount,
+    getSpectatorCount,
+    getRoomMemberCount,
+    createPlayer,
+    createSpectator,
+    updateRoomMemberAuth,
+    syncHostFlags,
+    resetPlayersForNewRound,
+    recordPlayerGuess,
+    markPlayerTimedOut
+} = require('./memberService');
+const {
+    buildLiveBoardState,
+    buildPublicRoomState
+} = require('./liveBoardService');
 
 function createRoom(roomId, hostSocketId, authUser = null) {
     const room = {
@@ -121,7 +44,7 @@ function createRoom(roomId, hostSocketId, authUser = null) {
 }
 
 function addPlayerToRoom(room, socketId, authUser = null) {
-    if (!room.spectators) room.spectators = {};
+    ensureRoomCollections(room);
 
     if (room.players[socketId]) {
         updateRoomMemberAuth(room.players[socketId], authUser, room);
@@ -171,7 +94,7 @@ function promoteNextSpectatorToPlayer(room) {
 }
 
 function removePlayerFromRoom(room, socketId) {
-    if (!room.spectators) room.spectators = {};
+    ensureRoomCollections(room);
 
     const wasPlayer = Boolean(room.players[socketId]);
     delete room.players[socketId];
@@ -192,11 +115,9 @@ function removePlayerFromRoom(room, socketId) {
     syncHostFlags(room);
 }
 
-
 function removeInactiveRoomMembers(room, isSocketActive) {
     if (!room || typeof isSocketActive !== 'function') return false;
-    if (!room.players) room.players = {};
-    if (!room.spectators) room.spectators = {};
+    ensureRoomCollections(room);
 
     let changed = false;
     let removedActivePlayer = false;
@@ -220,9 +141,7 @@ function removeInactiveRoomMembers(room, isSocketActive) {
         }
     }
 
-    if (!room.hostId) {
-        room.hostId = getPlayerIds(room)[0] || null;
-    }
+    ensureActiveHost(room);
 
     while (removedActivePlayer && getPlayerCount(room) < MAX_PLAYERS_PER_ROOM && getSpectatorCount(room) > 0) {
         const promoted = promoteNextSpectatorToPlayer(room);
@@ -230,12 +149,29 @@ function removeInactiveRoomMembers(room, isSocketActive) {
         changed = true;
     }
 
+    ensureActiveHost(room);
+    syncHostFlags(room);
+    return changed;
+}
+
+function refreshRoomMemberAuth(room, socketId, authUser = null) {
+    const member = getRoomMember(room, socketId);
+    if (!member) return null;
+
+    updateRoomMemberAuth(member, authUser, room);
+    syncHostFlags(room);
+    return member;
+}
+
+function ensureRoomCollections(room) {
+    if (!room.players) room.players = {};
+    if (!room.spectators) room.spectators = {};
+}
+
+function ensureActiveHost(room) {
     if (!room.hostId) {
         room.hostId = getPlayerIds(room)[0] || null;
     }
-
-    syncHostFlags(room);
-    return changed;
 }
 
 function getPlayer(room, socketId) {
@@ -264,98 +200,6 @@ function isHost(room, socketId) {
 
 function isSpectator(room, socketId) {
     return Boolean(getSpectator(room, socketId));
-}
-
-function resetPlayersForNewRound(room) {
-    for (const player of Object.values(room.players)) {
-        player.attempts = 0;
-        player.finished = false;
-        player.timedOut = false;
-        player.guesses = [];
-    }
-}
-
-function recordPlayerGuess(player, guessDriver, results, isCorrectGuess, isGameOver) {
-    if (!player) return null;
-    if (!Array.isArray(player.guesses)) player.guesses = [];
-
-    const entry = {
-        attempt: player.attempts,
-        guess: {
-            id: guessDriver.id,
-            name: guessDriver.name,
-            nat: guessDriver.nat,
-            team: Array.isArray(guessDriver.team) ? [...guessDriver.team] : guessDriver.team,
-            age: guessDriver.age,
-            debut: guessDriver.debut,
-            wins: guessDriver.wins
-        },
-        results,
-        isCorrect: Boolean(isCorrectGuess),
-        isGameOver: Boolean(isGameOver),
-        createdAt: Date.now()
-    };
-
-    player.guesses.push(entry);
-    return entry;
-}
-
-function markPlayerTimedOut(player) {
-    if (!player) return;
-    player.finished = true;
-    player.timedOut = true;
-}
-
-function serializeGuessEntry(entry) {
-    return {
-        attempt: entry.attempt,
-        guess: entry.guess,
-        results: entry.results,
-        isCorrect: entry.isCorrect,
-        isGameOver: entry.isGameOver,
-        createdAt: entry.createdAt
-    };
-}
-
-function serializeRoomMember(member, options = {}) {
-    const serialized = {
-        socketId: member.socketId,
-        userId: member.userId,
-        username: member.username,
-        role: member.role,
-        isHost: member.isHost,
-        connected: member.connected,
-        attempts: typeof member.attempts === 'number' ? member.attempts : 0,
-        finished: Boolean(member.finished),
-        timedOut: Boolean(member.timedOut)
-    };
-
-    if (options.includeGuesses) {
-        serialized.guesses = Array.isArray(member.guesses) ? member.guesses.map(serializeGuessEntry) : [];
-    }
-
-    return serialized;
-}
-
-function buildLiveBoardState(room) {
-    return {
-        roundState: room.roundState,
-        players: Object.values(room.players || {}).map(member => serializeRoomMember(member, { includeGuesses: true }))
-    };
-}
-
-function buildPublicRoomState(room) {
-    const players = Object.values(room.players || {}).map(serializeRoomMember);
-    const spectators = Object.values(room.spectators || {}).map(serializeRoomMember);
-
-    return {
-        playerCount: players.length,
-        spectatorCount: spectators.length,
-        totalCount: players.length + spectators.length,
-        maxPlayers: MAX_PLAYERS_PER_ROOM,
-        players,
-        spectators
-    };
 }
 
 module.exports = {
