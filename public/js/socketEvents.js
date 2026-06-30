@@ -2,12 +2,11 @@
 export function registerSocketEvents(socket, app) {
 	[
 		'initGame',
+		'roomStateUpdate',
 		'roomUpdate',
 		'guessResult',
 		'gameRestarted',
 		'gameTimedOut',
-		'liveBoardUpdate',
-		'duelStateUpdate',
 		'errorMessage',
 		'roomFull',
 		'hostStatus'
@@ -23,6 +22,24 @@ export function registerSocketEvents(socket, app) {
 			...options,
 			forceVisible: true
 		});
+	}
+
+	function updateRoomBadge(roomState = {}) {
+		const badge = document.getElementById("duelStatus");
+		if (!badge) return;
+
+		const maxPlayers = roomState.maxPlayers || 2;
+		const playerCount = roomState.playerCount || 0;
+		const spectatorCount = roomState.spectatorCount || 0;
+		const roleLabel = app.isSpectator?.() ? ' · Spectator' : (app.timer.isHost() ? ' · Host' : '');
+		const spectatorLabel = spectatorCount > 0 ? ` · Spectatori: ${spectatorCount}` : '';
+		badge.innerText = `Jucători: ${playerCount}/${maxPlayers}${spectatorLabel}${roleLabel}`;
+	}
+
+	function handleRoomStateUpdate(payload = {}) {
+		const roomState = payload.room || payload;
+		updateRoomBadge(roomState);
+		renderLiveBoardForSpectator(payload.liveBoard || roomState.liveBoard);
 	}
 
 	socket.on('initGame', (data) => {
@@ -58,7 +75,6 @@ export function registerSocketEvents(socket, app) {
 
 		app.initializeGridStructure();
 		renderLiveBoardForSpectator(data.liveBoard);
-		if (app.isSpectator?.()) socket.emit('requestLiveBoard');
 
 		const gameZone = document.getElementById("gameZone");
 		if (gameZone) {
@@ -66,19 +82,10 @@ export function registerSocketEvents(socket, app) {
 		}
 	});
 
-	socket.on('roomUpdate', (data) => {
-		if (data.liveBoard) renderLiveBoardForSpectator(data.liveBoard);
+	socket.on('roomStateUpdate', handleRoomStateUpdate);
 
-		const badge = document.getElementById("duelStatus");
-		if (badge) {
-			const maxPlayers = data.maxPlayers || 2;
-			const playerCount = data.playerCount || 0;
-			const spectatorCount = data.spectatorCount || 0;
-			const roleLabel = app.isSpectator?.() ? ' · Spectator' : (app.timer.isHost() ? ' · Host' : '');
-			const spectatorLabel = spectatorCount > 0 ? ` · Spectatori: ${spectatorCount}` : '';
-			badge.innerText = `Jucători: ${playerCount}/${maxPlayers}${spectatorLabel}${roleLabel}`;
-		}
-	});
+	// Compatibilitate defensivă pentru versiuni mai vechi de server/arhive intermediare.
+	socket.on('roomUpdate', handleRoomStateUpdate);
 
 	socket.on('hostStatus', (data) => {
 		const wasSpectator = Boolean(app.isSpectator?.());
@@ -86,11 +93,8 @@ export function registerSocketEvents(socket, app) {
 		app.setSpectatorMode?.(isSpectator);
 		app.timer.setHostStatus(Boolean(data && data.isHost));
 
-		// Când un client devine spectator, cerem explicit starea live board-ului.
-		// Asta acoperă cazurile în care spectatorul intră după startul rundei
-		// sau primește hostStatus înaintea initGame/roomUpdate.
-		if (isSpectator && !wasSpectator) {
-			socket.emit('requestLiveBoard');
+		if (!isSpectator && wasSpectator) {
+			app.resetLiveBoard?.();
 		}
 
 		const badge = document.getElementById("duelStatus");
@@ -122,19 +126,6 @@ export function registerSocketEvents(socket, app) {
 		}
 	});
 
-	socket.on('liveBoardUpdate', (data) => {
-		renderLiveBoardForSpectator(data);
-	});
-
-	socket.on('duelStateUpdate', (data = {}) => {
-		renderLiveBoardForSpectator(data.liveBoard);
-	});
-
-	socket.on('connect', () => {
-		// Re-sincronizare defensivă după reconnect automat Socket.IO.
-		socket.emit('requestLiveBoard');
-	});
-
 	socket.on('gameTimedOut', (data) => {
 		app.showEndGamePopup({
 			isCorrect: false,
@@ -150,7 +141,6 @@ export function registerSocketEvents(socket, app) {
 		app.initializeGridStructure();
 		app.hideEndGamePopup(false);
 		renderLiveBoardForSpectator(data.liveBoard);
-		if (app.isSpectator?.()) socket.emit('requestLiveBoard');
 
 		const popup = document.getElementById("endGameDisplay");
 		if (popup) popup.className = "end-game-popup";

@@ -329,8 +329,7 @@ function buildPublicRoomState(room) {
         totalCount: players.length + spectators.length,
         maxPlayers: MAX_PLAYERS_PER_ROOM,
         players,
-        spectators,
-        liveBoard: buildLiveBoardState(room)
+        spectators
     };
 }
 

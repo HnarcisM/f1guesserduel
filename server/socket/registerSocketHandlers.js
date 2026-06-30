@@ -89,28 +89,19 @@ function registerSocketHandlers(io, dependencies) {
         }
     }
 
-    function emitRoomUpdate(roomId) {
-        const room = roomStore.get(roomId);
-        if (!room) return;
-
-        emitToActiveRoomMembers(roomId, 'roomUpdate', buildPublicRoomState(room));
-    }
-
-    function emitLiveBoardUpdate(roomId) {
-        const room = roomStore.get(roomId);
-        if (!room) return;
-
-        emitToActiveRoomMembers(roomId, 'liveBoardUpdate', buildLiveBoardState(room));
-    }
-
-    function emitDuelStateUpdate(roomId, reason = 'sync') {
-        const room = roomStore.get(roomId);
-        if (!room) return;
-
-        emitToActiveRoomMembers(roomId, 'duelStateUpdate', {
+    function buildRoomStatePayload(room, reason = 'sync') {
+        return {
             reason,
+            room: buildPublicRoomState(room),
             liveBoard: buildLiveBoardState(room)
-        });
+        };
+    }
+
+    function emitRoomStateUpdate(roomId, reason = 'sync') {
+        const room = roomStore.get(roomId);
+        if (!room) return;
+
+        emitToActiveRoomMembers(roomId, 'roomStateUpdate', buildRoomStatePayload(room, reason));
     }
 
     function emitGameStateToActiveRoomMembers(roomId, eventName, payload) {
@@ -164,17 +155,7 @@ function registerSocketHandlers(io, dependencies) {
             currentRoom = roomId;
             socket.join(roomId);
             emitHostStatus(socket, room);
-            emitRoomUpdate(roomId);
-
-            // Trimitem board-ul direct către socket-ul nou intrat.
-            // Astfel spectatorii care intră în mijlocul rundei primesc instant istoricul,
-            // fără să depindă de următorul guess sau de ordinea evenimentelor roomUpdate/initGame.
-            const currentLiveBoard = buildLiveBoardState(room);
-            socket.emit('liveBoardUpdate', currentLiveBoard);
-            socket.emit('duelStateUpdate', {
-                reason: 'join',
-                liveBoard: currentLiveBoard
-            });
+            emitRoomStateUpdate(roomId, 'join');
 
             if (room.difficulty && room.roundState === 'playing') {
                 socket.emit('initGame', {
@@ -186,21 +167,6 @@ function registerSocketHandlers(io, dependencies) {
                     liveBoard: buildLiveBoardState(room)
                 });
             }
-        });
-
-        socket.on('requestLiveBoard', () => {
-            if (!currentRoom) return;
-
-            const room = roomStore.get(currentRoom);
-            if (!room) return;
-
-            cleanupInactiveMembers(currentRoom, room);
-            const currentLiveBoard = buildLiveBoardState(room);
-            socket.emit('liveBoardUpdate', currentLiveBoard);
-            socket.emit('duelStateUpdate', {
-                reason: 'request',
-                liveBoard: currentLiveBoard
-            });
         });
 
         socket.on('setDifficulty', (payload) => {
@@ -238,9 +204,7 @@ function registerSocketHandlers(io, dependencies) {
                 ...initPayload,
                 liveBoard: buildLiveBoardState(room)
             });
-            emitRoomUpdate(currentRoom);
-            emitLiveBoardUpdate(currentRoom);
-            emitDuelStateUpdate(currentRoom, 'round-started');
+            emitRoomStateUpdate(currentRoom, 'round-started');
         });
 
         socket.on('submitGuess', (driverId) => {
@@ -262,9 +226,7 @@ function registerSocketHandlers(io, dependencies) {
                 player.attempts = MAX_ATTEMPTS;
                 markPlayerTimedOut(player);
                 socket.emit('gameTimedOut', { target: { name: room.targetDriver.name }, attempts: MAX_ATTEMPTS });
-                emitRoomUpdate(currentRoom);
-                emitLiveBoardUpdate(currentRoom);
-                emitDuelStateUpdate(currentRoom, 'timeout');
+                emitRoomStateUpdate(currentRoom, 'timeout');
                 return;
             }
 
@@ -303,9 +265,7 @@ function registerSocketHandlers(io, dependencies) {
             }
 
             socket.emit('guessResult', responseData);
-            emitLiveBoardUpdate(currentRoom);
-            emitRoomUpdate(currentRoom);
-            emitDuelStateUpdate(currentRoom, 'guess');
+            emitRoomStateUpdate(currentRoom, 'guess');
         });
 
         socket.on('timeExpired', () => {
@@ -329,9 +289,7 @@ function registerSocketHandlers(io, dependencies) {
                 target: { name: room.targetDriver.name },
                 attempts: MAX_ATTEMPTS
             });
-            emitRoomUpdate(currentRoom);
-            emitLiveBoardUpdate(currentRoom);
-            emitDuelStateUpdate(currentRoom, 'timeout');
+            emitRoomStateUpdate(currentRoom, 'timeout');
         });
 
         socket.on('restartGame', (payload = {}) => {
@@ -360,9 +318,7 @@ function registerSocketHandlers(io, dependencies) {
                 ...restartPayload,
                 liveBoard: buildLiveBoardState(room)
             });
-            emitRoomUpdate(currentRoom);
-            emitLiveBoardUpdate(currentRoom);
-            emitDuelStateUpdate(currentRoom, 'restart');
+            emitRoomStateUpdate(currentRoom, 'restart');
         });
 
         function leaveCurrentRoom() {
@@ -385,7 +341,7 @@ function registerSocketHandlers(io, dependencies) {
                 return;
             }
 
-            emitRoomUpdate(roomId);
+            emitRoomStateUpdate(roomId, 'leave');
             emitRoomRoleStatuses(room);
         }
 
