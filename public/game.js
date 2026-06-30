@@ -3,6 +3,7 @@ import { createAutocomplete } from './js/autocomplete.js';
 import { initializeGridStructure, renderGuessResult } from './js/gridView.js';
 import { createTimerView } from './js/timerView.js';
 import { registerSocketEvents } from './js/socketEvents.js';
+import { createAuthView } from './js/authView.js';
 
 /**
  * F1 Guesser Duel - frontend entry point.
@@ -19,6 +20,8 @@ let socket;
 let driversList = [];
 let isRoundFinished = false;
 let isRematchMode = false;
+let authView;
+let authReadyOnce = false;
 
 function setDriversList(drivers) {
 	driversList = Array.isArray(drivers) ? drivers : [];
@@ -295,6 +298,9 @@ function setupTimerControls(menu) {
 function setupSocketConnection() {
 	try {
 		if (typeof io !== 'undefined') {
+			if (socket) {
+				socket.disconnect();
+			}
 			socket = io();
 			setupSocketEvents();
 		} else {
@@ -305,9 +311,13 @@ function setupSocketConnection() {
 	}
 }
 
-function setupRoom() {
+function getRoomIdFromUrl() {
 	const urlParams = new URLSearchParams(window.location.search);
-	let roomId = urlParams.get('room');
+	return urlParams.get('room');
+}
+
+function setupRoom() {
+	let roomId = getRoomIdFromUrl();
 
 	if (!roomId) {
 		roomId = Math.random().toString(36).substring(2, 9);
@@ -362,6 +372,24 @@ function setupGameControls() {
 	}
 }
 
+
+function reconnectSocketAfterAuthChange() {
+	if (!authReadyOnce) {
+		authReadyOnce = true;
+		return;
+	}
+
+	setupSocketConnection();
+	setupRoom();
+}
+
+function setupAuth() {
+	authView = createAuthView({
+		onAuthChanged: reconnectSocketAfterAuthChange
+	});
+	authView.setup();
+}
+
 function setupGlobalDocumentEvents(menu) {
 	document.addEventListener("keydown", function(e) {
 		const popup = document.getElementById("endGameDisplay");
@@ -400,6 +428,7 @@ document.addEventListener("DOMContentLoaded", () => {
 	setupThemeMenu(menu);
 	setupTimerControls(menu);
 	setupShareButton();
+	setupAuth();
 	setupSocketConnection();
 	setupRoom();
 	setupGameControls();

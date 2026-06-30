@@ -15,11 +15,11 @@ function buildGuestUsername(room) {
     return `Guest ${getPlayerCount(room) + 1}`;
 }
 
-function createPlayer(room, socketId) {
+function createPlayer(room, socketId, authUser = null) {
     return {
         socketId,
-        userId: null,
-        username: buildGuestUsername(room),
+        userId: authUser ? authUser.id : null,
+        username: authUser ? authUser.username : buildGuestUsername(room),
         isHost: room.hostId === socketId,
         attempts: 0,
         finished: false,
@@ -33,7 +33,7 @@ function syncHostFlags(room) {
     }
 }
 
-function createRoom(roomId, hostSocketId) {
+function createRoom(roomId, hostSocketId, authUser = null) {
     const room = {
         roomId,
         hostId: hostSocketId,
@@ -47,22 +47,26 @@ function createRoom(roomId, hostSocketId) {
         roundState: 'waiting'
     };
 
-    room.players[hostSocketId] = createPlayer(room, hostSocketId);
+    room.players[hostSocketId] = createPlayer(room, hostSocketId, authUser);
     syncHostFlags(room);
 
     return room;
 }
 
-function addPlayerToRoom(room, socketId) {
+function addPlayerToRoom(room, socketId, authUser = null) {
     if (room.players[socketId]) {
         room.players[socketId].connected = true;
+        if (authUser) {
+            room.players[socketId].userId = authUser.id;
+            room.players[socketId].username = authUser.username;
+        }
         syncHostFlags(room);
         return true;
     }
 
     if (getPlayerCount(room) >= MAX_PLAYERS_PER_ROOM) return false;
 
-    room.players[socketId] = createPlayer(room, socketId);
+    room.players[socketId] = createPlayer(room, socketId, authUser);
     syncHostFlags(room);
     return true;
 }
@@ -102,6 +106,7 @@ function buildPublicRoomState(room) {
         maxPlayers: MAX_PLAYERS_PER_ROOM,
         players: Object.values(room.players).map(player => ({
             socketId: player.socketId,
+            userId: player.userId,
             username: player.username,
             isHost: player.isHost,
             connected: player.connected,

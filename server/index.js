@@ -3,29 +3,47 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const { Server } = require('socket.io');
+const cookieParser = require('cookie-parser');
 
 const { createDriversRepository } = require('./data/driversRepository');
 const { createGameService } = require('./game/gameService');
 const { createMemoryRoomStore } = require('./rooms/roomStore.memory');
 const { registerSocketHandlers } = require('./socket/registerSocketHandlers');
+const { createDatabase } = require('./db/database');
+const { createSessionService } = require('./auth/sessionService');
+const { createAuthService } = require('./auth/authService');
+const { createAuthRoutes } = require('./auth/authRoutes');
+const { createAuthMiddleware } = require('./middleware/authMiddleware');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 
 const driversRepository = createDriversRepository({
     driversFilePath: path.join(__dirname, '..', 'drivers.json')
 });
 const gameService = createGameService(driversRepository);
 const roomStore = createMemoryRoomStore();
+const db = createDatabase({
+    dbFilePath: path.join(DATA_DIR, 'f1guesser.sqlite'),
+    schemaFilePath: path.join(__dirname, 'db', 'schema.sql')
+});
+const sessionService = createSessionService(db);
+const authService = createAuthService(db, sessionService);
 
+app.use(express.json({ limit: '32kb' }));
+app.use(cookieParser());
+app.use(createAuthMiddleware(sessionService));
+app.use('/api/auth', createAuthRoutes({ authService, sessionService }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 registerSocketHandlers(io, {
     roomStore,
-    gameService
+    gameService,
+    sessionService
 });
 
 app.get('/', (req, res) => {

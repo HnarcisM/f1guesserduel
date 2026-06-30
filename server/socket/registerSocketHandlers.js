@@ -17,8 +17,32 @@ const {
     buildPublicRoomState
 } = require('../rooms/roomService');
 
+function parseCookieHeader(cookieHeader) {
+    return String(cookieHeader || '')
+        .split(';')
+        .map(part => part.trim())
+        .filter(Boolean)
+        .reduce((cookies, part) => {
+            const separatorIndex = part.indexOf('=');
+            if (separatorIndex === -1) return cookies;
+            const key = decodeURIComponent(part.slice(0, separatorIndex));
+            const value = decodeURIComponent(part.slice(separatorIndex + 1));
+            cookies[key] = value;
+            return cookies;
+        }, {});
+}
+
 function registerSocketHandlers(io, dependencies) {
-    const { roomStore, gameService } = dependencies;
+    const { roomStore, gameService, sessionService } = dependencies;
+
+    io.use((socket, next) => {
+        if (!sessionService) return next();
+
+        const cookies = parseCookieHeader(socket.handshake.headers.cookie);
+        const token = cookies[sessionService.cookieName];
+        socket.user = sessionService.getUserByToken(token);
+        return next();
+    });
 
     function emitRoomUpdate(roomId) {
         const room = roomStore.get(roomId);
@@ -29,7 +53,8 @@ function registerSocketHandlers(io, dependencies) {
     function emitHostStatus(socket, room) {
         socket.emit('hostStatus', {
             isHost: isHost(room, socket.id),
-            username: getPlayer(room, socket.id)?.username || 'Guest'
+            username: getPlayer(room, socket.id)?.username || socket.user?.username || 'Guest',
+            user: socket.user || null
         });
     }
 
@@ -43,11 +68,11 @@ function registerSocketHandlers(io, dependencies) {
             }
 
             if (!roomStore.has(roomId)) {
-                roomStore.set(roomId, createRoom(roomId, socket.id));
+                roomStore.set(roomId, createRoom(roomId, socket.id, socket.user || null));
             }
 
             const room = roomStore.get(roomId);
-            const wasAdded = addPlayerToRoom(room, socket.id);
+            const wasAdded = addPlayerToRoom(room, socket.id, socket.user || null);
 
             if (!wasAdded) {
                 socket.emit('roomFull', { maxPlayers: MAX_PLAYERS_PER_ROOM });

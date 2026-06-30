@@ -40,6 +40,7 @@
     <h1>🏎️ F1 GUESSER</h1>
     <!-- Butonul nou de partajare unificat în header -->
 	<div class="header-actions">
+        <button type="button" id="authOpenBtn" class="auth-open-btn">👤 Login</button>
 		<div id="shareRoomBtn" class="share-btn" title="Copiază link-ul camerei">
 			<span id="roomBtnText">🏁 Room: --</span>
 			<span class="share-tooltip" id="shareTooltip">Copiat!</span>
@@ -175,6 +176,39 @@
             </li>
         </ul>
     </footer>
+</div>
+
+
+
+<!-- Auth modal: login/register pentru pregătirea profilului și a duelurilor cu prieteni. -->
+<div class="auth-backdrop" id="authBackdrop" aria-hidden="true"></div>
+<div class="auth-panel" id="authPanel" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+    <button type="button" class="auth-close" id="authCloseBtn" aria-label="Închide autentificarea">×</button>
+    <h2 id="authTitle">Autentificare</h2>
+    <p id="authSubtitle" class="auth-subtitle">Intră în cont ca să pregătim profilul și jocurile cu prieteni.</p>
+    <p id="authUserBadge" class="auth-user-badge">Joci momentan ca Guest.</p>
+
+    <form class="auth-form">
+        <label id="authUsernameGroup">
+            Username
+            <input type="text" id="authUsername" autocomplete="username" minlength="3" maxlength="20" placeholder="ex: Narcis_7">
+        </label>
+        <label>
+            Email
+            <input type="email" id="authEmail" autocomplete="email" placeholder="email@example.com" required>
+        </label>
+        <label>
+            Parolă
+            <input type="password" id="authPassword" autocomplete="current-password" minlength="8" placeholder="minimum 8 caractere" required>
+        </label>
+        <button type="submit" id="authSubmitBtn" class="auth-submit-btn">Login</button>
+    </form>
+
+    <p id="authMessage" class="auth-message" aria-live="polite"></p>
+    <div class="auth-actions-row">
+        <button type="button" id="authSwitchBtn" class="auth-link-btn">Nu ai cont? Register</button>
+        <button type="button" id="authLogoutBtn" class="auth-link-btn danger is-hidden">Logout</button>
+    </div>
 </div>
 
 <script type="module" src="/game.js"></script>
