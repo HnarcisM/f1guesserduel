@@ -31,7 +31,7 @@ export function registerSocketEvents(socket, app) {
 		const maxPlayers = roomState.maxPlayers || 2;
 		const playerCount = roomState.playerCount || 0;
 		const spectatorCount = roomState.spectatorCount || 0;
-		const roleLabel = app.isSpectator?.() ? ' · Spectator' : (app.timer.isHost() ? ' · Host' : '');
+		const roleLabel = app.getRoleBadgeLabel?.(app.timer.isHost()) || '';
 		const spectatorLabel = spectatorCount > 0 ? ` · Spectatori: ${spectatorCount}` : '';
 		badge.innerText = `Jucători: ${playerCount}/${maxPlayers}${spectatorLabel}${roleLabel}`;
 	}
@@ -100,11 +100,8 @@ export function registerSocketEvents(socket, app) {
 		const badge = document.getElementById("duelStatus");
 		if (badge) {
 			badge.innerText = badge.innerText.replace(/ · Host| · Spectator/g, '');
-			if (app.isSpectator?.()) {
-				badge.innerText = `${badge.innerText} · Spectator`;
-			} else if (app.timer.isHost()) {
-				badge.innerText = `${badge.innerText} · Host`;
-			}
+			const roleLabel = app.getRoleBadgeLabel?.(app.timer.isHost()) || '';
+			if (roleLabel) badge.innerText = `${badge.innerText}${roleLabel}`;
 		}
 	});
 
