@@ -8,14 +8,7 @@ import { createDailyChallengeController } from './js/dailyChallengeController.js
 import { createEndGameController } from './js/endGameController.js';
 import { createGameSocketController } from './js/gameSocketController.js';
 import { setupShareButton, setupRoom } from './js/roomController.js';
-import {
-	setupDailyChallengeControls,
-	setupGameControls,
-	setupGlobalDocumentEvents,
-	setupMenu,
-	setupThemeMenu,
-	setupTimerControls
-} from './js/menuController.js';
+import { setupMenuControllers } from './js/menuController.js';
 
 /**
  * F1 Guesser Duel - frontend entry point.
@@ -177,26 +170,19 @@ document.addEventListener('DOMContentLoaded', () => {
 		timer,
 		autocomplete
 	});
-	setupDailyChallengeControls({ startDailyChallenge: dailyChallengeController.start });
-	const menu = setupMenu({ startRoundFromSelection, startDailyChallenge: dailyChallengeController.start });
-	setupThemeMenu(menu);
-	dailyChallengeController.startCountdown();
-	setupTimerControls(menu, { timer, showHostOnlyTimerMessage });
-	setupShareButton();
-	setupAuth();
-	socketController.connect();
-	setupRoom({ getSocket: socketController.getSocket });
-	setupGameControls({
+	setupMenuControllers({
 		autocomplete,
 		sendGuess,
 		requestRematch: endGameController.requestRematch,
 		hideEndGamePopup: endGameController.hideEndGamePopup,
 		startRoundFromSelection,
-		startDailyChallenge: dailyChallengeController.start
+		startDailyChallenge: dailyChallengeController.start,
+		timer,
+		showHostOnlyTimerMessage
 	});
-	setupGlobalDocumentEvents(menu, {
-		autocomplete,
-		hideEndGamePopup: endGameController.hideEndGamePopup,
-		requestRematch: endGameController.requestRematch
-	});
+	dailyChallengeController.startCountdown();
+	setupShareButton();
+	setupAuth();
+	socketController.connect();
+	setupRoom({ getSocket: socketController.getSocket });
 });
