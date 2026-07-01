@@ -5,17 +5,17 @@
  * Keep imports ordered because later modules intentionally override earlier rules.
  */
 
-@import url("/css/01-theme-tokens.css?v=duel-lobby-1");
-@import url("/css/02-header-menu.css?v=duel-lobby-1");
-@import url("/css/03-game-board.css?v=duel-lobby-1");
-@import url("/css/04-difficulty-overlay.css?v=duel-lobby-1");
-@import url("/css/05-legend-stats.css?v=duel-lobby-1");
-@import url("/css/06-responsive.css?v=duel-lobby-1");
-@import url("/css/07-timer.css?v=duel-lobby-1");
-@import url("/css/08-auth.css?v=duel-lobby-1");
-@import url("/css/09-live-duel.css?v=duel-lobby-1");
-@import url("/css/10-daily-challenge.css?v=duel-lobby-1");
+@import url("/css/01-theme-tokens.css?v=duel-lobby-player-select-1");
+@import url("/css/02-header-menu.css?v=duel-lobby-player-select-1");
+@import url("/css/03-game-board.css?v=duel-lobby-player-select-1");
+@import url("/css/04-difficulty-overlay.css?v=duel-lobby-player-select-1");
+@import url("/css/05-legend-stats.css?v=duel-lobby-player-select-1");
+@import url("/css/06-responsive.css?v=duel-lobby-player-select-1");
+@import url("/css/07-timer.css?v=duel-lobby-player-select-1");
+@import url("/css/08-auth.css?v=duel-lobby-player-select-1");
+@import url("/css/09-live-duel.css?v=duel-lobby-player-select-1");
+@import url("/css/10-daily-challenge.css?v=duel-lobby-player-select-1");
 
-@import url("/css/11-mobile-layout-fix.css?v=duel-lobby-1");
+@import url("/css/11-mobile-layout-fix.css?v=duel-lobby-player-select-1");
 
-@import url("/css/12-toast.css?v=duel-lobby-1");
+@import url("/css/12-toast.css?v=duel-lobby-player-select-1");

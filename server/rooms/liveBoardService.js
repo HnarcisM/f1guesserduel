@@ -14,6 +14,7 @@ function serializeGuessEntry(entry) {
 
 function serializeRoomMember(member, options = {}) {
     const serialized = {
+        lobbyId: member.lobbyId || null,
         username: member.username,
         role: member.role,
         isHost: member.isHost,
@@ -31,6 +32,7 @@ function serializeRoomMember(member, options = {}) {
 
 function serializeRoomMemberSummary(member, options = {}) {
     return {
+        lobbyId: member.lobbyId || null,
         username: member.username,
         role: member.role,
         isHost: member.isHost,

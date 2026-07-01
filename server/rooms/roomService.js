@@ -97,6 +97,36 @@ function moveRoomMemberSocket(room, existing, newSocketId, authUser = null, opti
     return existing.member;
 }
 
+
+function findRoomMemberByLobbyId(room, lobbyId) {
+    if (!room || typeof lobbyId !== 'string' || !lobbyId.trim()) return null;
+    const normalizedLobbyId = lobbyId.trim();
+
+    for (const [socketId, player] of Object.entries(room.players || {})) {
+        if (player.lobbyId === normalizedLobbyId) {
+            return { member: player, socketId, role: 'player' };
+        }
+    }
+
+    for (const [socketId, spectator] of Object.entries(room.spectators || {})) {
+        if (spectator.lobbyId === normalizedLobbyId) {
+            return { member: spectator, socketId, role: 'spectator' };
+        }
+    }
+
+    return null;
+}
+
+function resetMemberRoundProgress(member) {
+    if (!member) return;
+    member.attempts = 0;
+    member.finished = false;
+    member.timedOut = false;
+    member.correctGuess = false;
+    member.completedAt = null;
+    member.guesses = [];
+}
+
 function addPlayerToRoom(room, socketId, authUser = null, options = {}) {
     ensureRoomCollections(room);
     const participantKey = buildParticipantKey(authUser, options.clientId);
@@ -160,6 +190,61 @@ function promoteNextSpectatorToPlayer(room) {
 
     syncHostFlags(room);
     return spectator;
+}
+
+
+function selectSpectatorAsPlayer(room, spectatorLobbyId) {
+    if (!room || room.roundState === 'playing') {
+        return { changed: false, reason: 'round-active' };
+    }
+
+    ensureRoomCollections(room);
+
+    const target = findRoomMemberByLobbyId(room, spectatorLobbyId);
+    if (!target) {
+        return { changed: false, reason: 'member-not-found' };
+    }
+
+    if (target.role === 'player') {
+        return { changed: false, reason: 'already-player' };
+    }
+
+    if (target.member.connected === false) {
+        return { changed: false, reason: 'member-disconnected' };
+    }
+
+    const spectatorSocketId = target.socketId;
+    const selectedSpectator = target.member;
+    const nonHostPlayerSocketId = getPlayerIds(room).find(playerSocketId => playerSocketId !== room.hostId) || null;
+
+    delete room.spectators[spectatorSocketId];
+
+    if (getPlayerCount(room) >= MAX_PLAYERS_PER_ROOM && nonHostPlayerSocketId) {
+        const previousPlayer = room.players[nonHostPlayerSocketId];
+        delete room.players[nonHostPlayerSocketId];
+        previousPlayer.role = 'spectator';
+        previousPlayer.isHost = false;
+        resetMemberRoundProgress(previousPlayer);
+        room.spectators[nonHostPlayerSocketId] = previousPlayer;
+    }
+
+    selectedSpectator.role = 'player';
+    resetMemberRoundProgress(selectedSpectator);
+    room.players[spectatorSocketId] = selectedSpectator;
+
+    if (!room.hostId) {
+        room.hostId = spectatorSocketId;
+    }
+
+    room.roundState = 'waiting';
+    room.roundResult = null;
+    room.targetDriver = null;
+    room.roundStartedAt = null;
+    resetPlayersForNewRound(room);
+    resetRoomScoreboard(room);
+    syncHostFlags(room);
+
+    return { changed: true, selectedSocketId: spectatorSocketId, replacedSocketId: nonHostPlayerSocketId };
 }
 
 function removePlayerFromRoom(room, socketId) {
@@ -332,7 +417,9 @@ module.exports = {
     createRoom,
     addPlayerToRoom,
     findRoomMemberByParticipantKey,
+    findRoomMemberByLobbyId,
     markRoomMemberDisconnectedBySocketId,
+    selectSpectatorAsPlayer,
     removePlayerFromRoom,
     removeInactiveRoomMembers,
     refreshRoomMemberAuth,

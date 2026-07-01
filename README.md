@@ -603,8 +603,10 @@ Această separare este fundația pentru feature-urile de cameră: winner logic p
 ```text
 - lobby-ul apare doar în mode-duel;
 - afișează Player 1, Player 2, spectatorii și hostul;
-- doar hostul poate modifica dificultatea și timerul;
-- spectatorii pot vedea lobby-ul, dar nu pot interacționa cu setările;
+- doar hostul poate modifica dificultatea, timerul și componența jucătorilor activi;
+- hostul poate selecta un spectator ca Player 2; dacă există deja Player 2, acesta devine spectator;
+- schimbarea Player 2 resetează automat scorul camerei la 0 - 0;
+- spectatorii pot vedea lobby-ul, dar nu pot interacționa cu setările sau selecția jucătorilor;
 - dropdown-ul hamburger nu mai schimbă dificultatea/timerul în Duel; setările se fac doar din lobby;
 - când o rundă activă este oprită intenționat, camera revine în lobby și scorul se păstrează.
 ```

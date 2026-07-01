@@ -443,7 +443,8 @@ document.addEventListener('DOMContentLoaded', () => {
 	socketController.connect();
 	setupDuelLobbyView({
 		timer,
-		onStartRound: (level) => startRoundFromSelection(level, { source: 'duel-lobby' })
+		onStartRound: (level) => startRoundFromSelection(level, { source: 'duel-lobby' }),
+		onSelectPlayer: (lobbyId) => socketController?.emit('selectDuelPlayer', { lobbyId })
 	});
 
 	gameModeSelectionController = createGameModeSelectionController({

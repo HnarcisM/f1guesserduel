@@ -3,6 +3,8 @@ import { showErrorToast } from './toastController.js';
 const DEFAULT_DUEL_LEVEL = 'easy';
 
 let selectedDuelLevel = DEFAULT_DUEL_LEVEL;
+let selectPlayerHandler = null;
+let latestRoomState = null;
 
 function getLobbyPanel() {
     return document.getElementById('duelLobbyPanel');
@@ -25,15 +27,53 @@ function getStatusLabel(member) {
     if (!member) return 'Slot liber';
     if (member.connected === false) return 'Deconectat';
     if (member.finished) return member.timedOut ? 'Timp expirat' : 'Terminat';
-    return 'În lobby';
+    return member.role === 'spectator' ? 'În lobby ca spectator' : 'În lobby';
 }
 
-function createMemberCard(member, label) {
+function getLobbyPermissions(roomState = {}) {
+    const you = roomState.you || {};
+    const isHost = Boolean(you.isHost);
+    const isSpectator = you.role === 'spectator';
+    const isPlaying = roomState.roundState === 'playing';
+
+    return {
+        isHost,
+        isSpectator,
+        isPlaying,
+        canInteract: isHost && !isSpectator && !isPlaying
+    };
+}
+
+function createSelectPlayerButton(member, canInteract) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'duel-lobby-select-player-btn';
+    button.textContent = 'Alege ca Player 2';
+    button.disabled = !canInteract || !member?.lobbyId || member.connected === false;
+    button.setAttribute('aria-disabled', String(button.disabled));
+
+    button.addEventListener('click', () => {
+        if (button.disabled || button.getAttribute('aria-disabled') === 'true') {
+            showErrorToast('Doar hostul poate schimba jucătorii din lobby.');
+            return;
+        }
+
+        const confirmed = window.confirm('Schimbi Player 2 cu spectatorul selectat? Scorul camerei se va reseta la 0 - 0.');
+        if (!confirmed) return;
+
+        selectPlayerHandler?.(member.lobbyId);
+    });
+
+    return button;
+}
+
+function createMemberCard(member, label, options = {}) {
     const card = document.createElement('article');
     card.className = 'duel-lobby-member-card';
     if (!member) card.classList.add('empty');
     if (member?.isYou) card.classList.add('is-you');
     if (member?.isHost) card.classList.add('is-host');
+    if (member?.role === 'spectator') card.classList.add('is-spectator');
 
     const title = createTextElement('span', 'duel-lobby-member-label', label);
     const name = createTextElement('strong', 'duel-lobby-member-name', member?.username || 'Așteaptă jucător');
@@ -43,8 +83,14 @@ function createMemberCard(member, label) {
     badges.className = 'duel-lobby-member-badges';
     if (member?.isHost) badges.appendChild(createTextElement('span', 'duel-lobby-badge host', 'Host'));
     if (member?.isYou) badges.appendChild(createTextElement('span', 'duel-lobby-badge you', 'Tu'));
+    if (member?.role === 'spectator') badges.appendChild(createTextElement('span', 'duel-lobby-badge spectator', 'Spectator'));
 
     card.append(title, name, status, badges);
+
+    if (options.showSelectAction && member) {
+        card.appendChild(createSelectPlayerButton(member, Boolean(options.canInteract)));
+    }
+
     return card;
 }
 
@@ -77,7 +123,7 @@ function updateLobbyMeta(roomState = {}) {
     if (subtitle) {
         subtitle.textContent = roomState.roundState === 'playing'
             ? 'Runda este în desfășurare. Setările sunt blocate până la final.'
-            : 'Hostul poate configura și porni următoarea rundă din lobby.';
+            : 'Hostul poate configura, schimba Player 2 și porni următoarea rundă din lobby.';
     }
     if (roomCode) {
         const roomId = roomState.roomId || new URLSearchParams(window.location.search).get('room') || '--';
@@ -93,6 +139,7 @@ function renderMembers(roomState = {}) {
 
     const players = Array.isArray(roomState.players) ? roomState.players : [];
     const spectators = Array.isArray(roomState.spectators) ? roomState.spectators : [];
+    const permissions = getLobbyPermissions(roomState);
 
     membersEl.replaceChildren(
         createMemberCard(players[0], 'Player 1'),
@@ -105,23 +152,23 @@ function renderMembers(roomState = {}) {
             spectatorsEl.appendChild(createTextElement('p', 'duel-lobby-empty', 'Nu există spectatori în lobby.'));
         } else {
             spectators.forEach((spectator, index) => {
-                spectatorsEl.appendChild(createMemberCard(spectator, `Spectator ${index + 1}`));
+                spectatorsEl.appendChild(createMemberCard(spectator, `Spectator ${index + 1}`, {
+                    showSelectAction: true,
+                    canInteract: permissions.canInteract
+                }));
             });
         }
     }
 }
 
 function renderSettingsState(roomState = {}) {
-    const you = roomState.you || {};
-    const isHost = Boolean(you.isHost);
-    const isSpectator = you.role === 'spectator';
-    const isPlaying = roomState.roundState === 'playing';
-    const canInteract = isHost && !isSpectator && !isPlaying;
+    const { isHost, isSpectator, isPlaying, canInteract } = getLobbyPermissions(roomState);
     const hint = document.getElementById('duelLobbySettingsHint');
     const startButton = document.getElementById('duelLobbyStartBtn');
 
     setControlsDisabled('[data-duel-lobby-level]', !canInteract);
     setControlsDisabled('#duelLobbyPanel [data-timer-mode]', !canInteract);
+    setControlsDisabled('.duel-lobby-select-player-btn', !canInteract);
 
     if (startButton) {
         startButton.disabled = !canInteract;
@@ -130,20 +177,21 @@ function renderSettingsState(roomState = {}) {
 
     if (hint) {
         if (isSpectator) {
-            hint.textContent = 'Ești spectator. Poți urmări lobby-ul, dar nu poți modifica setările.';
+            hint.textContent = 'Ești spectator. Poți urmări lobby-ul, dar nu poți modifica setările sau jucătorii.';
         } else if (!isHost) {
-            hint.textContent = 'Doar hostul poate modifica setările și porni runda.';
+            hint.textContent = 'Doar hostul poate modifica setările, schimba Player 2 și porni runda.';
         } else if (isPlaying) {
-            hint.textContent = 'Setările sunt blocate cât timp runda este activă.';
+            hint.textContent = 'Setările și jucătorii sunt blocați cât timp runda este activă.';
         } else {
-            hint.textContent = 'Setările din lobby se aplică la următoarea rundă de Duel.';
+            hint.textContent = 'Hostul poate schimba setările și poate alege un spectator ca Player 2. Schimbarea jucătorului resetează scorul.';
         }
     }
 
     syncLevelButtons();
 }
 
-export function setupDuelLobbyView({ onStartRound, timer } = {}) {
+export function setupDuelLobbyView({ onStartRound, onSelectPlayer, timer } = {}) {
+    selectPlayerHandler = typeof onSelectPlayer === 'function' ? onSelectPlayer : null;
     syncLevelButtons();
 
     document.querySelectorAll('[data-duel-lobby-level]').forEach(button => {
@@ -184,6 +232,7 @@ export function renderDuelLobby(roomState = {}, options = {}) {
     const panel = getLobbyPanel();
     if (!panel) return;
 
+    latestRoomState = roomState && typeof roomState === 'object' ? roomState : null;
     const shouldShow = Boolean(options.forceVisible) || roomState.roundState !== 'playing';
     setHidden(panel, !shouldShow);
     panel.classList.toggle('is-playing', roomState.roundState === 'playing');
@@ -196,9 +245,14 @@ export function renderDuelLobby(roomState = {}, options = {}) {
 }
 
 export function resetDuelLobby() {
+    latestRoomState = null;
     setHidden(getLobbyPanel(), true);
 }
 
 export function getSelectedDuelLevel() {
     return selectedDuelLevel;
+}
+
+export function getLatestDuelLobbyState() {
+    return latestRoomState;
 }

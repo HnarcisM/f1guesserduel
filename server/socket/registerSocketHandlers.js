@@ -9,6 +9,7 @@ const {
     addPlayerToRoom,
     removePlayerFromRoom,
     markRoomMemberDisconnectedBySocketId,
+    selectSpectatorAsPlayer,
     refreshRoomMemberAuth,
     getPlayer,
     hasRoomMember,
@@ -323,7 +324,43 @@ function registerSocketHandlers(io, dependencies) {
             }
         });
 
-        socket.on('restartGame', (payload = {}) => {
+        socket.on('selectDuelPlayer', (payload = {}) => {
+            if (!currentRoom) return;
+
+            const room = roomStore.get(currentRoom);
+            if (!room) return;
+
+            if (isSpectator(room, socket.id)) {
+                socket.emit('errorMessage', 'Spectatorii pot vedea lobby-ul, dar nu pot schimba jucătorii.');
+                return;
+            }
+
+            if (!isHost(room, socket.id)) {
+                socket.emit('errorMessage', 'Doar hostul poate schimba jucătorii activi.');
+                return;
+            }
+
+            if (room.roundState === 'playing') {
+                socket.emit('errorMessage', 'Nu poți schimba jucătorii în timpul rundei. Oprește runda sau așteaptă finalul.');
+                return;
+            }
+
+            const lobbyId = payload && typeof payload === 'object' && typeof payload.lobbyId === 'string'
+                ? payload.lobbyId
+                : null;
+            const result = selectSpectatorAsPlayer(room, lobbyId);
+
+            if (!result.changed) {
+                socket.emit('errorMessage', 'Nu am putut schimba jucătorul selectat. Verifică dacă spectatorul mai este în lobby.');
+                return;
+            }
+
+            roomStore.markDirty?.();
+            emitRoomRoleStatuses(room);
+            emitRoomStateUpdate(currentRoom, 'player-selected');
+        });
+
+        socket.on('restartGame' , (payload = {}) => {
             if (!currentRoom) return;
 
             const room = roomStore.get(currentRoom);

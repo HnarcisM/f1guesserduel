@@ -7,6 +7,7 @@ const {
     removePlayerFromRoom,
     removeInactiveRoomMembers,
     markRoomMemberDisconnectedBySocketId,
+    selectSpectatorAsPlayer,
     refreshRoomMemberAuth,
     getPlayer,
     getSpectator,
@@ -55,6 +56,33 @@ test('spectator is promoted when an active player leaves', () => {
     assert.equal(getSpectatorCount(room), 0);
     assert.equal(Boolean(getPlayer(room, 'socket-3')), true);
     assert.equal(getPlayer(room, 'socket-3').role, 'player');
+});
+
+
+test('host can select a spectator as player two and the score resets', () => {
+    const room = createRoom('abc123', 'socket-host');
+    addPlayerToRoom(room, 'socket-player');
+    addPlayerToRoom(room, 'socket-spectator');
+
+    room.scoreboard[getPlayer(room, 'socket-host').scoreKey].wins = 3;
+    room.scoreboard[getPlayer(room, 'socket-player').scoreKey].wins = 2;
+
+    const selectedSpectator = getSpectator(room, 'socket-spectator');
+    const result = selectSpectatorAsPlayer(room, selectedSpectator.lobbyId);
+
+    assert.equal(result.changed, true);
+    assert.equal(getPlayerCount(room), 2);
+    assert.equal(getSpectatorCount(room), 1);
+    assert.equal(isHost(room, 'socket-host'), true);
+    assert.equal(Boolean(getPlayer(room, 'socket-spectator')), true);
+    assert.equal(getPlayer(room, 'socket-spectator').role, 'player');
+    assert.equal(Boolean(getSpectator(room, 'socket-player')), true);
+    assert.equal(getSpectator(room, 'socket-player').role, 'spectator');
+
+    const publicScoreboard = room.scoreboard;
+    for (const entry of Object.values(publicScoreboard)) {
+        assert.equal(entry.wins, 0);
+    }
 });
 
 test('host transfers when host leaves', () => {
@@ -192,8 +220,10 @@ test('public room state does not expose socketId or userId', () => {
     assert.equal(firstPlayer.username, 'Narcis');
     assert.equal(firstPlayer.socketId, undefined);
     assert.equal(firstPlayer.userId, undefined);
+    assert.equal(typeof firstPlayer.lobbyId, 'string');
     assert.equal(firstSpectator.socketId, undefined);
     assert.equal(firstSpectator.userId, undefined);
+    assert.equal(typeof firstSpectator.lobbyId, 'string');
 });
 
 

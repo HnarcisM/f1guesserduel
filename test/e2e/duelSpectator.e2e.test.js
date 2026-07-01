@@ -305,6 +305,12 @@ async function finishRoundWithWrongEasyGuesses(page, options = {}) {
     }
 }
 
+async function expectNoHorizontalOverlapIfVisible(leftLocator, rightLocator) {
+    const isRightVisible = await rightLocator.isVisible().catch(() => false);
+    if (!isRightVisible) return;
+    await expectNoHorizontalOverlap(leftLocator, rightLocator);
+}
+
 async function expectNoHorizontalOverlap(leftLocator, rightLocator) {
     const leftBox = await leftLocator.boundingBox();
     const rightBox = await rightLocator.boundingBox();
@@ -673,7 +679,8 @@ test('mobile header keeps title separated from auth button on narrow and fold-li
         const viewports = [
             { width: 390, height: 844, label: 'phone narrow' },
             { width: 704, height: 842, label: 'fold inner portrait' },
-            { width: 842, height: 704, label: 'fold inner landscape' }
+            { width: 842, height: 704, label: 'fold inner landscape' },
+            { width: 980, height: 620, label: 'desktop split display' }
         ];
 
         for (const viewport of viewports) {
@@ -682,7 +689,9 @@ test('mobile header keeps title separated from auth button on narrow and fold-li
                 waitForVisibleDuelStatus: false
             });
             await page.locator('.site-header h1').waitFor({ timeout: 7000 });
-            await expectNoHorizontalOverlap(page.locator('.site-header h1'), page.locator('#authOpenBtn'));
+            await expectNoHorizontalOverlapIfVisible(page.locator('.site-header h1'), page.locator('#authOpenBtn'));
+            await expectNoHorizontalOverlapIfVisible(page.locator('.site-header h1'), page.locator('#shareRoomBtn'));
+            await expectNoHorizontalOverlapIfVisible(page.locator('.site-header h1'), page.locator('#duelStatus'));
             await assertEventually(async () => {
                 const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
                 const viewportWidth = await page.evaluate(() => window.innerWidth);

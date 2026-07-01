@@ -1,3 +1,5 @@
+const crypto = require('crypto');
+
 const DISCONNECTED_MEMBER_GRACE_MS = 2 * 60 * 1000;
 
 function getPlayerIds(room) {
@@ -30,6 +32,11 @@ function buildGuestUsername(room) {
     return `Guest ${guestNumber}`;
 }
 
+
+function createLobbyMemberId() {
+    return `member-${crypto.randomBytes(8).toString('hex')}`;
+}
+
 function normalizeClientId(clientId) {
     if (typeof clientId !== 'string') return null;
     const trimmed = clientId.trim();
@@ -54,6 +61,7 @@ function createRoomMember(room, socketId, authUser = null, role = 'player', opti
 
     return {
         socketId,
+        lobbyId: options.lobbyId || createLobbyMemberId(),
         clientId,
         participantKey,
         userId: authUser ? authUser.id : null,
@@ -194,6 +202,7 @@ module.exports = {
     buildGuestUsername,
     normalizeClientId,
     buildParticipantKey,
+    createLobbyMemberId,
     createPlayer,
     createSpectator,
     updateRoomMemberAuth,

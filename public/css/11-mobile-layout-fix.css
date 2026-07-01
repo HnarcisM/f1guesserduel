@@ -454,3 +454,88 @@
 .menu-item.is-locked {
     pointer-events: none;
 }
+
+/* --- SPLIT DISPLAY HEADER GUARD --- */
+/* Pe ferestre înguste de desktop/split-screen, titlul nu mai este absolut centrat peste Login/Room. */
+@media (max-width: 1120px) {
+    .site-header {
+        display: grid;
+        grid-template-columns: var(--header-control-size) minmax(0, 1fr) minmax(0, auto);
+        align-items: center;
+        column-gap: var(--space-md);
+        box-sizing: border-box;
+    }
+
+    .site-header h1 {
+        position: static;
+        left: auto;
+        transform: none;
+        justify-self: center;
+        min-width: 0;
+        max-width: min(30vw, 260px);
+        overflow: hidden;
+        text-align: center;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: clamp(13px, 1.8vw, 18px);
+        letter-spacing: clamp(0.35px, 0.12vw, 1.6px);
+    }
+
+    .site-header h1:hover,
+    .site-header h1:active {
+        transform: none;
+    }
+
+    .header-actions {
+        justify-self: end;
+        min-width: 0;
+        max-width: min(50vw, 430px);
+        gap: var(--space-sm);
+        overflow: hidden;
+    }
+
+    .auth-open-btn,
+    .share-btn,
+    .player-badge {
+        min-width: var(--header-control-size);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .auth-open-btn {
+        flex: 0 1 auto;
+        max-width: 104px;
+    }
+
+    .share-btn {
+        flex: 1 1 auto;
+        max-width: 170px;
+        padding-left: var(--space-lg);
+        padding-right: var(--space-lg);
+    }
+
+    .player-badge {
+        flex: 0 1 auto;
+        max-width: 148px;
+        padding-left: var(--space-lg);
+        padding-right: var(--space-lg);
+    }
+
+    #roomBtnText {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 860px) {
+    .player-badge {
+        display: none;
+    }
+
+    .header-actions {
+        max-width: min(46vw, 300px);
+    }
+}
