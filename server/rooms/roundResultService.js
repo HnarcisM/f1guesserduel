@@ -1,3 +1,4 @@
+const { applyRoundResultToScoreboard } = require('./scoreboardService');
 function getActivePlayers(room) {
     return Object.values(room?.players || {});
 }
@@ -18,14 +19,47 @@ function getPlayerCompletedAt(player) {
     return typeof player?.completedAt === 'number' ? player.completedAt : Number.MAX_SAFE_INTEGER;
 }
 
-function sortCorrectPlayers(a, b) {
+function compareCorrectPlayers(a, b) {
     const attemptsDiff = getPlayerAttempts(a) - getPlayerAttempts(b);
     if (attemptsDiff !== 0) return attemptsDiff;
-    return getPlayerCompletedAt(a) - getPlayerCompletedAt(b);
+
+    const completedAtDiff = getPlayerCompletedAt(a) - getPlayerCompletedAt(b);
+    if (completedAtDiff !== 0) return completedAtDiff;
+
+    return 0;
 }
 
 function getAllPlayersFinished(players) {
     return players.length > 0 && players.every(player => Boolean(player.finished));
+}
+
+function determineRoundOutcome(players) {
+    const correctPlayers = players.filter(getPlayerCorrect).sort(compareCorrectPlayers);
+
+    if (correctPlayers.length === 0) {
+        return {
+            status: 'draw',
+            reason: players.every(player => Boolean(player.timedOut)) ? 'all-timed-out' : 'no-correct-guess',
+            winner: null
+        };
+    }
+
+    const best = correctPlayers[0];
+    const tiedBestPlayers = correctPlayers.filter(player => compareCorrectPlayers(player, best) === 0);
+
+    if (tiedBestPlayers.length > 1) {
+        return {
+            status: 'draw',
+            reason: 'tie-breaker-draw',
+            winner: null
+        };
+    }
+
+    return {
+        status: 'win',
+        reason: 'best-result',
+        winner: best
+    };
 }
 
 function buildPlayerResult(player, winnerSocketId = null, isDraw = false) {
@@ -53,24 +87,6 @@ function buildRoundPlayers(room, winnerSocketId = null, isDraw = false) {
     return getActivePlayers(room).map(player => buildPlayerResult(player, winnerSocketId, isDraw));
 }
 
-function refreshExistingRoundResult(room) {
-    if (!room?.roundResult) return null;
-
-    const players = getActivePlayers(room);
-    const allPlayersFinished = getAllPlayersFinished(players);
-    const isDraw = room.roundResult.status === 'draw';
-
-    room.roundResult.players = buildRoundPlayers(room, room.roundResult.winnerSocketId || null, isDraw);
-    room.roundResult.allPlayersFinished = allPlayersFinished;
-
-    if (allPlayersFinished) {
-        room.roundState = 'finished';
-        room.roundResult.finishedAt = room.roundResult.finishedAt || Date.now();
-    }
-
-    return room.roundResult;
-}
-
 function buildPublicRoundResult(roundResult) {
     if (!roundResult) return null;
 
@@ -81,6 +97,7 @@ function buildPublicRoundResult(roundResult) {
         resolvedAt: roundResult.resolvedAt || null,
         finishedAt: roundResult.finishedAt || null,
         allPlayersFinished: Boolean(roundResult.allPlayersFinished),
+        scoreApplied: Boolean(roundResult.scoreApplied),
         target: roundResult.target || null,
         players: Array.isArray(roundResult.players)
             ? roundResult.players.map(player => ({ ...player }))
@@ -90,50 +107,35 @@ function buildPublicRoundResult(roundResult) {
 
 function resolveRoundWinner(room, reason = 'guess') {
     if (!room || room.roundState !== 'playing') return room?.roundResult || null;
-
-    if (room.roundResult) {
-        return refreshExistingRoundResult(room);
-    }
+    if (room.roundResult) return room.roundResult;
 
     const players = getActivePlayers(room);
     if (players.length === 0) return null;
 
-    const correctPlayers = players.filter(getPlayerCorrect).sort(sortCorrectPlayers);
     const allPlayersFinished = getAllPlayersFinished(players);
+    if (!allPlayersFinished) return null;
+
     const resolvedAt = Date.now();
-    let winner = null;
-    let status = null;
-    let resultReason = reason;
-
-    if (correctPlayers.length > 0) {
-        winner = correctPlayers[0];
-        status = 'win';
-        resultReason = 'correct-guess';
-    } else if (allPlayersFinished) {
-        status = 'draw';
-        resultReason = players.every(player => Boolean(player.timedOut)) ? 'all-timed-out' : 'no-correct-guess';
-    }
-
-    if (!status) return null;
-
+    const outcome = determineRoundOutcome(players);
+    const winner = outcome.winner || null;
+    const status = outcome.status;
     const winnerSocketId = winner?.socketId || null;
     const isDraw = status === 'draw';
     const result = {
         status,
-        reason: resultReason,
+        reason: outcome.reason || reason,
         winnerSocketId,
         winnerUsername: winner?.username || null,
         resolvedAt,
-        finishedAt: allPlayersFinished ? resolvedAt : null,
-        allPlayersFinished,
+        finishedAt: resolvedAt,
+        allPlayersFinished: true,
         target: buildTargetSummary(room),
         players: buildRoundPlayers(room, winnerSocketId, isDraw)
     };
 
     room.roundResult = result;
-    if (allPlayersFinished) {
-        room.roundState = 'finished';
-    }
+    room.roundState = 'finished';
+    applyRoundResultToScoreboard(room, result);
 
     return result;
 }
@@ -162,7 +164,7 @@ function buildPersonalRoundResult(roundResult, member = null) {
     const isWinner = Boolean(roundResult.winnerSocketId && member.socketId === roundResult.winnerSocketId);
     const outcome = playerResult?.outcome || (roundResult.status === 'draw'
         ? 'draw'
-        : isWinner ? 'win' : member.finished ? 'loss' : 'pending');
+        : isWinner ? 'win' : 'loss');
 
     return {
         ...publicResult,

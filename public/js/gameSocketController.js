@@ -15,7 +15,9 @@ export function createGameSocketController({
 	initializeGridStructure,
 	renderGuessResult,
 	renderLiveBoard,
+	renderRoomScoreboard,
 	resetLiveBoard,
+	resetRoomScoreboard,
 	timer,
 	autocomplete
 }) {
@@ -49,7 +51,9 @@ export function createGameSocketController({
 			showEndGamePopup: endGameController.showEndGamePopup,
 			hideEndGamePopup: endGameController.hideEndGamePopup,
 			renderLiveBoard,
+			renderRoomScoreboard,
 			resetLiveBoard,
+			resetRoomScoreboard,
 			handleInitDailyChallenge: dailyChallengeController.handleInit,
 			handleDailyChallengeError: dailyChallengeController.handleError,
 			timer,

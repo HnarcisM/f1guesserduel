@@ -1,5 +1,5 @@
 const { normalizeTimeLimitSeconds, isValidDifficulty } = require('../config/constants');
-const { resetPlayersForNewRound } = require('../rooms/roomService');
+const { resetPlayersForNewRound, syncScoreboardWithPlayers } = require('../rooms/roomService');
 const { pickDailyDriver } = require('./dailyChallenge');
 
 function createGameService(driversRepository) {
@@ -89,10 +89,12 @@ function createGameService(driversRepository) {
         room.dailyDate = null;
         room.dailyChallengeId = null;
         resetPlayersForNewRound(room);
+        syncScoreboardWithPlayers(room);
         room.timed = Boolean(options.timed);
         room.timeLimitSeconds = normalizeTimeLimitSeconds(options.timeLimitSeconds);
         room.roundStartedAt = Date.now();
         room.roundState = 'playing';
+        room.roundResult = null;
 
         return {
             drivers,
@@ -117,10 +119,12 @@ function createGameService(driversRepository) {
         room.dailyDate = null;
         room.dailyChallengeId = null;
         resetPlayersForNewRound(room);
+        syncScoreboardWithPlayers(room);
         room.timed = Boolean(options.timed);
         room.timeLimitSeconds = normalizeTimeLimitSeconds(options.timeLimitSeconds);
         room.roundStartedAt = Date.now();
         room.roundState = 'playing';
+        room.roundResult = null;
 
         return {
             timed: room.timed,

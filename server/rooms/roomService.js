@@ -25,6 +25,12 @@ const {
     buildPublicRoundResult,
     resolveRoundWinner
 } = require('./roundResultService');
+const {
+    buildPublicScoreboard,
+    ensureMemberScoreEntry,
+    resetRoomScoreboard,
+    syncScoreboardWithPlayers
+} = require('./scoreboardService');
 
 function createRoom(roomId, hostSocketId, authUser = null) {
     const room = {
@@ -41,12 +47,14 @@ function createRoom(roomId, hostSocketId, authUser = null) {
         roundStartedAt: null,
         roundState: 'waiting',
         roundResult: null,
+        scoreboard: {},
         isDailyChallenge: false,
         dailyDate: null,
         dailyChallengeId: null
     };
 
     room.players[hostSocketId] = createPlayer(room, hostSocketId, authUser);
+    ensureMemberScoreEntry(room, room.players[hostSocketId]);
     syncHostFlags(room);
 
     return room;
@@ -57,6 +65,7 @@ function addPlayerToRoom(room, socketId, authUser = null) {
 
     if (room.players[socketId]) {
         updateRoomMemberAuth(room.players[socketId], authUser, room);
+        ensureMemberScoreEntry(room, room.players[socketId]);
         syncHostFlags(room);
         return { joined: true, role: 'player' };
     }
@@ -74,6 +83,7 @@ function addPlayerToRoom(room, socketId, authUser = null) {
     }
 
     room.players[socketId] = createPlayer(room, socketId, authUser);
+    ensureMemberScoreEntry(room, room.players[socketId]);
     if (!room.hostId) {
         room.hostId = socketId;
     }
@@ -96,6 +106,7 @@ function promoteNextSpectatorToPlayer(room) {
     spectator.timedOut = false;
     spectator.guesses = [];
     room.players[nextSpectatorId] = spectator;
+    ensureMemberScoreEntry(room, spectator);
 
     if (!room.hostId) {
         room.hostId = nextSpectatorId;
@@ -171,6 +182,7 @@ function refreshRoomMemberAuth(room, socketId, authUser = null) {
     if (!member) return null;
 
     updateRoomMemberAuth(member, authUser, room);
+    if (member.role === 'player') ensureMemberScoreEntry(room, member);
     syncHostFlags(room);
     return member;
 }
@@ -227,12 +239,15 @@ module.exports = {
     hasRoomMember,
     isHost,
     isSpectator,
+    buildPublicScoreboard,
     getPlayerCount,
     getSpectatorCount,
     getRoomMemberCount,
     resetPlayersForNewRound,
     recordPlayerGuess,
     markPlayerTimedOut,
+    resetRoomScoreboard,
+    syncScoreboardWithPlayers,
     buildLiveBoardState,
     buildPublicRoomState,
     buildPersonalRoundResult,

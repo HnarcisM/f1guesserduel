@@ -29,6 +29,15 @@ export function registerSocketEvents(socket, app) {
 		});
 	}
 
+	function renderRoomScoreboard(roomState = {}) {
+		if (!app.isDuelMode?.()) {
+			app.resetRoomScoreboard?.();
+			return;
+		}
+
+		app.renderRoomScoreboard?.(roomState.scoreboard || [], { forceVisible: true });
+	}
+
 	function updateRoomBadge(roomState = {}) {
 		const badge = document.getElementById("duelStatus");
 		if (!badge) return;
@@ -46,6 +55,7 @@ export function registerSocketEvents(socket, app) {
 
 		const roomState = payload.room || payload;
 		updateRoomBadge(roomState);
+		renderRoomScoreboard(roomState);
 		renderLiveBoardForSpectator(payload.liveBoard || roomState.liveBoard);
 	}
 
@@ -93,6 +103,7 @@ export function registerSocketEvents(socket, app) {
 
 	function handleRoundResolved(payload = {}) {
 		if (!app.isDuelMode?.()) return;
+		if (payload.scoreboard) app.renderRoomScoreboard?.(payload.scoreboard, { forceVisible: true });
 		if (payload.liveBoard) app.renderLiveBoard?.(payload.liveBoard, { forceVisible: Boolean(app.isSpectator?.()) });
 
 		if (app.isSpectator?.()) return;
@@ -160,6 +171,7 @@ export function registerSocketEvents(socket, app) {
 		}
 
 		app.initializeGridStructure();
+		if (!app.isDuelMode?.()) app.resetRoomScoreboard?.();
 		renderLiveBoardForSpectator(data.liveBoard);
 
 		const gameZone = document.getElementById("gameZone");
@@ -202,12 +214,17 @@ export function registerSocketEvents(socket, app) {
 		const { guess, results, attempts, isCorrect, isGameOver, target, roundResult } = data;
 		const rendered = app.renderGuessResult({ guess, results, attempts });
 
-		// Popup-ul de final nu trebuie să depindă de randarea gridului.
-		// În Duel, non-host-ul poate primi rezultatul rundei înainte ca UI-ul să fie
-		// perfect stabil, iar dacă renderGuessResult returnează false nu vrem să piardă popup-ul.
-		if (isGameOver && roundResult) {
-			const popupPayload = buildRoundResolvedPopup(roundResult);
-			if (popupPayload) app.showEndGamePopup?.(popupPayload);
+		if (isGameOver && app.isDuelMode?.()) {
+			// În Duel, popup-ul de rezultat apare doar când runda este complet
+			// terminată pentru toți jucătorii și serverul trimite roundResolved.
+			// Astfel evităm să anunțăm câștigătorul înainte ca al doilea player
+			// să termine și înainte să se aplice regula attempts -> timp -> remiză.
+			app.setRoundFinished?.(true);
+			const statusEl = document.getElementById('status');
+			if (statusEl) {
+				statusEl.classList.remove('is-hidden');
+				statusEl.textContent = 'Ai terminat runda. Așteaptă să termine și celălalt jucător pentru rezultatul final.';
+			}
 			return;
 		}
 
@@ -264,6 +281,7 @@ export function registerSocketEvents(socket, app) {
 		app.exitRematchMode();
 		app.initializeGridStructure();
 		app.hideEndGamePopup(false);
+		if (!app.isDuelMode?.()) app.resetRoomScoreboard?.();
 		renderLiveBoardForSpectator(data.liveBoard);
 
 		const popup = document.getElementById("endGameDisplay");

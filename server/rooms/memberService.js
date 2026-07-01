@@ -36,6 +36,7 @@ function createRoomMember(room, socketId, authUser = null, role = 'player') {
         userId: authUser ? authUser.id : null,
         username: authUser ? authUser.username : guestUsername,
         guestUsername,
+        scoreKey: authUser ? `user:${authUser.id}` : `guest:${guestUsername}`,
         role,
         isHost: role === 'player' && room.hostId === socketId,
         attempts: 0,

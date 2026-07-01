@@ -145,6 +145,41 @@ function createPlayerCard(player, index) {
     return card;
 }
 
+function normalizeScoreboard(scoreboard) {
+    return Array.isArray(scoreboard) ? scoreboard.slice(0, 2) : [];
+}
+
+function createScoreEntry(entry, index) {
+    const row = document.createElement('div');
+    row.className = 'room-score-entry';
+    row.append(
+        createTextElement('span', 'room-score-name', entry?.username || `Player ${index + 1}`),
+        createTextElement('span', 'room-score-wins', `${typeof entry?.wins === 'number' ? entry.wins : 0}`)
+    );
+    return row;
+}
+
+export function renderRoomScoreboard(scoreboard, options = {}) {
+    const container = document.getElementById('roomScoreboard');
+    const playersContainer = document.getElementById('roomScoreboardPlayers');
+    if (!container || !playersContainer) return;
+
+    const entries = normalizeScoreboard(scoreboard);
+    const shouldShow = Boolean(options.forceVisible) && entries.length > 0;
+    container.classList.toggle('is-hidden', !shouldShow);
+    clearNode(playersContainer);
+
+    if (!shouldShow) return;
+
+    for (let index = 0; index < Math.max(entries.length, 2); index++) {
+        playersContainer.appendChild(createScoreEntry(entries[index], index));
+    }
+}
+
+export function resetRoomScoreboard() {
+    renderRoomScoreboard([], { forceVisible: false });
+}
+
 export function renderLiveBoard(board, options = {}) {
     try {
         const container = document.getElementById('liveDuelBoard');

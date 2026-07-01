@@ -1,25 +1,24 @@
 {
   "version": 1,
-  "savedAt": "2026-07-01T19:52:35.768Z",
+  "savedAt": "2026-07-01T20:37:03.604Z",
   "rooms": [
     {
-      "roomId": "hyymbcy",
+      "roomId": "tc3own4",
       "hostId": null,
       "players": {},
       "spectators": {},
-      "nextGuestNumber": 4,
+      "nextGuestNumber": 5,
       "targetDriver": {
-        "id": "HAM",
-        "name": "Lewis Hamilton",
-        "nat": "GBR",
+        "id": "COL",
+        "name": "Franco Colapinto",
+        "nat": "ARG",
         "team": [
-          "Ferrari",
-          "Mercedes",
-          "McLaren"
+          "Alpine",
+          "Williams"
         ],
-        "age": 41,
-        "debut": 2007,
-        "wins": 106,
+        "age": 23,
+        "debut": 2024,
+        "wins": 0,
         "difficulty": "easy"
       },
       "difficulty": "easy",
@@ -546,33 +545,33 @@
       ],
       "timed": false,
       "timeLimitSeconds": 60,
-      "roundStartedAt": 1782935528882,
+      "roundStartedAt": 1782938141418,
       "roundState": "finished",
       "roundResult": {
         "status": "win",
-        "reason": "correct-guess",
+        "reason": "best-result",
         "winnerSocketId": null,
-        "winnerUsername": "narcis",
-        "resolvedAt": 1782935477894,
+        "winnerUsername": "mihai",
+        "resolvedAt": 1782938218892,
         "target": {
-          "name": "Sergio Perez"
+          "name": "Franco Colapinto"
         },
         "players": [
           {
-            "username": "narcis",
+            "username": "mihai",
             "role": "player",
             "isHost": true,
-            "attempts": 2,
+            "attempts": 4,
             "finished": true,
             "timedOut": false,
             "isCorrect": true,
             "outcome": "win"
           },
           {
-            "username": "narcis",
+            "username": "bonib0n",
             "role": "player",
             "isHost": false,
-            "attempts": 1,
+            "attempts": 5,
             "finished": true,
             "timedOut": false,
             "isCorrect": true,

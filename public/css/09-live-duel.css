@@ -261,3 +261,78 @@ body.spectator-active .live-duel-board {
     margin-top: 18px;
 }
 
+
+/* Scoreboard duel: scor persistent pe cameră, vizibil pentru playeri și spectatori. */
+.room-scoreboard {
+    width: min(100%, 680px);
+    margin: 10px auto 16px;
+    padding: 12px 14px;
+    border: 1px solid var(--border-soft);
+    border-radius: 18px;
+    background: color-mix(in srgb, var(--surface-card) 86%, transparent);
+    box-shadow: var(--shadow-card);
+}
+
+.room-scoreboard.is-hidden,
+body:not(.mode-duel) .room-scoreboard {
+    display: none !important;
+}
+
+.room-scoreboard-label {
+    margin-bottom: 8px;
+    color: var(--accent-f1);
+    font-size: 0.74rem;
+    font-weight: 950;
+    letter-spacing: 0.1em;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+.room-scoreboard-players {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.room-score-entry {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.065);
+}
+
+.room-score-name {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text-primary);
+    font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.room-score-wins {
+    flex: 0 0 auto;
+    min-width: 42px;
+    padding: 6px 9px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--accent-f1);
+    font-weight: 950;
+    text-align: center;
+}
+
+@media (max-width: 520px) {
+    .room-scoreboard {
+        padding: 10px;
+        border-radius: 16px;
+    }
+
+    .room-scoreboard-players {
+        grid-template-columns: 1fr;
+    }
+}

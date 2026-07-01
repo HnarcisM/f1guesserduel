@@ -1,5 +1,6 @@
 const { MAX_PLAYERS_PER_ROOM } = require('../config/constants');
 const { buildPublicRoundResult } = require('./roundResultService');
+const { buildPublicScoreboard } = require('./scoreboardService');
 
 function serializeGuessEntry(entry) {
     return {
@@ -41,6 +42,7 @@ function buildLiveBoardState(room) {
     return {
         roundState: room.roundState,
         roundResult: buildPublicRoundResult(room.roundResult),
+        scoreboard: buildPublicScoreboard(room),
         isDailyChallenge: Boolean(room.isDailyChallenge),
         dailyDate: room.dailyDate || null,
         players: Object.values(room.players || {}).map(member => serializeRoomMember(member, { includeGuesses: true }))
@@ -58,6 +60,7 @@ function buildPublicRoomState(room) {
         maxPlayers: MAX_PLAYERS_PER_ROOM,
         roundState: room.roundState,
         roundResult: buildPublicRoundResult(room.roundResult),
+        scoreboard: buildPublicScoreboard(room),
         difficulty: room.difficulty || null,
         isDailyChallenge: Boolean(room.isDailyChallenge),
         dailyDate: room.dailyDate || null,

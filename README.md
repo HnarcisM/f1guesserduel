@@ -29,6 +29,8 @@ Aplicația rulează cu **Node.js**, **Express** și **Socket.IO**, iar interfaț
 - Joc de ghicit piloți de Formula 1.
 - Selectare clară între Single Play, Duel și Daily Challenge.
 - Suport pentru camere multiplayer / duel prin link de room.
+- Winner logic pe rundă în Duel: câștigătorul se decide după ce termină ambii playeri, după criteriile mai puține încercări → timp mai bun → remiză.
+- Scoreboard persistent pe cameră pentru rundele de Duel.
 - Alegere dificultate înainte de începerea rundei.
 - Autocomplete pentru numele piloților.
 - Feedback vizual după fiecare încercare.
@@ -53,10 +55,11 @@ Aplicația rulează cu **Node.js**, **Express** și **Socket.IO**, iar interfaț
 7. Utilizatorul introduce un pilot și trimite ghicirea.
 8. Serverul compară pilotul ales cu pilotul țintă.
 9. Clientul primește doar rezultatul comparației, nu și răspunsul complet.
-10. Jocul se termină când:
-   - pilotul este ghicit corect; sau
-   - sunt epuizate cele 6 încercări.
-11. La final se afișează popup-ul de rezultat și statisticile locale.
+10. În `Single Play` și `Daily Challenge`, jocul se termină când pilotul este ghicit corect sau sunt epuizate cele 6 încercări.
+11. În `Duel`, niciun player nu primește popup de câștig/pierdere până nu termină ambii playeri activi.
+12. Câștigătorul rundei este decis după aceste criterii: mai puține încercări, apoi timp mai bun, apoi remiză dacă ambele sunt egale.
+13. Scoreboard-ul de cameră se actualizează după calcularea rezultatului final și se păstrează la rematch.
+14. La final se afișează popup-ul de rezultat și statisticile locale.
 
 Răspunsul corect este ținut pe server până la finalul jocului, pentru a evita citirea lui directă din codul client-side.
 
@@ -589,4 +592,20 @@ daily   - Daily Challenge individual
 
 Ecranul inițial permite acum alegerea explicită a modului. Aplicația pornește implicit în `single`, creează/join-uiește camera doar când alegi `duel` sau intri direct pe un link cu `?room=...`, iar `daily` rămâne separat de ambele.
 
-Această separare este fundația pentru următoarele feature-uri: winner logic pe rundă, scoreboard pe cameră, lobby, ready system și Daily Challenge server-side.
+Această separare este fundația pentru feature-urile de cameră: winner logic pe rundă, scoreboard pe cameră, lobby, ready system și Daily Challenge server-side.
+
+### Winner logic și scoreboard în Duel
+
+În modul `Duel`, winner logic-ul este decis server-side:
+
+```text
+- rezultatul se calculează doar după ce toți playerii activi au terminat;
+- câștigă playerul care a ghicit corect în mai puține încercări;
+- dacă numărul de încercări este egal, câștigă playerul care a terminat mai repede;
+- dacă și numărul de încercări, și timpul sunt egale, runda este remiză;
+- dacă nimeni nu ghicește corect, runda este remiză;
+- scorul camerei se incrementează o singură dată, după calcularea rezultatului final;
+- rematch-ul păstrează scorul camerei și resetează doar runda.
+```
+
+Scoreboard-ul este vizibil în modul Duel și este inclus în starea publică a camerei fără să expună `socketId` sau `userId`.

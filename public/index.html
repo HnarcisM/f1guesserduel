@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>F1 Guesser</title>
-    <link rel="stylesheet" href="/style.css?v=mode-select-1">
+    <link rel="stylesheet" href="/style.css?v=e2e-mobile-rematch-fix-1">
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
@@ -126,6 +126,10 @@
 
     <div id="status">Se așteaptă selectarea dificultății...</div>
     <div id="diff-display-label"></div>
+    <section id="roomScoreboard" class="room-scoreboard is-hidden" aria-live="polite">
+        <div class="room-scoreboard-label">Scor duel</div>
+        <div id="roomScoreboardPlayers" class="room-scoreboard-players"></div>
+    </section>
     <div id="roundTimer" class="round-timer is-hidden" aria-live="polite">
         <div class="timer-track-header">
             <span class="timer-track-start">START</span>
@@ -263,6 +267,6 @@
     </div>
 </div>
 
-<script type="module" src="/game.js?v=daily-panel-toggle-1"></script>
+<script type="module" src="/game.js?v=e2e-mobile-rematch-fix-1"></script>
 </body>
 </html>

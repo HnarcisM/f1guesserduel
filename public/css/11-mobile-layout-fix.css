@@ -326,3 +326,37 @@
         max-width: 132px;
     }
 }
+
+/* --- MODE SELECTION MOBILE OVERFLOW GUARD --- */
+/* Cardurile de selectare mod au fost adăugate după fix-urile inițiale de mobile.
+   Pe viewport-uri înguste, padding-ul overlay-ului + cardurile puteau depăși lățimea body-ului. */
+@media (max-width: 520px) {
+    .overlay {
+        padding-left: var(--space-lg);
+        padding-right: var(--space-lg);
+    }
+
+    .menu-container {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        padding-left: var(--space-3xl);
+        padding-right: var(--space-3xl);
+    }
+
+    .game-mode-selection,
+    .difficulty-grid,
+    .difficulty-section {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .game-mode-card,
+    .btn-diff {
+        width: 100%;
+        max-width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+}

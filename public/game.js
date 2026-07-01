@@ -2,7 +2,7 @@ import { createAutocomplete } from './js/autocomplete.js';
 import { initializeGridStructure, renderGuessResult } from './js/gridView.js';
 import { createTimerView } from './js/timerView.js';
 import { createAuthView } from './js/authView.js';
-import { renderLiveBoard, resetLiveBoard } from './js/liveBoardView.js';
+import { renderLiveBoard, renderRoomScoreboard, resetLiveBoard, resetRoomScoreboard } from './js/liveBoardView.js';
 import { createRoleState } from './js/roleState.js';
 import { createDailyChallengeController } from './js/dailyChallengeController.js';
 import { createEndGameController } from './js/endGameController.js';
@@ -204,6 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		exitRematchMode: () => endGameController?.exitRematchMode?.(),
 		initializeGridStructure,
 		resetLiveBoard,
+		resetRoomScoreboard,
 		gameModeController
 	});
 
@@ -218,7 +219,9 @@ document.addEventListener('DOMContentLoaded', () => {
 		initializeGridStructure,
 		renderGuessResult,
 		renderLiveBoard,
+		renderRoomScoreboard,
 		resetLiveBoard,
+		resetRoomScoreboard,
 		timer,
 		autocomplete
 	});

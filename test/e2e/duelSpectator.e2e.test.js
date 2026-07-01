@@ -241,7 +241,8 @@ async function makeGuess(page, query) {
     return true;
 }
 
-async function finishRoundByGuessing(page) {
+async function finishRoundByGuessing(page, options = {}) {
+    const { waitForPopup = true } = options;
     const guesses = ['Arvid', 'Andrea', 'Gabriel', 'Isack', 'Franco', 'Oliver'];
     const popup = page.locator('#endGameDisplay.show');
 
@@ -255,7 +256,9 @@ async function finishRoundByGuessing(page) {
         if (popupAppeared) return;
     }
 
-    await popup.waitFor({ timeout: 7000 });
+    if (waitForPopup) {
+        await popup.waitFor({ timeout: 7000 });
+    }
 }
 
 async function expectNoHorizontalOverlap(leftLocator, rightLocator) {
@@ -455,8 +458,10 @@ test('host can start a rematch after a round ends', { concurrency: false }, asyn
         await host.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
         await playerTwo.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
 
-        await finishRoundByGuessing(host);
+        await finishRoundByGuessing(host, { waitForPopup: false });
+        await finishRoundByGuessing(playerTwo, { waitForPopup: true });
         await host.locator('#endGameDisplay.show').waitFor({ timeout: 7000 });
+        await playerTwo.locator('#endGameDisplay.show').waitFor({ timeout: 7000 });
         await host.locator('#restartGameBtn').click();
 
         await host.locator('#endGameDisplay').waitFor({ state: 'hidden', timeout: 7000 });
