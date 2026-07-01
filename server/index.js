@@ -14,6 +14,7 @@ const { createSessionService } = require('./auth/sessionService');
 const { createAuthService } = require('./auth/authService');
 const { createAuthRoutes } = require('./auth/authRoutes');
 const { createAuthMiddleware } = require('./middleware/authMiddleware');
+const { createHealthRoutes } = require('./routes/healthRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -58,6 +59,7 @@ function setStaticCacheHeaders(res, filePath) {
 app.use(express.json({ limit: '32kb' }));
 app.use(cookieParser());
 app.use(createAuthMiddleware(sessionService));
+app.use('/api', createHealthRoutes());
 app.use('/api/auth', createAuthRoutes({ authService, sessionService }));
 app.use(express.static(path.join(__dirname, '..', 'public'), {
     etag: true,
