@@ -48,7 +48,7 @@ export function getRoomIdFromUrl() {
 	return urlParams.get('room');
 }
 
-export function setupRoom({ getSocket }) {
+export function setupRoom({ getSocket, onRoomJoined } = {}) {
 	let roomId = getRoomIdFromUrl();
 
 	if (!roomId) {
@@ -64,7 +64,9 @@ export function setupRoom({ getSocket }) {
 	const linkTextEl = document.getElementById('linkText');
 	if (linkTextEl) linkTextEl.innerText = window.location.href;
 
-	const socket = getSocket();
+	onRoomJoined?.(roomId);
+
+	const socket = getSocket?.();
 	if (socket) {
 		socket.emit('joinRoom', roomId);
 	}

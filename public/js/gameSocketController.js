@@ -10,6 +10,7 @@ export function createGameSocketController({
 	setRoundFinished,
 	roleState,
 	dailyChallengeController,
+	gameModeController,
 	endGameController,
 	initializeGridStructure,
 	renderGuessResult,
@@ -31,8 +32,12 @@ export function createGameSocketController({
 			setSpectatorMode: roleState.setSpectatorMode,
 			setDailyMode: dailyChallengeController.setMode,
 			setDailyStartPending: dailyChallengeController.setStartPending,
+			enterDuelMode: gameModeController?.enterDuel,
+			enterSingleMode: gameModeController?.enterSingle,
+			enterDailyMode: gameModeController?.enterDaily,
+			getGameMode: gameModeController?.getMode,
 			completeDailyChallenge: dailyChallengeController.complete,
-			isDailyMode: dailyChallengeController.isMode,
+			isDailyMode: () => gameModeController?.isDaily?.() || dailyChallengeController.isMode(),
 			isDailyStartPending: dailyChallengeController.isStartPending,
 			isSpectator: roleState.isSpectator,
 			getRoleBadgeLabel: roleState.getRoleBadgeLabel,
@@ -53,7 +58,7 @@ export function createGameSocketController({
 	function connect() {
 		try {
 			if (typeof io === 'undefined') {
-				console.error("Eroare: Socket.io nu este încărcat! Pornește serverul cu 'node server.js' și accesează http://localhost:3000");
+				console.error("Eroare: Socket.io nu este încărcat! Pornește serverul cu 'npm start' și accesează http://localhost:3000");
 				return null;
 			}
 

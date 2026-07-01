@@ -37,7 +37,8 @@ export function createDailyChallengeController({
 	setRoundFinished,
 	exitRematchMode,
 	initializeGridStructure,
-	resetLiveBoard
+	resetLiveBoard,
+	gameModeController
 } = {}) {
 	let isDailyMode = false;
 	let isDailyStartPending = false;
@@ -53,7 +54,11 @@ export function createDailyChallengeController({
 		isDailyMode = Boolean(value);
 		if (isDailyMode) isDailyStartPending = false;
 		currentDailyChallenge = isDailyMode ? challenge : null;
-		document.body.classList.toggle('daily-active', isDailyMode);
+		if (isDailyMode) {
+			gameModeController?.enterDaily?.(challenge || {});
+		} else if (gameModeController?.isDaily?.()) {
+			gameModeController.exitDaily?.();
+		}
 
 		if (isDailyMode) {
 			roleState?.setSpectatorMode?.(false);
@@ -102,7 +107,7 @@ export function createDailyChallengeController({
 
 		isDailyStartPending = false;
 		setMode(false);
-		showErrorToast("Butonul funcționează, dar nu ești conectat la server! Porneste 'node server.js'");
+		showErrorToast("Butonul funcționează, dar nu ești conectat la server! Pornește serverul cu 'npm start'");
 	}
 
 	function handleInit(data = {}) {

@@ -10,6 +10,7 @@ import { createGameSocketController } from './js/gameSocketController.js';
 import { setupShareButton, setupRoom } from './js/roomController.js';
 import { setupMenuControllers } from './js/menuController.js';
 import { showErrorToast } from './js/toastController.js';
+import { createGameModeController } from './js/gameModeController.js';
 
 /**
  * F1 Guesser Duel - frontend entry point.
@@ -26,6 +27,7 @@ let authReadyOnce = false;
 let dailyChallengeController;
 let autocomplete;
 let endGameController;
+let gameModeController;
 
 
 const roleState = createRoleState({
@@ -67,7 +69,7 @@ function createEndGameHandlers() {
 		timer,
 		dailyChallengeState: dailyChallengeController.state,
 		getSocket: () => socketController?.getSocket?.() || null,
-		getIsDailyMode: dailyChallengeController.isMode,
+		getIsDailyMode: () => gameModeController?.isDaily?.() || dailyChallengeController.isMode(),
 		getIsRoundFinished: () => isRoundFinished,
 		setRoundFinished
 	});
@@ -94,7 +96,7 @@ function sendGuess() {
 	}
 
 	socketController?.emit(
-		dailyChallengeController.isMode() ? 'submitDailyGuess' : 'submitGuess',
+		gameModeController?.isDaily?.() ? 'submitDailyGuess' : 'submitGuess',
 		finalDriver.id
 	);
 	inputEl.value = '';
@@ -105,13 +107,16 @@ function sendGuess() {
 function startRoundFromSelection(level) {
 	dailyChallengeController.setStartPending(false);
 	dailyChallengeController.setMode(false);
+	if (gameModeController?.isDaily?.()) {
+		gameModeController.exitDaily();
+	}
 	if (!roleState.requirePlayer('Ești spectator. Doar hostul poate porni jocul.')) return;
 
 	const overlay = document.getElementById('difficulty-overlay');
 	if (overlay) overlay.classList.add('hidden');
 
 	if (!socketController?.emit('setDifficulty', timer.buildRoundOptions(level))) {
-		showErrorToast("Butonul funcționează, dar nu ești conectat la server! Porneste 'node server.js'");
+		showErrorToast("Butonul funcționează, dar nu ești conectat la server! Pornește serverul cu 'npm start'");
 	}
 }
 
@@ -140,6 +145,9 @@ function setupAuth() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+	gameModeController = createGameModeController();
+	gameModeController.enterSingle();
+
 	autocomplete = createAutocomplete({
 		getDriversList: () => driversList,
 		onSubmitGuess: sendGuess
@@ -154,7 +162,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		setRoundFinished,
 		exitRematchMode: () => endGameController?.exitRematchMode?.(),
 		initializeGridStructure,
-		resetLiveBoard
+		resetLiveBoard,
+		gameModeController
 	});
 
 	createEndGameHandlers();
@@ -163,6 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		setRoundFinished,
 		roleState,
 		dailyChallengeController,
+		gameModeController,
 		endGameController,
 		initializeGridStructure,
 		renderGuessResult,
@@ -185,5 +195,8 @@ document.addEventListener('DOMContentLoaded', () => {
 	setupShareButton();
 	setupAuth();
 	socketController.connect();
-	setupRoom({ getSocket: socketController.getSocket });
+	setupRoom({
+		getSocket: socketController.getSocket,
+		onRoomJoined: (roomId) => gameModeController.enterDuel({ roomId })
+	});
 });

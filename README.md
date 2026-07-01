@@ -566,3 +566,22 @@ Daily Challenge se resetează la miezul nopții local al browserului și este bl
 ## Test launcher progress
 
 `F1GuesserDuel_Tests.bat` afișează mesaje `[progress]` pentru comenzile lungi, inclusiv `npm install`, instalarea Chromium Playwright și testele E2E.
+
+
+### Structură frontend pe moduri de joc
+
+Frontend-ul are un controller dedicat pentru modul de joc curent:
+
+```text
+public/js/gameModeController.js
+```
+
+Modurile definite sunt:
+
+```text
+single  - joc individual normal
+duel    - joc în cameră cu playeri/spectatori
+daily   - Daily Challenge individual
+```
+
+Momentan controllerul păstrează comportamentul existent și servește ca fundație pentru următoarele feature-uri: winner logic pe rundă, scoreboard pe cameră, lobby, ready system și Daily Challenge server-side.
