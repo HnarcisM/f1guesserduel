@@ -124,3 +124,9 @@ body.daily-active #liveDuelBoard {
 .daily-challenge-copy #dailyResetInfo {
     color: var(--text-secondary);
 }
+
+/* Daily panel is shown only after the Daily Challenge mode card is selected. */
+.daily-challenge-card.is-hidden,
+body:not(.mode-daily) .daily-challenge-card {
+    display: none !important;
+}

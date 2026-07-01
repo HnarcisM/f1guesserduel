@@ -16,6 +16,10 @@ export function createGameModeSelectionController({
 		return document.getElementById('difficultySection');
 	}
 
+	function getDailyPanel() {
+		return document.getElementById('dailyChallengePanel');
+	}
+
 	function updateModeSelection(mode) {
 		getModeControls().forEach(control => {
 			const isActive = control.dataset.gameModeChoice === mode;
@@ -26,6 +30,13 @@ export function createGameModeSelectionController({
 		const difficultySection = getDifficultySection();
 		if (difficultySection) {
 			difficultySection.classList.toggle('is-hidden', mode === 'daily');
+		}
+
+		const dailyPanel = getDailyPanel();
+		if (dailyPanel) {
+			const showDailyPanel = mode === 'daily';
+			dailyPanel.classList.toggle('is-hidden', !showDailyPanel);
+			dailyPanel.setAttribute('aria-hidden', String(!showDailyPanel));
 		}
 	}
 
@@ -49,6 +60,7 @@ export function createGameModeSelectionController({
 	}
 
 	function selectDaily(level = null) {
+		gameModeController?.enterDaily?.({ source: 'mode-selection' });
 		updateModeSelection('daily');
 		if (level) {
 			startDailyChallenge?.(level);
