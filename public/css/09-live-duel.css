@@ -740,3 +740,42 @@ body:not(.mode-duel) .duel-lobby-panel {
     opacity: 0.52;
     transform: none;
 }
+
+/* Lobby leave action: available while a user is in the Duel lobby. */
+.duel-lobby-header-actions {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    min-width: 0;
+}
+
+.duel-lobby-leave-btn {
+    border: 1px solid color-mix(in srgb, var(--danger) 52%, var(--border-soft));
+    border-radius: 999px;
+    padding: 8px 12px;
+    background: color-mix(in srgb, var(--danger) 14%, rgba(255, 255, 255, 0.07));
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 950;
+    transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.duel-lobby-leave-btn:hover {
+    transform: translateY(-1px);
+    border-color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 24%, rgba(255, 255, 255, 0.09));
+}
+
+@media (max-width: 760px) {
+    .duel-lobby-header-actions {
+        align-items: stretch;
+        width: 100%;
+    }
+
+    .duel-lobby-leave-btn {
+        width: 100%;
+    }
+}

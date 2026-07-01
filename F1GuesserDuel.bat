@@ -13,6 +13,8 @@ echo.
 
 set "REQUIRED_NODE_MAJOR=22"
 set "NEEDS_NEW_TERMINAL=0"
+set "SERVER_PORT=%PORT%"
+if not defined SERVER_PORT set "SERVER_PORT=3000"
 
 call :ensureWinget
 if errorlevel 1 goto :manualSetupRequired
@@ -29,7 +31,7 @@ if errorlevel 1 goto :manualSetupRequired
 call :configureNpmPython
 
 echo.
-echo [5/6] Curat instalari npm incomplete daca este nevoie...
+echo [5/8] Curat instalari npm incomplete daca este nevoie...
 if exist "node_modules\better-sqlite3" (
     node -e "require.resolve('better-sqlite3')" >nul 2>nul
     if errorlevel 1 (
@@ -47,7 +49,7 @@ if exist "node_modules" (
 )
 
 echo.
-echo [5/6] Instalez/verific dependentele proiectului npm pentru server...
+echo [6/8] Instalez/verific dependentele proiectului npm pentru server...
 call npm.cmd install --omit=dev
 if errorlevel 1 (
     echo.
@@ -82,15 +84,33 @@ if errorlevel 1 (
     exit /b 1
 )
 echo.
-echo [6/6] Pornesc serverul...
-echo Aplicatia va fi disponibila de obicei la: http://localhost:3000
+echo [7/8] Verific daca portul %SERVER_PORT% este deja ocupat...
+call :freeServerPort
+if errorlevel 1 (
+    echo.
+    echo EROARE: Nu am putut elibera portul %SERVER_PORT%.
+    echo Inchide manual serverul vechi sau ruleaza acest .bat cu Run as administrator.
+    pause
+    exit /b 1
+)
+
+echo.
+echo [8/8] Pornesc serverul...
+echo Aplicatia va fi disponibila de obicei la: http://localhost:%SERVER_PORT%
 echo.
 node server/index.js
 pause
 exit /b 0
 
+:freeServerPort
+if not defined SERVER_PORT set "SERVER_PORT=3000"
+
+powershell -NoProfile -ExecutionPolicy Bypass -Command "if (-not ('%SERVER_PORT%' -match '^[0-9]+$')) { Write-Host 'Port invalid: %SERVER_PORT%'; exit 2 }; $port = [int]'%SERVER_PORT%'; $connections = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue; if (-not $connections) { Write-Host ('Portul ' + $port + ' este liber.'); exit 0 }; $ownerPids = $connections | Select-Object -ExpandProperty OwningProcess -Unique; foreach ($ownerPid in $ownerPids) { if (-not $ownerPid) { continue }; try { $proc = Get-Process -Id $ownerPid -ErrorAction Stop; Write-Host ('Inchid procesul care ocupa portul ' + $port + ': ' + $proc.ProcessName + ' PID ' + $ownerPid); Stop-Process -Id $ownerPid -Force -ErrorAction Stop } catch { Write-Host ('Nu am putut inchide PID ' + $ownerPid + ': ' + $_.Exception.Message); exit 1 } }; Start-Sleep -Milliseconds 500; $stillBusy = Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue; if ($stillBusy) { Write-Host ('Portul ' + $port + ' este inca ocupat.'); exit 1 }; Write-Host ('Portul ' + $port + ' a fost eliberat.'); exit 0"
+if errorlevel 1 exit /b 1
+exit /b 0
+
 :ensureWinget
-echo [1/6] Verific winget...
+echo [1/8] Verific winget...
 where winget >nul 2>nul
 if errorlevel 1 (
     echo winget nu este disponibil pe acest Windows.
@@ -102,7 +122,7 @@ exit /b 0
 
 :ensureCompatibleNode
 echo.
-echo [2/6] Verific Node.js compatibil cu better-sqlite3...
+echo [2/8] Verific Node.js compatibil cu better-sqlite3...
 call :refreshNvmPath
 where node >nul 2>nul
 if errorlevel 1 (
@@ -190,7 +210,7 @@ exit /b 0
 
 :ensurePython
 echo.
-echo [3/6] Verific Python pentru node-gyp...
+echo [3/8] Verific Python pentru node-gyp...
 py -3 --version >nul 2>nul
 if not errorlevel 1 (
     for /f "tokens=*" %%v in ('py -3 --version 2^>^&1') do echo Python detectat: %%v
@@ -210,7 +230,7 @@ exit /b 0
 
 :ensureBuildTools
 echo.
-echo [4/6] Verific Visual Studio Build Tools / C++ compiler...
+echo [4/8] Verific Visual Studio Build Tools / C++ compiler...
 set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
 if exist "%VSWHERE%" (
     "%VSWHERE%" -products * -requires Microsoft.VisualStudio.Workload.VCTools -property installationPath >nul 2>nul

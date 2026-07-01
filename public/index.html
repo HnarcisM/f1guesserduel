@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>F1 Guesser</title>
-    <link rel="stylesheet" href="/style.css?v=duel-lobby-player-select-1">
+    <link rel="stylesheet" href="/style.css?v=duel-lobby-exit-main-1">
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
@@ -133,7 +133,10 @@
                 <h2 id="duelLobbyTitle">Lobby Duel</h2>
                 <p id="duelLobbySubtitle" class="duel-lobby-subtitle">Hostul poate configura și porni următoarea rundă din lobby.</p>
             </div>
-            <div id="duelLobbyRoomCode" class="duel-lobby-room-code">Camera --</div>
+            <div class="duel-lobby-header-actions">
+                <div id="duelLobbyRoomCode" class="duel-lobby-room-code">Camera --</div>
+                <button type="button" id="duelLobbyLeaveBtn" class="duel-lobby-leave-btn">Ieși din cameră</button>
+            </div>
         </div>
 
         <div id="duelLobbyMembers" class="duel-lobby-members" aria-label="Jucători în lobby"></div>
