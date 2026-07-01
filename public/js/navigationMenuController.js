@@ -1,3 +1,4 @@
+import { showErrorToast } from './toastController.js';
 export function setupDailyChallengeControls({ startDailyChallenge }) {
 	document.addEventListener('click', (event) => {
 		const dailyControl = event.target.closest('[data-daily-level]');
@@ -14,7 +15,7 @@ export function setupDailyChallengeControls({ startDailyChallenge }) {
 	}, true);
 }
 
-export function setupMenu({ startRoundFromSelection, startDailyChallenge, confirmDuelExit, abortDuelRound }) {
+export function setupMenu({ startRoundFromSelection, startDailyChallenge, confirmDuelExit, abortDuelRound, getIsDuelMode }) {
 	const menuBtn = document.getElementById('menu-hamburger');
 	const menu = document.getElementById('dropdown-menu');
 
@@ -30,7 +31,7 @@ export function setupMenu({ startRoundFromSelection, startDailyChallenge, confir
 		siteTitle.addEventListener('click', () => {
 			const leaveResult = confirmDuelExit?.('home');
 			if (leaveResult === false) return;
-			if (leaveResult === 'left-duel') return;
+			if (leaveResult === 'left-duel' || leaveResult === 'to-lobby') return;
 			window.location.reload();
 		});
 	}
@@ -43,9 +44,13 @@ export function setupMenu({ startRoundFromSelection, startDailyChallenge, confir
 			if (choice === 'home') {
 				const leaveResult = confirmDuelExit?.('home');
 				if (leaveResult === false) return;
-				if (leaveResult === 'left-duel') return;
+				if (leaveResult === 'left-duel' || leaveResult === 'to-lobby') return;
 				window.location.reload();
 			} else if (choice) {
+				if (getIsDuelMode?.()) {
+					showErrorToast('În Duel, dificultatea se schimbă doar din lobby.');
+					return;
+				}
 				startRoundFromSelection(choice);
 			}
 		});

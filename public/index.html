@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>F1 Guesser</title>
-    <link rel="stylesheet" href="/style.css?v=opponent-progress-1">
+    <link rel="stylesheet" href="/style.css?v=duel-lobby-1">
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
@@ -126,6 +126,55 @@
 
     <div id="status">Se așteaptă selectarea dificultății...</div>
     <div id="diff-display-label"></div>
+    <section id="duelLobbyPanel" class="duel-lobby-panel is-hidden" aria-live="polite" aria-hidden="true">
+        <div class="duel-lobby-header">
+            <div>
+                <p class="duel-lobby-eyebrow">Duel room</p>
+                <h2 id="duelLobbyTitle">Lobby Duel</h2>
+                <p id="duelLobbySubtitle" class="duel-lobby-subtitle">Hostul poate configura și porni următoarea rundă din lobby.</p>
+            </div>
+            <div id="duelLobbyRoomCode" class="duel-lobby-room-code">Camera --</div>
+        </div>
+
+        <div id="duelLobbyMembers" class="duel-lobby-members" aria-label="Jucători în lobby"></div>
+
+        <div class="duel-lobby-settings" aria-label="Setări lobby duel">
+            <div class="duel-lobby-settings-header">
+                <div>
+                    <p class="duel-lobby-eyebrow">Setări rundă</p>
+                    <h3>Configurare host</h3>
+                </div>
+                <p id="duelLobbySettingsHint" class="duel-lobby-settings-hint">Doar hostul poate modifica setările.</p>
+            </div>
+
+            <div class="duel-lobby-setting-group">
+                <span class="duel-lobby-setting-label">Dificultate</span>
+                <div class="duel-lobby-option-row">
+                    <button type="button" class="duel-lobby-option active" data-duel-lobby-level="easy" aria-pressed="true">🟢 Easy</button>
+                    <button type="button" class="duel-lobby-option" data-duel-lobby-level="medium" aria-pressed="false">🟡 Medium</button>
+                    <button type="button" class="duel-lobby-option" data-duel-lobby-level="hard" aria-pressed="false">🔴 Hard</button>
+                </div>
+            </div>
+
+            <div class="duel-lobby-setting-group">
+                <span class="duel-lobby-setting-label">Timer</span>
+                <div class="duel-lobby-option-row">
+                    <button type="button" class="duel-lobby-option timer-mode-option active" data-timer-mode="off">∞ Fără timp</button>
+                    <button type="button" class="duel-lobby-option timer-mode-option" data-timer-mode="60">⏱️ 60 sec</button>
+                    <button type="button" class="duel-lobby-option timer-mode-option" data-timer-mode="90">⏱️ 90 sec</button>
+                    <button type="button" class="duel-lobby-option timer-mode-option" data-timer-mode="120">⏱️ 120 sec</button>
+                </div>
+            </div>
+
+            <button type="button" id="duelLobbyStartBtn" class="duel-lobby-start-btn">Pornește runda</button>
+        </div>
+
+        <div class="duel-lobby-spectators-block">
+            <p class="duel-lobby-eyebrow">Spectatori</p>
+            <div id="duelLobbySpectators" class="duel-lobby-spectators"></div>
+        </div>
+    </section>
+
     <section id="roomScoreboard" class="room-scoreboard is-hidden" aria-live="polite">
         <div class="room-scoreboard-label">Scor duel</div>
         <div id="roomScoreboardPlayers" class="room-scoreboard-players"></div>

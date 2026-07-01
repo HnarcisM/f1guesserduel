@@ -4,6 +4,7 @@ import { createTimerView } from './js/timerView.js';
 import { createAuthView } from './js/authView.js';
 import { renderLiveBoard, renderRoomScoreboard, resetLiveBoard, resetRoomScoreboard } from './js/liveBoardView.js';
 import { renderOpponentProgress, resetOpponentProgress } from './js/opponentProgressView.js';
+import { renderDuelLobby, resetDuelLobby, setupDuelLobbyView } from './js/duelLobbyView.js';
 import { createRoleState } from './js/roleState.js';
 import { createDailyChallengeController } from './js/dailyChallengeController.js';
 import { createEndGameController } from './js/endGameController.js';
@@ -33,6 +34,7 @@ let gameModeController;
 let gameModeSelectionController;
 let activeRoomId = null;
 let isDuelRoundActive = false;
+let lastDuelRoomState = null;
 
 
 const roleState = createRoleState({
@@ -78,8 +80,33 @@ function setDuelRoundState(roundState) {
 	syncRoundSettingsLock();
 }
 
+function updateDuelRoomState(roomState = null) {
+	lastDuelRoomState = roomState && typeof roomState === 'object' ? roomState : null;
+	if (lastDuelRoomState?.roundState) {
+		setDuelRoundState(lastDuelRoomState.roundState);
+	}
+}
+
+function isDuelLobbyVisible() {
+	const lobby = document.getElementById('duelLobbyPanel');
+	return Boolean(lobby && !lobby.classList.contains('is-hidden'));
+}
+
+function isDuelGameUiActive() {
+	const gameZone = document.getElementById('gameZone');
+	return Boolean(gameZone && !gameZone.classList.contains('game-zone-hidden'));
+}
+
 function isActiveDuelRound() {
-	return Boolean(gameModeController?.isDuel?.() && isDuelRoundActive);
+	if (!gameModeController?.isDuel?.()) return false;
+	if (isDuelRoundActive || lastDuelRoomState?.roundState === 'playing') return true;
+	/*
+	 * Fallback UI guard: dacă suntem în Duel, lobby-ul nu este vizibil, iar zona
+	 * de joc este încă activă, tratăm navigarea ca părăsire de rundă. Asta previne
+	 * cazul în care starea locală roundState nu s-a sincronizat perfect înainte de
+	 * click pe Home/F1 Guesser.
+	 */
+	return isDuelGameUiActive() && !isDuelLobbyVisible();
 }
 
 function isInDuelMode() {
@@ -122,7 +149,7 @@ function showGuessControlsForActiveRound() {
 
 function getDuelExitMessage(targetMode = 'single') {
 	if (isActiveDuelRound()) {
-		return 'Ești sigur că vrei să părăsești duelul? Runda va fi oprită pentru ambii jucători și vei părăsi camera.';
+		return 'Ești sigur că vrei să oprești runda? Ambii jucători vor reveni în lobby-ul camerei.';
 	}
 
 	if (targetMode === 'daily') {
@@ -134,10 +161,9 @@ function getDuelExitMessage(targetMode = 'single') {
 
 function confirmDuelExit(targetMode = 'single') {
 	/*
-	 * Orice trecere din Duel către Home/Single/Daily înseamnă părăsirea camerei.
-	 * Înainte verificam doar isActiveDuelRound(), iar dacă starea locală a rundei nu era
-	 * sincronizată perfect, Home/F1 Guesser ajungea să facă reload. Acum interceptăm
-	 * orice ieșire cât timp modul curent este Duel.
+	 * Dacă există o rundă activă, ieșirea intenționată oprește runda și revine în lobby,
+	 * nu scoate automat playerii din cameră. Din lobby, userul poate părăsi camera spre
+	 * Single/Daily/Home.
 	 */
 	if (!isInDuelMode()) return 'not-active';
 
@@ -146,7 +172,10 @@ function confirmDuelExit(targetMode = 'single') {
 
 	if (isActiveDuelRound()) {
 		abortDuelRound();
+		showDuelLobby('Runda a fost oprită. Ați revenit în lobby-ul camerei.');
+		return 'to-lobby';
 	}
+
 	enterSingleMode();
 
 	const status = document.getElementById('status');
@@ -173,9 +202,17 @@ function showDuelLobby(message = 'Duelul a fost oprit. Alege dificultatea pentru
 	autocomplete?.clearSelectedDriverId?.();
 	setGuessControlsVisible(false);
 	const overlay = document.getElementById('difficulty-overlay');
-	if (overlay) overlay.classList.remove('hidden');
+	if (overlay) overlay.classList.add('hidden');
 	gameModeController?.enterDuel?.({ roomId: activeRoomId });
 	gameModeSelectionController?.updateModeSelection?.('duel');
+	const lobbyState = lastDuelRoomState || {
+		roomId: activeRoomId,
+		roundState: 'waiting',
+		players: [],
+		spectators: [],
+		scoreboard: []
+	};
+	renderDuelLobby({ ...lobbyState, roundState: 'waiting' }, { forceVisible: true });
 	const status = document.getElementById('status');
 	if (status) {
 		status.classList.remove('is-hidden');
@@ -239,11 +276,17 @@ function sendGuess() {
 }
 
 function startDailyFromSelection(level) {
-	if (confirmDuelExit('daily') === false) return;
+	const leaveResult = confirmDuelExit('daily');
+	if (leaveResult === false || leaveResult === 'to-lobby') return;
 	dailyChallengeController.start(level);
 }
 
-function startRoundFromSelection(level) {
+function startRoundFromSelection(level, options = {}) {
+	if (gameModeController?.isDuel?.() && options.source !== 'duel-lobby') {
+		showErrorToast('În Duel, dificultatea și startul rundei se fac doar din lobby.');
+		return;
+	}
+
 	if (isActiveDuelRound()) {
 		showErrorToast('Nu poți schimba dificultatea sau setările în timpul rundei. Așteaptă finalul rundei.');
 		return;
@@ -270,6 +313,7 @@ function startRoundFromSelection(level) {
 
 function enterSingleMode() {
 	activeRoomId = null;
+	lastDuelRoomState = null;
 	clearRoomFromUrl();
 	resetRoomUi();
 	roleState.setSpectatorMode(false);
@@ -277,6 +321,7 @@ function enterSingleMode() {
 	setDuelRoundState('waiting');
 	resetLiveBoard();
 	resetOpponentProgress();
+	resetDuelLobby();
 	socketController?.emit('leaveRoom');
 	gameModeController.enterSingle();
 }
@@ -367,6 +412,9 @@ document.addEventListener('DOMContentLoaded', () => {
 		renderRoomScoreboard,
 		renderOpponentProgress,
 		resetOpponentProgress,
+		renderDuelLobby,
+		resetDuelLobby,
+		updateDuelRoomState,
 		hideGuessControlsAfterLocalFinish,
 		showGuessControlsForActiveRound,
 		resetLiveBoard,
@@ -386,12 +434,17 @@ document.addEventListener('DOMContentLoaded', () => {
 		confirmDuelExit,
 		abortDuelRound,
 		timer,
-		showHostOnlyTimerMessage
+		showHostOnlyTimerMessage,
+		getIsDuelMode: () => gameModeController?.isDuel?.() || false
 	});
 	dailyChallengeController.startCountdown();
 	setupShareButton();
 	setupAuth();
 	socketController.connect();
+	setupDuelLobbyView({
+		timer,
+		onStartRound: (level) => startRoundFromSelection(level, { source: 'duel-lobby' })
+	});
 
 	gameModeSelectionController = createGameModeSelectionController({
 		gameModeController,

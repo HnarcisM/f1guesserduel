@@ -31,6 +31,7 @@ Aplicația rulează cu **Node.js**, **Express** și **Socket.IO**, iar interfaț
 - Suport pentru camere multiplayer / duel prin link de room.
 - Winner logic pe rundă în Duel: câștigătorul se decide după ce termină ambii playeri, după criteriile mai puține încercări → timp mai bun → remiză.
 - Scoreboard persistent pe cameră pentru rundele de Duel.
+- Lobby dedicat pentru Duel, cu jucători, spectatori și setări host-only.
 - Alegere dificultate înainte de începerea rundei.
 - Autocomplete pentru numele piloților.
 - Feedback vizual după fiecare încercare.
@@ -50,7 +51,7 @@ Aplicația rulează cu **Node.js**, **Express** și **Socket.IO**, iar interfaț
 2. În `Single Play`, jocul pornește fără cameră și fără adversar.
 3. În `Duel`, aplicația creează sau folosește un room din URL, apoi sincronizează playerii/spectatorii prin Socket.IO.
 4. În `Daily Challenge`, aplicația pornește provocarea zilei, separată de duel.
-5. Jucătorul alege dificultatea.
+5. În `Duel`, hostul configurează dificultatea și timerul doar din lobby; Single/Daily folosesc overlay-ul lor dedicat.
 6. Serverul selectează pilotul țintă din `data/drivers.json`.
 7. Utilizatorul introduce un pilot și trimite ghicirea.
 8. Serverul compară pilotul ales cu pilotul țintă.
@@ -593,6 +594,20 @@ daily   - Daily Challenge individual
 Ecranul inițial permite acum alegerea explicită a modului. Aplicația pornește implicit în `single`, creează/join-uiește camera doar când alegi `duel` sau intri direct pe un link cu `?room=...`, iar `daily` rămâne separat de ambele.
 
 Această separare este fundația pentru feature-urile de cameră: winner logic pe rundă, scoreboard pe cameră, lobby, ready system și Daily Challenge server-side.
+
+
+### Lobby Duel
+
+În modul `Duel`, camera are un lobby separat de Single/Daily:
+
+```text
+- lobby-ul apare doar în mode-duel;
+- afișează Player 1, Player 2, spectatorii și hostul;
+- doar hostul poate modifica dificultatea și timerul;
+- spectatorii pot vedea lobby-ul, dar nu pot interacționa cu setările;
+- dropdown-ul hamburger nu mai schimbă dificultatea/timerul în Duel; setările se fac doar din lobby;
+- când o rundă activă este oprită intenționat, camera revine în lobby și scorul se păstrează.
+```
 
 ### Winner logic și scoreboard în Duel
 

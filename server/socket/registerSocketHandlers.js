@@ -594,10 +594,28 @@ function registerSocketHandlers(io, dependencies) {
 
             const roomId = currentRoom;
             const room = roomStore.get(roomId);
+
+            if (!room) {
+                currentRoom = null;
+                socket.leave(roomId);
+                return;
+            }
+
+            if (hasRoomMember(room, socket.id) && room.roundState === 'playing' && !isSpectator(room, socket.id)) {
+                const result = abortDuelRound(room, 'player-aborted');
+                roomStore.markDirty?.();
+                io.to(roomId).emit('duelAborted', {
+                    message: `${getPlayer(room, socket.id)?.username || 'Un jucător'} a oprit runda. Revenim în lobby.`,
+                    roundResult: result,
+                    room: buildPublicRoomState(room),
+                    liveBoard: buildLiveBoardState(room)
+                });
+                emitRoomStateUpdate(roomId, 'duel-aborted');
+                return;
+            }
+
             currentRoom = null;
             socket.leave(roomId);
-
-            if (!room) return;
 
             if (hasRoomMember(room, socket.id)) {
                 removePlayerFromRoom(room, socket.id);

@@ -23,12 +23,13 @@ export function setupMenuControllers({
 	confirmDuelExit,
 	abortDuelRound,
 	timer,
-	showHostOnlyTimerMessage
+	showHostOnlyTimerMessage,
+	getIsDuelMode
 }) {
 	setupDailyChallengeControls({ startDailyChallenge });
-	const menu = setupMenu({ startRoundFromSelection, startDailyChallenge, confirmDuelExit, abortDuelRound });
+	const menu = setupMenu({ startRoundFromSelection, startDailyChallenge, confirmDuelExit, abortDuelRound, getIsDuelMode });
 	setupThemeMenu(menu);
-	setupTimerControls(menu, { timer, showHostOnlyTimerMessage });
+	setupTimerControls(menu, { timer, showHostOnlyTimerMessage, getIsDuelMode });
 	setupGameControls({
 		autocomplete,
 		sendGuess,

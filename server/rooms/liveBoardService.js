@@ -63,6 +63,7 @@ function buildPublicRoomState(room, options = {}) {
     }));
 
     return {
+        roomId: room.roomId || null,
         playerCount: players.length,
         spectatorCount: spectators.length,
         totalCount: players.length + spectators.length,

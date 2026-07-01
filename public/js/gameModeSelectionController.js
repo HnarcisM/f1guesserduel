@@ -31,7 +31,7 @@ export function createGameModeSelectionController({
 
 		const difficultySection = getDifficultySection();
 		if (difficultySection) {
-			difficultySection.classList.toggle('is-hidden', mode === 'daily');
+			difficultySection.classList.toggle('is-hidden', mode === 'daily' || mode === 'duel');
 		}
 
 		const dailyPanel = getDailyPanel();
@@ -43,7 +43,8 @@ export function createGameModeSelectionController({
 	}
 
 	function selectSingle() {
-		if (confirmDuelExit?.('single') === false) return;
+		const leaveResult = confirmDuelExit?.('single');
+		if (leaveResult === false || leaveResult === 'to-lobby') return;
 		gameModeController?.enterSingle?.();
 		onSingleSelected?.();
 		updateModeSelection('single');
@@ -54,6 +55,8 @@ export function createGameModeSelectionController({
 	function selectDuel() {
 		const roomId = startDuelMode?.();
 		updateModeSelection('duel');
+		const overlay = document.getElementById('difficulty-overlay');
+		if (overlay) overlay.classList.add('hidden');
 		const status = document.getElementById('status');
 		if (status) {
 			status.textContent = roomId
@@ -63,7 +66,8 @@ export function createGameModeSelectionController({
 	}
 
 	function selectDaily(level = null) {
-		if (confirmDuelExit?.('daily') === false) return;
+		const leaveResult = confirmDuelExit?.('daily');
+		if (leaveResult === false || leaveResult === 'to-lobby') return;
 		gameModeController?.enterDaily?.({ source: 'mode-selection' });
 		updateModeSelection('daily');
 		if (level) {

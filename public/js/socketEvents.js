@@ -57,7 +57,13 @@ export function registerSocketEvents(socket, app) {
 		const roomState = payload.room || payload;
 		updateRoomBadge(roomState);
 		renderRoomScoreboard(roomState);
+		app.updateDuelRoomState?.(roomState);
 		app.setDuelRoundState?.(roomState.roundState);
+		if (roomState.roundState === 'playing') {
+			app.resetDuelLobby?.();
+		} else {
+			app.renderDuelLobby?.(roomState, { forceVisible: true });
+		}
 
 		if (!app.isSpectator?.()) {
 			if (roomState.roundState === 'playing' && roomState.you?.finished) {
@@ -169,6 +175,7 @@ export function registerSocketEvents(socket, app) {
 
 		const overlay = document.getElementById('difficulty-overlay');
 		if (overlay) overlay.classList.add('hidden');
+		app.resetDuelLobby?.();
 
 		app.setDailyMode?.(false);
 		if (data.isSinglePlay) app.enterSingleMode?.();
@@ -176,6 +183,7 @@ export function registerSocketEvents(socket, app) {
 		app.setDriversList(data.drivers);
 		app.setRoundFinished(false);
 		app.resetOpponentProgress?.();
+		app.resetDuelLobby?.();
 		app.setDuelRoundState?.('playing');
 		app.showGuessControlsForActiveRound?.();
 		app.exitRematchMode();
@@ -245,10 +253,12 @@ export function registerSocketEvents(socket, app) {
 	socket.on('duelAborted', (payload = {}) => {
 		if (!app.isDuelMode?.()) return;
 		app.setDuelRoundState?.('waiting');
+		if (payload.room) app.updateDuelRoomState?.({ ...payload.room, roundState: 'waiting' });
 		app.resetOpponentProgress?.();
 		if (payload.room) {
 			updateRoomBadge(payload.room);
 			renderRoomScoreboard(payload.room);
+			app.renderDuelLobby?.(payload.room, { forceVisible: true });
 		}
 		app.resetLiveBoard?.();
 		app.showDuelLobby?.(payload.message || 'Runda a fost oprită. Revenim în lobby.');
@@ -343,6 +353,7 @@ export function registerSocketEvents(socket, app) {
 		if (data.isSinglePlay) app.enterSingleMode?.();
 		app.setRoundFinished(false);
 		app.resetOpponentProgress?.();
+		app.resetDuelLobby?.();
 		app.setDuelRoundState?.('playing');
 		app.showGuessControlsForActiveRound?.();
 		app.exitRematchMode();
