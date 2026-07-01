@@ -6,7 +6,7 @@ Aceste teste pornesc serverul local pe un port liber și deschid 3 taburi reale 
 2. Player 2
 3. Spectator
 
-Testele verifică faptul că spectatorul vede live board-ul, iar playerii nu îl văd. Mai există teste pentru restaurarea unei camere după restart server, auth register/login/logout cu refresh pe socket, rematch după final de rundă, Single Play fără cameră, Daily Challenge izolat de Single/Duel și layout mobil/Fold fără overlap între titlu și login.
+Testele verifică faptul că spectatorul vede live board-ul, iar playerii nu îl văd. Mai există teste pentru restaurarea unei camere după restart server, auth register/login/logout cu refresh pe socket, rematch după final de rundă, Single Play fără cameră, Daily Challenge izolat de Single/Duel, layout mobil/Fold fără overlap între titlu și login și cazul în care playerul non-host ghicește corect iar spectatorul vede rezultatul live.
 
 ## Rulare rapidă pe Windows
 
@@ -40,6 +40,8 @@ npm run test:e2e
 ```
 
 Testele E2E au timeout de siguranță de 60 de secunde, ca să nu rămână blocate fără rezultat.
+
+În mediul E2E, serverul folosește o țintă de duel deterministă (`E2E_FIXED_DUEL_TARGET_ID=LIN`) ca scenariile cu răspuns corect să nu depindă de random.
 
 Pentru toate testele:
 

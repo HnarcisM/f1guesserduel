@@ -3,8 +3,21 @@ const { resetPlayersForNewRound, syncScoreboardWithPlayers } = require('../rooms
 const { pickDailyDriver } = require('./dailyChallenge');
 
 function createGameService(driversRepository) {
+    function getForcedDuelTarget(drivers) {
+        if (process.env.NODE_ENV !== 'test') return null;
+
+        const forcedId = String(process.env.E2E_FIXED_DUEL_TARGET_ID || '').trim().toUpperCase();
+        if (!forcedId) return null;
+
+        return drivers.find(driver => String(driver.id || '').toUpperCase() === forcedId) || null;
+    }
+
     function pickRandomDriver(drivers) {
         return drivers[Math.floor(Math.random() * drivers.length)];
+    }
+
+    function pickDuelTargetDriver(drivers) {
+        return getForcedDuelTarget(drivers) || pickRandomDriver(drivers);
     }
 
     function buildDailyChallenge(difficulty, date = new Date()) {
@@ -86,7 +99,7 @@ function createGameService(driversRepository) {
 
         room.difficulty = difficulty;
         room.driversList = drivers;
-        room.targetDriver = pickRandomDriver(drivers);
+        room.targetDriver = pickDuelTargetDriver(drivers);
         room.isDailyChallenge = false;
         room.dailyDate = null;
         room.dailyChallengeId = null;
@@ -116,7 +129,7 @@ function createGameService(driversRepository) {
         if (drivers.length === 0) return null;
 
         room.driversList = drivers;
-        room.targetDriver = pickRandomDriver(drivers);
+        room.targetDriver = pickDuelTargetDriver(drivers);
         room.isDailyChallenge = false;
         room.dailyDate = null;
         room.dailyChallengeId = null;

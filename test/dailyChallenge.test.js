@@ -152,3 +152,31 @@ test('single, daily and duel round payloads keep mode-specific flags separated',
     assert.equal(duelPayload.isSinglePlay, undefined);
     assert.equal(room.isDailyChallenge, false);
 });
+
+test('test-only forced duel target keeps E2E rounds deterministic without affecting single play', () => {
+    const previousNodeEnv = process.env.NODE_ENV;
+    const previousForcedTarget = process.env.E2E_FIXED_DUEL_TARGET_ID;
+    process.env.NODE_ENV = 'test';
+    process.env.E2E_FIXED_DUEL_TARGET_ID = 'b';
+
+    try {
+        const repository = {
+            getDriversByDifficulty: difficulty => difficulty === 'easy' ? drivers : []
+        };
+        const gameService = createGameService(repository);
+        const room = { players: {}, difficulty: null };
+
+        const duelPayload = gameService.startNewRound(room, { difficulty: 'easy' });
+        const singlePayload = gameService.startSingleRound({ difficulty: 'easy' });
+
+        assert.equal(room.targetDriver.id, 'b');
+        assert.equal(duelPayload.isDailyChallenge, false);
+        assert.ok(singlePayload.targetDriver);
+    } finally {
+        if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+        else process.env.NODE_ENV = previousNodeEnv;
+
+        if (previousForcedTarget === undefined) delete process.env.E2E_FIXED_DUEL_TARGET_ID;
+        else process.env.E2E_FIXED_DUEL_TARGET_ID = previousForcedTarget;
+    }
+});

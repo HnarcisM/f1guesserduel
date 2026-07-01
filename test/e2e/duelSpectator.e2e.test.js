@@ -70,7 +70,8 @@ async function startAppServer(options = {}) {
             PORT: String(port),
             DATA_DIR: dataDir,
             NODE_ENV: 'test',
-            ROOM_SAVE_DEBOUNCE_MS: '50'
+            ROOM_SAVE_DEBOUNCE_MS: '50',
+            E2E_FIXED_DUEL_TARGET_ID: 'LIN'
         },
         stdio: ['ignore', 'pipe', 'pipe']
     });
@@ -254,6 +255,39 @@ async function finishRoundByGuessing(page, options = {}) {
             .then(() => true)
             .catch(() => false);
         if (popupAppeared) return;
+
+        const localPlayerFinished = await page.locator('#gameZone.game-zone-hidden, #gameZone.is-player-finished')
+            .count()
+            .then(count => count > 0)
+            .catch(() => false);
+
+        if (localPlayerFinished) {
+            if (waitForPopup) {
+                await popup.waitFor({ timeout: 7000 });
+            }
+            return;
+        }
+    }
+
+    if (waitForPopup) {
+        await popup.waitFor({ timeout: 7000 });
+    }
+}
+
+
+async function finishRoundWithWrongEasyGuesses(page, options = {}) {
+    const { waitForPopup = true } = options;
+    const guesses = ['Andrea', 'Gabriel', 'Isack', 'Franco', 'Oliver', 'Liam'];
+    const popup = page.locator('#endGameDisplay.show');
+
+    for (const query of guesses) {
+        const guessed = await makeGuess(page, query);
+        if (!guessed) return;
+
+        const popupAppeared = await popup.waitFor({ state: 'visible', timeout: 1500 })
+            .then(() => true)
+            .catch(() => false);
+        if (popupAppeared) return;
     }
 
     if (waitForPopup) {
@@ -323,6 +357,61 @@ test('2 players can play while a third browser tab watches live as spectator', {
         logE2E('Testul E2E s-a terminat cu succes.');
     } finally {
         logE2E('Închid browserul și serverul de test...');
+        await browser.close();
+        await app.stop();
+    }
+});
+
+
+test('non-host correct guess is marked correct and spectator sees the live result', { concurrency: false }, async () => {
+    logE2E('Verific E2E: Player 2 non-host ghicește corect și spectatorul vede rezultatul live...');
+    const { chromium } = requirePlaywright();
+    const app = await startAppServer();
+    const browser = await chromium.launch({ headless: process.env.E2E_HEADED !== '1' });
+
+    try {
+        const context = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+        const roomId = `nh${Date.now().toString(36)}`;
+        const host = await openRoomPage(context, app.baseUrl, roomId);
+        const playerTwo = await openRoomPage(context, app.baseUrl, roomId);
+        const spectator = await openRoomPage(context, app.baseUrl, roomId);
+
+        await spectator.locator('body.spectator-active').waitFor({ timeout: 7000 });
+        await host.locator('.btn-diff.easy').click();
+        await host.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
+        await playerTwo.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
+        await spectator.locator('#liveDuelBoard:not(.is-hidden)').waitFor({ timeout: 7000 });
+
+        logE2E('Player 2 trimite răspunsul corect determinist: Arvid Lindblad...');
+        const correctGuess = await pickFirstSuggestion(playerTwo, 'Arvid');
+        assert.match(correctGuess, /Arvid Lindblad/i);
+
+        const playerTwoFirstCell = playerTwo.locator('#cell-0-0');
+        await expectText(playerTwoFirstCell, /Arvid Lindblad/i);
+        await assertEventually(async () => {
+            const className = await playerTwoFirstCell.getAttribute('class');
+            assert.match(className || '', /green/, 'Player 2 should see the correct pilot cell as green');
+        });
+        await assertElementHidden(playerTwo.locator('#endGameDisplay'));
+
+        const spectatorPlayerTwoCard = spectator.locator('#liveDuelPlayers .live-player-card').nth(1);
+        await expectText(spectatorPlayerTwoCard.locator('.live-player-status'), /Terminat|Câștigător|În joc/i);
+        await spectatorPlayerTwoCard.locator('.live-guess-driver-name').filter({ hasText: 'Arvid Lindblad' }).first().waitFor({ timeout: 7000 });
+        await assertEventually(async () => {
+            const correctPilotPillText = await spectatorPlayerTwoCard.locator('.live-guess-pill.green').allTextContents();
+            assert.ok(
+                correctPilotPillText.some(text => /Pilot\s*Arvid Lindblad/i.test(text.replace(/\s+/g, ' '))),
+                `Spectator should see Player 2's correct pilot result as green. Got: ${correctPilotPillText.join(' | ')}`
+            );
+        });
+
+        logE2E('Hostul termină cu încercări greșite pentru a declanșa rezultatul final al rundei...');
+        await finishRoundWithWrongEasyGuesses(host, { waitForPopup: true });
+        await playerTwo.locator('#endGameDisplay.show').waitFor({ timeout: 7000 });
+        await expectText(playerTwo.locator('#endGameDisplay'), /AI CÂȘTIGAT|CÂȘTIGAT/i);
+        await expectText(spectator.locator('#liveDuelSummary'), /a câștigat runda/i);
+        await expectText(spectator.locator('#liveDuelSummary'), /Guest|Player|E2E|Host|a câștigat runda/i);
+    } finally {
         await browser.close();
         await app.stop();
     }
