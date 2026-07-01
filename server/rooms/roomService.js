@@ -68,6 +68,9 @@ function addPlayerToRoom(room, socketId, authUser = null) {
     }
 
     room.players[socketId] = createPlayer(room, socketId, authUser);
+    if (!room.hostId) {
+        room.hostId = socketId;
+    }
     syncHostFlags(room);
     return { joined: true, role: 'player' };
 }

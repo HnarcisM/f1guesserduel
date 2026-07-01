@@ -58,10 +58,10 @@ function logE2E(message) {
     console.log(`[E2E ${now}] ${message}`);
 }
 
-async function startAppServer() {
+async function startAppServer(options = {}) {
     logE2E('Caut port liber pentru serverul de test...');
     const port = await getFreePort();
-    const dataDir = path.join(os.tmpdir(), `f1guesser-e2e-${process.pid}-${Date.now()}`);
+    const dataDir = options.dataDir || path.join(os.tmpdir(), `f1guesser-e2e-${process.pid}-${Date.now()}`);
     logE2E(`Pornesc serverul de test pe portul ${port}...`);
     const child = spawn(process.execPath, ['server.js'], {
         cwd: path.join(__dirname, '..', '..'),
@@ -69,7 +69,8 @@ async function startAppServer() {
             ...process.env,
             PORT: String(port),
             DATA_DIR: dataDir,
-            NODE_ENV: 'test'
+            NODE_ENV: 'test',
+            ROOM_SAVE_DEBOUNCE_MS: '50'
         },
         stdio: ['ignore', 'pipe', 'pipe']
     });
@@ -93,6 +94,7 @@ async function startAppServer() {
     logE2E('Serverul de test este gata.');
     return {
         baseUrl: `http://127.0.0.1:${port}`,
+        dataDir,
         stop: async () => {
             if (!child.killed) child.kill('SIGTERM');
             await new Promise(resolve => child.once('close', resolve));
@@ -100,13 +102,19 @@ async function startAppServer() {
     };
 }
 
-async function openRoomPage(context, baseUrl, roomId) {
+async function openRoomPage(context, baseUrl, roomId, options = {}) {
     const page = await context.newPage();
     page.on('pageerror', error => {
         throw error;
     });
     await page.goto(`${baseUrl}/?room=${roomId}`, { waitUntil: 'domcontentloaded' });
-    await page.waitForSelector('#duelStatus');
+    await page.addStyleTag({
+        content: `*, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; }`
+    });
+    const shouldWaitForVisibleDuelStatus = options.waitForVisibleDuelStatus !== false;
+    await page.waitForSelector('#duelStatus', {
+        state: shouldWaitForVisibleDuelStatus ? 'visible' : 'attached'
+    });
     return page;
 }
 
@@ -119,7 +127,135 @@ async function pickFirstSuggestion(page, query) {
     return selectedName;
 }
 
-test('2 players can play while a third browser tab watches live as spectator', async () => {
+
+async function openAuthPanel(page) {
+    const panel = page.locator('#authPanel');
+    const isOpen = await panel.evaluate(element => element.classList.contains('show')).catch(() => false);
+
+    if (!isOpen) {
+        await page.locator('#authOpenBtn').click({ force: true });
+    }
+
+    await page.locator('#authPanel.show').waitFor({ state: 'visible', timeout: 7000 });
+}
+
+async function closeAuthPanel(page) {
+    const isOpen = await page.locator('#authPanel').evaluate(element => element.classList.contains('show')).catch(() => false);
+    if (!isOpen) return;
+
+    await page.locator('#authCloseBtn').click({ force: true });
+    await assertEventually(async () => {
+        const stillOpen = await page.locator('#authPanel').evaluate(element => element.classList.contains('show'));
+        assert.equal(stillOpen, false);
+    });
+}
+
+async function ensureAuthMode(page, expectedMode) {
+    await openAuthPanel(page);
+    const submitText = (await page.locator('#authSubmitBtn').textContent()) || '';
+    const isRegisterMode = /Creează cont/i.test(submitText);
+
+    if (expectedMode === 'register' && !isRegisterMode) {
+        await page.locator('#authSwitchBtn').click({ force: true });
+    }
+
+    if (expectedMode === 'login' && isRegisterMode) {
+        await page.locator('#authSwitchBtn').click({ force: true });
+    }
+}
+
+async function submitAuthForm(page) {
+    await page.locator('#authPanel.show form').evaluate(form => form.requestSubmit());
+}
+
+async function registerViaUi(page, { username, email, password }) {
+    await ensureAuthMode(page, 'register');
+    await page.locator('#authUsername').fill(username);
+    await page.locator('#authEmail').fill(email);
+    await page.locator('#authPassword').fill(password);
+    await submitAuthForm(page);
+    await expectText(page.locator('#authMessage'), /Bun venit|Autentificare reușită/i);
+    await expectText(page.locator('#authOpenBtn'), new RegExp(username));
+    await closeAuthPanel(page);
+}
+
+async function logoutViaUi(page) {
+    await openAuthPanel(page);
+    await page.locator('#authLogoutBtn:not(.is-hidden)').waitFor({ state: 'visible', timeout: 7000 });
+    await page.locator('#authLogoutBtn').click({ force: true });
+    await expectText(page.locator('#authOpenBtn'), /Login/i);
+    await closeAuthPanel(page);
+}
+
+async function loginViaUi(page, { email, password, username }) {
+    await ensureAuthMode(page, 'login');
+    await page.locator('#authEmail').fill(email);
+    await page.locator('#authPassword').fill(password);
+    await submitAuthForm(page);
+    await expectText(page.locator('#authMessage'), /Bun venit|Autentificare reușită/i);
+    await expectText(page.locator('#authOpenBtn'), new RegExp(username));
+    await closeAuthPanel(page);
+}
+
+async function waitForGameInputReady(page, timeout = 7000) {
+    const popup = page.locator('#endGameDisplay.show');
+    const input = page.locator('#driverInput');
+
+    const popupAlreadyVisible = await popup.isVisible().catch(() => false);
+    if (popupAlreadyVisible) return 'ended';
+
+    try {
+        await page.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout });
+        await input.waitFor({ state: 'visible', timeout });
+        await assertEventually(async () => {
+            const editable = await input.evaluate(element => !element.disabled && !element.readOnly);
+            assert.equal(editable, true);
+        }, timeout);
+        return 'ready';
+    } catch (error) {
+        const endedWhileWaiting = await popup.isVisible().catch(() => false);
+        if (endedWhileWaiting) return 'ended';
+        throw error;
+    }
+}
+
+async function makeGuess(page, query) {
+    const state = await waitForGameInputReady(page);
+    if (state === 'ended') return false;
+
+    await pickFirstSuggestion(page, query);
+    return true;
+}
+
+async function finishRoundByGuessing(page) {
+    const guesses = ['Arvid', 'Andrea', 'Gabriel', 'Isack', 'Franco', 'Oliver'];
+    const popup = page.locator('#endGameDisplay.show');
+
+    for (const query of guesses) {
+        const guessed = await makeGuess(page, query);
+        if (!guessed) return;
+
+        const popupAppeared = await popup.waitFor({ state: 'visible', timeout: 1500 })
+            .then(() => true)
+            .catch(() => false);
+        if (popupAppeared) return;
+    }
+
+    await popup.waitFor({ timeout: 7000 });
+}
+
+async function expectNoHorizontalOverlap(leftLocator, rightLocator) {
+    const leftBox = await leftLocator.boundingBox();
+    const rightBox = await rightLocator.boundingBox();
+    assert.ok(leftBox, 'left element should have a bounding box');
+    assert.ok(rightBox, 'right element should have a bounding box');
+    assert.ok(
+        leftBox.x + leftBox.width <= rightBox.x || rightBox.x + rightBox.width <= leftBox.x,
+        `Expected no overlap. Left=${JSON.stringify(leftBox)}, right=${JSON.stringify(rightBox)}`
+    );
+}
+
+test('2 players can play while a third browser tab watches live as spectator', { concurrency: false }, async () => {
     logE2E('Verific Playwright și pornesc browserul Chromium...');
     const { chromium } = requirePlaywright();
     const app = await startAppServer();
@@ -204,4 +340,155 @@ async function assertEventually(assertion, timeoutMs = 7000) {
     }
 
     throw lastError;
+}
+
+
+test('room round is restored after server restart', { concurrency: false }, async () => {
+    logE2E('Verific Playwright pentru testul de persistență camere...');
+    const { chromium } = requirePlaywright();
+    const dataDir = path.join(os.tmpdir(), `f1guesser-e2e-persist-${process.pid}-${Date.now()}`);
+    const browser = await chromium.launch({ headless: process.env.E2E_HEADED !== '1' });
+    const roomId = `p${Date.now().toString(36)}`;
+    let app = null;
+
+    try {
+        app = await startAppServer({ dataDir });
+        const firstContext = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+        const host = await openRoomPage(firstContext, app.baseUrl, roomId);
+
+        logE2E('Pornesc o rundă Easy care trebuie salvată pe disk...');
+        await host.locator('.btn-diff.easy').click();
+        await host.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
+        await sleep(300);
+        await firstContext.close();
+        await app.stop();
+        app = null;
+
+        logE2E('Repornesc serverul cu același DATA_DIR...');
+        app = await startAppServer({ dataDir });
+        const secondContext = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+        const rejoined = await openRoomPage(secondContext, app.baseUrl, roomId);
+
+        logE2E('Verific dacă runda camerei a fost restaurată după restart...');
+        await rejoined.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
+        await expectText(rejoined.locator('#diff-display-label'), /Easy/i);
+        await expectText(rejoined.locator('#duelStatus'), /Host|Player/i);
+        await secondContext.close();
+    } finally {
+        await browser.close();
+        if (app) await app.stop();
+    }
+});
+
+
+test('auth register login logout refreshes room member name while staying in the room', { concurrency: false }, async () => {
+    logE2E('Verific fluxul E2E de auth + socket refresh în cameră...');
+    const { chromium } = requirePlaywright();
+    const app = await startAppServer();
+    const browser = await chromium.launch({ headless: process.env.E2E_HEADED !== '1' });
+
+    try {
+        const context = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+        const roomId = `a${Date.now().toString(36)}`;
+        const username = `E2E_${Date.now().toString(36).slice(-6)}`;
+        const credentials = {
+            username,
+            email: `${username.toLowerCase()}@example.test`,
+            password: 'TestPass123!'
+        };
+
+        const host = await openRoomPage(context, app.baseUrl, roomId);
+        const playerTwo = await openRoomPage(context, app.baseUrl, roomId);
+        const spectator = await openRoomPage(context, app.baseUrl, roomId);
+        await spectator.locator('body.spectator-active').waitFor({ timeout: 7000 });
+
+        await host.locator('.btn-diff.easy').click();
+        await spectator.locator('#liveDuelBoard:not(.is-hidden)').waitFor({ timeout: 7000 });
+
+        await registerViaUi(host, credentials);
+        await spectator.locator('#liveDuelPlayers .live-player-name').filter({ hasText: username }).first().waitFor({ timeout: 7000 });
+
+        await logoutViaUi(host);
+        await assertEventually(async () => {
+            const names = await spectator.locator('#liveDuelPlayers .live-player-name').allTextContents();
+            assert.equal(names.includes(username), false);
+            assert.ok(names.some(name => /Guest/i.test(name)), `Expected a Guest name after logout, got: ${names.join(', ')}`);
+        });
+
+        await loginViaUi(host, credentials);
+        await spectator.locator('#liveDuelPlayers .live-player-name').filter({ hasText: username }).first().waitFor({ timeout: 7000 });
+        await playerTwo.close();
+    } finally {
+        await browser.close();
+        await app.stop();
+    }
+});
+
+
+test('host can start a rematch after a round ends', { concurrency: false }, async () => {
+    logE2E('Verific fluxul E2E de rematch...');
+    const { chromium } = requirePlaywright();
+    const app = await startAppServer();
+    const browser = await chromium.launch({ headless: process.env.E2E_HEADED !== '1' });
+
+    try {
+        const context = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+        const roomId = `r${Date.now().toString(36)}`;
+        const host = await openRoomPage(context, app.baseUrl, roomId);
+        const playerTwo = await openRoomPage(context, app.baseUrl, roomId);
+
+        await host.locator('.btn-diff.easy').click();
+        await host.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
+        await playerTwo.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
+
+        await finishRoundByGuessing(host);
+        await host.locator('#endGameDisplay.show').waitFor({ timeout: 7000 });
+        await host.locator('#restartGameBtn').click();
+
+        await host.locator('#endGameDisplay').waitFor({ state: 'hidden', timeout: 7000 });
+        await host.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
+        await playerTwo.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
+        await expectText(host.locator('#status'), /Ghicește noul pilot misterios|Ghicește pilotul misterios/i);
+    } finally {
+        await browser.close();
+        await app.stop();
+    }
+});
+
+
+test('mobile header keeps title separated from auth button on narrow and fold-like viewports', { concurrency: false }, async () => {
+    logE2E('Verific layout-ul headerului pe mobil și Fold-like viewport...');
+    const { chromium } = requirePlaywright();
+    const app = await startAppServer();
+    const browser = await chromium.launch({ headless: process.env.E2E_HEADED !== '1' });
+
+    try {
+        const viewports = [
+            { width: 390, height: 844, label: 'phone narrow' },
+            { width: 704, height: 842, label: 'fold inner portrait' },
+            { width: 842, height: 704, label: 'fold inner landscape' }
+        ];
+
+        for (const viewport of viewports) {
+            const context = await browser.newContext({ viewport });
+            const page = await openRoomPage(context, app.baseUrl, `m${Date.now().toString(36).slice(-8)}`, {
+                waitForVisibleDuelStatus: false
+            });
+            await page.locator('.site-header h1').waitFor({ timeout: 7000 });
+            await expectNoHorizontalOverlap(page.locator('.site-header h1'), page.locator('#authOpenBtn'));
+            await assertEventually(async () => {
+                const bodyWidth = await page.evaluate(() => document.body.scrollWidth);
+                const viewportWidth = await page.evaluate(() => window.innerWidth);
+                assert.ok(bodyWidth <= viewportWidth + 2, `${viewport.label}: body has horizontal overflow ${bodyWidth} > ${viewportWidth}`);
+            });
+            await context.close();
+        }
+    } finally {
+        await browser.close();
+        await app.stop();
+    }
+});
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }

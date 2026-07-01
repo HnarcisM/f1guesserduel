@@ -2,7 +2,8 @@ const crypto = require('crypto');
 const {
     DEFAULT_SESSION_COOKIE_NAME,
     DEFAULT_SESSION_MAX_AGE_DAYS,
-    DEFAULT_SOCKET_AUTH_TOKEN_MAX_AGE_MS
+    DEFAULT_SOCKET_AUTH_TOKEN_MAX_AGE_MS,
+    DEFAULT_SESSION_CLEANUP_INTERVAL_MS
 } = require('../config/appConfig');
 
 const SESSION_COOKIE_NAME = DEFAULT_SESSION_COOKIE_NAME;
@@ -40,6 +41,7 @@ function createSessionService(db, options = {}) {
     const cookieName = options.cookieName || SESSION_COOKIE_NAME;
     const maxAgeMs = options.sessionMaxAgeMs || SESSION_MAX_AGE_MS;
     const socketAuthTokenMaxAgeMs = options.socketAuthTokenMaxAgeMs || SOCKET_AUTH_TOKEN_MAX_AGE_MS;
+    const sessionCleanupIntervalMs = options.sessionCleanupIntervalMs ?? DEFAULT_SESSION_CLEANUP_INTERVAL_MS;
     const socketAuthSecret = options.socketAuthSecret || DEFAULT_SOCKET_AUTH_SECRET;
 
     const createSessionStmt = db.prepare(`
@@ -67,8 +69,30 @@ function createSessionService(db, options = {}) {
         DELETE FROM sessions WHERE datetime(expires_at) <= datetime('now')
     `);
 
+    function cleanupExpiredSessions() {
+        return deleteExpiredStmt.run();
+    }
+
+    function startExpiredSessionCleanup({ intervalMs = sessionCleanupIntervalMs, logger = console } = {}) {
+        if (!Number.isFinite(intervalMs) || intervalMs <= 0) {
+            return () => {};
+        }
+
+        const timer = setInterval(() => {
+            try {
+                cleanupExpiredSessions();
+            } catch (error) {
+                logger?.error?.('[sessions] Failed to clean up expired sessions:', error);
+            }
+        }, intervalMs);
+
+        timer.unref?.();
+
+        return () => clearInterval(timer);
+    }
+
     function createSession(userId) {
-        deleteExpiredStmt.run();
+        cleanupExpiredSessions();
 
         const token = crypto.randomBytes(32).toString('hex');
         const tokenHash = hashToken(token);
@@ -134,14 +158,18 @@ function createSessionService(db, options = {}) {
         getUserByToken,
         createSocketAuthToken,
         getUserBySocketAuthToken,
+        cleanupExpiredSessions,
+        startExpiredSessionCleanup,
         destroySession,
         cookieName,
-        maxAgeMs
+        maxAgeMs,
+        sessionCleanupIntervalMs
     };
 }
 
 module.exports = {
     createSessionService,
     SESSION_COOKIE_NAME,
-    SOCKET_AUTH_TOKEN_MAX_AGE_MS
+    SOCKET_AUTH_TOKEN_MAX_AGE_MS,
+    DEFAULT_SESSION_CLEANUP_INTERVAL_MS
 };

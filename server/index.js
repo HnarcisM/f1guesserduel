@@ -7,7 +7,7 @@ const cookieParser = require('cookie-parser');
 
 const { createDriversRepository } = require('./data/driversRepository');
 const { createGameService } = require('./game/gameService');
-const { createMemoryRoomStore } = require('./rooms/roomStore.memory');
+const { createPersistentRoomStore } = require('./rooms/roomStore.persistent');
 const { registerSocketHandlers } = require('./socket/registerSocketHandlers');
 const { createDatabase } = require('./db/database');
 const { createSessionService } = require('./auth/sessionService');
@@ -15,6 +15,7 @@ const { createAuthService } = require('./auth/authService');
 const { createAuthRoutes } = require('./auth/authRoutes');
 const { createAuthMiddleware } = require('./middleware/authMiddleware');
 const { createErrorMiddleware } = require('./middleware/errorMiddleware');
+const { createServerErrorHandler } = require('./middleware/serverErrorHandler');
 const { createHealthRoutes } = require('./routes/healthRoutes');
 const { createAppConfig } = require('./config/appConfig');
 
@@ -36,7 +37,10 @@ const driversRepository = createDriversRepository({
     driversFilePath: config.driversFilePath
 });
 const gameService = createGameService(driversRepository);
-const roomStore = createMemoryRoomStore();
+const roomStore = createPersistentRoomStore({
+    persistenceFilePath: config.rooms.persistenceFilePath,
+    saveDebounceMs: config.rooms.saveDebounceMs
+});
 const db = createDatabase({
     dbFilePath: config.dbFilePath,
     schemaFilePath: config.schemaFilePath
@@ -45,9 +49,13 @@ const sessionService = createSessionService(db, {
     cookieName: config.auth.sessionCookieName,
     sessionMaxAgeMs: config.auth.sessionMaxAgeMs,
     socketAuthTokenMaxAgeMs: config.auth.socketAuthTokenMaxAgeMs,
+    sessionCleanupIntervalMs: config.auth.sessionCleanupIntervalMs,
     socketAuthSecret: config.auth.socketAuthSecret
 });
 const authService = createAuthService(db, sessionService);
+sessionService.startExpiredSessionCleanup({
+    intervalMs: config.auth.sessionCleanupIntervalMs
+});
 
 function setStaticCacheHeaders(res, filePath) {
     const extension = path.extname(filePath).toLowerCase();
@@ -107,6 +115,20 @@ app.get('/', (req, res, next) => {
 
 app.use(createErrorMiddleware({
     isProduction: config.isProduction
+}));
+
+function shutdownRoomStore() {
+    try {
+        roomStore.close?.();
+    } catch (error) {
+        console.error('[rooms] Nu am putut salva camerele la închidere:', error.message);
+    }
+}
+
+process.once('exit', shutdownRoomStore);
+
+server.on('error', createServerErrorHandler({
+    port: config.port
 }));
 
 server.listen(config.port, () => {

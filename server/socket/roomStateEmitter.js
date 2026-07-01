@@ -56,6 +56,8 @@ function createRoomStateEmitter(io, roomStore) {
         const roomWasRemoved = cleanupInactiveMembers(roomId, room);
         if (roomWasRemoved && !roomStore.has(roomId)) return;
 
+        roomStore.markDirty?.();
+
         for (const memberSocket of getActiveRoomSockets(room)) {
             memberSocket.emit('roomStateUpdate', buildRoomStatePayload(room, reason, memberSocket.id));
         }
@@ -67,6 +69,8 @@ function createRoomStateEmitter(io, roomStore) {
 
         const roomWasRemoved = cleanupInactiveMembers(roomId, room);
         if (roomWasRemoved && !roomStore.has(roomId)) return;
+
+        roomStore.markDirty?.();
 
         for (const memberSocket of getActiveRoomSockets(room)) {
             const recipientPayload = { ...payload };

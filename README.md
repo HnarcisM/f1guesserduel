@@ -126,6 +126,32 @@ node server.js
 http://localhost:3000
 ```
 
+
+---
+
+## Configurare producție
+
+Aplicația poate fi configurată prin variabile de mediu. Pentru rulare locală nu este obligatoriu să setezi nimic, dar pentru `NODE_ENV=production` trebuie să setezi cel puțin `SESSION_SECRET`.
+
+| Variabilă | Default local | Descriere |
+| --- | --- | --- |
+| `NODE_ENV` | `development` | Folosește `production` pe server public. |
+| `PORT` | `3000` | Portul pe care pornește aplicația. |
+| `DATA_DIR` | `./data` | Folderul în care se salvează baza SQLite. |
+| `SESSION_SECRET` | dev fallback local | Secret pentru sesiuni; obligatoriu în production. |
+| `SOCKET_AUTH_SECRET` | `SESSION_SECRET` sau dev fallback | Secret pentru token-ul scurt folosit de socket auth refresh. |
+| `SESSION_COOKIE_NAME` | `f1_session` | Numele cookie-ului de sesiune. |
+| `SESSION_MAX_AGE_DAYS` | `7` | Durata sesiunii în zile. |
+| `SOCKET_AUTH_TOKEN_MAX_AGE_MS` | `120000` | Durata token-ului temporar pentru socket refresh. |
+| `SESSION_CLEANUP_INTERVAL_MS` | `900000` | Intervalul la care serverul curăță automat sesiunile expirate. |
+| `ROOMS_FILE_PATH` | `<DATA_DIR>/rooms.json` | Fișierul JSON în care serverul salvează camerele active pentru restart. |
+| `ROOM_SAVE_DEBOUNCE_MS` | `250` | Întârzierea de debounce pentru salvarea camerelor după modificări. |
+| `COOKIE_SECURE` | `true` în production, altfel `false` | Trimite cookie-ul doar prin HTTPS. |
+| `COOKIE_SAMESITE` | `lax` | Poate fi `lax`, `strict` sau `none`. |
+| `TRUST_PROXY` | `false` | Setează `true` când rulezi în spatele unui proxy/load balancer. |
+
+Există și un fișier `.env.example` cu un exemplu de configurare. Aplicația nu încarcă automat `.env`, ca să nu adăugăm dependințe noi; setează variabilele direct în mediul de rulare sau folosește un loader extern dacă ai nevoie.
+
 ---
 
 ## Testare pe telefon

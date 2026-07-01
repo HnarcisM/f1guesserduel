@@ -54,8 +54,11 @@ function registerSocketHandlers(io, dependencies) {
             }
 
             const room = roomStore.get(roomId);
-            cleanupInactiveMembers(roomId, room);
+            if (getRoomMemberCount(room) > 0) {
+                cleanupInactiveMembers(roomId, room);
+            }
             const joinResult = addPlayerToRoom(room, socket.id, socket.user || null);
+            roomStore.markDirty?.();
 
             if (!joinResult || !joinResult.joined) {
                 socket.emit('roomFull', { maxPlayers: MAX_PLAYERS_PER_ROOM });

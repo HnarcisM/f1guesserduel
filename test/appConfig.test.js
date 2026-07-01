@@ -34,6 +34,9 @@ test('app config reads production values from environment', () => {
         SESSION_COOKIE_NAME: 'custom_session',
         SESSION_MAX_AGE_DAYS: '14',
         SOCKET_AUTH_TOKEN_MAX_AGE_MS: '60000',
+        SESSION_CLEANUP_INTERVAL_MS: '120000',
+        ROOMS_FILE_PATH: '/var/lib/f1guesser/rooms.json',
+        ROOM_SAVE_DEBOUNCE_MS: '500',
         TRUST_PROXY: 'true'
     }, { projectRoot });
 
@@ -49,6 +52,9 @@ test('app config reads production values from environment', () => {
     assert.equal(config.auth.sessionCookieName, 'custom_session');
     assert.equal(config.auth.sessionMaxAgeMs, 14 * 24 * 60 * 60 * 1000);
     assert.equal(config.auth.socketAuthTokenMaxAgeMs, 60000);
+    assert.equal(config.auth.sessionCleanupIntervalMs, 120000);
+    assert.equal(path.normalize(config.rooms.persistenceFilePath), path.normalize('/var/lib/f1guesser/rooms.json'));
+    assert.equal(config.rooms.saveDebounceMs, 500);
 });
 
 test('production config requires SESSION_SECRET', () => {
