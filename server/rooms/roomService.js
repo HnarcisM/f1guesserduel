@@ -11,6 +11,9 @@ const {
     createPlayer,
     createSpectator,
     updateRoomMemberAuth,
+    markRoomMemberDisconnected,
+    reconnectRoomMember,
+    buildParticipantKey,
     syncHostFlags,
     resetPlayersForNewRound,
     recordPlayerGuess,
@@ -32,7 +35,7 @@ const {
     syncScoreboardWithPlayers
 } = require('./scoreboardService');
 
-function createRoom(roomId, hostSocketId, authUser = null) {
+function createRoom(roomId, hostSocketId, authUser = null, options = {}) {
     const room = {
         roomId,
         hostId: hostSocketId,
@@ -53,15 +56,50 @@ function createRoom(roomId, hostSocketId, authUser = null) {
         dailyChallengeId: null
     };
 
-    room.players[hostSocketId] = createPlayer(room, hostSocketId, authUser);
+    room.players[hostSocketId] = createPlayer(room, hostSocketId, authUser, options);
     ensureMemberScoreEntry(room, room.players[hostSocketId]);
     syncHostFlags(room);
 
     return room;
 }
 
-function addPlayerToRoom(room, socketId, authUser = null) {
+function findRoomMemberByParticipantKey(room, participantKey) {
+    if (!participantKey) return null;
+
+    for (const [socketId, player] of Object.entries(room.players || {})) {
+        if (player.participantKey === participantKey) {
+            return { member: player, socketId, role: 'player' };
+        }
+    }
+
+    for (const [socketId, spectator] of Object.entries(room.spectators || {})) {
+        if (spectator.participantKey === participantKey) {
+            return { member: spectator, socketId, role: 'spectator' };
+        }
+    }
+
+    return null;
+}
+
+function moveRoomMemberSocket(room, existing, newSocketId, authUser = null, options = {}) {
+    if (!existing || !existing.member || existing.socketId === newSocketId) return existing?.member || null;
+
+    const collection = existing.role === 'spectator' ? room.spectators : room.players;
+    delete collection[existing.socketId];
+
+    reconnectRoomMember(existing.member, newSocketId, authUser, room, options);
+    collection[newSocketId] = existing.member;
+
+    if (room.hostId === existing.socketId) {
+        room.hostId = newSocketId;
+    }
+
+    return existing.member;
+}
+
+function addPlayerToRoom(room, socketId, authUser = null, options = {}) {
     ensureRoomCollections(room);
+    const participantKey = buildParticipantKey(authUser, options.clientId);
 
     if (room.players[socketId]) {
         updateRoomMemberAuth(room.players[socketId], authUser, room);
@@ -76,13 +114,21 @@ function addPlayerToRoom(room, socketId, authUser = null) {
         return { joined: true, role: 'spectator' };
     }
 
+    const existingMember = findRoomMemberByParticipantKey(room, participantKey);
+    if (existingMember) {
+        const member = moveRoomMemberSocket(room, existingMember, socketId, authUser, options);
+        if (member.role === 'player') ensureMemberScoreEntry(room, member);
+        syncHostFlags(room);
+        return { joined: true, role: member.role, reconnected: true };
+    }
+
     if (getPlayerCount(room) >= MAX_PLAYERS_PER_ROOM) {
-        room.spectators[socketId] = createSpectator(room, socketId, authUser);
+        room.spectators[socketId] = createSpectator(room, socketId, authUser, options);
         syncHostFlags(room);
         return { joined: true, role: 'spectator' };
     }
 
-    room.players[socketId] = createPlayer(room, socketId, authUser);
+    room.players[socketId] = createPlayer(room, socketId, authUser, options);
     ensureMemberScoreEntry(room, room.players[socketId]);
     if (!room.hostId) {
         room.hostId = socketId;
@@ -138,29 +184,52 @@ function removePlayerFromRoom(room, socketId) {
     syncHostFlags(room);
 }
 
+function shouldRemoveDisconnectedMember(member, now = Date.now()) {
+    if (!member) return true;
+    if (!member.participantKey) return true;
+    if (!member.disconnectedAt) return false;
+    const graceMs = 2 * 60 * 1000;
+    return now - member.disconnectedAt > graceMs;
+}
+
 function removeInactiveRoomMembers(room, isSocketActive) {
     if (!room || typeof isSocketActive !== 'function') return false;
     ensureRoomCollections(room);
 
     let changed = false;
     let removedActivePlayer = false;
+    const now = Date.now();
 
     for (const socketId of getPlayerIds(room)) {
         if (!isSocketActive(socketId)) {
-            delete room.players[socketId];
-            changed = true;
-            removedActivePlayer = true;
+            const player = room.players[socketId];
+            markRoomMemberDisconnected(player, now);
 
-            if (room.hostId === socketId) {
-                room.hostId = null;
+            if (shouldRemoveDisconnectedMember(player, now)) {
+                delete room.players[socketId];
+                changed = true;
+                removedActivePlayer = true;
+
+                if (room.hostId === socketId) {
+                    room.hostId = null;
+                }
+            } else {
+                changed = true;
             }
         }
     }
 
     for (const socketId of getSpectatorIds(room)) {
         if (!isSocketActive(socketId)) {
-            delete room.spectators[socketId];
-            changed = true;
+            const spectator = room.spectators[socketId];
+            markRoomMemberDisconnected(spectator, now);
+
+            if (shouldRemoveDisconnectedMember(spectator, now)) {
+                delete room.spectators[socketId];
+                changed = true;
+            } else {
+                changed = true;
+            }
         }
     }
 
@@ -175,6 +244,14 @@ function removeInactiveRoomMembers(room, isSocketActive) {
     ensureActiveHost(room);
     syncHostFlags(room);
     return changed;
+}
+
+function markRoomMemberDisconnectedBySocketId(room, socketId) {
+    const member = getRoomMember(room, socketId);
+    if (!member) return null;
+    markRoomMemberDisconnected(member);
+    syncHostFlags(room);
+    return member;
 }
 
 function refreshRoomMemberAuth(room, socketId, authUser = null) {
@@ -254,6 +331,8 @@ function abortDuelRound(room, reason = 'aborted') {
 module.exports = {
     createRoom,
     addPlayerToRoom,
+    findRoomMemberByParticipantKey,
+    markRoomMemberDisconnectedBySocketId,
     removePlayerFromRoom,
     removeInactiveRoomMembers,
     refreshRoomMemberAuth,

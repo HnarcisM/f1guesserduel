@@ -1,25 +1,28 @@
 {
   "version": 1,
-  "savedAt": "2026-07-01T21:33:44.443Z",
+  "savedAt": "2026-07-01T21:47:13.315Z",
   "rooms": [
     {
-      "roomId": "wppy6ju",
+      "roomId": "vr9wqps",
       "hostId": null,
       "players": {},
       "spectators": {},
-      "nextGuestNumber": 9,
+      "nextGuestNumber": 4,
       "targetDriver": {
-        "id": "HAM",
-        "name": "Lewis Hamilton",
-        "nat": "GBR",
+        "id": "PER",
+        "name": "Sergio Perez",
+        "nat": "MEX",
         "team": [
-          "Ferrari",
-          "Mercedes",
-          "McLaren"
+          "Cadillac",
+          "Red Bull",
+          "Racing Point",
+          "Force India",
+          "McLaren",
+          "Sauber"
         ],
-        "age": 41,
-        "debut": 2007,
-        "wins": 106,
+        "age": 36,
+        "debut": 2011,
+        "wins": 6,
         "difficulty": "easy"
       },
       "difficulty": "easy",
@@ -545,10 +548,41 @@
         }
       ],
       "timed": true,
-      "timeLimitSeconds": 120,
-      "roundStartedAt": 1782941610894,
-      "roundState": "playing",
-      "roundResult": null,
+      "timeLimitSeconds": 90,
+      "roundStartedAt": 1782942376454,
+      "roundState": "finished",
+      "roundResult": {
+        "status": "win",
+        "reason": "best-result",
+        "winnerSocketId": null,
+        "winnerUsername": "Guest 1",
+        "resolvedAt": 1782942411199,
+        "target": {
+          "name": "Sergio Perez"
+        },
+        "players": [
+          {
+            "username": "Guest 1",
+            "role": "player",
+            "isHost": true,
+            "attempts": 2,
+            "finished": true,
+            "timedOut": false,
+            "isCorrect": true,
+            "outcome": "win"
+          },
+          {
+            "username": "Guest 2",
+            "role": "player",
+            "isHost": false,
+            "attempts": 5,
+            "finished": true,
+            "timedOut": false,
+            "isCorrect": true,
+            "outcome": "loss"
+          }
+        ]
+      },
       "isDailyChallenge": false,
       "dailyDate": null,
       "dailyChallengeId": null

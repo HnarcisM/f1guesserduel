@@ -621,3 +621,13 @@ Scoreboard-ul este vizibil în modul Duel și este inclus în starea publică a 
 ```
 
 Dacă un player încearcă să revină la Home / meniul principal în timpul unei runde active, aplicația cere confirmare. Dacă playerul confirmă, runda este oprită pentru toți jucătorii, camera rămâne activă, scorul se păstrează și ambele părți revin în lobby-ul camerei pentru o rundă nouă.
+
+Dacă un player dă refresh accidental în timpul unei runde active, aplicația tratează refresh-ul ca reconnect, nu ca reset:
+
+```text
+- browserul afișează warning nativ înainte de refresh;
+- după refresh, același tab revine în aceeași cameră;
+- încercările și guess-urile deja făcute sunt restaurate;
+- playerul nu primește încercări noi;
+- dacă terminase deja runda, rămâne în starea de așteptare a rezultatului final.
+```

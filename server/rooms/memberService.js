@@ -1,3 +1,5 @@
+const DISCONNECTED_MEMBER_GRACE_MS = 2 * 60 * 1000;
+
 function getPlayerIds(room) {
     return Object.keys(room.players || {});
 }
@@ -28,11 +30,32 @@ function buildGuestUsername(room) {
     return `Guest ${guestNumber}`;
 }
 
-function createRoomMember(room, socketId, authUser = null, role = 'player') {
+function normalizeClientId(clientId) {
+    if (typeof clientId !== 'string') return null;
+    const trimmed = clientId.trim();
+    if (!trimmed || trimmed.length > 120) return null;
+    if (!/^[a-zA-Z0-9_-]+$/.test(trimmed)) return null;
+    return trimmed;
+}
+
+function buildParticipantKey(authUser = null, clientId = null) {
+    if (authUser && authUser.id !== undefined && authUser.id !== null) {
+        return `user:${authUser.id}`;
+    }
+
+    const normalizedClientId = normalizeClientId(clientId);
+    return normalizedClientId ? `client:${normalizedClientId}` : null;
+}
+
+function createRoomMember(room, socketId, authUser = null, role = 'player', options = {}) {
     const guestUsername = buildGuestUsername(room);
+    const clientId = normalizeClientId(options.clientId);
+    const participantKey = buildParticipantKey(authUser, clientId);
 
     return {
         socketId,
+        clientId,
+        participantKey,
         userId: authUser ? authUser.id : null,
         username: authUser ? authUser.username : guestUsername,
         guestUsername,
@@ -45,26 +68,31 @@ function createRoomMember(room, socketId, authUser = null, role = 'player') {
         correctGuess: false,
         completedAt: null,
         guesses: [],
-        connected: true
+        connected: true,
+        disconnectedAt: null
     };
 }
 
-function createPlayer(room, socketId, authUser = null) {
-    return createRoomMember(room, socketId, authUser, 'player');
+function createPlayer(room, socketId, authUser = null, options = {}) {
+    return createRoomMember(room, socketId, authUser, 'player', options);
 }
 
-function createSpectator(room, socketId, authUser = null) {
-    const spectator = createRoomMember(room, socketId, authUser, 'spectator');
+function createSpectator(room, socketId, authUser = null, options = {}) {
+    const spectator = createRoomMember(room, socketId, authUser, 'spectator', options);
     spectator.isHost = false;
     return spectator;
 }
 
 function updateRoomMemberAuth(member, authUser = null, room = null) {
     member.connected = true;
+    member.disconnectedAt = null;
 
     if (authUser) {
         member.userId = authUser.id;
         member.username = authUser.username;
+        if (!member.participantKey) {
+            member.participantKey = buildParticipantKey(authUser, member.clientId);
+        }
         return;
     }
 
@@ -73,6 +101,26 @@ function updateRoomMemberAuth(member, authUser = null, room = null) {
         member.guestUsername = room ? buildGuestUsername(room) : 'Guest';
     }
     member.username = member.guestUsername;
+}
+
+function markRoomMemberDisconnected(member, now = Date.now()) {
+    if (!member) return null;
+    member.connected = false;
+    if (!member.disconnectedAt) member.disconnectedAt = now;
+    return member;
+}
+
+function reconnectRoomMember(member, socketId, authUser = null, room = null, options = {}) {
+    if (!member) return null;
+    member.socketId = socketId;
+    member.clientId = normalizeClientId(options.clientId) || member.clientId || null;
+    if (!member.participantKey) {
+        member.participantKey = buildParticipantKey(authUser, member.clientId);
+    }
+    updateRoomMemberAuth(member, authUser, room);
+    member.connected = true;
+    member.disconnectedAt = null;
+    return member;
 }
 
 function syncHostFlags(room) {
@@ -137,15 +185,20 @@ function markPlayerTimedOut(player) {
 }
 
 module.exports = {
+    DISCONNECTED_MEMBER_GRACE_MS,
     getPlayerIds,
     getSpectatorIds,
     getPlayerCount,
     getSpectatorCount,
     getRoomMemberCount,
     buildGuestUsername,
+    normalizeClientId,
+    buildParticipantKey,
     createPlayer,
     createSpectator,
     updateRoomMemberAuth,
+    markRoomMemberDisconnected,
+    reconnectRoomMember,
     syncHostFlags,
     resetPlayersForNewRound,
     recordPlayerGuess,

@@ -1,5 +1,29 @@
 import { showErrorToast, showSuccessToast } from './toastController.js';
 
+
+const ROOM_CLIENT_ID_STORAGE_KEY = 'f1guesserduel.tabClientId';
+
+function createRoomClientId() {
+	if (window.crypto?.randomUUID) {
+		return window.crypto.randomUUID().replace(/-/g, '');
+	}
+	return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
+}
+
+export function getRoomClientId() {
+	try {
+		const existing = sessionStorage.getItem(ROOM_CLIENT_ID_STORAGE_KEY);
+		if (existing && /^[a-zA-Z0-9_-]+$/.test(existing)) return existing;
+
+		const nextId = createRoomClientId();
+		sessionStorage.setItem(ROOM_CLIENT_ID_STORAGE_KEY, nextId);
+		return nextId;
+	} catch (error) {
+		return createRoomClientId();
+	}
+}
+
+
 function fallbackCopyText(text, onCopied) {
 	const textArea = document.createElement('textarea');
 	textArea.value = text;
@@ -84,7 +108,10 @@ export function setupRoom({ getSocket, onRoomJoined, roomId: requestedRoomId, up
 
 	const socket = getSocket?.();
 	if (socket) {
-		socket.emit('joinRoom', roomId);
+		socket.emit('joinRoom', {
+			roomId,
+			clientId: getRoomClientId()
+		});
 	}
 
 	return roomId;

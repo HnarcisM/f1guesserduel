@@ -125,6 +125,29 @@ export function registerSocketEvents(socket, app) {
 	}
 
 
+
+	function restorePlayerProgress(playerProgress = null) {
+		if (!playerProgress || !Array.isArray(playerProgress.guesses)) return;
+
+		for (const entry of playerProgress.guesses) {
+			if (!entry || !entry.guess || !entry.results || typeof entry.attempt !== 'number') continue;
+			app.renderGuessResult?.({
+				guess: entry.guess,
+				results: entry.results,
+				attempts: entry.attempt
+			});
+		}
+
+		if (playerProgress.finished) {
+			app.setRoundFinished?.(true);
+			const statusEl = document.getElementById('status');
+			if (statusEl && app.isDuelMode?.()) {
+				statusEl.classList.remove('is-hidden');
+				statusEl.textContent = 'Ai revenit în rundă. Ai terminat deja încercările și aștepți rezultatul final.';
+			}
+		}
+	}
+
 	socket.on('initDailyChallenge', (data) => {
 		app.handleInitDailyChallenge?.(data);
 	});
@@ -175,6 +198,7 @@ export function registerSocketEvents(socket, app) {
 		}
 
 		app.initializeGridStructure();
+		restorePlayerProgress(data.playerProgress);
 		if (!app.isDuelMode?.()) app.resetRoomScoreboard?.();
 		renderLiveBoardForSpectator(data.liveBoard);
 

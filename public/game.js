@@ -285,6 +285,12 @@ function setupAuth() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+	window.addEventListener('beforeunload', (event) => {
+		if (!isActiveDuelRound()) return;
+		event.preventDefault();
+		event.returnValue = '';
+	});
+
 	gameModeController = createGameModeController({
 		onModeChanged({ mode }) {
 			if (mode === 'single') timer.setHostStatus(true);

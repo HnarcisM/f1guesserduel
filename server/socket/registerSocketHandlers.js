@@ -8,6 +8,7 @@ const {
     createRoom,
     addPlayerToRoom,
     removePlayerFromRoom,
+    markRoomMemberDisconnectedBySocketId,
     refreshRoomMemberAuth,
     getPlayer,
     hasRoomMember,
@@ -66,24 +67,61 @@ function registerSocketHandlers(io, dependencies) {
         emitRoomStateUpdate(roomId, 'round-resolved');
     }
 
+    function normalizeJoinRoomPayload(payload) {
+        if (typeof payload === 'string') {
+            return { roomId: payload, clientId: null };
+        }
+
+        if (!payload || typeof payload !== 'object') {
+            return { roomId: null, clientId: null };
+        }
+
+        return {
+            roomId: typeof payload.roomId === 'string' ? payload.roomId : null,
+            clientId: typeof payload.clientId === 'string' ? payload.clientId : null
+        };
+    }
+
+    function buildPlayerProgressPayload(player) {
+        if (!player) return null;
+        return {
+            attempts: typeof player.attempts === 'number' ? player.attempts : 0,
+            finished: Boolean(player.finished),
+            timedOut: Boolean(player.timedOut),
+            correctGuess: Boolean(player.correctGuess),
+            guesses: Array.isArray(player.guesses)
+                ? player.guesses.map(entry => ({
+                    attempt: entry.attempt,
+                    guess: entry.guess,
+                    results: entry.results,
+                    isCorrect: Boolean(entry.isCorrect),
+                    isGameOver: Boolean(entry.isGameOver)
+                }))
+                : []
+        };
+    }
+
     io.on('connection', (socket) => {
         let currentRoom = null;
 
-        socket.on('joinRoom', (roomId) => {
+        socket.on('joinRoom', (payload) => {
+            const { roomId, clientId } = normalizeJoinRoomPayload(payload);
             if (!isValidRoomId(roomId)) {
                 socket.emit('errorMessage', 'Camera este invalidă. Folosește un room ID de 3-20 caractere.');
                 return;
             }
 
+            const memberOptions = { clientId };
+
             if (!roomStore.has(roomId)) {
-                roomStore.set(roomId, createRoom(roomId, socket.id, socket.user || null));
+                roomStore.set(roomId, createRoom(roomId, socket.id, socket.user || null, memberOptions));
             }
 
             const room = roomStore.get(roomId);
             if (getRoomMemberCount(room) > 0) {
                 cleanupInactiveMembers(roomId, room);
             }
-            const joinResult = addPlayerToRoom(room, socket.id, socket.user || null);
+            const joinResult = addPlayerToRoom(room, socket.id, socket.user || null, memberOptions);
             roomStore.markDirty?.();
 
             if (!joinResult || !joinResult.joined) {
@@ -104,7 +142,8 @@ function registerSocketHandlers(io, dependencies) {
                     timeLimitSeconds: room.timeLimitSeconds,
                     roundStartedAt: room.roundStartedAt,
                     isDailyChallenge: Boolean(room.isDailyChallenge),
-                    dailyDate: room.dailyDate || null
+                    dailyDate: room.dailyDate || null,
+                    playerProgress: buildPlayerProgressPayload(getPlayer(room, socket.id))
                 };
 
                 if (isSpectator(room, socket.id)) {
@@ -602,11 +641,22 @@ function registerSocketHandlers(io, dependencies) {
             emitRoomStateUpdate(currentRoom, 'duel-aborted');
         });
 
+        function markCurrentRoomDisconnected() {
+            if (!currentRoom) return;
+
+            const room = roomStore.get(currentRoom);
+            if (!room) return;
+
+            markRoomMemberDisconnectedBySocketId(room, socket.id);
+            roomStore.markDirty?.();
+            emitRoomStateUpdate(currentRoom, 'disconnect');
+        }
+
         socket.on('leaveRoom', leaveCurrentRoom);
-        socket.on('disconnecting', leaveCurrentRoom);
+        socket.on('disconnecting', markCurrentRoomDisconnected);
         socket.on('disconnect', () => {
             singleSessions.delete(socket.id);
-            leaveCurrentRoom();
+            markCurrentRoomDisconnected();
         });
     });
 }

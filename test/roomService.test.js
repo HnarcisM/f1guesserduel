@@ -6,6 +6,7 @@ const {
     addPlayerToRoom,
     removePlayerFromRoom,
     removeInactiveRoomMembers,
+    markRoomMemberDisconnectedBySocketId,
     refreshRoomMemberAuth,
     getPlayer,
     getSpectator,
@@ -77,6 +78,46 @@ test('inactive members are removed and active spectator can be promoted', () => 
     assert.equal(getPlayerCount(room), 2);
     assert.equal(getSpectatorCount(room), 0);
     assert.equal(Boolean(getPlayer(room, 'socket-3')), true);
+});
+
+
+
+test('refresh reconnects the same browser participant and preserves duel progress', () => {
+    const room = createRoom('abc123', 'socket-1', null, { clientId: 'tab-one' });
+    const player = getPlayer(room, 'socket-1');
+    player.attempts = 2;
+    player.finished = false;
+    player.guesses = [{ attempt: 1 }, { attempt: 2 }];
+    room.roundState = 'playing';
+    room.hostId = 'socket-1';
+
+    markRoomMemberDisconnectedBySocketId(room, 'socket-1');
+    assert.equal(getPlayer(room, 'socket-1').connected, false);
+
+    const result = addPlayerToRoom(room, 'socket-1-refresh', null, { clientId: 'tab-one' });
+    const reconnectedPlayer = getPlayer(room, 'socket-1-refresh');
+
+    assert.deepEqual(result, { joined: true, role: 'player', reconnected: true });
+    assert.equal(getPlayer(room, 'socket-1'), null);
+    assert.equal(reconnectedPlayer.attempts, 2);
+    assert.equal(reconnectedPlayer.finished, false);
+    assert.equal(reconnectedPlayer.guesses.length, 2);
+    assert.equal(reconnectedPlayer.connected, true);
+    assert.equal(room.hostId, 'socket-1-refresh');
+    assert.equal(isHost(room, 'socket-1-refresh'), true);
+});
+
+test('inactive participant with reconnect key is kept during cleanup grace period', () => {
+    const room = createRoom('abc123', 'socket-1', null, { clientId: 'tab-one' });
+    addPlayerToRoom(room, 'socket-2', null, { clientId: 'tab-two' });
+    room.roundState = 'playing';
+
+    const changed = removeInactiveRoomMembers(room, socketId => socketId !== 'socket-1');
+
+    assert.equal(changed, true);
+    assert.equal(getPlayerCount(room), 2);
+    assert.equal(getPlayer(room, 'socket-1').connected, false);
+    assert.equal(getPlayer(room, 'socket-1').attempts, 0);
 });
 
 test('auth refresh updates username and logout returns to guest username', () => {
