@@ -1,4 +1,5 @@
 import { createDailyChallengeState } from './dailyChallengeState.js';
+import { showErrorToast, showWarningToast } from './toastController.js';
 
 const DAILY_LEVEL_LABELS = {
 	easy: 'Easy',
@@ -63,7 +64,7 @@ export function createDailyChallengeController({
 	function showBlockedMessage(level) {
 		const message = state.getBlockedMessage(level);
 		setStatusMessage(message);
-		alert(message);
+		showWarningToast(message, { duration: 5000 });
 	}
 
 	function complete(data = {}) {
@@ -101,7 +102,7 @@ export function createDailyChallengeController({
 
 		isDailyStartPending = false;
 		setMode(false);
-		alert("Butonul funcționează, dar nu ești conectat la server! Porneste 'node server.js'");
+		showErrorToast("Butonul funcționează, dar nu ești conectat la server! Porneste 'node server.js'");
 	}
 
 	function handleInit(data = {}) {
@@ -139,7 +140,7 @@ export function createDailyChallengeController({
 		setStartPending(false);
 		setMode(false);
 		showDifficultyOverlay();
-		if (message) alert(message);
+		if (message) showErrorToast(message);
 	}
 
 	return {

@@ -9,6 +9,7 @@ import { createEndGameController } from './js/endGameController.js';
 import { createGameSocketController } from './js/gameSocketController.js';
 import { setupShareButton, setupRoom } from './js/roomController.js';
 import { setupMenuControllers } from './js/menuController.js';
+import { showErrorToast } from './js/toastController.js';
 
 /**
  * F1 Guesser Duel - frontend entry point.
@@ -88,7 +89,7 @@ function sendGuess() {
 	const selectedDriverId = autocomplete.getSelectedDriverId();
 	const finalDriver = driversList.find(d => d.id === selectedDriverId || d.name.toLowerCase() === inputVal.toLowerCase());
 	if (!finalDriver) {
-		alert('Te rog selectează un pilot valid din lista de predicții!');
+		showErrorToast('Te rog selectează un pilot valid din lista de predicții!');
 		return;
 	}
 
@@ -110,7 +111,7 @@ function startRoundFromSelection(level) {
 	if (overlay) overlay.classList.add('hidden');
 
 	if (!socketController?.emit('setDifficulty', timer.buildRoundOptions(level))) {
-		alert("Butonul funcționează, dar nu ești conectat la server! Porneste 'node server.js'");
+		showErrorToast("Butonul funcționează, dar nu ești conectat la server! Porneste 'node server.js'");
 	}
 }
 

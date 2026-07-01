@@ -1,4 +1,5 @@
 import { authApi } from './apiClient.js';
+import { showErrorToast, showSuccessToast } from './toastController.js';
 
 export function createAuthView({ onAuthChanged } = {}) {
     let currentUser = null;

@@ -1,3 +1,5 @@
+import { showErrorToast, showSuccessToast } from './toastController.js';
+
 function fallbackCopyText(text, onCopied) {
 	const textArea = document.createElement('textarea');
 	textArea.value = text;
@@ -10,7 +12,7 @@ function fallbackCopyText(text, onCopied) {
 		onCopied();
 	} catch (err) {
 		console.error('Fallback eșuat completely:', err);
-		alert('Nu s-a putut copia automat. Link-ul tău este: ' + text);
+		showErrorToast('Nu s-a putut copia automat. Link-ul tău este: ' + text, { duration: 7000 });
 	}
 	document.body.removeChild(textArea);
 }
@@ -21,6 +23,7 @@ export function setupShareButton() {
 
 	function triggerTooltip() {
 		shareBtn.classList.add('copied');
+		showSuccessToast('Link-ul camerei a fost copiat.');
 		setTimeout(() => shareBtn.classList.remove('copied'), 2000);
 	}
 

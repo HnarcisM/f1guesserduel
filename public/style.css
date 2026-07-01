@@ -5,15 +5,17 @@
  * Keep imports ordered because later modules intentionally override earlier rules.
  */
 
-@import url("/css/01-theme-tokens.css?v=css-clean-1");
-@import url("/css/02-header-menu.css?v=css-clean-1");
-@import url("/css/03-game-board.css?v=css-clean-1");
-@import url("/css/04-difficulty-overlay.css?v=css-clean-1");
-@import url("/css/05-legend-stats.css?v=css-clean-1");
-@import url("/css/06-responsive.css?v=css-clean-1");
-@import url("/css/07-timer.css?v=css-clean-1");
-@import url("/css/08-auth.css?v=css-clean-1");
-@import url("/css/09-live-duel.css?v=css-clean-1");
-@import url("/css/10-daily-challenge.css?v=css-clean-1");
+@import url("/css/01-theme-tokens.css?v=toast-1");
+@import url("/css/02-header-menu.css?v=toast-1");
+@import url("/css/03-game-board.css?v=toast-1");
+@import url("/css/04-difficulty-overlay.css?v=toast-1");
+@import url("/css/05-legend-stats.css?v=toast-1");
+@import url("/css/06-responsive.css?v=toast-1");
+@import url("/css/07-timer.css?v=toast-1");
+@import url("/css/08-auth.css?v=toast-1");
+@import url("/css/09-live-duel.css?v=toast-1");
+@import url("/css/10-daily-challenge.css?v=toast-1");
 
-@import url("/css/11-mobile-layout-fix.css?v=css-clean-1");
+@import url("/css/11-mobile-layout-fix.css?v=toast-1");
+
+@import url("/css/12-toast.css?v=toast-1");

@@ -1,3 +1,5 @@
+import { showErrorToast } from './toastController.js';
+
 /** Leagă evenimentele Socket.IO primite de la server. */
 export function registerSocketEvents(socket, app) {
 	[
@@ -124,11 +126,11 @@ export function registerSocketEvents(socket, app) {
 	});
 
 	socket.on('roomFull', (data = {}) => {
-		alert(`Camera este plină. Maxim ${data.maxPlayers || 2} jucători pot intra într-un duel.`);
+		showErrorToast(`Camera este plină. Maxim ${data.maxPlayers || 2} jucători pot intra într-un duel.`);
 	});
 
 	socket.on('errorMessage', (message) => {
-		if (message) alert(message);
+		if (message) showErrorToast(message);
 	});
 
 	socket.on('guessResult', (data) => {
