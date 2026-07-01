@@ -1,26 +1,25 @@
 {
   "version": 1,
-  "savedAt": "2026-07-01T20:54:47.667Z",
+  "savedAt": "2026-07-01T21:33:44.443Z",
   "rooms": [
     {
-      "roomId": "tc3own4",
+      "roomId": "wppy6ju",
       "hostId": null,
       "players": {},
       "spectators": {},
-      "nextGuestNumber": 46,
+      "nextGuestNumber": 9,
       "targetDriver": {
-        "id": "KUB",
-        "name": "Robert Kubica",
-        "nat": "POL",
+        "id": "HAM",
+        "name": "Lewis Hamilton",
+        "nat": "GBR",
         "team": [
-          "Alfa Romeo",
-          "Williams",
-          "Renault",
-          "BMW"
+          "Ferrari",
+          "Mercedes",
+          "McLaren"
         ],
         "age": 41,
-        "debut": 2006,
-        "wins": 1,
+        "debut": 2007,
+        "wins": 106,
         "difficulty": "easy"
       },
       "difficulty": "easy",
@@ -545,9 +544,9 @@
           "difficulty": "easy"
         }
       ],
-      "timed": false,
-      "timeLimitSeconds": 60,
-      "roundStartedAt": 1782939267872,
+      "timed": true,
+      "timeLimitSeconds": 120,
+      "roundStartedAt": 1782941610894,
       "roundState": "playing",
       "roundResult": null,
       "isDailyChallenge": false,

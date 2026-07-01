@@ -14,7 +14,7 @@ export function setupDailyChallengeControls({ startDailyChallenge }) {
 	}, true);
 }
 
-export function setupMenu({ startRoundFromSelection, startDailyChallenge }) {
+export function setupMenu({ startRoundFromSelection, startDailyChallenge, confirmDuelExit, abortDuelRound }) {
 	const menuBtn = document.getElementById('menu-hamburger');
 	const menu = document.getElementById('dropdown-menu');
 
@@ -27,7 +27,12 @@ export function setupMenu({ startRoundFromSelection, startDailyChallenge }) {
 
 	const siteTitle = document.querySelector('.site-header h1');
 	if (siteTitle) {
-		siteTitle.addEventListener('click', () => window.location.reload());
+		siteTitle.addEventListener('click', () => {
+			const leaveResult = confirmDuelExit?.('home');
+			if (leaveResult === false) return;
+			if (leaveResult === 'left-duel') return;
+			window.location.reload();
+		});
 	}
 
 	document.querySelectorAll('.menu-item:not(.theme-item):not(.timer-item):not(.daily-item)').forEach(item => {
@@ -36,6 +41,9 @@ export function setupMenu({ startRoundFromSelection, startDailyChallenge }) {
 			if (menu) menu.classList.add('hidden');
 
 			if (choice === 'home') {
+				const leaveResult = confirmDuelExit?.('home');
+				if (leaveResult === false) return;
+				if (leaveResult === 'left-duel') return;
 				window.location.reload();
 			} else if (choice) {
 				startRoundFromSelection(choice);

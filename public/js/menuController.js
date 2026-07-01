@@ -20,11 +20,13 @@ export function setupMenuControllers({
 	hideEndGamePopup,
 	startRoundFromSelection,
 	startDailyChallenge,
+	confirmDuelExit,
+	abortDuelRound,
 	timer,
 	showHostOnlyTimerMessage
 }) {
 	setupDailyChallengeControls({ startDailyChallenge });
-	const menu = setupMenu({ startRoundFromSelection, startDailyChallenge });
+	const menu = setupMenu({ startRoundFromSelection, startDailyChallenge, confirmDuelExit, abortDuelRound });
 	setupThemeMenu(menu);
 	setupTimerControls(menu, { timer, showHostOnlyTimerMessage });
 	setupGameControls({

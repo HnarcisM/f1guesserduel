@@ -226,6 +226,31 @@ function isSpectator(room, socketId) {
     return Boolean(getSpectator(room, socketId));
 }
 
+function abortDuelRound(room, reason = 'aborted') {
+    if (!room || room.roundState !== 'playing') return null;
+
+    room.targetDriver = null;
+    room.driversList = Array.isArray(room.driversList) ? room.driversList : [];
+    room.roundStartedAt = null;
+    room.roundState = 'waiting';
+    room.roundResult = {
+        status: 'aborted',
+        reason,
+        winnerSocketId: null,
+        winnerUsername: null,
+        resolvedAt: Date.now(),
+        finishedAt: Date.now(),
+        allPlayersFinished: true,
+        scoreApplied: true,
+        target: null,
+        players: []
+    };
+    resetPlayersForNewRound(room);
+    syncScoreboardWithPlayers(room);
+
+    return buildPublicRoundResult(room.roundResult);
+}
+
 module.exports = {
     createRoom,
     addPlayerToRoom,
@@ -252,5 +277,6 @@ module.exports = {
     buildPublicRoomState,
     buildPersonalRoundResult,
     buildPublicRoundResult,
-    resolveRoundWinner
+    resolveRoundWinner,
+    abortDuelRound
 };

@@ -18,7 +18,9 @@ const {
     markPlayerTimedOut,
     buildLiveBoardState,
     buildPersonalRoundResult,
-    resolveRoundWinner
+    buildPublicRoomState,
+    resolveRoundWinner,
+    abortDuelRound
 } = require('../rooms/roomService');
 const { attachSocketAuth } = require('./socketAuth');
 const { createRoomStateEmitter } = require('./roomStateEmitter');
@@ -126,6 +128,11 @@ function registerSocketHandlers(io, dependencies) {
 
             if (!isHost(room, socket.id)) {
                 socket.emit('errorMessage', 'Doar hostul camerei poate schimba dificultatea.');
+                return;
+            }
+
+            if (room.roundState === 'playing') {
+                socket.emit('errorMessage', 'Nu poți schimba dificultatea sau setările în timpul rundei. Așteaptă finalul rundei.');
                 return;
             }
 
@@ -567,6 +574,33 @@ function registerSocketHandlers(io, dependencies) {
             emitRoomStateUpdate(roomId, 'leave');
             emitRoomRoleStatuses(room);
         }
+
+        socket.on('abortDuelRound', () => {
+            if (!currentRoom) return;
+
+            const room = roomStore.get(currentRoom);
+            if (!room) return;
+
+            if (isSpectator(room, socket.id)) {
+                socket.emit('errorMessage', 'Spectatorii nu pot opri runda de duel.');
+                return;
+            }
+
+            if (room.roundState !== 'playing') {
+                socket.emit('errorMessage', 'Nu există o rundă activă de oprit.');
+                return;
+            }
+
+            const result = abortDuelRound(room, 'player-aborted');
+            roomStore.markDirty?.();
+            io.to(currentRoom).emit('duelAborted', {
+                message: `${getPlayer(room, socket.id)?.username || 'Un jucător'} a oprit runda. Revenim în lobby.`,
+                roundResult: result,
+                room: buildPublicRoomState(room),
+                liveBoard: buildLiveBoardState(room)
+            });
+            emitRoomStateUpdate(currentRoom, 'duel-aborted');
+        });
 
         socket.on('leaveRoom', leaveCurrentRoom);
         socket.on('disconnecting', leaveCurrentRoom);

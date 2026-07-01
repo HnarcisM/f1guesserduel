@@ -31,6 +31,7 @@ let endGameController;
 let gameModeController;
 let gameModeSelectionController;
 let activeRoomId = null;
+let isDuelRoundActive = false;
 
 
 const roleState = createRoleState({
@@ -59,6 +60,99 @@ function showHostOnlyTimerMessage() {
 			: 'Doar hostul camerei poate modifica timerul.';
 	}
 }
+
+function syncRoundSettingsLock() {
+	const shouldLock = Boolean(gameModeController?.isDuel?.() && isDuelRoundActive);
+	timer?.setRoundSettingsLocked?.(shouldLock);
+	document.querySelectorAll('.btn-diff, .menu-item[data-level="easy"], .menu-item[data-level="medium"], .menu-item[data-level="hard"]').forEach(control => {
+		control.classList.toggle('is-locked', shouldLock);
+		control.setAttribute('aria-disabled', String(shouldLock));
+		if ('disabled' in control) control.disabled = shouldLock;
+		control.title = shouldLock ? 'Dificultatea poate fi schimbată după finalul rundei.' : '';
+	});
+}
+
+function setDuelRoundState(roundState) {
+	isDuelRoundActive = roundState === 'playing';
+	syncRoundSettingsLock();
+}
+
+function isActiveDuelRound() {
+	return Boolean(gameModeController?.isDuel?.() && isDuelRoundActive);
+}
+
+function isInDuelMode() {
+	return Boolean(gameModeController?.isDuel?.());
+}
+
+function getDuelExitMessage(targetMode = 'single') {
+	if (isActiveDuelRound()) {
+		return 'Ești sigur că vrei să părăsești duelul? Runda va fi oprită pentru ambii jucători și vei părăsi camera.';
+	}
+
+	if (targetMode === 'daily') {
+		return 'Ești sigur că vrei să părăsești camera de Duel și să intri în Daily Challenge?';
+	}
+
+	return 'Ești sigur că vrei să părăsești camera de Duel?';
+}
+
+function confirmDuelExit(targetMode = 'single') {
+	/*
+	 * Orice trecere din Duel către Home/Single/Daily înseamnă părăsirea camerei.
+	 * Înainte verificam doar isActiveDuelRound(), iar dacă starea locală a rundei nu era
+	 * sincronizată perfect, Home/F1 Guesser ajungea să facă reload. Acum interceptăm
+	 * orice ieșire cât timp modul curent este Duel.
+	 */
+	if (!isInDuelMode()) return 'not-active';
+
+	const shouldLeave = window.confirm(getDuelExitMessage(targetMode));
+	if (!shouldLeave) return false;
+
+	if (isActiveDuelRound()) {
+		abortDuelRound();
+	}
+	enterSingleMode();
+
+	const status = document.getElementById('status');
+	if (status) {
+		status.classList.remove('is-hidden');
+		status.textContent = targetMode === 'daily'
+			? 'Ai părăsit camera de Duel. Poți porni Daily Challenge.'
+			: 'Ai părăsit camera de Duel.';
+	}
+
+	return 'left-duel';
+}
+
+function abortDuelRound() {
+	socketController?.emit('abortDuelRound');
+}
+
+function showDuelLobby(message = 'Duelul a fost oprit. Alege dificultatea pentru o rundă nouă.') {
+	setRoundFinished(true);
+	setDuelRoundState('waiting');
+	timer.hideRoundTimer();
+	endGameController?.hideEndGamePopup?.(false);
+	autocomplete?.clearSuggestions?.();
+	autocomplete?.clearSelectedDriverId?.();
+	const inputEl = document.getElementById('driverInput');
+	if (inputEl) inputEl.value = '';
+	const gameZone = document.getElementById('gameZone');
+	if (gameZone) gameZone.classList.add('game-zone-hidden');
+	const overlay = document.getElementById('difficulty-overlay');
+	if (overlay) overlay.classList.remove('hidden');
+	gameModeController?.enterDuel?.({ roomId: activeRoomId });
+	gameModeSelectionController?.updateModeSelection?.('duel');
+	const status = document.getElementById('status');
+	if (status) {
+		status.classList.remove('is-hidden');
+		status.textContent = message;
+	}
+	const diffLabel = document.getElementById('diff-display-label');
+	if (diffLabel) diffLabel.textContent = '';
+}
+
 
 const timer = createTimerView({
 	getSocket: () => socketController?.getSocket?.() || null,
@@ -112,7 +206,17 @@ function sendGuess() {
 	autocomplete.clearSelectedDriverId();
 }
 
+function startDailyFromSelection(level) {
+	if (confirmDuelExit('daily') === false) return;
+	dailyChallengeController.start(level);
+}
+
 function startRoundFromSelection(level) {
+	if (isActiveDuelRound()) {
+		showErrorToast('Nu poți schimba dificultatea sau setările în timpul rundei. Așteaptă finalul rundei.');
+		return;
+	}
+
 	dailyChallengeController.setStartPending(false);
 	dailyChallengeController.setMode(false);
 	if (gameModeController?.isDaily?.()) {
@@ -138,6 +242,7 @@ function enterSingleMode() {
 	resetRoomUi();
 	roleState.setSpectatorMode(false);
 	timer.setHostStatus(true);
+	setDuelRoundState('waiting');
 	resetLiveBoard();
 	socketController?.emit('leaveRoom');
 	gameModeController.enterSingle();
@@ -184,6 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		onModeChanged({ mode }) {
 			if (mode === 'single') timer.setHostStatus(true);
 			if (mode === 'daily') timer.setHostStatus(false);
+			syncRoundSettingsLock();
 		}
 	});
 	gameModeController.enterSingle();
@@ -222,6 +328,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		renderRoomScoreboard,
 		resetLiveBoard,
 		resetRoomScoreboard,
+		setDuelRoundState,
+		showDuelLobby,
 		timer,
 		autocomplete
 	});
@@ -231,7 +339,9 @@ document.addEventListener('DOMContentLoaded', () => {
 		requestRematch: endGameController.requestRematch,
 		hideEndGamePopup: endGameController.hideEndGamePopup,
 		startRoundFromSelection,
-		startDailyChallenge: dailyChallengeController.start,
+		startDailyChallenge: startDailyFromSelection,
+		confirmDuelExit,
+		abortDuelRound,
 		timer,
 		showHostOnlyTimerMessage
 	});
@@ -243,8 +353,10 @@ document.addEventListener('DOMContentLoaded', () => {
 	gameModeSelectionController = createGameModeSelectionController({
 		gameModeController,
 		startDuelMode: () => enterDuelMode(),
-		startDailyChallenge: dailyChallengeController.start,
-		onSingleSelected: enterSingleMode
+		startDailyChallenge: startDailyFromSelection,
+		onSingleSelected: enterSingleMode,
+		confirmDuelExit,
+		abortDuelRound
 	});
 	gameModeSelectionController.setup();
 

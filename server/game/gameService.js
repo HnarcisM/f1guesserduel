@@ -76,6 +76,8 @@ function createGameService(driversRepository) {
     }
 
     function startNewRound(room, options) {
+        if (room && room.roundState === 'playing') return null;
+
         const difficulty = options && options.difficulty;
         if (!isValidDifficulty(difficulty)) return null;
 

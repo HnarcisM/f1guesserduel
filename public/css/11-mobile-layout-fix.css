@@ -440,3 +440,17 @@
         max-width: 100%;
     }
 }
+
+/* Duel safety guard: difficulty controls are locked while a duel round is active. */
+.btn-diff:disabled,
+.btn-diff.is-locked,
+.menu-item.is-locked {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: grayscale(0.35);
+}
+
+.btn-diff:disabled,
+.menu-item.is-locked {
+    pointer-events: none;
+}

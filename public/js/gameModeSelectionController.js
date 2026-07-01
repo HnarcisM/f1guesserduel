@@ -6,7 +6,9 @@ export function createGameModeSelectionController({
 	gameModeController,
 	startDuelMode,
 	startDailyChallenge,
-	onSingleSelected
+	onSingleSelected,
+	confirmDuelExit,
+	abortDuelRound
 } = {}) {
 	function getModeControls() {
 		return Array.from(document.querySelectorAll('[data-game-mode-choice]'));
@@ -41,6 +43,7 @@ export function createGameModeSelectionController({
 	}
 
 	function selectSingle() {
+		if (confirmDuelExit?.('single') === false) return;
 		gameModeController?.enterSingle?.();
 		onSingleSelected?.();
 		updateModeSelection('single');
@@ -60,6 +63,7 @@ export function createGameModeSelectionController({
 	}
 
 	function selectDaily(level = null) {
+		if (confirmDuelExit?.('daily') === false) return;
 		gameModeController?.enterDaily?.({ source: 'mode-selection' });
 		updateModeSelection('daily');
 		if (level) {

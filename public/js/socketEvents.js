@@ -9,6 +9,7 @@ export function registerSocketEvents(socket, app) {
 		'gameRestarted',
 		'gameTimedOut',
 		'roundResolved',
+		'duelAborted',
 		'errorMessage',
 		'roomFull',
 		'hostStatus',
@@ -56,6 +57,7 @@ export function registerSocketEvents(socket, app) {
 		const roomState = payload.room || payload;
 		updateRoomBadge(roomState);
 		renderRoomScoreboard(roomState);
+		app.setDuelRoundState?.(roomState.roundState);
 		renderLiveBoardForSpectator(payload.liveBoard || roomState.liveBoard);
 	}
 
@@ -103,6 +105,7 @@ export function registerSocketEvents(socket, app) {
 
 	function handleRoundResolved(payload = {}) {
 		if (!app.isDuelMode?.()) return;
+		app.setDuelRoundState?.('finished');
 		if (payload.scoreboard) app.renderRoomScoreboard?.(payload.scoreboard, { forceVisible: true });
 		if (payload.liveBoard) app.renderLiveBoard?.(payload.liveBoard, { forceVisible: Boolean(app.isSpectator?.()) });
 
@@ -137,6 +140,7 @@ export function registerSocketEvents(socket, app) {
 		else if (!data.isDailyChallenge) app.enterDuelMode?.();
 		app.setDriversList(data.drivers);
 		app.setRoundFinished(false);
+		app.setDuelRoundState?.('playing');
 		app.exitRematchMode();
 
 		if (app.isSpectator?.()) {
@@ -200,6 +204,18 @@ export function registerSocketEvents(socket, app) {
 			const roleLabel = app.getRoleBadgeLabel?.(app.timer.isHost()) || '';
 			if (roleLabel) badge.innerText = `${badge.innerText}${roleLabel}`;
 		}
+	});
+
+
+	socket.on('duelAborted', (payload = {}) => {
+		if (!app.isDuelMode?.()) return;
+		app.setDuelRoundState?.('waiting');
+		if (payload.room) {
+			updateRoomBadge(payload.room);
+			renderRoomScoreboard(payload.room);
+		}
+		app.resetLiveBoard?.();
+		app.showDuelLobby?.(payload.message || 'Runda a fost oprită. Revenim în lobby.');
 	});
 
 	socket.on('roomFull', (data = {}) => {
@@ -278,6 +294,7 @@ export function registerSocketEvents(socket, app) {
 		app.setDailyMode?.(false);
 		if (data.isSinglePlay) app.enterSingleMode?.();
 		app.setRoundFinished(false);
+		app.setDuelRoundState?.('playing');
 		app.exitRematchMode();
 		app.initializeGridStructure();
 		app.hideEndGamePopup(false);

@@ -7,6 +7,7 @@ export function createTimerView({ getSocket, isRoundFinished, onHostOnlyMessage 
 	let selectedTimeLimitSeconds = Number(localStorage.getItem('f1-guesser-time-limit')) || DEFAULT_TIME_LIMIT_SECONDS;
 	let currentRoundTimed = false;
 	let currentTimeLimitSeconds = DEFAULT_TIME_LIMIT_SECONDS;
+	let areRoundSettingsLocked = false;
 	let roundTimerInterval = null;
 	let roundTimerEndsAt = null;
 
@@ -43,7 +44,7 @@ export function createTimerView({ getSocket, isRoundFinished, onHostOnlyMessage 
 	}
 
 	function updateTimerControlsLock() {
-		const isLocked = !isCurrentRoomHost;
+		const isLocked = !isCurrentRoomHost || areRoundSettingsLocked;
 		document.querySelectorAll("[data-timer-mode], .timer-item").forEach(control => {
 			control.classList.toggle("is-locked", isLocked);
 			control.setAttribute("aria-disabled", String(isLocked));
@@ -53,7 +54,7 @@ export function createTimerView({ getSocket, isRoundFinished, onHostOnlyMessage 
 			}
 
 			control.title = isLocked
-				? "Doar hostul camerei poate modifica timerul."
+				? (areRoundSettingsLocked ? "Setările pot fi schimbate după finalul rundei." : "Doar hostul camerei poate modifica timerul.")
 				: "";
 		});
 
@@ -67,7 +68,19 @@ export function createTimerView({ getSocket, isRoundFinished, onHostOnlyMessage 
 		updateTimerControlsLock();
 	}
 
+	function setRoundSettingsLocked(isLocked) {
+		areRoundSettingsLocked = Boolean(isLocked);
+		updateTimerControlsLock();
+	}
+
 	function setTimedMode(enabled, timeLimitSeconds = selectedTimeLimitSeconds) {
+		if (areRoundSettingsLocked) {
+			const status = document.getElementById("status");
+			if (status) status.textContent = "Setările pot fi schimbate după finalul rundei.";
+			syncTimerModeControls();
+			return;
+		}
+
 		if (!isCurrentRoomHost) {
 			onHostOnlyMessage?.();
 			syncTimerModeControls();
@@ -161,6 +174,7 @@ export function createTimerView({ getSocket, isRoundFinished, onHostOnlyMessage 
 		buildRestartOptions,
 		syncTimerModeControls,
 		setHostStatus,
+		setRoundSettingsLocked,
 		setTimedMode,
 		startRoundTimer,
 		hideRoundTimer,

@@ -17,7 +17,8 @@ const {
     recordPlayerGuess,
     markPlayerTimedOut,
     buildLiveBoardState,
-    buildPublicRoomState
+    buildPublicRoomState,
+    abortDuelRound
 } = require('../server/rooms/roomService');
 
 test('room creation creates host as first player', () => {
@@ -411,4 +412,32 @@ test('duel scoreboard does not increment on draw', () => {
     assert.equal(result.status, 'draw');
     assert.equal(result.scoreApplied, true);
     assert.deepEqual(buildPublicScoreboard(room).map(entry => entry.wins), [0, 0]);
+});
+
+
+test('abortDuelRound stops active duel round without resetting scoreboard', () => {
+    const { buildPublicScoreboard } = require('../server/rooms/roomService');
+    const room = createRoom('abc123', 'socket-1');
+    addPlayerToRoom(room, 'socket-2');
+    room.roundState = 'playing';
+    room.difficulty = 'easy';
+    room.targetDriver = { name: 'Lewis Hamilton' };
+    room.driversList = [{ id: 'hamilton', name: 'Lewis Hamilton' }];
+    room.scoreboard[getPlayer(room, 'socket-1').scoreKey].wins = 2;
+
+    const player = getPlayer(room, 'socket-1');
+    player.attempts = 2;
+    player.finished = true;
+    player.guesses = [{ attempt: 1 }];
+
+    const result = abortDuelRound(room, 'player-aborted');
+
+    assert.equal(result.status, 'aborted');
+    assert.equal(room.roundState, 'waiting');
+    assert.equal(room.targetDriver, null);
+    assert.equal(room.roundStartedAt, null);
+    assert.equal(getPlayer(room, 'socket-1').attempts, 0);
+    assert.equal(getPlayer(room, 'socket-1').finished, false);
+    assert.deepEqual(getPlayer(room, 'socket-1').guesses, []);
+    assert.deepEqual(buildPublicScoreboard(room).map(entry => entry.wins), [2, 0]);
 });
