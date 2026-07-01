@@ -24,6 +24,10 @@ function sortCorrectPlayers(a, b) {
     return getPlayerCompletedAt(a) - getPlayerCompletedAt(b);
 }
 
+function getAllPlayersFinished(players) {
+    return players.length > 0 && players.every(player => Boolean(player.finished));
+}
+
 function buildPlayerResult(player, winnerSocketId = null, isDraw = false) {
     const isWinner = Boolean(winnerSocketId && player.socketId === winnerSocketId);
     const isCorrect = getPlayerCorrect(player);
@@ -31,6 +35,7 @@ function buildPlayerResult(player, winnerSocketId = null, isDraw = false) {
 
     if (isDraw) outcome = 'draw';
     else if (isWinner) outcome = 'win';
+    else if (!player.finished) outcome = 'pending';
 
     return {
         username: player.username,
@@ -44,6 +49,28 @@ function buildPlayerResult(player, winnerSocketId = null, isDraw = false) {
     };
 }
 
+function buildRoundPlayers(room, winnerSocketId = null, isDraw = false) {
+    return getActivePlayers(room).map(player => buildPlayerResult(player, winnerSocketId, isDraw));
+}
+
+function refreshExistingRoundResult(room) {
+    if (!room?.roundResult) return null;
+
+    const players = getActivePlayers(room);
+    const allPlayersFinished = getAllPlayersFinished(players);
+    const isDraw = room.roundResult.status === 'draw';
+
+    room.roundResult.players = buildRoundPlayers(room, room.roundResult.winnerSocketId || null, isDraw);
+    room.roundResult.allPlayersFinished = allPlayersFinished;
+
+    if (allPlayersFinished) {
+        room.roundState = 'finished';
+        room.roundResult.finishedAt = room.roundResult.finishedAt || Date.now();
+    }
+
+    return room.roundResult;
+}
+
 function buildPublicRoundResult(roundResult) {
     if (!roundResult) return null;
 
@@ -52,6 +79,8 @@ function buildPublicRoundResult(roundResult) {
         reason: roundResult.reason,
         winnerUsername: roundResult.winnerUsername || null,
         resolvedAt: roundResult.resolvedAt || null,
+        finishedAt: roundResult.finishedAt || null,
+        allPlayersFinished: Boolean(roundResult.allPlayersFinished),
         target: roundResult.target || null,
         players: Array.isArray(roundResult.players)
             ? roundResult.players.map(player => ({ ...player }))
@@ -60,13 +89,17 @@ function buildPublicRoundResult(roundResult) {
 }
 
 function resolveRoundWinner(room, reason = 'guess') {
-    if (!room || room.roundState !== 'playing' || room.roundResult) return room?.roundResult || null;
+    if (!room || room.roundState !== 'playing') return room?.roundResult || null;
+
+    if (room.roundResult) {
+        return refreshExistingRoundResult(room);
+    }
 
     const players = getActivePlayers(room);
     if (players.length === 0) return null;
 
     const correctPlayers = players.filter(getPlayerCorrect).sort(sortCorrectPlayers);
-    const allPlayersFinished = players.every(player => Boolean(player.finished));
+    const allPlayersFinished = getAllPlayersFinished(players);
     const resolvedAt = Date.now();
     let winner = null;
     let status = null;
@@ -91,12 +124,17 @@ function resolveRoundWinner(room, reason = 'guess') {
         winnerSocketId,
         winnerUsername: winner?.username || null,
         resolvedAt,
+        finishedAt: allPlayersFinished ? resolvedAt : null,
+        allPlayersFinished,
         target: buildTargetSummary(room),
-        players: players.map(player => buildPlayerResult(player, winnerSocketId, isDraw))
+        players: buildRoundPlayers(room, winnerSocketId, isDraw)
     };
 
-    room.roundState = 'finished';
     room.roundResult = result;
+    if (allPlayersFinished) {
+        room.roundState = 'finished';
+    }
+
     return result;
 }
 
@@ -122,9 +160,9 @@ function buildPersonalRoundResult(roundResult, member = null) {
     }
 
     const isWinner = Boolean(roundResult.winnerSocketId && member.socketId === roundResult.winnerSocketId);
-    const outcome = roundResult.status === 'draw'
+    const outcome = playerResult?.outcome || (roundResult.status === 'draw'
         ? 'draw'
-        : isWinner ? 'win' : 'loss';
+        : isWinner ? 'win' : member.finished ? 'loss' : 'pending');
 
     return {
         ...publicResult,

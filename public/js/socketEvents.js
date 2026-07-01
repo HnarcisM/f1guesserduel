@@ -51,6 +51,8 @@ export function registerSocketEvents(socket, app) {
 
 	function buildRoundResolvedPopup(payload = {}) {
 		const result = payload.resultForYou || {};
+		if (result.outcome === 'pending') return null;
+
 		const winnerName = payload.winnerUsername || 'Nimeni';
 		const targetName = payload.target?.name || 'Necunoscut';
 		const attempts = result.attempts || 0;
@@ -73,7 +75,8 @@ export function registerSocketEvents(socket, app) {
 				target: payload.target,
 				customTitle: '🤝 REMIZĂ!',
 				customMessage: `Runda s-a terminat la egalitate. Pilotul misterios era ${targetName}.`,
-				statsResult: 'loss'
+				statsResult: 'loss',
+				force: true
 			};
 		}
 
@@ -83,7 +86,8 @@ export function registerSocketEvents(socket, app) {
 			target: payload.target,
 			customTitle: '💀 AI PIERDUT RUNDA!',
 			customMessage: `${winnerName} a câștigat runda. Pilotul misterios era ${targetName}.`,
-			statsResult: 'loss'
+			statsResult: 'loss',
+			force: true
 		};
 	}
 
@@ -92,7 +96,18 @@ export function registerSocketEvents(socket, app) {
 		if (payload.liveBoard) app.renderLiveBoard?.(payload.liveBoard, { forceVisible: Boolean(app.isSpectator?.()) });
 
 		if (app.isSpectator?.()) return;
-		app.showEndGamePopup?.(buildRoundResolvedPopup(payload));
+
+		const popupPayload = buildRoundResolvedPopup(payload);
+		if (popupPayload) {
+			app.showEndGamePopup?.(popupPayload);
+			return;
+		}
+
+		const statusEl = document.getElementById('status');
+		if (statusEl && payload.winnerUsername) {
+			statusEl.classList.remove('is-hidden');
+			statusEl.textContent = `${payload.winnerUsername} a ghicit primul. Continuă runda până ghicești, rămâi fără încercări sau expiră timpul.`;
+		}
 	}
 
 
@@ -186,11 +201,22 @@ export function registerSocketEvents(socket, app) {
 	socket.on('guessResult', (data) => {
 		const { guess, results, attempts, isCorrect, isGameOver, target, roundResult } = data;
 		const rendered = app.renderGuessResult({ guess, results, attempts });
-		if (!rendered) return;
 
-		if (isGameOver && !roundResult) {
-			app.showEndGamePopup({ isCorrect, attempts, target });
+		// Popup-ul de final nu trebuie să depindă de randarea gridului.
+		// În Duel, non-host-ul poate primi rezultatul rundei înainte ca UI-ul să fie
+		// perfect stabil, iar dacă renderGuessResult returnează false nu vrem să piardă popup-ul.
+		if (isGameOver && roundResult) {
+			const popupPayload = buildRoundResolvedPopup(roundResult);
+			if (popupPayload) app.showEndGamePopup?.(popupPayload);
+			return;
 		}
+
+		if (isGameOver) {
+			app.showEndGamePopup({ isCorrect, attempts, target, force: true });
+			return;
+		}
+
+		if (!rendered) return;
 	});
 
 
@@ -215,7 +241,12 @@ export function registerSocketEvents(socket, app) {
 		app.handleDailyChallengeError?.(message);
 	});
 	socket.on('gameTimedOut', (data) => {
-		if (data.roundResult) return;
+		if (data.roundResult) {
+			const popupPayload = buildRoundResolvedPopup(data.roundResult);
+			if (popupPayload) app.showEndGamePopup?.(popupPayload);
+			return;
+		}
+
 		app.showEndGamePopup({
 			isCorrect: false,
 			attempts: data.attempts || 0,

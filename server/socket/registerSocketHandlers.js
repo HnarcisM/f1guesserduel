@@ -165,8 +165,18 @@ function registerSocketHandlers(io, dependencies) {
             if (room.timed && room.roundStartedAt && Date.now() - room.roundStartedAt >= room.timeLimitSeconds * 1000) {
                 player.attempts = MAX_ATTEMPTS;
                 markPlayerTimedOut(player);
-                socket.emit('gameTimedOut', { target: { name: room.targetDriver.name }, attempts: MAX_ATTEMPTS });
-                emitRoomStateUpdate(currentRoom, 'timeout');
+                const hadRoundResult = Boolean(room.roundResult);
+                const roundResult = resolveRoundWinner(room, 'timeout');
+                socket.emit('gameTimedOut', {
+                    target: { name: room.targetDriver.name },
+                    attempts: MAX_ATTEMPTS,
+                    roundResult: roundResult ? buildPersonalRoundResult(roundResult, player) : null
+                });
+                if (roundResult && !hadRoundResult) {
+                    emitRoundResolved(currentRoom, room, roundResult);
+                } else {
+                    emitRoomStateUpdate(currentRoom, roundResult ? 'round-progress' : 'timeout');
+                }
                 return;
             }
 
@@ -197,6 +207,7 @@ function registerSocketHandlers(io, dependencies) {
             }
 
             recordPlayerGuess(player, guessDriver, results, isCorrectGuess, isGameOver);
+            const hadRoundResult = Boolean(room.roundResult);
             const roundResult = resolveRoundWinner(room, isCorrectGuess ? 'correct-guess' : 'guess');
 
             const responseData = {
@@ -214,10 +225,10 @@ function registerSocketHandlers(io, dependencies) {
 
             socket.emit('guessResult', responseData);
 
-            if (roundResult) {
+            if (roundResult && !hadRoundResult) {
                 emitRoundResolved(currentRoom, room, roundResult);
             } else {
-                emitRoomStateUpdate(currentRoom, 'guess');
+                emitRoomStateUpdate(currentRoom, roundResult ? 'round-progress' : 'guess');
             }
         });
 
@@ -252,16 +263,17 @@ function registerSocketHandlers(io, dependencies) {
 
             player.attempts = MAX_ATTEMPTS;
             markPlayerTimedOut(player);
+            const hadRoundResult = Boolean(room.roundResult);
             const roundResult = resolveRoundWinner(room, 'timeout');
             socket.emit('gameTimedOut', {
                 target: { name: room.targetDriver.name },
                 attempts: MAX_ATTEMPTS,
                 roundResult: roundResult ? buildPersonalRoundResult(roundResult, player) : null
             });
-            if (roundResult) {
+            if (roundResult && !hadRoundResult) {
                 emitRoundResolved(currentRoom, room, roundResult);
             } else {
-                emitRoomStateUpdate(currentRoom, 'timeout');
+                emitRoomStateUpdate(currentRoom, roundResult ? 'round-progress' : 'timeout');
             }
         });
 
@@ -278,6 +290,11 @@ function registerSocketHandlers(io, dependencies) {
 
             if (!isHost(room, socket.id)) {
                 socket.emit('errorMessage', 'Doar hostul camerei poate porni un rematch.');
+                return;
+            }
+
+            if (room.roundResult && room.roundState !== 'finished') {
+                socket.emit('errorMessage', 'Runda a fost decisă, dar celălalt jucător încă joacă. Așteaptă să termine înainte de rematch.');
                 return;
             }
 

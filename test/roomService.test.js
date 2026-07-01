@@ -180,12 +180,60 @@ test('duel round resolves with the first correct player as winner', () => {
     const winnerResult = buildPersonalRoundResult(result, winner);
     const loserResult = buildPersonalRoundResult(result, getPlayer(room, 'socket-2'));
 
-    assert.equal(room.roundState, 'finished');
+    assert.equal(room.roundState, 'playing');
     assert.equal(result.status, 'win');
+    assert.equal(result.allPlayersFinished, false);
     assert.equal(publicResult.winnerUsername, 'Guest 1');
     assert.equal(publicResult.winnerSocketId, undefined);
     assert.equal(winnerResult.resultForYou.outcome, 'win');
-    assert.equal(loserResult.resultForYou.outcome, 'loss');
+    assert.equal(loserResult.resultForYou.outcome, 'pending');
+
+    const loser = getPlayer(room, 'socket-2');
+    loser.attempts = 6;
+    loser.finished = true;
+    loser.correctGuess = false;
+    loser.completedAt = Date.now();
+
+    const finalResult = resolveRoundWinner(room, 'guess');
+    const finalLoserResult = buildPersonalRoundResult(finalResult, loser);
+
+    assert.equal(room.roundState, 'finished');
+    assert.equal(finalResult.allPlayersFinished, true);
+    assert.equal(finalLoserResult.resultForYou.outcome, 'loss');
+});
+
+
+test('duel round returns win outcome when non-host player guesses first', () => {
+    const {
+        resolveRoundWinner,
+        buildPersonalRoundResult
+    } = require('../server/rooms/roomService');
+    const room = createRoom('abc123', 'socket-host');
+    addPlayerToRoom(room, 'socket-guest');
+    room.roundState = 'playing';
+    room.targetDriver = { name: 'Lewis Hamilton' };
+
+    const nonHost = getPlayer(room, 'socket-guest');
+    nonHost.attempts = 1;
+    recordPlayerGuess(
+        nonHost,
+        { id: 'hamilton', name: 'Lewis Hamilton', nat: 'British', team: ['Mercedes'], age: 39, debut: 2007, wins: 103 },
+        { name: 'green' },
+        true,
+        true
+    );
+
+    const result = resolveRoundWinner(room, 'correct-guess');
+    const nonHostResult = buildPersonalRoundResult(result, nonHost);
+    const hostResult = buildPersonalRoundResult(result, getPlayer(room, 'socket-host'));
+
+    assert.equal(result.status, 'win');
+    assert.equal(result.winnerUsername, nonHost.username);
+    assert.equal(nonHost.isHost, false);
+    assert.equal(nonHostResult.resultForYou.outcome, 'win');
+    assert.equal(nonHostResult.resultForYou.isWinner, true);
+    assert.equal(hostResult.resultForYou.outcome, 'pending');
+    assert.equal(room.roundState, 'playing');
 });
 
 test('duel round resolves as draw when all players finish without a correct guess', () => {
