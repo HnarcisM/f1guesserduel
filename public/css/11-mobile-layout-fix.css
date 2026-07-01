@@ -183,40 +183,8 @@
         padding-right: var(--space-2xl);
     }
 
-    .site-header {
-        grid-template-columns: auto minmax(120px, 1fr) minmax(0, auto);
-        column-gap: var(--space-md);
-    }
-
-    .site-header h1 {
-        font-size: 15px;
-        letter-spacing: 1px;
-        max-width: 100%;
-        text-align: center;
-    }
-
-    .header-actions {
-        max-width: min(46vw, 300px);
-        gap: var(--space-sm);
-        overflow: hidden;
-    }
-
-    .auth-open-btn {
-        max-width: 96px;
-        min-width: var(--header-control-size);
-    }
-
-    .share-btn {
-        max-width: 168px;
-        min-width: var(--header-control-size);
-        overflow: hidden;
-    }
-
-    #roomBtnText {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
+    /* Header-ul pentru Fold este gestionat într-un breakpoint dedicat mai jos,
+       ca portrait și landscape să folosească aceeași protecție anti-overlap. */
 
     .container {
         width: min(720px, 100%);

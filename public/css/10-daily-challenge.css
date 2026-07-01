@@ -115,11 +115,7 @@ body.daily-active #liveDuelBoard {
     filter: grayscale(0.25);
 }
 
-.daily-challenge-btn:disabled {
-    transform: none;
-    box-shadow: none;
-}
-
+.daily-challenge-btn:disabled,
 .daily-challenge-btn:disabled:hover {
     transform: none;
     box-shadow: none;

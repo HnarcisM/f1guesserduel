@@ -264,12 +264,6 @@ button#sendGuessBtn.rematch-submit-btn {
     }
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .round-timer.timer-danger {
-        animation: none;
-    }
-}
-
 /* Theme polish pentru noul race timer. */
 [data-app-theme="neon"] .timer-track-line::before {
     box-shadow: 0 0 22px color-mix(in srgb, var(--accent-f1) 42%, transparent);
@@ -302,6 +296,10 @@ button#sendGuessBtn.rematch-submit-btn {
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .round-timer.timer-danger {
+        animation: none;
+    }
+
     .timer-car,
     .timer-track-line::before {
         transition: none;
