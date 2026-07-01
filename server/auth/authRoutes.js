@@ -1,7 +1,7 @@
 const express = require('express');
 const { createMemoryRateLimiter } = require('../middleware/rateLimit');
 
-function createAuthRoutes({ authService, sessionService, rateLimiters = {} }) {
+function createAuthRoutes({ authService, sessionService, rateLimiters = {}, cookieOptions = {} }) {
     const router = express.Router();
     const loginRateLimiter = rateLimiters.login || createMemoryRateLimiter({
         windowMs: 10 * 60 * 1000,
@@ -16,18 +16,26 @@ function createAuthRoutes({ authService, sessionService, rateLimiters = {} }) {
         message: 'Prea multe încercări de înregistrare. Încearcă din nou peste câteva minute.'
     });
 
-    function setSessionCookie(res, token) {
-        res.cookie(sessionService.cookieName, token, {
+    function buildCookieOptions(extraOptions = {}) {
+        return {
             httpOnly: true,
             sameSite: 'lax',
-            secure: process.env.NODE_ENV === 'production',
-            maxAge: sessionService.maxAgeMs,
-            path: '/'
-        });
+            secure: false,
+            path: '/',
+            ...cookieOptions,
+            ...extraOptions
+        };
+    }
+
+    function setSessionCookie(res, token) {
+        res.cookie(sessionService.cookieName, token, buildCookieOptions({
+            maxAge: sessionService.maxAgeMs
+        }));
     }
 
     function clearSessionCookie(res) {
-        res.clearCookie(sessionService.cookieName, { path: '/' });
+        const { maxAge, ...clearOptions } = buildCookieOptions();
+        res.clearCookie(sessionService.cookieName, clearOptions);
     }
 
     function buildAuthResponse(user, sessionToken = null) {

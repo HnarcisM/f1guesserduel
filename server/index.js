@@ -15,27 +15,37 @@ const { createAuthService } = require('./auth/authService');
 const { createAuthRoutes } = require('./auth/authRoutes');
 const { createAuthMiddleware } = require('./middleware/authMiddleware');
 const { createHealthRoutes } = require('./routes/healthRoutes');
+const { createAppConfig } = require('./config/appConfig');
+
+const config = createAppConfig(process.env, {
+    projectRoot: path.join(__dirname, '..')
+});
 
 const app = express();
+if (config.trustProxy) {
+    app.set('trust proxy', 1);
+}
 const server = http.createServer(app);
 const io = new Server(server, {
     pingInterval: 10000,
     pingTimeout: 5000
 });
 
-const PORT = process.env.PORT || 3000;
-const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
-
 const driversRepository = createDriversRepository({
-    driversFilePath: path.join(__dirname, '..', 'drivers.json')
+    driversFilePath: config.driversFilePath
 });
 const gameService = createGameService(driversRepository);
 const roomStore = createMemoryRoomStore();
 const db = createDatabase({
-    dbFilePath: path.join(DATA_DIR, 'f1guesser.sqlite'),
-    schemaFilePath: path.join(__dirname, 'db', 'schema.sql')
+    dbFilePath: config.dbFilePath,
+    schemaFilePath: config.schemaFilePath
 });
-const sessionService = createSessionService(db);
+const sessionService = createSessionService(db, {
+    cookieName: config.auth.sessionCookieName,
+    sessionMaxAgeMs: config.auth.sessionMaxAgeMs,
+    socketAuthTokenMaxAgeMs: config.auth.socketAuthTokenMaxAgeMs,
+    socketAuthSecret: config.auth.socketAuthSecret
+});
 const authService = createAuthService(db, sessionService);
 
 function setStaticCacheHeaders(res, filePath) {
@@ -60,8 +70,12 @@ app.use(express.json({ limit: '32kb' }));
 app.use(cookieParser());
 app.use(createAuthMiddleware(sessionService));
 app.use('/api', createHealthRoutes());
-app.use('/api/auth', createAuthRoutes({ authService, sessionService }));
-app.use(express.static(path.join(__dirname, '..', 'public'), {
+app.use('/api/auth', createAuthRoutes({
+    authService,
+    sessionService,
+    cookieOptions: config.auth.cookie
+}));
+app.use(express.static(config.publicDir, {
     etag: true,
     lastModified: true,
     setHeaders: setStaticCacheHeaders
@@ -74,8 +88,8 @@ registerSocketHandlers(io, {
 });
 
 app.get('/', (req, res) => {
-    const htmlPath = path.join(__dirname, '..', 'public', 'index.html');
-    const txtPath = path.join(__dirname, '..', 'public', 'index.txt');
+    const htmlPath = path.join(config.publicDir, 'index.html');
+    const txtPath = path.join(config.publicDir, 'index.txt');
 
     if (fs.existsSync(htmlPath)) {
         res.sendFile(htmlPath);
@@ -86,9 +100,9 @@ app.get('/', (req, res) => {
     }
 });
 
-server.listen(PORT, () => {
+server.listen(config.port, () => {
     console.log(`===================================================`);
     console.log(` 🏎️  F1 GUESSER DUEL RULEAZĂ ACUM!`);
-    console.log(` 🌐 Accesează în browser: http://localhost:${PORT}`);
+    console.log(` 🌐 Accesează în browser: http://localhost:${config.port}`);
     console.log(`===================================================`);
 });

@@ -1,10 +1,15 @@
 const crypto = require('crypto');
+const {
+    DEFAULT_SESSION_COOKIE_NAME,
+    DEFAULT_SESSION_MAX_AGE_DAYS,
+    DEFAULT_SOCKET_AUTH_TOKEN_MAX_AGE_MS
+} = require('../config/appConfig');
 
-const SESSION_COOKIE_NAME = 'f1_session';
-const SESSION_MAX_AGE_DAYS = 7;
+const SESSION_COOKIE_NAME = DEFAULT_SESSION_COOKIE_NAME;
+const SESSION_MAX_AGE_DAYS = DEFAULT_SESSION_MAX_AGE_DAYS;
 const SESSION_MAX_AGE_MS = SESSION_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
-const SOCKET_AUTH_TOKEN_MAX_AGE_MS = 2 * 60 * 1000;
-const SOCKET_AUTH_SECRET = process.env.SOCKET_AUTH_SECRET || process.env.SESSION_SECRET || 'f1-guesser-duel-dev-socket-auth-secret';
+const SOCKET_AUTH_TOKEN_MAX_AGE_MS = DEFAULT_SOCKET_AUTH_TOKEN_MAX_AGE_MS;
+const DEFAULT_SOCKET_AUTH_SECRET = 'f1-guesser-duel-dev-socket-auth-secret';
 
 function hashToken(token) {
     return crypto.createHash('sha256').update(token).digest('hex');
@@ -18,9 +23,9 @@ function base64UrlDecode(value) {
     return Buffer.from(value, 'base64url').toString('utf8');
 }
 
-function signSocketAuthPayload(encodedPayload) {
+function signSocketAuthPayload(encodedPayload, secret) {
     return crypto
-        .createHmac('sha256', SOCKET_AUTH_SECRET)
+        .createHmac('sha256', secret)
         .update(encodedPayload)
         .digest('base64url');
 }
@@ -31,7 +36,12 @@ function safeEqual(a, b) {
     return left.length === right.length && crypto.timingSafeEqual(left, right);
 }
 
-function createSessionService(db) {
+function createSessionService(db, options = {}) {
+    const cookieName = options.cookieName || SESSION_COOKIE_NAME;
+    const maxAgeMs = options.sessionMaxAgeMs || SESSION_MAX_AGE_MS;
+    const socketAuthTokenMaxAgeMs = options.socketAuthTokenMaxAgeMs || SOCKET_AUTH_TOKEN_MAX_AGE_MS;
+    const socketAuthSecret = options.socketAuthSecret || DEFAULT_SOCKET_AUTH_SECRET;
+
     const createSessionStmt = db.prepare(`
         INSERT INTO sessions (user_id, token_hash, expires_at)
         VALUES (@userId, @tokenHash, @expiresAt)
@@ -62,7 +72,7 @@ function createSessionService(db) {
 
         const token = crypto.randomBytes(32).toString('hex');
         const tokenHash = hashToken(token);
-        const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_MS).toISOString();
+        const expiresAt = new Date(Date.now() + maxAgeMs).toISOString();
 
         createSessionStmt.run({ userId, tokenHash, expiresAt });
         return { token, expiresAt };
@@ -87,10 +97,10 @@ function createSessionService(db) {
 
         const payload = {
             sessionHash,
-            exp: Date.now() + SOCKET_AUTH_TOKEN_MAX_AGE_MS
+            exp: Date.now() + socketAuthTokenMaxAgeMs
         };
         const encodedPayload = base64UrlEncode(JSON.stringify(payload));
-        const signature = signSocketAuthPayload(encodedPayload);
+        const signature = signSocketAuthPayload(encodedPayload, socketAuthSecret);
 
         return `${encodedPayload}.${signature}`;
     }
@@ -101,7 +111,7 @@ function createSessionService(db) {
         const [encodedPayload, signature] = socketAuthToken.split('.');
         if (!encodedPayload || !signature) return null;
 
-        const expectedSignature = signSocketAuthPayload(encodedPayload);
+        const expectedSignature = signSocketAuthPayload(encodedPayload, socketAuthSecret);
         if (!safeEqual(signature, expectedSignature)) return null;
 
         try {
@@ -125,8 +135,8 @@ function createSessionService(db) {
         createSocketAuthToken,
         getUserBySocketAuthToken,
         destroySession,
-        cookieName: SESSION_COOKIE_NAME,
-        maxAgeMs: SESSION_MAX_AGE_MS
+        cookieName,
+        maxAgeMs
     };
 }
 
