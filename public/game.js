@@ -1,12 +1,12 @@
 import { createAutocomplete } from './js/autocomplete.js';
 import { initializeGridStructure, renderGuessResult } from './js/gridView.js';
 import { createTimerView } from './js/timerView.js';
-import { registerSocketEvents } from './js/socketEvents.js';
 import { createAuthView } from './js/authView.js';
 import { renderLiveBoard, resetLiveBoard } from './js/liveBoardView.js';
 import { createRoleState } from './js/roleState.js';
 import { createDailyChallengeController } from './js/dailyChallengeController.js';
 import { createEndGameController } from './js/endGameController.js';
+import { createGameSocketController } from './js/gameSocketController.js';
 import { setupShareButton, setupRoom } from './js/roomController.js';
 import {
 	setupDailyChallengeControls,
@@ -24,7 +24,7 @@ import {
  * care este partajată între Socket.IO, daily challenge, autocomplete și controllere.
  */
 
-let socket;
+let socketController;
 let driversList = [];
 let isRoundFinished = false;
 let authView;
@@ -62,7 +62,7 @@ function showHostOnlyTimerMessage() {
 }
 
 const timer = createTimerView({
-	getSocket: () => socket,
+	getSocket: () => socketController?.getSocket?.() || null,
 	isRoundFinished: () => isRoundFinished,
 	onHostOnlyMessage: showHostOnlyTimerMessage
 });
@@ -72,7 +72,7 @@ function createEndGameHandlers() {
 		roleState,
 		timer,
 		dailyChallengeState: dailyChallengeController.state,
-		getSocket: () => socket,
+		getSocket: () => socketController?.getSocket?.() || null,
 		getIsDailyMode: dailyChallengeController.isMode,
 		getIsRoundFinished: () => isRoundFinished,
 		setRoundFinished
@@ -99,38 +99,13 @@ function sendGuess() {
 		return;
 	}
 
-	if (socket) {
-		socket.emit(dailyChallengeController.isMode() ? 'submitDailyGuess' : 'submitGuess', finalDriver.id);
-	}
+	socketController?.emit(
+		dailyChallengeController.isMode() ? 'submitDailyGuess' : 'submitGuess',
+		finalDriver.id
+	);
 	inputEl.value = '';
 	autocomplete.clearSuggestions();
 	autocomplete.clearSelectedDriverId();
-}
-
-function setupSocketEvents() {
-	registerSocketEvents(socket, {
-		setDriversList,
-		setRoundFinished,
-		setSpectatorMode: roleState.setSpectatorMode,
-		setDailyMode: dailyChallengeController.setMode,
-		setDailyStartPending: dailyChallengeController.setStartPending,
-		completeDailyChallenge: dailyChallengeController.complete,
-		isDailyMode: dailyChallengeController.isMode,
-		isDailyStartPending: dailyChallengeController.isStartPending,
-		isSpectator: roleState.isSpectator,
-		getRoleBadgeLabel: roleState.getRoleBadgeLabel,
-		exitRematchMode: endGameController.exitRematchMode,
-		initializeGridStructure,
-		renderGuessResult,
-		showEndGamePopup: endGameController.showEndGamePopup,
-		hideEndGamePopup: endGameController.hideEndGamePopup,
-		renderLiveBoard,
-		resetLiveBoard,
-		handleInitDailyChallenge: dailyChallengeController.handleInit,
-		handleDailyChallengeError: dailyChallengeController.handleError,
-		timer,
-		autocomplete
-	});
 }
 
 function startRoundFromSelection(level) {
@@ -141,26 +116,8 @@ function startRoundFromSelection(level) {
 	const overlay = document.getElementById('difficulty-overlay');
 	if (overlay) overlay.classList.add('hidden');
 
-	if (socket) {
-		socket.emit('setDifficulty', timer.buildRoundOptions(level));
-	} else {
+	if (!socketController?.emit('setDifficulty', timer.buildRoundOptions(level))) {
 		alert("Butonul funcționează, dar nu ești conectat la server! Porneste 'node server.js'");
-	}
-}
-
-function setupSocketConnection() {
-	try {
-		if (typeof io !== 'undefined') {
-			if (socket) {
-				socket.disconnect();
-			}
-			socket = io();
-			setupSocketEvents();
-		} else {
-			console.error("Eroare: Socket.io nu este încărcat! Pornește serverul cu 'node server.js' și accesează http://localhost:3000");
-		}
-	} catch (err) {
-		console.error('Eroare conexiune server:', err);
 	}
 }
 
@@ -178,9 +135,7 @@ function handleAuthChangeWithoutLeavingRoom(currentUser) {
 	 */
 	dailyChallengeController.updateControls();
 
-	if (socket && socket.connected) {
-		socket.emit('refreshAuthUser', currentUser || null);
-	}
+	socketController?.refreshAuthUser(currentUser);
 }
 
 function setupAuth() {
@@ -198,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	dailyChallengeController = createDailyChallengeController({
 		getCurrentUser: () => authView?.getCurrentUser?.() || null,
-		getSocket: () => socket,
+		getSocket: () => socketController?.getSocket?.() || null,
 		roleState,
 		timer,
 		setDriversList,
@@ -209,6 +164,19 @@ document.addEventListener('DOMContentLoaded', () => {
 	});
 
 	createEndGameHandlers();
+	socketController = createGameSocketController({
+		setDriversList,
+		setRoundFinished,
+		roleState,
+		dailyChallengeController,
+		endGameController,
+		initializeGridStructure,
+		renderGuessResult,
+		renderLiveBoard,
+		resetLiveBoard,
+		timer,
+		autocomplete
+	});
 	setupDailyChallengeControls({ startDailyChallenge: dailyChallengeController.start });
 	const menu = setupMenu({ startRoundFromSelection, startDailyChallenge: dailyChallengeController.start });
 	setupThemeMenu(menu);
@@ -216,8 +184,8 @@ document.addEventListener('DOMContentLoaded', () => {
 	setupTimerControls(menu, { timer, showHostOnlyTimerMessage });
 	setupShareButton();
 	setupAuth();
-	setupSocketConnection();
-	setupRoom({ getSocket: () => socket });
+	socketController.connect();
+	setupRoom({ getSocket: socketController.getSocket });
 	setupGameControls({
 		autocomplete,
 		sendGuess,
