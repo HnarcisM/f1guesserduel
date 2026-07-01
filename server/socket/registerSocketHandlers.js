@@ -16,7 +16,9 @@ const {
     getRoomMemberCount,
     recordPlayerGuess,
     markPlayerTimedOut,
-    buildLiveBoardState
+    buildLiveBoardState,
+    buildPersonalRoundResult,
+    resolveRoundWinner
 } = require('../rooms/roomService');
 const { attachSocketAuth } = require('./socketAuth');
 const { createRoomStateEmitter } = require('./roomStateEmitter');
@@ -38,8 +40,29 @@ function registerSocketHandlers(io, dependencies) {
         emitGameStateToActiveRoomMembers,
         emitHostStatus,
         emitRoomRoleStatuses,
-        emitRoomStateUpdate
+        emitRoomStateUpdate,
+        getActiveRoomSockets
     } = createRoomStateEmitter(io, roomStore);
+
+
+    function emitRoundResolved(roomId, room, roundResult) {
+        if (!room || !roundResult) return;
+        roomStore.markDirty?.();
+
+        for (const memberSocket of getActiveRoomSockets(room)) {
+            const member = room.players?.[memberSocket.id] || room.spectators?.[memberSocket.id] || null;
+            const payload = buildPersonalRoundResult(roundResult, member);
+            if (!payload) continue;
+
+            if (isSpectator(room, memberSocket.id)) {
+                payload.liveBoard = buildLiveBoardState(room);
+            }
+
+            memberSocket.emit('roundResolved', payload);
+        }
+
+        emitRoomStateUpdate(roomId, 'round-resolved');
+    }
 
     io.on('connection', (socket) => {
         let currentRoom = null;
@@ -174,13 +197,15 @@ function registerSocketHandlers(io, dependencies) {
             }
 
             recordPlayerGuess(player, guessDriver, results, isCorrectGuess, isGameOver);
+            const roundResult = resolveRoundWinner(room, isCorrectGuess ? 'correct-guess' : 'guess');
 
             const responseData = {
                 guess: guessDriver,
                 results,
                 attempts: player.attempts,
                 isCorrect: isCorrectGuess,
-                isGameOver
+                isGameOver,
+                roundResult: roundResult ? buildPersonalRoundResult(roundResult, player) : null
             };
 
             if (isGameOver) {
@@ -188,7 +213,12 @@ function registerSocketHandlers(io, dependencies) {
             }
 
             socket.emit('guessResult', responseData);
-            emitRoomStateUpdate(currentRoom, 'guess');
+
+            if (roundResult) {
+                emitRoundResolved(currentRoom, room, roundResult);
+            } else {
+                emitRoomStateUpdate(currentRoom, 'guess');
+            }
         });
 
         socket.on('timeExpired', () => {
@@ -222,11 +252,17 @@ function registerSocketHandlers(io, dependencies) {
 
             player.attempts = MAX_ATTEMPTS;
             markPlayerTimedOut(player);
+            const roundResult = resolveRoundWinner(room, 'timeout');
             socket.emit('gameTimedOut', {
                 target: { name: room.targetDriver.name },
-                attempts: MAX_ATTEMPTS
+                attempts: MAX_ATTEMPTS,
+                roundResult: roundResult ? buildPersonalRoundResult(roundResult, player) : null
             });
-            emitRoomStateUpdate(currentRoom, 'timeout');
+            if (roundResult) {
+                emitRoundResolved(currentRoom, room, roundResult);
+            } else {
+                emitRoomStateUpdate(currentRoom, 'timeout');
+            }
         });
 
         socket.on('restartGame', (payload = {}) => {

@@ -3,6 +3,22 @@ const path = require('path');
 
 const ROOM_PERSISTENCE_VERSION = 1;
 
+function cloneRoundResult(roundResult) {
+    if (!roundResult || typeof roundResult !== 'object') return null;
+
+    return {
+        status: roundResult.status || null,
+        reason: roundResult.reason || null,
+        winnerSocketId: null,
+        winnerUsername: roundResult.winnerUsername || null,
+        resolvedAt: typeof roundResult.resolvedAt === 'number' ? roundResult.resolvedAt : null,
+        target: roundResult.target ? { ...roundResult.target } : null,
+        players: Array.isArray(roundResult.players)
+            ? roundResult.players.map(player => ({ ...player }))
+            : []
+    };
+}
+
 function ensureDirectoryForFile(filePath) {
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
 }
@@ -28,6 +44,7 @@ function serializeRoom(room) {
         timeLimitSeconds: room.timeLimitSeconds,
         roundStartedAt: typeof room.roundStartedAt === 'number' ? room.roundStartedAt : null,
         roundState: room.roundState || 'waiting',
+        roundResult: cloneRoundResult(room.roundResult),
         isDailyChallenge: Boolean(room.isDailyChallenge),
         dailyDate: room.dailyDate || null,
         dailyChallengeId: room.dailyChallengeId || null

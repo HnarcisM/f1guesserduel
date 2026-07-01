@@ -153,3 +153,60 @@ test('public room state does not expose socketId or userId', () => {
     assert.equal(firstSpectator.socketId, undefined);
     assert.equal(firstSpectator.userId, undefined);
 });
+
+test('duel round resolves with the first correct player as winner', () => {
+    const {
+        resolveRoundWinner,
+        buildPublicRoundResult,
+        buildPersonalRoundResult
+    } = require('../server/rooms/roomService');
+    const room = createRoom('abc123', 'socket-1');
+    addPlayerToRoom(room, 'socket-2');
+    room.roundState = 'playing';
+    room.targetDriver = { name: 'Lewis Hamilton' };
+
+    const winner = getPlayer(room, 'socket-1');
+    winner.attempts = 2;
+    recordPlayerGuess(
+        winner,
+        { id: 'hamilton', name: 'Lewis Hamilton', nat: 'British', team: ['Mercedes'], age: 39, debut: 2007, wins: 103 },
+        { name: 'green' },
+        true,
+        true
+    );
+
+    const result = resolveRoundWinner(room, 'correct-guess');
+    const publicResult = buildPublicRoundResult(result);
+    const winnerResult = buildPersonalRoundResult(result, winner);
+    const loserResult = buildPersonalRoundResult(result, getPlayer(room, 'socket-2'));
+
+    assert.equal(room.roundState, 'finished');
+    assert.equal(result.status, 'win');
+    assert.equal(publicResult.winnerUsername, 'Guest 1');
+    assert.equal(publicResult.winnerSocketId, undefined);
+    assert.equal(winnerResult.resultForYou.outcome, 'win');
+    assert.equal(loserResult.resultForYou.outcome, 'loss');
+});
+
+test('duel round resolves as draw when all players finish without a correct guess', () => {
+    const { resolveRoundWinner, buildPersonalRoundResult } = require('../server/rooms/roomService');
+    const room = createRoom('abc123', 'socket-1');
+    addPlayerToRoom(room, 'socket-2');
+    room.roundState = 'playing';
+    room.targetDriver = { name: 'Lewis Hamilton' };
+
+    for (const player of Object.values(room.players)) {
+        player.attempts = 6;
+        player.finished = true;
+        player.correctGuess = false;
+        player.completedAt = Date.now();
+    }
+
+    const result = resolveRoundWinner(room, 'no-correct-guess');
+
+    assert.equal(result.status, 'draw');
+    assert.equal(result.winnerUsername, null);
+    assert.equal(buildPersonalRoundResult(result, getPlayer(room, 'socket-1')).resultForYou.outcome, 'draw');
+    assert.equal(buildPersonalRoundResult(result, getPlayer(room, 'socket-2')).resultForYou.outcome, 'draw');
+});
+

@@ -33,9 +33,19 @@ function renderFallbackMessage(message) {
 
 function createStatusLabel(player) {
     if (!player) return 'Slot liber';
+    if (player.outcome === 'win') return 'Câștigător';
+    if (player.outcome === 'loss') return 'Pierdut';
+    if (player.outcome === 'draw') return 'Remiză';
     if (player.timedOut) return 'Timp expirat';
     if (player.finished) return 'Terminat';
     return 'În joc';
+}
+
+function createRoundResultSummary(roundResult) {
+    if (!roundResult) return null;
+    if (roundResult.status === 'draw') return 'Runda s-a terminat la egalitate.';
+    if (roundResult.winnerUsername) return `${roundResult.winnerUsername} a câștigat runda.`;
+    return 'Runda s-a terminat.';
 }
 
 function createResultPill(field, guess, results = {}) {
@@ -165,7 +175,8 @@ export function renderLiveBoard(board, options = {}) {
         const completed = players.filter(player => player.finished).length;
         const totalGuesses = players.reduce((sum, player) => sum + (Array.isArray(player.guesses) ? player.guesses.length : 0), 0);
         if (summary) {
-            summary.textContent = `${totalGuesses} încercări · ${completed}/${players.length || 2} terminați`;
+            summary.textContent = createRoundResultSummary(board?.roundResult)
+                || `${totalGuesses} încercări · ${completed}/${players.length || 2} terminați`;
         }
 
         for (let index = 0; index < 2; index++) {

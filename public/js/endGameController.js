@@ -113,8 +113,8 @@ export function createEndGameController({
 		}
 	}
 
-	function showEndGamePopup({ isCorrect, attempts, target, isTimedOut = false, isDailyChallenge = false }) {
-		if (getIsRoundFinished()) return;
+	function showEndGamePopup({ isCorrect, attempts, target, isTimedOut = false, isDailyChallenge = false, customTitle = null, customMessage = null, statsResult = null, force = false }) {
+		if (getIsRoundFinished() && !force) return;
 		setRoundFinished(true);
 		isRematchMode = false;
 		timer.stopRoundTimer();
@@ -131,7 +131,19 @@ export function createEndGameController({
 
 		popup.classList.remove('win-style', 'lose-style');
 
-		if (isCorrect) {
+		if (customTitle || customMessage) {
+			setText('endGameTitle', customTitle || (isCorrect ? '🏆 AI CÂȘTIGAT!' : '💀 AI PIERDUT!'));
+			if (messageEl) messageEl.textContent = customMessage || '';
+			popup.classList.add(isCorrect ? 'win-style' : 'lose-style');
+
+			if (statsResult === 'loss') {
+				updateStats(false, 0);
+			} else if (isCorrect) {
+				updateStats(true, attempts);
+			} else {
+				updateStats(false, 0);
+			}
+		} else if (isCorrect) {
 			setText('endGameTitle', '🏆 AI CÂȘTIGAT!');
 			setMessageWithStrong(
 				messageEl,

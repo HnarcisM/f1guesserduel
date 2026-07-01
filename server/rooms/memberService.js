@@ -41,6 +41,8 @@ function createRoomMember(room, socketId, authUser = null, role = 'player') {
         attempts: 0,
         finished: false,
         timedOut: false,
+        correctGuess: false,
+        completedAt: null,
         guesses: [],
         connected: true
     };
@@ -89,6 +91,8 @@ function resetPlayersForNewRound(room) {
         player.attempts = 0;
         player.finished = false;
         player.timedOut = false;
+        player.correctGuess = false;
+        player.completedAt = null;
         player.guesses = [];
     }
 }
@@ -113,6 +117,13 @@ function recordPlayerGuess(player, guessDriver, results, isCorrectGuess, isGameO
     };
 
     player.guesses.push(entry);
+
+    if (isGameOver) {
+        player.finished = true;
+        player.completedAt = Date.now();
+        player.correctGuess = Boolean(isCorrectGuess);
+    }
+
     return entry;
 }
 
@@ -120,6 +131,8 @@ function markPlayerTimedOut(player) {
     if (!player) return;
     player.finished = true;
     player.timedOut = true;
+    player.correctGuess = false;
+    player.completedAt = Date.now();
 }
 
 module.exports = {

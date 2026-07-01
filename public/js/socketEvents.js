@@ -8,6 +8,7 @@ export function registerSocketEvents(socket, app) {
 		'guessResult',
 		'gameRestarted',
 		'gameTimedOut',
+		'roundResolved',
 		'errorMessage',
 		'roomFull',
 		'hostStatus',
@@ -48,6 +49,51 @@ export function registerSocketEvents(socket, app) {
 		renderLiveBoardForSpectator(payload.liveBoard || roomState.liveBoard);
 	}
 
+	function buildRoundResolvedPopup(payload = {}) {
+		const result = payload.resultForYou || {};
+		const winnerName = payload.winnerUsername || 'Nimeni';
+		const targetName = payload.target?.name || 'Necunoscut';
+		const attempts = result.attempts || 0;
+
+		if (result.outcome === 'win') {
+			return {
+				isCorrect: true,
+				attempts,
+				target: payload.target,
+				customTitle: '🏁 AI CÂȘTIGAT RUNDA!',
+				customMessage: `Ai câștigat runda în ${attempts} ${attempts === 1 ? 'încercare' : 'încercări'}. Pilotul era ${targetName}.`,
+			force: true
+			};
+		}
+
+		if (result.outcome === 'draw') {
+			return {
+				isCorrect: false,
+				attempts,
+				target: payload.target,
+				customTitle: '🤝 REMIZĂ!',
+				customMessage: `Runda s-a terminat la egalitate. Pilotul misterios era ${targetName}.`,
+				statsResult: 'loss'
+			};
+		}
+
+		return {
+			isCorrect: false,
+			attempts,
+			target: payload.target,
+			customTitle: '💀 AI PIERDUT RUNDA!',
+			customMessage: `${winnerName} a câștigat runda. Pilotul misterios era ${targetName}.`,
+			statsResult: 'loss'
+		};
+	}
+
+	function handleRoundResolved(payload = {}) {
+		if (!app.isDuelMode?.()) return;
+		if (payload.liveBoard) app.renderLiveBoard?.(payload.liveBoard, { forceVisible: Boolean(app.isSpectator?.()) });
+
+		if (app.isSpectator?.()) return;
+		app.showEndGamePopup?.(buildRoundResolvedPopup(payload));
+	}
 
 
 	socket.on('initDailyChallenge', (data) => {
@@ -138,11 +184,11 @@ export function registerSocketEvents(socket, app) {
 	});
 
 	socket.on('guessResult', (data) => {
-		const { guess, results, attempts, isCorrect, isGameOver, target } = data;
+		const { guess, results, attempts, isCorrect, isGameOver, target, roundResult } = data;
 		const rendered = app.renderGuessResult({ guess, results, attempts });
 		if (!rendered) return;
 
-		if (isGameOver) {
+		if (isGameOver && !roundResult) {
 			app.showEndGamePopup({ isCorrect, attempts, target });
 		}
 	});
@@ -169,6 +215,7 @@ export function registerSocketEvents(socket, app) {
 		app.handleDailyChallengeError?.(message);
 	});
 	socket.on('gameTimedOut', (data) => {
+		if (data.roundResult) return;
 		app.showEndGamePopup({
 			isCorrect: false,
 			attempts: data.attempts || 0,
@@ -176,6 +223,8 @@ export function registerSocketEvents(socket, app) {
 			isTimedOut: true
 		});
 	});
+
+	socket.on('roundResolved', handleRoundResolved);
 
 	socket.on('gameRestarted', (data = {}) => {
 		app.setDailyMode?.(false);

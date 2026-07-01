@@ -20,6 +20,11 @@ const {
     buildLiveBoardState,
     buildPublicRoomState
 } = require('./liveBoardService');
+const {
+    buildPersonalRoundResult,
+    buildPublicRoundResult,
+    resolveRoundWinner
+} = require('./roundResultService');
 
 function createRoom(roomId, hostSocketId, authUser = null) {
     const room = {
@@ -35,6 +40,7 @@ function createRoom(roomId, hostSocketId, authUser = null) {
         timeLimitSeconds: DEFAULT_TIME_LIMIT_SECONDS,
         roundStartedAt: null,
         roundState: 'waiting',
+        roundResult: null,
         isDailyChallenge: false,
         dailyDate: null,
         dailyChallengeId: null
@@ -228,5 +234,8 @@ module.exports = {
     recordPlayerGuess,
     markPlayerTimedOut,
     buildLiveBoardState,
-    buildPublicRoomState
+    buildPublicRoomState,
+    buildPersonalRoundResult,
+    buildPublicRoundResult,
+    resolveRoundWinner
 };
