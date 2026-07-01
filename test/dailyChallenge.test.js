@@ -86,3 +86,69 @@ test('single restart keeps previous difficulty without requiring a room', () => 
     assert.equal(Array.isArray(restarted.drivers), true);
     assert.ok(restarted.targetDriver);
 });
+
+
+test('daily challenge rejects invalid difficulty without creating a payload', () => {
+    const repository = {
+        getDriversByDifficulty: difficulty => difficulty === 'easy' ? drivers : []
+    };
+    const gameService = createGameService(repository);
+
+    assert.equal(gameService.startDailyChallenge('legendary', '2026-06-30'), null);
+});
+
+test('single play rejects invalid difficulty without requiring a duel room', () => {
+    const repository = {
+        getDriversByDifficulty: difficulty => difficulty === 'easy' ? drivers : []
+    };
+    const gameService = createGameService(repository);
+
+    assert.equal(gameService.startSingleRound({ difficulty: 'legendary' }), null);
+});
+
+test('single play normalizes timer options independently from daily challenge', () => {
+    const repository = {
+        getDriversByDifficulty: difficulty => difficulty === 'easy' ? drivers : []
+    };
+    const gameService = createGameService(repository);
+
+    const singlePayload = gameService.startSingleRound({ difficulty: 'easy', timed: true, timeLimitSeconds: 120 });
+    const dailyPayload = gameService.startDailyChallenge('easy', '2026-07-01');
+
+    assert.equal(singlePayload.isSinglePlay, true);
+    assert.equal(singlePayload.timed, true);
+    assert.equal(singlePayload.timeLimitSeconds, 120);
+    assert.equal(dailyPayload.isDailyChallenge, true);
+    assert.equal(dailyPayload.timed, false);
+    assert.equal(dailyPayload.timeLimitSeconds, null);
+});
+
+test('single restart returns null when no previous single session exists', () => {
+    const repository = {
+        getDriversByDifficulty: difficulty => difficulty === 'easy' ? drivers : []
+    };
+    const gameService = createGameService(repository);
+
+    assert.equal(gameService.restartSingleRound(null), null);
+    assert.equal(gameService.restartSingleRound({}), null);
+});
+
+test('single, daily and duel round payloads keep mode-specific flags separated', () => {
+    const repository = {
+        getDriversByDifficulty: difficulty => difficulty === 'easy' ? drivers : []
+    };
+    const gameService = createGameService(repository);
+    const room = { players: {}, difficulty: null };
+
+    const singlePayload = gameService.startSingleRound({ difficulty: 'easy' });
+    const dailyPayload = gameService.startDailyChallenge('easy', '2026-07-01');
+    const duelPayload = gameService.startNewRound(room, { difficulty: 'easy' });
+
+    assert.equal(singlePayload.isSinglePlay, true);
+    assert.equal(singlePayload.isDailyChallenge, undefined);
+    assert.equal(dailyPayload.isDailyChallenge, true);
+    assert.equal(dailyPayload.isSinglePlay, undefined);
+    assert.equal(duelPayload.isDailyChallenge, false);
+    assert.equal(duelPayload.isSinglePlay, undefined);
+    assert.equal(room.isDailyChallenge, false);
+});

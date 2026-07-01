@@ -12,9 +12,20 @@ export function getStats() {
 		streak: 0,
 		distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
 	};
-	let stats = JSON.parse(localStorage.getItem('f1-guesser-stats'));
-	if (!stats) return defaultStats;
-	if (!stats.distribution) stats.distribution = defaultStats.distribution;
+
+	let stats = null;
+	try {
+		const rawStats = localStorage.getItem('f1-guesser-stats');
+		stats = rawStats ? JSON.parse(rawStats) : null;
+	} catch (error) {
+		localStorage.removeItem?.('f1-guesser-stats');
+		return defaultStats;
+	}
+
+	if (!stats || typeof stats !== 'object') return defaultStats;
+	if (!stats.distribution || typeof stats.distribution !== 'object') {
+		stats.distribution = { ...defaultStats.distribution };
+	}
 	return stats;
 }
 

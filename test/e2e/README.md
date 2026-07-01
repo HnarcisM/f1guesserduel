@@ -6,7 +6,7 @@ Aceste teste pornesc serverul local pe un port liber și deschid 3 taburi reale 
 2. Player 2
 3. Spectator
 
-Testele verifică faptul că spectatorul vede live board-ul, iar playerii nu îl văd. Mai există teste pentru restaurarea unei camere după restart server, auth register/login/logout cu refresh pe socket, rematch după final de rundă și layout mobil/Fold fără overlap între titlu și login.
+Testele verifică faptul că spectatorul vede live board-ul, iar playerii nu îl văd. Mai există teste pentru restaurarea unei camere după restart server, auth register/login/logout cu refresh pe socket, rematch după final de rundă, Single Play fără cameră, Daily Challenge izolat de Single/Duel și layout mobil/Fold fără overlap între titlu și login.
 
 ## Rulare rapidă pe Windows
 

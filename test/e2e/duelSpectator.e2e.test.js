@@ -118,6 +118,20 @@ async function openRoomPage(context, baseUrl, roomId, options = {}) {
     return page;
 }
 
+async function openAppPage(context, baseUrl) {
+    const page = await context.newPage();
+    page.on('pageerror', error => {
+        throw error;
+    });
+    await page.goto(baseUrl, { waitUntil: 'domcontentloaded' });
+    await page.addStyleTag({
+        content: `*, *::before, *::after { transition-duration: 0s !important; animation-duration: 0s !important; }`
+    });
+    await page.locator('[data-game-mode-choice="single"]').waitFor({ state: 'visible', timeout: 7000 });
+    await page.locator('body.mode-single').waitFor({ timeout: 7000 });
+    return page;
+}
+
 async function pickFirstSuggestion(page, query) {
     await page.locator('#driverInput').fill(query);
     const firstSuggestion = page.locator('#suggestions li').first();
@@ -449,6 +463,95 @@ test('host can start a rematch after a round ends', { concurrency: false }, asyn
         await host.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
         await playerTwo.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
         await expectText(host.locator('#status'), /Ghicește noul pilot misterios|Ghicește pilotul misterios/i);
+    } finally {
+        await browser.close();
+        await app.stop();
+    }
+});
+
+
+
+test('single play starts without room state and rematch stays in single mode', { concurrency: false }, async () => {
+    logE2E('Verific flow-ul E2E pentru Single Play fără cameră...');
+    const { chromium } = requirePlaywright();
+    const app = await startAppServer();
+    const browser = await chromium.launch({ headless: process.env.E2E_HEADED !== '1' });
+
+    try {
+        const context = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+        const page = await openAppPage(context, app.baseUrl);
+
+        await page.locator('body.mode-single').waitFor({ timeout: 7000 });
+        await assertElementHidden(page.locator('#shareRoomBtn'));
+        await assertElementHidden(page.locator('#duelStatus'));
+        await assertElementHidden(page.locator('#dailyChallengePanel'));
+        await assertElementHidden(page.locator('#liveDuelBoard'));
+
+        await page.locator('.btn-diff.easy').click();
+        await page.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
+        await page.locator('body.mode-single').waitFor({ timeout: 7000 });
+        await expectText(page.locator('#diff-display-label'), /Single Play · Mod: easy/i);
+        await expectText(page.locator('#status'), /Single Play/i);
+        await assertElementHidden(page.locator('#shareRoomBtn'));
+        await assertElementHidden(page.locator('#liveDuelBoard'));
+
+        await finishRoundByGuessing(page);
+        await page.locator('#endGameDisplay.show').waitFor({ timeout: 7000 });
+        await page.locator('#restartGameBtn').click();
+        await page.locator('#endGameDisplay').waitFor({ state: 'hidden', timeout: 7000 });
+        await page.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
+        await page.locator('body.mode-single').waitFor({ timeout: 7000 });
+        await expectText(page.locator('#diff-display-label'), /Single Play · Mod: easy/i);
+        await assertElementHidden(page.locator('#shareRoomBtn'));
+        await context.close();
+    } finally {
+        await browser.close();
+        await app.stop();
+    }
+});
+
+
+test('daily challenge panel is isolated from single and duel modes', { concurrency: false }, async () => {
+    logE2E('Verific flow-ul E2E pentru Daily Challenge separat de Single/Duel...');
+    const { chromium } = requirePlaywright();
+    const app = await startAppServer();
+    const browser = await chromium.launch({ headless: process.env.E2E_HEADED !== '1' });
+
+    try {
+        const context = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+        const page = await openAppPage(context, app.baseUrl);
+
+        await page.locator('body.mode-single').waitFor({ timeout: 7000 });
+        await assertElementHidden(page.locator('#dailyChallengePanel'));
+        await page.locator('[data-game-mode-choice="daily"]').click();
+        await page.locator('body.mode-daily').waitFor({ timeout: 7000 });
+        await page.locator('#dailyChallengePanel:not(.is-hidden)').waitFor({ state: 'visible', timeout: 7000 });
+        await assertElementHidden(page.locator('#difficultySection'));
+        await assertElementHidden(page.locator('#shareRoomBtn'));
+        await assertElementHidden(page.locator('#duelStatus'));
+
+        await page.locator('#dailyChallengePanel [data-daily-level="easy"]').click();
+        await page.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
+        await page.locator('body.mode-daily').waitFor({ timeout: 7000 });
+        await expectText(page.locator('#diff-display-label'), /Daily Challenge · Mod: easy/i);
+        await expectText(page.locator('#status'), /Daily Challenge/i);
+        await assertElementHidden(page.locator('#shareRoomBtn'));
+        await assertElementHidden(page.locator('#liveDuelBoard'));
+
+        await pickFirstSuggestion(page, 'Arvid');
+        await page.locator('#grid .cell').first().waitFor({ state: 'visible', timeout: 7000 });
+
+        const secondPage = await openAppPage(context, app.baseUrl);
+        await secondPage.locator('[data-game-mode-choice="daily"]').click();
+        await secondPage.locator('body.mode-daily').waitFor({ timeout: 7000 });
+        await secondPage.locator('[data-game-mode-choice="single"]').click();
+        await secondPage.locator('body.mode-single').waitFor({ timeout: 7000 });
+        await assertElementHidden(secondPage.locator('#dailyChallengePanel'));
+        await secondPage.locator('[data-game-mode-choice="duel"]').click();
+        await secondPage.locator('body.mode-duel').waitFor({ timeout: 7000 });
+        await assertElementHidden(secondPage.locator('#dailyChallengePanel'));
+        await secondPage.close();
+        await context.close();
     } finally {
         await browser.close();
         await app.stop();
