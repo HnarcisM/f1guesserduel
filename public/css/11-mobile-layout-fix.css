@@ -187,8 +187,8 @@
        ca portrait și landscape să folosească aceeași protecție anti-overlap. */
 
     .container {
-        width: min(720px, 100%);
-        max-width: 720px;
+        width: 100%;
+        max-width: 100%;
     }
 
     #gameZone {
@@ -200,7 +200,7 @@
     }
 
     .grid {
-        width: min(720px, 100%);
+        width: 100%;
         grid-template-columns: minmax(34px, 0.34fr) minmax(118px, 1.25fr) minmax(95px, 1fr) minmax(110px, 1.1fr) repeat(3, minmax(78px, 0.85fr));
         justify-content: center;
         gap: var(--space-sm);
@@ -327,6 +327,51 @@
     }
 }
 
+
+/* --- FOLD INNER WIDTH GUARD --- */
+/*
+   Pe Fold interior portrait, body.scrollWidth putea deveni viewport + padding
+   (ex: 720px pe viewport 704px). Setăm width explicit și limităm copiii
+   principali ca testul E2E să reflecte layout-ul real, fără overflow orizontal.
+*/
+@media (min-width: 521px) and (max-width: 920px) {
+    html,
+    body {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    body {
+        box-sizing: border-box;
+    }
+
+    *,
+    *::before,
+    *::after {
+        box-sizing: border-box;
+    }
+
+    .site-header,
+    .overlay,
+    .container,
+    .menu-container,
+    .game-mode-selection,
+    .difficulty-section,
+    .difficulty-grid,
+    #gameZone,
+    .grid {
+        max-width: 100%;
+    }
+
+    .container,
+    .game-mode-selection,
+    .difficulty-section,
+    .difficulty-grid {
+        width: 100%;
+    }
+}
+
 /* --- MODE SELECTION MOBILE OVERFLOW GUARD --- */
 /* Cardurile de selectare mod au fost adăugate după fix-urile inițiale de mobile.
    Pe viewport-uri înguste, padding-ul overlay-ului + cardurile puteau depăși lățimea body-ului. */
@@ -358,5 +403,40 @@
         max-width: 100%;
         min-width: 0;
         box-sizing: border-box;
+    }
+}
+
+/* --- STRICT MOBILE WIDTH GUARD --- */
+/*
+   Previne body.scrollWidth > viewport pe telefoane înguste.
+   Body-ul are padding pe mobil; fără width explicit, unele browsere pot calcula
+   scrollWidth ca lățime viewport + padding.
+*/
+@media (max-width: 520px) {
+    html,
+    body {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    body {
+        box-sizing: border-box;
+    }
+
+    *,
+    *::before,
+    *::after {
+        box-sizing: border-box;
+    }
+
+    .site-header,
+    .overlay,
+    .container,
+    .menu-container,
+    .game-mode-selection,
+    .difficulty-section,
+    .difficulty-grid {
+        max-width: 100%;
     }
 }

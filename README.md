@@ -609,3 +609,15 @@ Această separare este fundația pentru feature-urile de cameră: winner logic p
 ```
 
 Scoreboard-ul este vizibil în modul Duel și este inclus în starea publică a camerei fără să expună `socketId` sau `userId`.
+
+### Reguli de siguranță în Duel
+
+În timpul unei runde active de `Duel`, setările rundei sunt blocate:
+
+```text
+- dificultatea nu poate fi schimbată;
+- timerul nu poate fi schimbat;
+- hostul trebuie să aștepte finalul rundei pentru setările următoare.
+```
+
+Dacă un player încearcă să revină la Home / meniul principal în timpul unei runde active, aplicația cere confirmare. Dacă playerul confirmă, runda este oprită pentru toți jucătorii, camera rămâne activă, scorul se păstrează și ambele părți revin în lobby-ul camerei pentru o rundă nouă.

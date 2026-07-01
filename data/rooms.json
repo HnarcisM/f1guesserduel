@@ -1,24 +1,26 @@
 {
   "version": 1,
-  "savedAt": "2026-07-01T20:37:03.604Z",
+  "savedAt": "2026-07-01T20:54:47.667Z",
   "rooms": [
     {
       "roomId": "tc3own4",
       "hostId": null,
       "players": {},
       "spectators": {},
-      "nextGuestNumber": 5,
+      "nextGuestNumber": 46,
       "targetDriver": {
-        "id": "COL",
-        "name": "Franco Colapinto",
-        "nat": "ARG",
+        "id": "KUB",
+        "name": "Robert Kubica",
+        "nat": "POL",
         "team": [
-          "Alpine",
-          "Williams"
+          "Alfa Romeo",
+          "Williams",
+          "Renault",
+          "BMW"
         ],
-        "age": 23,
-        "debut": 2024,
-        "wins": 0,
+        "age": 41,
+        "debut": 2006,
+        "wins": 1,
         "difficulty": "easy"
       },
       "difficulty": "easy",
@@ -545,40 +547,9 @@
       ],
       "timed": false,
       "timeLimitSeconds": 60,
-      "roundStartedAt": 1782938141418,
-      "roundState": "finished",
-      "roundResult": {
-        "status": "win",
-        "reason": "best-result",
-        "winnerSocketId": null,
-        "winnerUsername": "mihai",
-        "resolvedAt": 1782938218892,
-        "target": {
-          "name": "Franco Colapinto"
-        },
-        "players": [
-          {
-            "username": "mihai",
-            "role": "player",
-            "isHost": true,
-            "attempts": 4,
-            "finished": true,
-            "timedOut": false,
-            "isCorrect": true,
-            "outcome": "win"
-          },
-          {
-            "username": "bonib0n",
-            "role": "player",
-            "isHost": false,
-            "attempts": 5,
-            "finished": true,
-            "timedOut": false,
-            "isCorrect": true,
-            "outcome": "loss"
-          }
-        ]
-      },
+      "roundStartedAt": 1782939267872,
+      "roundState": "playing",
+      "roundResult": null,
       "isDailyChallenge": false,
       "dailyDate": null,
       "dailyChallengeId": null
