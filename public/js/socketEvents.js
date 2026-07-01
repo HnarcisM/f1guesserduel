@@ -49,41 +49,7 @@ export function registerSocketEvents(socket, app) {
 
 
 	socket.on('initDailyChallenge', (data) => {
-		const overlay = document.getElementById('difficulty-overlay');
-		if (overlay) overlay.classList.add('hidden');
-
-		app.setDailyStartPending?.(false);
-		app.setDailyMode?.(true, {
-			difficulty: data.difficulty,
-			dailyDate: data.dailyDate,
-			dailyChallengeId: data.dailyChallengeId
-		});
-		app.setDriversList(data.drivers);
-		app.setRoundFinished(false);
-		app.exitRematchMode();
-		app.resetLiveBoard?.();
-		app.timer.hideRoundTimer();
-
-		const diffLabel = document.getElementById("diff-display-label");
-		if (diffLabel) {
-			const dailyDate = data.dailyDate ? ` · ${data.dailyDate}` : '';
-			diffLabel.innerText = `Daily Challenge · Mod: ${data.difficulty}${dailyDate}`;
-			diffLabel.className = `diff-display-label difficulty-${data.difficulty} daily-mode`;
-		}
-
-		const statusEl = document.getElementById("status");
-		if (statusEl) {
-			statusEl.classList.remove("is-hidden");
-			statusEl.innerText = "Daily Challenge individual: ghicește pilotul zilei. După finalizare, revine la următorul reset.";
-		}
-
-		app.initializeGridStructure();
-
-		const gameZone = document.getElementById("gameZone");
-		if (gameZone) gameZone.classList.remove("game-zone-hidden");
-
-		const badge = document.getElementById("duelStatus");
-		if (badge) badge.innerText = "Daily Challenge · Individual";
+		app.handleInitDailyChallenge?.(data);
 	});
 
 	socket.on('initGame', (data) => {
@@ -194,11 +160,7 @@ export function registerSocketEvents(socket, app) {
 	});
 
 	socket.on('dailyChallengeError', (message) => {
-		app.setDailyStartPending?.(false);
-		app.setDailyMode?.(false);
-		const overlay = document.getElementById('difficulty-overlay');
-		if (overlay) overlay.classList.remove('hidden');
-		if (message) alert(message);
+		app.handleDailyChallengeError?.(message);
 	});
 	socket.on('gameTimedOut', (data) => {
 		app.showEndGamePopup({

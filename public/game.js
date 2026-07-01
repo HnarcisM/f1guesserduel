@@ -5,7 +5,7 @@ import { registerSocketEvents } from './js/socketEvents.js';
 import { createAuthView } from './js/authView.js';
 import { renderLiveBoard, resetLiveBoard } from './js/liveBoardView.js';
 import { createRoleState } from './js/roleState.js';
-import { createDailyChallengeState } from './js/dailyChallengeState.js';
+import { createDailyChallengeController } from './js/dailyChallengeController.js';
 import { createEndGameController } from './js/endGameController.js';
 import { setupShareButton, setupRoom } from './js/roomController.js';
 import {
@@ -29,15 +29,10 @@ let driversList = [];
 let isRoundFinished = false;
 let authView;
 let authReadyOnce = false;
-let isDailyMode = false;
-let isDailyStartPending = false;
-let currentDailyChallenge = null;
+let dailyChallengeController;
 let autocomplete;
 let endGameController;
 
-const dailyChallengeState = createDailyChallengeState({
-	getCurrentUser: () => authView?.getCurrentUser?.() || null
-});
 
 const roleState = createRoleState({
 	onSpectatorModeChanged(isSpectator) {
@@ -55,50 +50,6 @@ function setDriversList(drivers) {
 
 function setRoundFinished(value) {
 	isRoundFinished = Boolean(value);
-}
-
-function setDailyStartPending(value) {
-	isDailyStartPending = Boolean(value);
-}
-
-function setDailyMode(value, challenge = null) {
-	isDailyMode = Boolean(value);
-	if (isDailyMode) isDailyStartPending = false;
-	currentDailyChallenge = isDailyMode ? challenge : null;
-	document.body.classList.toggle('daily-active', isDailyMode);
-
-	if (isDailyMode) {
-		roleState.setSpectatorMode(false);
-		resetLiveBoard();
-	}
-}
-
-function getDailyLevelLabel(level) {
-	const labels = {
-		easy: 'Easy',
-		medium: 'Medium',
-		hard: 'Hard'
-	};
-	return labels[level] || level;
-}
-
-function showDailyBlockedMessage(level) {
-	const message = dailyChallengeState.getBlockedMessage(level);
-	const status = document.getElementById('status');
-	if (status) {
-		status.classList.remove('is-hidden');
-		status.textContent = message;
-	}
-	alert(message);
-}
-
-function completeDailyChallenge(data = {}) {
-	if (!isDailyMode) return;
-	dailyChallengeState.markCompleted({
-		level: data.difficulty || currentDailyChallenge?.difficulty,
-		challengeId: data.dailyChallengeId || currentDailyChallenge?.dailyChallengeId,
-		dailyDate: data.dailyDate || currentDailyChallenge?.dailyDate
-	});
 }
 
 function showHostOnlyTimerMessage() {
@@ -120,9 +71,9 @@ function createEndGameHandlers() {
 	endGameController = createEndGameController({
 		roleState,
 		timer,
-		dailyChallengeState,
+		dailyChallengeState: dailyChallengeController.state,
 		getSocket: () => socket,
-		getIsDailyMode: () => isDailyMode,
+		getIsDailyMode: dailyChallengeController.isMode,
 		getIsRoundFinished: () => isRoundFinished,
 		setRoundFinished
 	});
@@ -149,7 +100,7 @@ function sendGuess() {
 	}
 
 	if (socket) {
-		socket.emit(isDailyMode ? 'submitDailyGuess' : 'submitGuess', finalDriver.id);
+		socket.emit(dailyChallengeController.isMode() ? 'submitDailyGuess' : 'submitGuess', finalDriver.id);
 	}
 	inputEl.value = '';
 	autocomplete.clearSuggestions();
@@ -161,11 +112,11 @@ function setupSocketEvents() {
 		setDriversList,
 		setRoundFinished,
 		setSpectatorMode: roleState.setSpectatorMode,
-		setDailyMode,
-		setDailyStartPending,
-		completeDailyChallenge,
-		isDailyMode: () => isDailyMode,
-		isDailyStartPending: () => isDailyStartPending,
+		setDailyMode: dailyChallengeController.setMode,
+		setDailyStartPending: dailyChallengeController.setStartPending,
+		completeDailyChallenge: dailyChallengeController.complete,
+		isDailyMode: dailyChallengeController.isMode,
+		isDailyStartPending: dailyChallengeController.isStartPending,
 		isSpectator: roleState.isSpectator,
 		getRoleBadgeLabel: roleState.getRoleBadgeLabel,
 		exitRematchMode: endGameController.exitRematchMode,
@@ -175,48 +126,16 @@ function setupSocketEvents() {
 		hideEndGamePopup: endGameController.hideEndGamePopup,
 		renderLiveBoard,
 		resetLiveBoard,
+		handleInitDailyChallenge: dailyChallengeController.handleInit,
+		handleDailyChallengeError: dailyChallengeController.handleError,
 		timer,
 		autocomplete
 	});
 }
 
-function startDailyChallenge(level) {
-	if (!level) return;
-	if (!dailyChallengeState.canStart(level)) {
-		showDailyBlockedMessage(level);
-		return;
-	}
-
-	isDailyStartPending = true;
-	setDailyMode(true, { difficulty: level });
-
-	const overlay = document.getElementById('difficulty-overlay');
-	if (overlay) overlay.classList.add('hidden');
-
-	const status = document.getElementById('status');
-	if (status) {
-		status.classList.remove('is-hidden');
-		status.textContent = `Se pornește Daily Challenge ${getDailyLevelLabel(level)}...`;
-	}
-
-	const badge = document.getElementById('duelStatus');
-	if (badge) badge.innerText = 'Daily Challenge · Individual';
-
-	if (socket) {
-		socket.emit('startDailyChallenge', {
-			level,
-			dailyDate: dailyChallengeState.getTodayDateKey()
-		});
-	} else {
-		isDailyStartPending = false;
-		setDailyMode(false);
-		alert("Butonul funcționează, dar nu ești conectat la server! Porneste 'node server.js'");
-	}
-}
-
 function startRoundFromSelection(level) {
-	isDailyStartPending = false;
-	setDailyMode(false);
+	dailyChallengeController.setStartPending(false);
+	dailyChallengeController.setMode(false);
 	if (!roleState.requirePlayer('Ești spectator. Doar hostul poate porni jocul.')) return;
 
 	const overlay = document.getElementById('difficulty-overlay');
@@ -257,7 +176,7 @@ function handleAuthChangeWithoutLeavingRoom(currentUser) {
 	 * unei runde scoate player-ul din cameră și poate șterge runda dacă era singur.
 	 * Sincronizăm doar datele de profil ale socket-ului curent.
 	 */
-	dailyChallengeState.updateControls();
+	dailyChallengeController.updateControls();
 
 	if (socket && socket.connected) {
 		socket.emit('refreshAuthUser', currentUser || null);
@@ -277,11 +196,23 @@ document.addEventListener('DOMContentLoaded', () => {
 		onSubmitGuess: sendGuess
 	});
 
+	dailyChallengeController = createDailyChallengeController({
+		getCurrentUser: () => authView?.getCurrentUser?.() || null,
+		getSocket: () => socket,
+		roleState,
+		timer,
+		setDriversList,
+		setRoundFinished,
+		exitRematchMode: () => endGameController?.exitRematchMode?.(),
+		initializeGridStructure,
+		resetLiveBoard
+	});
+
 	createEndGameHandlers();
-	setupDailyChallengeControls({ startDailyChallenge });
-	const menu = setupMenu({ startRoundFromSelection, startDailyChallenge });
+	setupDailyChallengeControls({ startDailyChallenge: dailyChallengeController.start });
+	const menu = setupMenu({ startRoundFromSelection, startDailyChallenge: dailyChallengeController.start });
 	setupThemeMenu(menu);
-	dailyChallengeState.startCountdown();
+	dailyChallengeController.startCountdown();
 	setupTimerControls(menu, { timer, showHostOnlyTimerMessage });
 	setupShareButton();
 	setupAuth();
@@ -293,7 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		requestRematch: endGameController.requestRematch,
 		hideEndGamePopup: endGameController.hideEndGamePopup,
 		startRoundFromSelection,
-		startDailyChallenge
+		startDailyChallenge: dailyChallengeController.start
 	});
 	setupGlobalDocumentEvents(menu, {
 		autocomplete,
