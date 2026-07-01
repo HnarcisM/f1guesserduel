@@ -14,6 +14,7 @@ const { createSessionService } = require('./auth/sessionService');
 const { createAuthService } = require('./auth/authService');
 const { createAuthRoutes } = require('./auth/authRoutes');
 const { createAuthMiddleware } = require('./middleware/authMiddleware');
+const { createErrorMiddleware } = require('./middleware/errorMiddleware');
 const { createHealthRoutes } = require('./routes/healthRoutes');
 const { createAppConfig } = require('./config/appConfig');
 
@@ -87,18 +88,26 @@ registerSocketHandlers(io, {
     sessionService
 });
 
-app.get('/', (req, res) => {
+app.get('/', (req, res, next) => {
     const htmlPath = path.join(config.publicDir, 'index.html');
     const txtPath = path.join(config.publicDir, 'index.txt');
 
     if (fs.existsSync(htmlPath)) {
-        res.sendFile(htmlPath);
+        return res.sendFile(htmlPath, error => {
+            if (error) next(error);
+        });
     } else if (fs.existsSync(txtPath)) {
-        res.sendFile(txtPath);
+        return res.sendFile(txtPath, error => {
+            if (error) next(error);
+        });
     } else {
-        res.status(404).send("<h2>Eroare: Nu am găsit 'index.html' în folderul /public! Asigură-te că fișierul se află acolo.</h2>");
+        return res.status(404).send("<h2>Eroare: Nu am găsit 'index.html' în folderul /public! Asigură-te că fișierul se află acolo.</h2>");
     }
 });
+
+app.use(createErrorMiddleware({
+    isProduction: config.isProduction
+}));
 
 server.listen(config.port, () => {
     console.log(`===================================================`);
