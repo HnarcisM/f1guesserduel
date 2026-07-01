@@ -39,7 +39,7 @@ function createRoomStateEmitter(io, roomStore) {
     function buildRoomStatePayload(room, reason = 'sync', recipientSocketId = null) {
         const payload = {
             reason,
-            room: buildPublicRoomState(room)
+            room: buildPublicRoomState(room, { recipientSocketId })
         };
 
         if (recipientSocketId && isSpectator(room, recipientSocketId)) {

@@ -482,3 +482,36 @@ test('abortDuelRound stops active duel round without resetting scoreboard', () =
     assert.deepEqual(getPlayer(room, 'socket-1').guesses, []);
     assert.deepEqual(buildPublicScoreboard(room).map(entry => entry.wins), [2, 0]);
 });
+
+test('public room state exposes opponent progress without guesses for finished player waiting', () => {
+    const { buildPublicRoomState } = require('../server/rooms/roomService');
+    const room = createRoom('abc123', 'socket-1');
+    addPlayerToRoom(room, 'socket-2');
+    room.roundState = 'playing';
+    room.timed = true;
+    room.timeLimitSeconds = 90;
+    room.roundStartedAt = 123456;
+
+    const host = getPlayer(room, 'socket-1');
+    const guest = getPlayer(room, 'socket-2');
+    host.attempts = 4;
+    host.finished = true;
+    host.guesses = [{ attempt: 1, guess: { name: 'Hidden' } }];
+    guest.attempts = 2;
+    guest.finished = false;
+    guest.guesses = [{ attempt: 1, guess: { name: 'Also Hidden' } }];
+
+    const state = buildPublicRoomState(room, { recipientSocketId: 'socket-1' });
+
+    assert.equal(state.you.username, host.username);
+    assert.equal(state.you.finished, true);
+    assert.equal(state.timed, true);
+    assert.equal(state.timeLimitSeconds, 90);
+    assert.equal(state.roundStartedAt, 123456);
+    assert.equal(state.players[0].isYou, true);
+    assert.equal(state.players[0].attempts, 4);
+    assert.equal(state.players[1].isYou, false);
+    assert.equal(state.players[1].attempts, 2);
+    assert.equal(state.players[1].finished, false);
+    assert.equal(Object.prototype.hasOwnProperty.call(state.players[1], 'guesses'), false);
+});

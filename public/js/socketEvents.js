@@ -58,6 +58,15 @@ export function registerSocketEvents(socket, app) {
 		updateRoomBadge(roomState);
 		renderRoomScoreboard(roomState);
 		app.setDuelRoundState?.(roomState.roundState);
+
+		if (!app.isSpectator?.()) {
+			if (roomState.roundState === 'playing' && roomState.you?.finished) {
+				app.hideGuessControlsAfterLocalFinish?.();
+			} else if (roomState.roundState === 'playing') {
+				app.showGuessControlsForActiveRound?.();
+			}
+			app.renderOpponentProgress?.(roomState);
+		}
 		renderLiveBoardForSpectator(payload.liveBoard || roomState.liveBoard);
 	}
 
@@ -106,7 +115,9 @@ export function registerSocketEvents(socket, app) {
 	function handleRoundResolved(payload = {}) {
 		if (!app.isDuelMode?.()) return;
 		app.setDuelRoundState?.('finished');
+		app.hideGuessControlsAfterLocalFinish?.();
 		if (payload.scoreboard) app.renderRoomScoreboard?.(payload.scoreboard, { forceVisible: true });
+		app.resetOpponentProgress?.();
 		if (payload.liveBoard) app.renderLiveBoard?.(payload.liveBoard, { forceVisible: Boolean(app.isSpectator?.()) });
 
 		if (app.isSpectator?.()) return;
@@ -140,6 +151,7 @@ export function registerSocketEvents(socket, app) {
 
 		if (playerProgress.finished) {
 			app.setRoundFinished?.(true);
+			app.hideGuessControlsAfterLocalFinish?.();
 			const statusEl = document.getElementById('status');
 			if (statusEl && app.isDuelMode?.()) {
 				statusEl.classList.remove('is-hidden');
@@ -163,7 +175,9 @@ export function registerSocketEvents(socket, app) {
 		else if (!data.isDailyChallenge) app.enterDuelMode?.();
 		app.setDriversList(data.drivers);
 		app.setRoundFinished(false);
+		app.resetOpponentProgress?.();
 		app.setDuelRoundState?.('playing');
+		app.showGuessControlsForActiveRound?.();
 		app.exitRematchMode();
 
 		if (app.isSpectator?.()) {
@@ -198,14 +212,11 @@ export function registerSocketEvents(socket, app) {
 		}
 
 		app.initializeGridStructure();
+		app.resetOpponentProgress?.();
 		restorePlayerProgress(data.playerProgress);
 		if (!app.isDuelMode?.()) app.resetRoomScoreboard?.();
 		renderLiveBoardForSpectator(data.liveBoard);
 
-		const gameZone = document.getElementById("gameZone");
-		if (gameZone) {
-			gameZone.classList.toggle("game-zone-hidden", Boolean(app.isSpectator?.()));
-		}
 	});
 
 	socket.on('roomStateUpdate', handleRoomStateUpdate);
@@ -234,6 +245,7 @@ export function registerSocketEvents(socket, app) {
 	socket.on('duelAborted', (payload = {}) => {
 		if (!app.isDuelMode?.()) return;
 		app.setDuelRoundState?.('waiting');
+		app.resetOpponentProgress?.();
 		if (payload.room) {
 			updateRoomBadge(payload.room);
 			renderRoomScoreboard(payload.room);
@@ -260,6 +272,7 @@ export function registerSocketEvents(socket, app) {
 			// Astfel evităm să anunțăm câștigătorul înainte ca al doilea player
 			// să termine și înainte să se aplice regula attempts -> timp -> remiză.
 			app.setRoundFinished?.(true);
+			app.hideGuessControlsAfterLocalFinish?.();
 			const statusEl = document.getElementById('status');
 			if (statusEl) {
 				statusEl.classList.remove('is-hidden');
@@ -304,6 +317,17 @@ export function registerSocketEvents(socket, app) {
 			return;
 		}
 
+		if (app.isDuelMode?.()) {
+			app.setRoundFinished?.(true);
+			app.hideGuessControlsAfterLocalFinish?.();
+			const statusEl = document.getElementById('status');
+			if (statusEl) {
+				statusEl.classList.remove('is-hidden');
+				statusEl.textContent = 'Timpul tău a expirat. Așteaptă să termine și celălalt jucător pentru rezultatul final.';
+			}
+			return;
+		}
+
 		app.showEndGamePopup({
 			isCorrect: false,
 			attempts: data.attempts || 0,
@@ -318,7 +342,9 @@ export function registerSocketEvents(socket, app) {
 		app.setDailyMode?.(false);
 		if (data.isSinglePlay) app.enterSingleMode?.();
 		app.setRoundFinished(false);
+		app.resetOpponentProgress?.();
 		app.setDuelRoundState?.('playing');
+		app.showGuessControlsForActiveRound?.();
 		app.exitRematchMode();
 		app.initializeGridStructure();
 		app.hideEndGamePopup(false);
@@ -331,9 +357,7 @@ export function registerSocketEvents(socket, app) {
 		const backdrop = document.getElementById("endGameBackdrop");
 		if (backdrop) backdrop.classList.remove("show");
 
-		const gz = document.getElementById("gameZone");
 		const st = document.getElementById("status");
-		if (gz) gz.classList.toggle("game-zone-hidden", Boolean(app.isSpectator?.()));
 		if (st) st.classList.remove("is-hidden");
 		if (st) {
 			const playerMessage = data.isDailyChallenge

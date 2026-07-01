@@ -46,6 +46,8 @@ export function createEndGameController({
 		if (mode === 'rematch') {
 			sendBtn.textContent = '🔄 Rematch';
 			sendBtn.classList.add('rematch-submit-btn');
+			sendBtn.disabled = false;
+			sendBtn.removeAttribute?.('aria-disabled');
 			return;
 		}
 

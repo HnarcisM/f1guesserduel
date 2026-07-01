@@ -631,3 +631,16 @@ Dacă un player dă refresh accidental în timpul unei runde active, aplicația 
 - playerul nu primește încercări noi;
 - dacă terminase deja runda, rămâne în starea de așteptare a rezultatului final.
 ```
+
+### Progres adversar după ce ai terminat runda
+
+În `Duel`, dacă un player termină înaintea celuilalt, nu primește imediat popup de rezultat. În schimb, vede un panel de așteptare cu progresul adversarului:
+
+```text
+- numele adversarului;
+- status: încă joacă / a terminat / timp expirat;
+- încercări folosite din 6;
+- timpul rămas, dacă runda are timer.
+```
+
+Panelul nu afișează piloții ghiciți de adversar. Rezultatul final și scoreboard-ul apar doar după ce ambii playeri activi au terminat runda.

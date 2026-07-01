@@ -29,12 +29,16 @@ function serializeRoomMember(member, options = {}) {
     return serialized;
 }
 
-function serializeRoomMemberSummary(member) {
+function serializeRoomMemberSummary(member, options = {}) {
     return {
         username: member.username,
         role: member.role,
         isHost: member.isHost,
-        finished: Boolean(member.finished)
+        isYou: Boolean(options.isYou),
+        attempts: typeof member.attempts === 'number' ? member.attempts : 0,
+        finished: Boolean(member.finished),
+        timedOut: Boolean(member.timedOut),
+        connected: member.connected !== false
     };
 }
 
@@ -49,9 +53,14 @@ function buildLiveBoardState(room) {
     };
 }
 
-function buildPublicRoomState(room) {
-    const players = Object.values(room.players || {}).map(serializeRoomMemberSummary);
-    const spectators = Object.values(room.spectators || {}).map(serializeRoomMemberSummary);
+function buildPublicRoomState(room, options = {}) {
+    const recipientSocketId = options.recipientSocketId || null;
+    const players = Object.values(room.players || {}).map(member => serializeRoomMemberSummary(member, {
+        isYou: Boolean(recipientSocketId && member.socketId === recipientSocketId)
+    }));
+    const spectators = Object.values(room.spectators || {}).map(member => serializeRoomMemberSummary(member, {
+        isYou: Boolean(recipientSocketId && member.socketId === recipientSocketId)
+    }));
 
     return {
         playerCount: players.length,
@@ -62,6 +71,10 @@ function buildPublicRoomState(room) {
         roundResult: buildPublicRoundResult(room.roundResult),
         scoreboard: buildPublicScoreboard(room),
         difficulty: room.difficulty || null,
+        timed: Boolean(room.timed),
+        timeLimitSeconds: room.timeLimitSeconds || null,
+        roundStartedAt: room.roundStartedAt || null,
+        you: recipientSocketId ? serializeRoomMemberSummary((room.players || {})[recipientSocketId] || (room.spectators || {})[recipientSocketId] || {}, { isYou: true }) : null,
         isDailyChallenge: Boolean(room.isDailyChallenge),
         dailyDate: room.dailyDate || null,
         players,

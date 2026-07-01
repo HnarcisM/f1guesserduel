@@ -336,3 +336,135 @@ body:not(.mode-duel) .room-scoreboard {
         grid-template-columns: 1fr;
     }
 }
+
+/* Opponent progress: vizibil pentru playerul care a terminat primul și așteaptă adversarul. */
+.opponent-progress-panel {
+    width: min(100%, 720px);
+    margin: 14px auto 18px;
+    padding: 16px;
+    border: 1px solid var(--border-soft);
+    border-radius: 20px;
+    background: color-mix(in srgb, var(--surface-card) 88%, transparent);
+    box-shadow: var(--shadow-card);
+}
+
+.opponent-progress-panel.is-hidden,
+body:not(.mode-duel) .opponent-progress-panel {
+    display: none !important;
+}
+
+.opponent-progress-header {
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.opponent-progress-eyebrow {
+    margin: 0 0 4px;
+    color: var(--accent-f1);
+    font-size: 0.74rem;
+    font-weight: 950;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.opponent-progress-header h2 {
+    margin: 0;
+    font-size: clamp(1.05rem, 2vw, 1.35rem);
+}
+
+.opponent-progress-message {
+    margin: 0 0 12px;
+    color: var(--text-secondary);
+    font-size: 0.92rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.opponent-progress-content {
+    display: grid;
+    gap: 10px;
+}
+
+.opponent-progress-card {
+    border: 1px solid var(--border-soft);
+    border-radius: 16px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.055);
+}
+
+.opponent-progress-card-header,
+.opponent-progress-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.opponent-progress-name {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text-primary);
+    font-weight: 950;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.opponent-progress-status {
+    flex: 0 0 auto;
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-secondary);
+    font-size: 0.74rem;
+    font-weight: 900;
+}
+
+.opponent-progress-card.is-finished .opponent-progress-status {
+    color: #4ade80;
+}
+
+.opponent-progress-card.is-timed-out .opponent-progress-status {
+    color: #fb7185;
+}
+
+.opponent-progress-meter {
+    position: relative;
+    overflow: hidden;
+    height: 10px;
+    margin: 12px 0 9px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.opponent-progress-meter-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--accent-f1), var(--warning));
+    transition: width 180ms ease;
+}
+
+.opponent-progress-meta {
+    color: var(--text-secondary);
+    font-size: 0.84rem;
+    font-weight: 850;
+}
+
+.opponent-progress-meta strong {
+    margin-left: 4px;
+    color: var(--text-primary);
+}
+
+@media (max-width: 520px) {
+    .opponent-progress-panel {
+        padding: 12px;
+        border-radius: 16px;
+    }
+
+    .opponent-progress-card-header,
+    .opponent-progress-meta {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 6px;
+    }
+}

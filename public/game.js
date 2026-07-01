@@ -3,6 +3,7 @@ import { initializeGridStructure, renderGuessResult } from './js/gridView.js';
 import { createTimerView } from './js/timerView.js';
 import { createAuthView } from './js/authView.js';
 import { renderLiveBoard, renderRoomScoreboard, resetLiveBoard, resetRoomScoreboard } from './js/liveBoardView.js';
+import { renderOpponentProgress, resetOpponentProgress } from './js/opponentProgressView.js';
 import { createRoleState } from './js/roleState.js';
 import { createDailyChallengeController } from './js/dailyChallengeController.js';
 import { createEndGameController } from './js/endGameController.js';
@@ -85,6 +86,40 @@ function isInDuelMode() {
 	return Boolean(gameModeController?.isDuel?.());
 }
 
+function setGuessControlsVisible(isVisible) {
+	const shouldShow = Boolean(isVisible) && !roleState.isSpectator();
+	const gameZone = document.getElementById('gameZone');
+	const inputEl = document.getElementById('driverInput');
+	const sendBtn = document.getElementById('sendGuessBtn');
+
+	if (gameZone) {
+		gameZone.classList.toggle('game-zone-hidden', !shouldShow);
+		gameZone.classList.toggle('is-player-finished', !shouldShow && Boolean(isVisible) === false);
+	}
+
+	if (inputEl) {
+		inputEl.disabled = !shouldShow;
+		if (!shouldShow) inputEl.value = '';
+	}
+
+	if (sendBtn) {
+		sendBtn.disabled = !shouldShow;
+	}
+
+	if (!shouldShow) {
+		autocomplete?.clearSuggestions?.();
+		autocomplete?.clearSelectedDriverId?.();
+	}
+}
+
+function hideGuessControlsAfterLocalFinish() {
+	setGuessControlsVisible(false);
+}
+
+function showGuessControlsForActiveRound() {
+	setGuessControlsVisible(true);
+}
+
 function getDuelExitMessage(targetMode = 'single') {
 	if (isActiveDuelRound()) {
 		return 'Ești sigur că vrei să părăsești duelul? Runda va fi oprită pentru ambii jucători și vei părăsi camera.';
@@ -136,10 +171,7 @@ function showDuelLobby(message = 'Duelul a fost oprit. Alege dificultatea pentru
 	endGameController?.hideEndGamePopup?.(false);
 	autocomplete?.clearSuggestions?.();
 	autocomplete?.clearSelectedDriverId?.();
-	const inputEl = document.getElementById('driverInput');
-	if (inputEl) inputEl.value = '';
-	const gameZone = document.getElementById('gameZone');
-	if (gameZone) gameZone.classList.add('game-zone-hidden');
+	setGuessControlsVisible(false);
 	const overlay = document.getElementById('difficulty-overlay');
 	if (overlay) overlay.classList.remove('hidden');
 	gameModeController?.enterDuel?.({ roomId: activeRoomId });
@@ -244,6 +276,7 @@ function enterSingleMode() {
 	timer.setHostStatus(true);
 	setDuelRoundState('waiting');
 	resetLiveBoard();
+	resetOpponentProgress();
 	socketController?.emit('leaveRoom');
 	gameModeController.enterSingle();
 }
@@ -332,6 +365,10 @@ document.addEventListener('DOMContentLoaded', () => {
 		renderGuessResult,
 		renderLiveBoard,
 		renderRoomScoreboard,
+		renderOpponentProgress,
+		resetOpponentProgress,
+		hideGuessControlsAfterLocalFinish,
+		showGuessControlsForActiveRound,
 		resetLiveBoard,
 		resetRoomScoreboard,
 		setDuelRoundState,

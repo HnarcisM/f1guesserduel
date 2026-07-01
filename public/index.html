@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>F1 Guesser</title>
-    <link rel="stylesheet" href="/style.css?v=duel-safety-guards-1">
+    <link rel="stylesheet" href="/style.css?v=opponent-progress-1">
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
@@ -150,6 +150,15 @@
         <button id="sendGuessBtn">Trimite</button>
     </div>
 
+    <section id="opponentProgressPanel" class="opponent-progress-panel is-hidden" aria-live="polite" aria-hidden="true">
+        <div class="opponent-progress-header">
+            <p class="opponent-progress-eyebrow">Așteptare rezultat</p>
+            <h2>Adversarul încă joacă</h2>
+        </div>
+        <p class="opponent-progress-message">Ai terminat runda. Rezultatul final se calculează după ce termină și celălalt jucător.</p>
+        <div id="opponentProgressContent" class="opponent-progress-content"></div>
+    </section>
+
     <!-- Duel live: afișează în timp real încercările celor doi jucători pentru spectatori și pentru playeri. -->
     <section id="liveDuelBoard" class="live-duel-board is-hidden" aria-live="polite">
         <div class="live-duel-header">
@@ -267,6 +276,6 @@
     </div>
 </div>
 
-<script type="module" src="/game.js?v=duel-safety-guards-1"></script>
+<script type="module" src="/game.js?v=opponent-progress-1"></script>
 </body>
 </html>
