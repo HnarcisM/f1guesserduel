@@ -7,10 +7,11 @@ import { createRoleState } from './js/roleState.js';
 import { createDailyChallengeController } from './js/dailyChallengeController.js';
 import { createEndGameController } from './js/endGameController.js';
 import { createGameSocketController } from './js/gameSocketController.js';
-import { setupShareButton, setupRoom } from './js/roomController.js';
+import { clearRoomFromUrl, getRoomIdFromUrl, resetRoomUi, setupShareButton, setupRoom } from './js/roomController.js';
 import { setupMenuControllers } from './js/menuController.js';
 import { showErrorToast } from './js/toastController.js';
 import { createGameModeController } from './js/gameModeController.js';
+import { createGameModeSelectionController } from './js/gameModeSelectionController.js';
 
 /**
  * F1 Guesser Duel - frontend entry point.
@@ -28,6 +29,8 @@ let dailyChallengeController;
 let autocomplete;
 let endGameController;
 let gameModeController;
+let gameModeSelectionController;
+let activeRoomId = null;
 
 
 const roleState = createRoleState({
@@ -70,13 +73,15 @@ function createEndGameHandlers() {
 		dailyChallengeState: dailyChallengeController.state,
 		getSocket: () => socketController?.getSocket?.() || null,
 		getIsDailyMode: () => gameModeController?.isDaily?.() || dailyChallengeController.isMode(),
+		getIsDuelMode: () => gameModeController?.isDuel?.() || false,
+		getIsSingleMode: () => gameModeController?.isSingle?.() || false,
 		getIsRoundFinished: () => isRoundFinished,
 		setRoundFinished
 	});
 }
 
 function sendGuess() {
-	if (!roleState.requirePlayer('Ești spectator. Poți urmări jocul, dar nu poți trimite încercări.')) return;
+	if (gameModeController?.isDuel?.() && !roleState.requirePlayer('Ești spectator. Poți urmări jocul, dar nu poți trimite încercări.')) return;
 
 	if (endGameController.isRematchMode()) {
 		endGameController.requestRematch();
@@ -95,10 +100,13 @@ function sendGuess() {
 		return;
 	}
 
-	socketController?.emit(
-		gameModeController?.isDaily?.() ? 'submitDailyGuess' : 'submitGuess',
-		finalDriver.id
-	);
+	const guessEvent = gameModeController?.isDaily?.()
+		? 'submitDailyGuess'
+		: gameModeController?.isSingle?.()
+			? 'submitSingleGuess'
+			: 'submitGuess';
+
+	socketController?.emit(guessEvent, finalDriver.id);
 	inputEl.value = '';
 	autocomplete.clearSuggestions();
 	autocomplete.clearSelectedDriverId();
@@ -110,14 +118,41 @@ function startRoundFromSelection(level) {
 	if (gameModeController?.isDaily?.()) {
 		gameModeController.exitDaily();
 	}
-	if (!roleState.requirePlayer('Ești spectator. Doar hostul poate porni jocul.')) return;
 
 	const overlay = document.getElementById('difficulty-overlay');
 	if (overlay) overlay.classList.add('hidden');
 
-	if (!socketController?.emit('setDifficulty', timer.buildRoundOptions(level))) {
+	const roundOptions = timer.buildRoundOptions(level);
+	const eventName = gameModeController?.isDuel?.() ? 'setDifficulty' : 'startSingleGame';
+
+	if (gameModeController?.isDuel?.() && !roleState.requirePlayer('Ești spectator. Doar hostul poate porni jocul.')) return;
+
+	if (!socketController?.emit(eventName, roundOptions)) {
 		showErrorToast("Butonul funcționează, dar nu ești conectat la server! Pornește serverul cu 'npm start'");
 	}
+}
+
+function enterSingleMode() {
+	activeRoomId = null;
+	clearRoomFromUrl();
+	resetRoomUi();
+	roleState.setSpectatorMode(false);
+	timer.setHostStatus(true);
+	resetLiveBoard();
+	socketController?.emit('leaveRoom');
+	gameModeController.enterSingle();
+}
+
+function enterDuelMode(roomId = null) {
+	const joinedRoomId = setupRoom({
+		getSocket: socketController.getSocket,
+		roomId,
+		onRoomJoined: (nextRoomId) => {
+			activeRoomId = nextRoomId;
+			gameModeController.enterDuel({ roomId: nextRoomId });
+		}
+	});
+	return joinedRoomId;
 }
 
 function handleAuthChangeWithoutLeavingRoom(currentUser, socketAuthToken = null) {
@@ -145,8 +180,14 @@ function setupAuth() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-	gameModeController = createGameModeController();
+	gameModeController = createGameModeController({
+		onModeChanged({ mode }) {
+			if (mode === 'single') timer.setHostStatus(true);
+			if (mode === 'daily') timer.setHostStatus(false);
+		}
+	});
 	gameModeController.enterSingle();
+	timer.setHostStatus(true);
 
 	autocomplete = createAutocomplete({
 		getDriversList: () => driversList,
@@ -195,8 +236,19 @@ document.addEventListener('DOMContentLoaded', () => {
 	setupShareButton();
 	setupAuth();
 	socketController.connect();
-	setupRoom({
-		getSocket: socketController.getSocket,
-		onRoomJoined: (roomId) => gameModeController.enterDuel({ roomId })
+
+	gameModeSelectionController = createGameModeSelectionController({
+		gameModeController,
+		startDuelMode: () => enterDuelMode(),
+		startDailyChallenge: dailyChallengeController.start,
+		onSingleSelected: enterSingleMode
 	});
+	gameModeSelectionController.setup();
+
+	const roomIdFromUrl = getRoomIdFromUrl();
+	if (roomIdFromUrl) {
+		gameModeSelectionController.selectDuel();
+	} else {
+		gameModeSelectionController.selectSingle();
+	}
 });

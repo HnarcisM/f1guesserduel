@@ -55,3 +55,34 @@ test('duel rounds ignore daily flags and remain normal multiplayer rounds', () =
     assert.equal(room.isDailyChallenge, false);
     assert.equal(room.dailyChallengeId, null);
 });
+
+test('single rounds are independent from duel rooms', () => {
+    const repository = {
+        getDriversByDifficulty: difficulty => difficulty === 'easy' ? drivers : []
+    };
+    const gameService = createGameService(repository);
+    const room = { players: {}, difficulty: null };
+
+    const singlePayload = gameService.startSingleRound({ difficulty: 'easy', timed: true, timeLimitSeconds: 60 });
+
+    assert.equal(singlePayload.isSinglePlay, true);
+    assert.equal(singlePayload.difficulty, 'easy');
+    assert.equal(singlePayload.timed, true);
+    assert.equal(singlePayload.timeLimitSeconds, 60);
+    assert.equal(room.difficulty, null);
+});
+
+test('single restart keeps previous difficulty without requiring a room', () => {
+    const repository = {
+        getDriversByDifficulty: difficulty => difficulty === 'easy' ? drivers : []
+    };
+    const gameService = createGameService(repository);
+    const firstRound = gameService.startSingleRound({ difficulty: 'easy' });
+
+    const restarted = gameService.restartSingleRound(firstRound, { timed: false });
+
+    assert.equal(restarted.isSinglePlay, true);
+    assert.equal(restarted.difficulty, 'easy');
+    assert.equal(Array.isArray(restarted.drivers), true);
+    assert.ok(restarted.targetDriver);
+});

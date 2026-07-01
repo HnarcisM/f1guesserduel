@@ -48,22 +48,38 @@ export function getRoomIdFromUrl() {
 	return urlParams.get('room');
 }
 
-export function setupRoom({ getSocket, onRoomJoined } = {}) {
-	let roomId = getRoomIdFromUrl();
+function generateRoomId() {
+	return Math.random().toString(36).substring(2, 9);
+}
 
-	if (!roomId) {
-		roomId = Math.random().toString(36).substring(2, 9);
-		window.history.pushState({}, '', `?room=${roomId}`);
-	}
-
+function updateRoomUi(roomId) {
 	const roomBtnTextEl = document.getElementById('roomBtnText');
 	if (roomBtnTextEl) {
-		roomBtnTextEl.textContent = `🏁 Room: ${roomId}`;
+		roomBtnTextEl.textContent = roomId ? `🏁 Room: ${roomId}` : '🏁 Duel inactive';
 	}
 
 	const linkTextEl = document.getElementById('linkText');
 	if (linkTextEl) linkTextEl.innerText = window.location.href;
+}
 
+export function clearRoomFromUrl() {
+	const url = new URL(window.location.href);
+	if (!url.searchParams.has('room')) return;
+	url.searchParams.delete('room');
+	window.history.pushState({}, '', `${url.pathname}${url.search}${url.hash}`);
+}
+
+export function setupRoom({ getSocket, onRoomJoined, roomId: requestedRoomId, updateUrl = true } = {}) {
+	const existingRoomId = getRoomIdFromUrl();
+	const roomId = requestedRoomId || existingRoomId || generateRoomId();
+
+	if (updateUrl) {
+		const url = new URL(window.location.href);
+		url.searchParams.set('room', roomId);
+		window.history.pushState({}, '', `${url.pathname}${url.search}${url.hash}`);
+	}
+
+	updateRoomUi(roomId);
 	onRoomJoined?.(roomId);
 
 	const socket = getSocket?.();
@@ -72,4 +88,8 @@ export function setupRoom({ getSocket, onRoomJoined } = {}) {
 	}
 
 	return roomId;
+}
+
+export function resetRoomUi() {
+	updateRoomUi(null);
 }

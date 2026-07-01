@@ -27,6 +27,7 @@ Aplicația rulează cu **Node.js**, **Express** și **Socket.IO**, iar interfaț
 ## Funcționalități
 
 - Joc de ghicit piloți de Formula 1.
+- Selectare clară între Single Play, Duel și Daily Challenge.
 - Suport pentru camere multiplayer / duel prin link de room.
 - Alegere dificultate înainte de începerea rundei.
 - Autocomplete pentru numele piloților.
@@ -43,17 +44,19 @@ Aplicația rulează cu **Node.js**, **Express** și **Socket.IO**, iar interfaț
 
 ## Cum funcționează jocul
 
-1. Utilizatorul intră într-o cameră de joc.
-2. Dacă nu există o cameră în URL, aplicația generează automat una.
-3. Jucătorul alege dificultatea.
-4. Serverul selectează aleator un pilot țintă din `data/drivers.json`.
-5. Utilizatorul introduce un pilot și trimite ghicirea.
-6. Serverul compară pilotul ales cu pilotul țintă.
-7. Clientul primește doar rezultatul comparației, nu și răspunsul complet.
-8. Jocul se termină când:
+1. Utilizatorul alege modul de joc: `Single Play`, `Duel` sau `Daily Challenge`.
+2. În `Single Play`, jocul pornește fără cameră și fără adversar.
+3. În `Duel`, aplicația creează sau folosește un room din URL, apoi sincronizează playerii/spectatorii prin Socket.IO.
+4. În `Daily Challenge`, aplicația pornește provocarea zilei, separată de duel.
+5. Jucătorul alege dificultatea.
+6. Serverul selectează pilotul țintă din `data/drivers.json`.
+7. Utilizatorul introduce un pilot și trimite ghicirea.
+8. Serverul compară pilotul ales cu pilotul țintă.
+9. Clientul primește doar rezultatul comparației, nu și răspunsul complet.
+10. Jocul se termină când:
    - pilotul este ghicit corect; sau
    - sunt epuizate cele 6 încercări.
-9. La final se afișează popup-ul de rezultat și statisticile locale.
+11. La final se afișează popup-ul de rezultat și statisticile locale.
 
 Răspunsul corect este ținut pe server până la finalul jocului, pentru a evita citirea lui directă din codul client-side.
 
@@ -556,7 +559,7 @@ Daily Challenge adaugă o provocare zilnică separată pe dificultate:
 - `Daily Medium`
 - `Daily Hard`
 
-Pentru fiecare dificultate, serverul alege determinist același pilot pentru aceeași zi calendaristică UTC. Nu este nevoie de bază de date pentru prima versiune: seed-ul este calculat din dată și dificultate. Hostul poate porni Daily Challenge din overlay-ul principal sau din meniul hamburger. Spectatorii văd în continuare live board-ul, dar nu pot porni provocarea sau trimite încercări.
+Pentru fiecare dificultate, serverul alege determinist același pilot pentru aceeași zi calendaristică UTC. Nu este nevoie de bază de date pentru prima versiune: seed-ul este calculat din dată și dificultate. Daily Challenge poate fi pornit din overlay-ul principal sau din meniul hamburger. Este tratat ca mod separat de `Single Play` și `Duel`, astfel încât nu activează camera, spectator board-ul sau viitorul scoreboard de duel.
 
 
 ## Daily Challenge reset
@@ -584,4 +587,6 @@ duel    - joc în cameră cu playeri/spectatori
 daily   - Daily Challenge individual
 ```
 
-Momentan controllerul păstrează comportamentul existent și servește ca fundație pentru următoarele feature-uri: winner logic pe rundă, scoreboard pe cameră, lobby, ready system și Daily Challenge server-side.
+Ecranul inițial permite acum alegerea explicită a modului. Aplicația pornește implicit în `single`, creează/join-uiește camera doar când alegi `duel` sau intri direct pe un link cu `?room=...`, iar `daily` rămâne separat de ambele.
+
+Această separare este fundația pentru următoarele feature-uri: winner logic pe rundă, scoreboard pe cameră, lobby, ready system și Daily Challenge server-side.

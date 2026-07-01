@@ -42,6 +42,39 @@ function createGameService(driversRepository) {
         };
     }
 
+
+    function startSingleRound(options) {
+        const difficulty = options && options.difficulty;
+        if (!isValidDifficulty(difficulty)) return null;
+
+        const drivers = driversRepository.getDriversByDifficulty(difficulty);
+        if (drivers.length === 0) return null;
+
+        const timed = Boolean(options.timed);
+        const timeLimitSeconds = normalizeTimeLimitSeconds(options.timeLimitSeconds);
+
+        return {
+            drivers,
+            difficulty,
+            targetDriver: pickRandomDriver(drivers),
+            attempts: 0,
+            finished: false,
+            timed,
+            timeLimitSeconds,
+            roundStartedAt: Date.now(),
+            isSinglePlay: true
+        };
+    }
+
+    function restartSingleRound(singleSession, options = {}) {
+        if (!singleSession || !singleSession.difficulty) return null;
+        return startSingleRound({
+            difficulty: singleSession.difficulty,
+            timed: Boolean(options.timed),
+            timeLimitSeconds: options.timeLimitSeconds
+        });
+    }
+
     function startNewRound(room, options) {
         const difficulty = options && options.difficulty;
         if (!isValidDifficulty(difficulty)) return null;
@@ -101,7 +134,9 @@ function createGameService(driversRepository) {
     return {
         startNewRound,
         restartRound,
-        startDailyChallenge
+        startDailyChallenge,
+        startSingleRound,
+        restartSingleRound
     };
 }
 

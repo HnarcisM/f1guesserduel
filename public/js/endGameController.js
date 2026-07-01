@@ -32,6 +32,8 @@ export function createEndGameController({
 	dailyChallengeState,
 	getSocket,
 	getIsDailyMode,
+	getIsDuelMode = () => true,
+	getIsSingleMode = () => false,
 	getIsRoundFinished,
 	setRoundFinished
 }) {
@@ -87,10 +89,12 @@ export function createEndGameController({
 			return;
 		}
 
-		if (!roleState.requirePlayer('Ești spectator. Doar hostul poate porni un rematch.')) return;
+		if (getIsDuelMode() && !roleState.requirePlayer('Ești spectator. Doar hostul poate porni un rematch.')) return;
 
 		const socket = getSocket();
-		if (socket) socket.emit('restartGame', timer.buildRestartOptions());
+		if (!socket) return;
+		const restartEvent = getIsSingleMode() ? 'restartSingleGame' : 'restartGame';
+		socket.emit(restartEvent, timer.buildRestartOptions());
 	}
 
 	function hideEndGamePopup(keepRematchAvailable = true) {

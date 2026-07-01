@@ -179,3 +179,83 @@
     backdrop-filter: blur(6px);
 }
 
+
+/* --- SELECTARE MOD DE JOC --- */
+.game-mode-selection {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-4xl);
+    margin: var(--space-6xl) auto var(--space-5xl);
+    max-width: 760px;
+}
+
+.game-mode-card {
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-2xl);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--surface-main) 92%, white) 0%, var(--surface-main) 100%);
+    color: var(--text-on-accent);
+    min-height: 150px;
+    padding: var(--space-4xl);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: var(--space-sm);
+    text-align: left;
+    cursor: pointer;
+    transition: transform var(--transition-medium), border-color var(--transition-medium), box-shadow var(--transition-medium), background var(--transition-medium);
+}
+
+.game-mode-card:hover,
+.game-mode-card.active {
+    transform: translateY(-3px);
+    border-color: color-mix(in srgb, var(--accent-f1) 70%, var(--border-soft));
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.36), 0 0 24px color-mix(in srgb, var(--accent-f1) 22%, transparent);
+}
+
+.game-mode-card.active {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--accent-f1) 16%, var(--surface-main)) 0%, var(--surface-main) 100%);
+}
+
+.game-mode-card .mode-icon {
+    font-size: 1.8rem;
+    line-height: 1;
+}
+
+.game-mode-card strong {
+    font-size: 1.05rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.game-mode-card small {
+    color: var(--text-secondary);
+    line-height: 1.45;
+}
+
+.difficulty-section.is-hidden {
+    display: none;
+}
+
+body.mode-single #shareRoomBtn,
+body.mode-daily #shareRoomBtn {
+    display: none;
+}
+
+body.mode-single #duelStatus,
+body.mode-daily #duelStatus {
+    display: none;
+}
+
+@media (max-width: 720px) {
+    .game-mode-selection {
+        grid-template-columns: 1fr;
+        gap: var(--space-2xl);
+        margin-top: var(--space-4xl);
+    }
+
+    .game-mode-card {
+        min-height: auto;
+        padding: var(--space-3xl);
+    }
+}

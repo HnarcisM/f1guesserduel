@@ -29,6 +29,7 @@ const {
 function registerSocketHandlers(io, dependencies) {
     const { roomStore, gameService, sessionService } = dependencies;
     const dailySessions = new Map();
+    const singleSessions = new Map();
 
     attachSocketAuth(io, sessionService);
 
@@ -191,7 +192,21 @@ function registerSocketHandlers(io, dependencies) {
         });
 
         socket.on('timeExpired', () => {
-            if (!currentRoom) return;
+            if (!currentRoom) {
+                const singleSession = singleSessions.get(socket.id);
+                if (!singleSession || singleSession.finished || !singleSession.timed || !singleSession.roundStartedAt) return;
+
+                const elapsedMs = Date.now() - singleSession.roundStartedAt;
+                if (elapsedMs < singleSession.timeLimitSeconds * 1000 - 500) return;
+
+                singleSession.attempts = MAX_ATTEMPTS;
+                singleSession.finished = true;
+                socket.emit('gameTimedOut', {
+                    target: { name: singleSession.targetDriver.name },
+                    attempts: MAX_ATTEMPTS
+                });
+                return;
+            }
 
             const room = roomStore.get(currentRoom);
             if (!room) return;
@@ -240,6 +255,128 @@ function registerSocketHandlers(io, dependencies) {
                 includeLiveBoardForSpectators: true
             });
             emitRoomStateUpdate(currentRoom, 'restart');
+        });
+
+
+        socket.on('startSingleGame', (payload) => {
+            const roundOptions = normalizeRoundOptions(payload);
+            if (!roundOptions) {
+                socket.emit('errorMessage', 'Dificultatea selectată nu este validă.');
+                return;
+            }
+
+            leaveCurrentRoom();
+
+            const singlePayload = gameService.startSingleRound(roundOptions);
+            if (!singlePayload) {
+                socket.emit('errorMessage', 'Nu am putut porni jocul single pentru dificultatea selectată.');
+                return;
+            }
+
+            singleSessions.set(socket.id, {
+                difficulty: singlePayload.difficulty,
+                driversList: singlePayload.drivers,
+                targetDriver: singlePayload.targetDriver,
+                attempts: 0,
+                finished: false,
+                timed: singlePayload.timed,
+                timeLimitSeconds: singlePayload.timeLimitSeconds,
+                roundStartedAt: singlePayload.roundStartedAt
+            });
+
+            socket.emit('initGame', {
+                drivers: singlePayload.drivers,
+                difficulty: singlePayload.difficulty,
+                timed: singlePayload.timed,
+                timeLimitSeconds: singlePayload.timeLimitSeconds,
+                roundStartedAt: singlePayload.roundStartedAt,
+                isDailyChallenge: false,
+                isSinglePlay: true,
+                dailyDate: null
+            });
+        });
+
+        socket.on('submitSingleGuess', (driverId) => {
+            const singleSession = singleSessions.get(socket.id);
+            if (!singleSession || singleSession.finished) return;
+
+            if (singleSession.attempts >= MAX_ATTEMPTS) return;
+
+            if (singleSession.timed && singleSession.roundStartedAt && Date.now() - singleSession.roundStartedAt >= singleSession.timeLimitSeconds * 1000) {
+                singleSession.attempts = MAX_ATTEMPTS;
+                singleSession.finished = true;
+                socket.emit('gameTimedOut', { target: { name: singleSession.targetDriver.name }, attempts: MAX_ATTEMPTS });
+                return;
+            }
+
+            const normalizedDriverId = normalizeDriverId(driverId);
+            if (!normalizedDriverId) {
+                socket.emit('errorMessage', 'Pilotul ales nu este valid pentru jocul single.');
+                return;
+            }
+
+            const guessDriver = singleSession.driversList.find(driver => driver.id === normalizedDriverId);
+            if (!guessDriver) {
+                socket.emit('errorMessage', 'Pilotul ales nu este valid pentru jocul single.');
+                return;
+            }
+
+            singleSession.attempts++;
+
+            const target = singleSession.targetDriver;
+            const results = compareGuess(guessDriver, target);
+            const isCorrectGuess = guessDriver.id === target.id;
+            const isGameOver = isCorrectGuess || singleSession.attempts >= MAX_ATTEMPTS;
+
+            if (isGameOver) {
+                singleSession.finished = true;
+            }
+
+            const responseData = {
+                guess: guessDriver,
+                results,
+                attempts: singleSession.attempts,
+                isCorrect: isCorrectGuess,
+                isGameOver,
+                isSinglePlay: true
+            };
+
+            if (isGameOver) {
+                responseData.target = { name: target.name };
+            }
+
+            socket.emit('guessResult', responseData);
+        });
+
+        socket.on('restartSingleGame', (payload = {}) => {
+            const previousSession = singleSessions.get(socket.id);
+            const restartPayload = gameService.restartSingleRound(previousSession, normalizeRestartOptions(payload));
+            if (!restartPayload) {
+                socket.emit('errorMessage', 'Nu am putut reporni jocul single. Alege mai întâi o dificultate.');
+                return;
+            }
+
+            singleSessions.set(socket.id, {
+                difficulty: restartPayload.difficulty,
+                driversList: restartPayload.drivers,
+                targetDriver: restartPayload.targetDriver,
+                attempts: 0,
+                finished: false,
+                timed: restartPayload.timed,
+                timeLimitSeconds: restartPayload.timeLimitSeconds,
+                roundStartedAt: restartPayload.roundStartedAt
+            });
+
+            socket.emit('gameRestarted', {
+                drivers: restartPayload.drivers,
+                difficulty: restartPayload.difficulty,
+                timed: restartPayload.timed,
+                timeLimitSeconds: restartPayload.timeLimitSeconds,
+                roundStartedAt: restartPayload.roundStartedAt,
+                isDailyChallenge: false,
+                isSinglePlay: true,
+                dailyDate: null
+            });
         });
 
 
@@ -359,6 +496,7 @@ function registerSocketHandlers(io, dependencies) {
             const roomId = currentRoom;
             const room = roomStore.get(roomId);
             currentRoom = null;
+            socket.leave(roomId);
 
             if (!room) return;
 
@@ -377,8 +515,12 @@ function registerSocketHandlers(io, dependencies) {
             emitRoomRoleStatuses(room);
         }
 
+        socket.on('leaveRoom', leaveCurrentRoom);
         socket.on('disconnecting', leaveCurrentRoom);
-        socket.on('disconnect', leaveCurrentRoom);
+        socket.on('disconnect', () => {
+            singleSessions.delete(socket.id);
+            leaveCurrentRoom();
+        });
     });
 }
 

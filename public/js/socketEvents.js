@@ -41,7 +41,7 @@ export function registerSocketEvents(socket, app) {
 	}
 
 	function handleRoomStateUpdate(payload = {}) {
-		if (app.isDailyMode?.() || app.isDailyStartPending?.()) return;
+		if (app.isDailyMode?.() || app.isDailyStartPending?.() || !app.isDuelMode?.()) return;
 
 		const roomState = payload.room || payload;
 		updateRoomBadge(roomState);
@@ -61,6 +61,8 @@ export function registerSocketEvents(socket, app) {
 		if (overlay) overlay.classList.add('hidden');
 
 		app.setDailyMode?.(false);
+		if (data.isSinglePlay) app.enterSingleMode?.();
+		else if (!data.isDailyChallenge) app.enterDuelMode?.();
 		app.setDriversList(data.drivers);
 		app.setRoundFinished(false);
 		app.exitRematchMode();
@@ -81,7 +83,7 @@ export function registerSocketEvents(socket, app) {
 
 		const diffLabel = document.getElementById("diff-display-label");
 		if (diffLabel) {
-			const dailyPrefix = data.isDailyChallenge ? 'Daily Challenge · ' : '';
+			const dailyPrefix = data.isDailyChallenge ? 'Daily Challenge · ' : data.isSinglePlay ? 'Single Play · ' : '';
 			const dailyDate = data.isDailyChallenge && data.dailyDate ? ` · ${data.dailyDate}` : '';
 			diffLabel.innerText = `${dailyPrefix}Mod: ${data.difficulty}${dailyDate}`;
 			diffLabel.className = `diff-display-label difficulty-${data.difficulty}${data.isDailyChallenge ? ' daily-mode' : ''}`;
@@ -91,7 +93,9 @@ export function registerSocketEvents(socket, app) {
 		if (statusEl && !app.isSpectator?.()) {
 			statusEl.innerText = data.isDailyChallenge
 				? "Daily Challenge: ghicește pilotul zilei!"
-				: "Ghicește pilotul misterios!";
+				: data.isSinglePlay
+					? "Single Play: ghicește pilotul misterios!"
+					: "Ghicește pilotul misterios!";
 		}
 
 		app.initializeGridStructure();
@@ -106,7 +110,7 @@ export function registerSocketEvents(socket, app) {
 	socket.on('roomStateUpdate', handleRoomStateUpdate);
 
 	socket.on('hostStatus', (data) => {
-		if (app.isDailyMode?.() || app.isDailyStartPending?.()) return;
+		if (app.isDailyMode?.() || app.isDailyStartPending?.() || !app.isDuelMode?.()) return;
 
 		const wasSpectator = Boolean(app.isSpectator?.());
 		const isSpectator = Boolean(data && data.isSpectator);
@@ -175,6 +179,7 @@ export function registerSocketEvents(socket, app) {
 
 	socket.on('gameRestarted', (data = {}) => {
 		app.setDailyMode?.(false);
+		if (data.isSinglePlay) app.enterSingleMode?.();
 		app.setRoundFinished(false);
 		app.exitRematchMode();
 		app.initializeGridStructure();
@@ -194,7 +199,9 @@ export function registerSocketEvents(socket, app) {
 		if (st) {
 			const playerMessage = data.isDailyChallenge
 				? "Daily Challenge: ghicește din nou pilotul zilei."
-				: "Ghicește noul pilot misterios!";
+				: data.isSinglePlay
+					? "Single Play: ghicește noul pilot misterios!"
+					: "Ghicește noul pilot misterios!";
 			st.innerText = app.isSpectator?.()
 				? "Mod spectator: urmărești noua rundă."
 				: playerMessage;

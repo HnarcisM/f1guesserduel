@@ -38,6 +38,8 @@ export function createGameSocketController({
 			getGameMode: gameModeController?.getMode,
 			completeDailyChallenge: dailyChallengeController.complete,
 			isDailyMode: () => gameModeController?.isDaily?.() || dailyChallengeController.isMode(),
+			isDuelMode: () => gameModeController?.isDuel?.() || false,
+			isSingleMode: () => gameModeController?.isSingle?.() || false,
 			isDailyStartPending: dailyChallengeController.isStartPending,
 			isSpectator: roleState.isSpectator,
 			getRoleBadgeLabel: roleState.getRoleBadgeLabel,

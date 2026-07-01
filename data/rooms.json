@@ -1,23 +1,5 @@
 {
   "version": 1,
-  "savedAt": "2026-07-01T18:25:40.265Z",
-  "rooms": [
-    {
-      "roomId": "dtpn1ra",
-      "hostId": null,
-      "players": {},
-      "spectators": {},
-      "nextGuestNumber": 2,
-      "targetDriver": null,
-      "difficulty": null,
-      "driversList": [],
-      "timed": false,
-      "timeLimitSeconds": 60,
-      "roundStartedAt": null,
-      "roundState": "waiting",
-      "isDailyChallenge": false,
-      "dailyDate": null,
-      "dailyChallengeId": null
-    }
-  ]
+  "savedAt": "2026-07-01T18:45:35.061Z",
+  "rooms": []
 }

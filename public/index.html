@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>F1 Guesser</title>
-    <link rel="stylesheet" href="/style.css?v=toast-1">
+    <link rel="stylesheet" href="/style.css?v=mode-select-1">
     <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
@@ -58,16 +58,26 @@
 <div id="difficulty-overlay" class="overlay">
     <div class="menu-container">
         <h2>F1 Guesser</h2>
-        <p class="subtitle">Selectează dificultatea grilei pentru acest duel:</p>
-        <div class="timer-mode-card" aria-label="Selectare mod cu sau fără timp">
-            <span class="timer-mode-label">Mod timp</span>
-            <div class="timer-mode-options">
-                <button type="button" class="timer-mode-option active" data-timer-mode="off">∞ Fără timp</button>
-                <button type="button" class="timer-mode-option" data-timer-mode="60">⏱️ 60 sec</button>
-                <button type="button" class="timer-mode-option" data-timer-mode="90">⏱️ 90 sec</button>
-                <button type="button" class="timer-mode-option" data-timer-mode="120">⏱️ 120 sec</button>
-            </div>
+        <p class="subtitle">Alege modul de joc, apoi selectează dificultatea.</p>
+
+        <div class="game-mode-selection" aria-label="Selectare mod de joc">
+            <button type="button" class="game-mode-card active" data-game-mode-choice="single" aria-pressed="true">
+                <span class="mode-icon">🎯</span>
+                <strong>Single Play</strong>
+                <small>Joacă solo, fără cameră și fără adversar.</small>
+            </button>
+            <button type="button" class="game-mode-card" data-game-mode-choice="duel" aria-pressed="false">
+                <span class="mode-icon">⚔️</span>
+                <strong>Duel</strong>
+                <small>Creează sau intră într-o cameră cu prietenii.</small>
+            </button>
+            <button type="button" class="game-mode-card" data-game-mode-choice="daily" aria-pressed="false">
+                <span class="mode-icon">🌅</span>
+                <strong>Daily Challenge</strong>
+                <small>Provocarea zilei, separată de duel.</small>
+            </button>
         </div>
+
         <div class="daily-challenge-card">
             <div class="daily-challenge-copy">
                 <span class="daily-eyebrow">Provocarea zilei</span>
@@ -81,6 +91,17 @@
             </div>
         </div>
 
+
+        <div id="difficultySection" class="difficulty-section">
+        <div class="timer-mode-card" aria-label="Selectare mod cu sau fără timp">
+            <span class="timer-mode-label">Mod timp</span>
+            <div class="timer-mode-options">
+                <button type="button" class="timer-mode-option active" data-timer-mode="off">∞ Fără timp</button>
+                <button type="button" class="timer-mode-option" data-timer-mode="60">⏱️ 60 sec</button>
+                <button type="button" class="timer-mode-option" data-timer-mode="90">⏱️ 90 sec</button>
+                <button type="button" class="timer-mode-option" data-timer-mode="120">⏱️ 120 sec</button>
+            </div>
+        </div>
         <div class="difficulty-grid">
             <button class="btn-diff easy" data-level="easy">
                 <span class="diff-title">Easy</span>
@@ -94,6 +115,7 @@
                 <span class="diff-title">Hard</span>
                 <span class="diff-desc">Anii 1950 - 2000<br>(Panteonul Istoric)</span>
             </button>
+        </div>
         </div>
     </div>
 </div>
