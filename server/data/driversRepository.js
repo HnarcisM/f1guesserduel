@@ -15,7 +15,7 @@ function loadDriversFromFile(filePath) {
 }
 
 function createDriversRepository(options = {}) {
-    const driversFilePath = options.driversFilePath || path.join(__dirname, '..', '..', 'drivers.json');
+    const driversFilePath = options.driversFilePath || path.join(__dirname, '..', '..', 'data', 'drivers.json');
     const allDrivers = loadDriversFromFile(driversFilePath);
 
     function getAllDrivers() {

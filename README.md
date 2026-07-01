@@ -46,7 +46,7 @@ Aplicația rulează cu **Node.js**, **Express** și **Socket.IO**, iar interfaț
 1. Utilizatorul intră într-o cameră de joc.
 2. Dacă nu există o cameră în URL, aplicația generează automat una.
 3. Jucătorul alege dificultatea.
-4. Serverul selectează aleator un pilot țintă din `drivers.json`.
+4. Serverul selectează aleator un pilot țintă din `data/drivers.json`.
 5. Utilizatorul introduce un pilot și trimite ghicirea.
 6. Serverul compară pilotul ales cu pilotul țintă.
 7. Clientul primește doar rezultatul comparației, nu și răspunsul complet.
@@ -75,19 +75,22 @@ Răspunsul corect este ținut pe server până la finalul jocului, pentru a evit
 
 ```text
 f1guesserduel/
-├── public/
-│   ├── flags/              # Steaguri locale în format SVG
-│   ├── logos/              # Logo-uri locale pentru echipe F1
-│   ├── game.js             # Logica aplicației client-side
-│   ├── index.html          # Structura paginii
-│   └── style.css           # Stiluri, teme și responsive CSS
-├── drivers.json            # Baza de date cu piloți
-├── server.js               # Server Express + Socket.IO
+├── public/                 # Frontend: HTML, CSS, JS și asset-uri
+├── server/                 # Backend Express + Socket.IO
+├── test/                   # Teste unitare și E2E
+├── scripts/                # Scripturi helper pentru testare
+├── data/
+│   └── drivers.json        # Baza de date cu piloți
+├── .github/
+│   └── CODEOWNERS          # Config GitHub pentru ownership
 ├── package.json            # Scripturi și dependențe Node.js
 ├── package-lock.json       # Versiuni exacte pentru dependențe
-├── F1GuesserDuel.bat       # Script Windows pentru pornire rapidă
-├── CODEOWNERS              # Config GitHub pentru ownership
+├── .env.example            # Exemplu de configurare runtime
 ├── .gitignore              # Fișiere ignorate de Git
+├── F1GuesserDuel.bat       # Script Windows pentru pornire rapidă
+├── F1GuesserDuel_Tests.bat # Script Windows pentru teste
+├── F1GuesserDuel_cachyos.sh        # Script Linux/CachyOS pentru pornire
+├── F1GuesserDuel_Tests_cachyos.sh  # Script Linux/CachyOS pentru teste
 └── README.md               # Documentația proiectului
 ```
 
@@ -117,7 +120,7 @@ npm start
 sau direct:
 
 ```bash
-node server.js
+node server/index.js
 ```
 
 ### 4. Deschide aplicația în browser
@@ -149,6 +152,17 @@ Aplicația poate fi configurată prin variabile de mediu. Pentru rulare locală 
 | `COOKIE_SECURE` | `true` în production, altfel `false` | Trimite cookie-ul doar prin HTTPS. |
 | `COOKIE_SAMESITE` | `lax` | Poate fi `lax`, `strict` sau `none`. |
 | `TRUST_PROXY` | `false` | Setează `true` când rulezi în spatele unui proxy/load balancer. |
+
+Validarea configului este strictă: dacă o variabilă este setată cu o valoare invalidă, serverul se oprește cu un mesaj clar. Reguli importante:
+
+- `NODE_ENV` trebuie să fie `development`, `test` sau `production`;
+- `PORT` trebuie să fie între `1` și `65535`;
+- valorile numerice de durată/interval trebuie să fie întregi în limite rezonabile;
+- `COOKIE_SECURE`, `TRUST_PROXY` acceptă doar valori de tip `true/false`, `1/0`, `yes/no`, `on/off`;
+- `COOKIE_SAMESITE` trebuie să fie `lax`, `strict` sau `none`;
+- `COOKIE_SAMESITE=none` cere obligatoriu `COOKIE_SECURE=true`;
+- `SESSION_COOKIE_NAME` nu poate conține spații, semicolon sau separatori invalizi;
+- path-urile configurate explicit nu pot fi stringuri goale.
 
 Există și un fișier `.env.example` cu un exemplu de configurare. Aplicația nu încarcă automat `.env`, ca să nu adăugăm dependințe noi; setează variabilele direct în mediul de rulare sau folosește un loader extern dacă ai nevoie.
 
@@ -196,7 +210,7 @@ Aplicația include trei niveluri principale:
 | Medium | Piloți din perioada 2000–2010 |
 | Hard | Piloți istorici, aproximativ 1950–2000 |
 
-Dificultatea este trimisă către server, iar serverul filtrează lista din `drivers.json`.
+Dificultatea este trimisă către server, iar serverul filtrează lista din `data/drivers.json`.
 
 ---
 
@@ -254,7 +268,7 @@ Aceste statistici sunt locale pentru fiecare browser/dispozitiv și nu sunt sinc
 
 ### Server
 
-Fișier principal: `server.js`
+Fișier principal: `server/index.js`
 
 Responsabilități:
 
@@ -332,7 +346,7 @@ Responsabilități:
 
 ## Datele despre piloți
 
-Piloții sunt definiți în `drivers.json`.
+Piloții sunt definiți în `data/drivers.json`.
 
 Fiecare pilot include informații precum:
 
@@ -371,7 +385,7 @@ După fiecare modificare importantă:
 Pentru verificare rapidă a sintaxei JavaScript:
 
 ```bash
-node --check server.js
+node --check server/index.js
 node --check public/game.js
 ```
 

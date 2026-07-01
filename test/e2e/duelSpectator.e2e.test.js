@@ -63,7 +63,7 @@ async function startAppServer(options = {}) {
     const port = await getFreePort();
     const dataDir = options.dataDir || path.join(os.tmpdir(), `f1guesser-e2e-${process.pid}-${Date.now()}`);
     logE2E(`Pornesc serverul de test pe portul ${port}...`);
-    const child = spawn(process.execPath, ['server.js'], {
+    const child = spawn(process.execPath, ['server/index.js'], {
         cwd: path.join(__dirname, '..', '..'),
         env: {
             ...process.env,

@@ -68,3 +68,59 @@ test('boolean and sameSite parsing are defensive', () => {
     assert.equal(normalizeSameSite('None'), 'none');
     assert.equal(normalizeSameSite('invalid'), 'lax');
 });
+
+test('app config rejects invalid numeric environment values', () => {
+    assert.throws(
+        () => createAppConfig({ PORT: '70000' }),
+        /PORT must be an integer between 1 and 65535/
+    );
+    assert.throws(
+        () => createAppConfig({ SESSION_MAX_AGE_DAYS: '0' }),
+        /SESSION_MAX_AGE_DAYS must be an integer/
+    );
+    assert.throws(
+        () => createAppConfig({ SOCKET_AUTH_TOKEN_MAX_AGE_MS: 'fast' }),
+        /SOCKET_AUTH_TOKEN_MAX_AGE_MS must be an integer/
+    );
+});
+
+test('app config rejects invalid boolean and enum values', () => {
+    assert.throws(
+        () => createAppConfig({ COOKIE_SECURE: 'maybe' }),
+        /COOKIE_SECURE must be one of/
+    );
+    assert.throws(
+        () => createAppConfig({ COOKIE_SAMESITE: 'external' }),
+        /COOKIE_SAMESITE must be one of/
+    );
+    assert.throws(
+        () => createAppConfig({ NODE_ENV: 'prod' }),
+        /NODE_ENV must be one of/
+    );
+});
+
+test('app config validates cookie settings', () => {
+    assert.throws(
+        () => createAppConfig({ COOKIE_SAMESITE: 'none', COOKIE_SECURE: 'false' }),
+        /COOKIE_SAMESITE=none requires COOKIE_SECURE=true/
+    );
+    assert.throws(
+        () => createAppConfig({ SESSION_COOKIE_NAME: 'bad cookie' }),
+        /SESSION_COOKIE_NAME must be a valid cookie name/
+    );
+
+    const config = createAppConfig({ COOKIE_SAMESITE: 'none', COOKIE_SECURE: 'true' });
+    assert.equal(config.auth.cookie.sameSite, 'none');
+    assert.equal(config.auth.cookie.secure, true);
+});
+
+test('app config rejects empty string environment overrides', () => {
+    assert.throws(
+        () => createAppConfig({ DATA_DIR: '   ' }),
+        /DATA_DIR must not be empty/
+    );
+    assert.throws(
+        () => createAppConfig({ SESSION_SECRET: '   ' }),
+        /SESSION_SECRET must not be empty/
+    );
+});

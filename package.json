@@ -1,7 +1,7 @@
 {
   "name": "F1GuesserDuel",
   "version": "1.0.0",
-  "main": "server.js",
+  "main": "server/index.js",
   "dependencies": {
     "express": "^4.19.2",
     "socket.io": "^4.7.5",
@@ -9,8 +9,8 @@
     "cookie-parser": "^1.4.7"
   },
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js",
+    "start": "node server/index.js",
+    "dev": "node server/index.js",
     "test": "node --test test/*.test.js",
     "test:e2e": "node --test --test-timeout=60000 test/e2e/*.test.js",
     "test:all": "npm test && npm run test:e2e",

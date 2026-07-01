@@ -4,7 +4,7 @@ cd /d "%~dp0"
 title F1 Guesser Duel - Server
 
 rem Ruleaza totul in aceeasi fereastra CMD.
-rem Nu folosim comanda START si pornim serverul direct cu node server.js.
+rem Nu folosim comanda START si pornim serverul direct cu node server/index.js.
 
 echo ============================================================
 echo  F1 Guesser Duel - verificare dependinte si pornire server
@@ -85,7 +85,7 @@ echo.
 echo [6/6] Pornesc serverul...
 echo Aplicatia va fi disponibila de obicei la: http://localhost:3000
 echo.
-node server.js
+node server/index.js
 pause
 exit /b 0
 
