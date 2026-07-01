@@ -70,9 +70,9 @@ export function createGameSocketController({
 		}
 	}
 
-	function refreshAuthUser(currentUser) {
+	function refreshAuthUser(socketAuthToken = null) {
 		if (socket && socket.connected) {
-			socket.emit('refreshAuthUser', currentUser || null);
+			socket.emit('refreshAuthUser', { socketAuthToken: socketAuthToken || null });
 		}
 	}
 

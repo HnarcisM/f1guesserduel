@@ -17,6 +17,13 @@ function createAuthRoutes({ authService, sessionService }) {
         res.clearCookie(sessionService.cookieName, { path: '/' });
     }
 
+    function buildAuthResponse(user, sessionToken = null) {
+        return {
+            user: user || null,
+            socketAuthToken: sessionService.createSocketAuthToken(sessionToken)
+        };
+    }
+
     router.post('/register', (req, res, next) => {
         try {
             const result = authService.register(req.body || {});
@@ -25,7 +32,7 @@ function createAuthRoutes({ authService, sessionService }) {
             }
 
             setSessionCookie(res, result.session.token);
-            return res.status(201).json({ user: result.user });
+            return res.status(201).json(buildAuthResponse(result.user, result.session.token));
         } catch (error) {
             return next(error);
         }
@@ -39,7 +46,7 @@ function createAuthRoutes({ authService, sessionService }) {
             }
 
             setSessionCookie(res, result.session.token);
-            return res.json({ user: result.user });
+            return res.json(buildAuthResponse(result.user, result.session.token));
         } catch (error) {
             return next(error);
         }
@@ -49,15 +56,16 @@ function createAuthRoutes({ authService, sessionService }) {
         const token = req.cookies ? req.cookies[sessionService.cookieName] : null;
         sessionService.destroySession(token);
         clearSessionCookie(res);
-        return res.json({ ok: true });
+        return res.json({ ok: true, user: null, socketAuthToken: null });
     });
 
     router.get('/me', (req, res) => {
         if (!req.user) {
-            return res.json({ user: null });
+            return res.json({ user: null, socketAuthToken: null });
         }
 
-        return res.json({ user: req.user });
+        const token = req.cookies ? req.cookies[sessionService.cookieName] : null;
+        return res.json(buildAuthResponse(req.user, token));
     });
 
     return router;

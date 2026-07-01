@@ -21,7 +21,6 @@ const {
 const { attachSocketAuth } = require('./socketAuth');
 const { createRoomStateEmitter } = require('./roomStateEmitter');
 const {
-    normalizeClientAuthUser,
     normalizeDriverId,
     normalizeRoundOptions,
     normalizeRestartOptions
@@ -325,10 +324,20 @@ function registerSocketHandlers(io, dependencies) {
         });
 
 
-        socket.on('refreshAuthUser', (userPayload = null) => {
+        socket.on('refreshAuthUser', (payload = {}) => {
             const room = currentRoom ? roomStore.get(currentRoom) : null;
-            const authUser = normalizeClientAuthUser(userPayload);
+            const socketAuthToken = payload && typeof payload === 'object'
+                ? payload.socketAuthToken
+                : null;
+            const authUser = socketAuthToken
+                ? sessionService.getUserBySocketAuthToken(socketAuthToken)
+                : null;
+
             socket.user = authUser;
+
+            if (socketAuthToken && !authUser) {
+                socket.emit('authRefreshFailed');
+            }
 
             if (!room) return;
 

@@ -4,8 +4,6 @@ const {
 } = require('../config/constants');
 
 const MAX_DRIVER_ID_LENGTH = 30;
-const MAX_USERNAME_LENGTH = 30;
-const MAX_USER_ID_LENGTH = 64;
 const DRIVER_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
 
 function isPlainObject(value) {
@@ -17,26 +15,6 @@ function normalizeString(value, maxLength) {
     const trimmed = value.trim();
     if (!trimmed || trimmed.length > maxLength) return null;
     return trimmed;
-}
-
-function normalizeUserId(value) {
-    if (typeof value !== 'string' && typeof value !== 'number') return null;
-    const id = String(value).trim();
-    if (!id || id.length > MAX_USER_ID_LENGTH) return null;
-    return id;
-}
-
-function normalizeClientAuthUser(user) {
-    if (!isPlainObject(user)) return null;
-
-    const username = normalizeString(user.username, MAX_USERNAME_LENGTH);
-    if (!username) return null;
-
-    return {
-        id: normalizeUserId(user.id),
-        username,
-        email: typeof user.email === 'string' ? user.email.trim().slice(0, 254) : null
-    };
 }
 
 
@@ -92,7 +70,6 @@ function normalizeRestartOptions(payload = {}) {
 }
 
 module.exports = {
-    normalizeClientAuthUser,
     normalizeDriverId,
     normalizeDailyDateKey,
     normalizeRoundOptions,

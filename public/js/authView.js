@@ -2,6 +2,7 @@ import { authApi } from './apiClient.js';
 
 export function createAuthView({ onAuthChanged } = {}) {
     let currentUser = null;
+    let socketAuthToken = null;
     let mode = 'login';
 
     function getEls() {
@@ -26,7 +27,7 @@ export function createAuthView({ onAuthChanged } = {}) {
 
     function emitAuthChanged() {
         if (typeof onAuthChanged === 'function') {
-            onAuthChanged(currentUser);
+            onAuthChanged(currentUser, socketAuthToken);
         }
     }
 
@@ -84,10 +85,12 @@ export function createAuthView({ onAuthChanged } = {}) {
         try {
             const data = await authApi.me();
             currentUser = data.user || null;
+            socketAuthToken = data.socketAuthToken || null;
             renderUser();
             emitAuthChanged();
         } catch (error) {
             currentUser = null;
+            socketAuthToken = null;
             renderUser();
             emitAuthChanged();
         }
@@ -107,6 +110,7 @@ export function createAuthView({ onAuthChanged } = {}) {
                 : await authApi.login({ email, password });
 
             currentUser = data.user || null;
+            socketAuthToken = data.socketAuthToken || null;
             renderUser();
             emitAuthChanged();
             setMessage(currentUser ? `Bun venit, ${currentUser.username}!` : 'Autentificare reușită.', 'success');
@@ -126,6 +130,7 @@ export function createAuthView({ onAuthChanged } = {}) {
         }
 
         currentUser = null;
+        socketAuthToken = null;
         renderUser();
         emitAuthChanged();
         setMessage('Ai ieșit din cont.', 'success');
@@ -151,10 +156,15 @@ export function createAuthView({ onAuthChanged } = {}) {
         return currentUser;
     }
 
+    function getSocketAuthToken() {
+        return socketAuthToken;
+    }
+
     return {
         setup,
         refreshCurrentUser,
         getCurrentUser,
+        getSocketAuthToken,
         openPanel,
         closePanel
     };

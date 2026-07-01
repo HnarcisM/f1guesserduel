@@ -114,7 +114,7 @@ function startRoundFromSelection(level) {
 	}
 }
 
-function handleAuthChangeWithoutLeavingRoom(currentUser) {
+function handleAuthChangeWithoutLeavingRoom(currentUser, socketAuthToken = null) {
 	if (!authReadyOnce) {
 		authReadyOnce = true;
 		return;
@@ -128,7 +128,7 @@ function handleAuthChangeWithoutLeavingRoom(currentUser) {
 	 */
 	dailyChallengeController.updateControls();
 
-	socketController?.refreshAuthUser(currentUser);
+	socketController?.refreshAuthUser(socketAuthToken);
 }
 
 function setupAuth() {

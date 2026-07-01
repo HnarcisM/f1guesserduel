@@ -2,7 +2,6 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const {
-    normalizeClientAuthUser,
     normalizeDriverId,
     normalizeRoundOptions,
     normalizeRestartOptions,
@@ -51,19 +50,6 @@ test('normalizeRestartOptions falls back to safe timer values', () => {
         dailyDate: null
     });
 });
-
-test('normalizeClientAuthUser sanitizes basic user data', () => {
-    assert.deepEqual(normalizeClientAuthUser({ id: 123, username: ' Narcis ', email: ' test@example.com ' }), {
-        id: '123',
-        username: 'Narcis',
-        email: 'test@example.com'
-    });
-});
-
-test('normalizeClientAuthUser rejects invalid username', () => {
-    assert.equal(normalizeClientAuthUser({ id: 123, username: '   ' }), null);
-});
-
 
 test('normalizeDailyDateKey accepts valid local date key', () => {
     assert.equal(normalizeDailyDateKey('2026-07-01'), '2026-07-01');
