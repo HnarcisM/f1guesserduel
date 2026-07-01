@@ -1,7 +1,20 @@
 const express = require('express');
+const { createMemoryRateLimiter } = require('../middleware/rateLimit');
 
-function createAuthRoutes({ authService, sessionService }) {
+function createAuthRoutes({ authService, sessionService, rateLimiters = {} }) {
     const router = express.Router();
+    const loginRateLimiter = rateLimiters.login || createMemoryRateLimiter({
+        windowMs: 10 * 60 * 1000,
+        maxRequests: 5,
+        keyPrefix: 'auth-login',
+        message: 'Prea multe încercări de login. Încearcă din nou peste câteva minute.'
+    });
+    const registerRateLimiter = rateLimiters.register || createMemoryRateLimiter({
+        windowMs: 10 * 60 * 1000,
+        maxRequests: 3,
+        keyPrefix: 'auth-register',
+        message: 'Prea multe încercări de înregistrare. Încearcă din nou peste câteva minute.'
+    });
 
     function setSessionCookie(res, token) {
         res.cookie(sessionService.cookieName, token, {
@@ -24,7 +37,7 @@ function createAuthRoutes({ authService, sessionService }) {
         };
     }
 
-    router.post('/register', (req, res, next) => {
+    router.post('/register', registerRateLimiter, (req, res, next) => {
         try {
             const result = authService.register(req.body || {});
             if (!result.ok) {
@@ -38,7 +51,7 @@ function createAuthRoutes({ authService, sessionService }) {
         }
     });
 
-    router.post('/login', (req, res, next) => {
+    router.post('/login', loginRateLimiter, (req, res, next) => {
         try {
             const result = authService.login(req.body || {});
             if (!result.ok) {
