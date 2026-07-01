@@ -1,0 +1,340 @@
+/* --- CONTAINER CENTRAL --- */
+.container { 
+    max-width: var(--game-layout-max-width); 
+    margin: 0 auto; 
+    position: relative; 
+}
+
+/* --- BAZĂ COMUNĂ PENTRU ELEMENTE INTERACTIVE --- */
+:where(button, .share-btn, .menu-item, .hamburger, .suggestions-list li) {
+    cursor: pointer;
+    user-select: none;
+}
+
+:where(button#sendGuessBtn, .restart-inline-btn, .btn-diff, .share-btn) {
+    font-family: inherit;
+    font-weight: 700;
+    transition: all var(--transition-fast);
+}
+
+/* Input-uri reactive la teme */
+input { background: var(--surface-card); color: var(--text-primary); border-color: var(--border-color); }
+button#sendGuessBtn, .restart-inline-btn { background-color: var(--accent-f1); color: var(--text-on-accent); }
+/* Celula de bază; clasele green/yellow/orange/purple/red descriu rezultatul. */
+.cell { background-color: var(--surface-card); border-color: var(--border-color); color: var(--text-primary); }
+
+/* --- STATUS & ETICHETE --- */
+#status { margin: var(--space-5xl) 0 var(--space-sm) 0; font-size: 20px; font-weight: 600; color: var(--text-on-accent); }
+#diff-display-label { font-size: 12px; margin-bottom: var(--space-7xl); font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; }
+
+/* --- ZONA DE INPUT & CĂUTARE --- */
+#gameZone {
+    width: var(--guess-controls-width);
+    margin: 0 auto var(--space-8xl);
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    gap: 0;
+}
+/* Input + autocomplete. Containerul este poziționat relativ pentru lista de sugestii absolută. */
+.search-container {
+    position: relative;
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+    display: block;
+}
+input { 
+    padding: var(--space-2xl) var(--space-5xl); 
+    width: 100%; 
+    border: 1px solid rgba(255, 255, 255, 0.1); 
+    background: var(--surface-main); 
+    color: var(--text-on-accent); 
+    font-size: 16px; 
+    border-radius: var(--radius-lg) 0 0 var(--radius-lg); 
+    box-sizing: border-box; 
+    outline: none;
+    transition: all var(--transition-fast);
+}
+input:focus { border-color: var(--accent-f1); box-shadow: 0 0 15px color-mix(in srgb, var(--accent-f1) 15%, transparent); }
+
+button#sendGuessBtn { 
+    padding: var(--space-2xl) var(--space-6xl); 
+    background: var(--accent-f1); 
+    color: var(--text-on-accent); 
+    border: none; 
+    font-size: 16px; 
+    border-radius: 0 var(--radius-lg) var(--radius-lg) 0; 
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: top; 
+}
+button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
+
+
+#gameZone.game-zone-hidden,
+#gameZone.is-hidden {
+    display: none !important;
+}
+
+/* Lista de autocomplete este suprapusă sub input. */
+.suggestions-list { 
+    position: absolute; top: 100%; left: 0; right: 0; 
+    background: var(--surface-main); border: 1px solid rgba(255, 255, 255, 0.1); border-top: none; 
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg); max-height: 220px; overflow-y: auto; 
+    z-index: 1000; list-style: none; padding: 0; margin: 0; text-align: left;
+    box-shadow: var(--shadow-md);
+}
+.suggestions-list:empty {
+    display: none;
+}
+
+.suggestions-list li { padding: var(--space-2xl) var(--space-5xl); border-bottom: 1px solid var(--border-muted); color: var(--text-primary); transition: all 0.15s; }
+.suggestions-list li:hover, .suggestions-list li.active { background: var(--accent-f1); color: var(--text-on-accent); }
+
+/* --- GRILA DE JOC TABULARĂ --- */
+/* Gridul jocului: 6 coloane fixe pentru a păstra structura de tabel F1 Guesser. */
+.grid { 
+    display: grid; 
+    grid-template-columns: minmax(44px, 0.34fr) minmax(150px, 1.2fr) minmax(130px, 1fr) minmax(150px, 1.15fr) repeat(3, minmax(105px, 0.85fr)); 
+    gap: var(--game-grid-gap); 
+    width: 100%;
+    margin: var(--space-7xl) auto; 
+}
+.cell { 
+    padding: var(--space-3xl) var(--space-xl); 
+    font-weight: 700; 
+    font-size: var(--game-cell-font-size); 
+    border: 1px solid var(--border-soft); 
+    text-transform: uppercase; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    min-height: var(--game-cell-min-height); 
+    border-radius: var(--radius-xl); 
+    background: color-mix(in srgb, var(--surface-main) 86%, var(--text-on-accent) 14%); 
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), var(--shadow-sm);
+    transition: background 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease, transform 0.22s ease; 
+}
+
+/* Animație scurtă pentru celulele completate după fiecare încercare.
+   Efectul este intenționat subtil: fade-in + mică ridicare, fără mișcare agresivă. */
+.cell-reveal {
+    animation: cellRevealPremium 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    will-change: transform, opacity;
+}
+
+@keyframes cellRevealPremium {
+    from {
+        opacity: 0;
+        transform: translateY(6px) scale(0.985);
+        filter: saturate(0.92);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: saturate(1);
+    }
+}
+.cell.header { 
+    color: var(--text-secondary); 
+    font-size: 11px; 
+    font-weight: 800;
+    letter-spacing: 1.1px;
+    border: 1px solid var(--border-subtle); 
+    background: color-mix(in srgb, var(--surface-card) 78%, transparent); 
+    min-height: 34px; 
+    padding: var(--space-sm) var(--space-md); 
+    border-radius: var(--radius-pill);
+    box-shadow: none;
+}
+
+/* Numerotarea încercărilor este integrată în același rând cu celulele.
+   Nu folosim borduri sau separatoare: numărul este începutul unui fundal discret care face fade spre dreapta. */
+.attempt-header,
+.attempt-index {
+    min-width: 0;
+    padding-left: var(--space-md);
+    padding-right: var(--space-md);
+}
+
+.attempt-index {
+    position: relative;
+    isolation: isolate;
+    color: color-mix(in srgb, var(--text-secondary) 72%, transparent);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.9px;
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+    overflow: visible;
+}
+
+/* Fundal continuu: începe sub număr, trece prin spațiul dintre coloane și se pierde peste rând.
+   Fără border, fără marker vertical, fără margini definite clar. */
+.attempt-index::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: min(980px, calc(100vw - 72px));
+    height: calc(100% + 10px);
+    transform: translateY(-50%);
+    border-radius: var(--radius-2xl);
+    background: linear-gradient(90deg,
+        color-mix(in srgb, var(--accent-f1) 13%, transparent) 0%,
+        color-mix(in srgb, var(--accent-f1) 8%, transparent) 18%,
+        color-mix(in srgb, var(--accent-f1) 4%, transparent) 52%,
+        transparent 92%);
+    opacity: 0.48;
+    pointer-events: none;
+    z-index: -1;
+}
+
+.attempt-index::after {
+    content: none;
+}
+
+.attempt-index.attempt-completed {
+    color: var(--text-primary);
+    text-shadow: 0 0 8px color-mix(in srgb, var(--accent-f1) 14%, transparent);
+}
+
+.attempt-index.attempt-completed::before {
+    background: linear-gradient(90deg,
+        color-mix(in srgb, var(--accent-f1) 18%, transparent) 0%,
+        color-mix(in srgb, var(--accent-f1) 11%, transparent) 20%,
+        color-mix(in srgb, var(--accent-f1) 5%, transparent) 55%,
+        transparent 94%);
+    opacity: 0.66;
+}
+
+[data-app-theme="carbon"] .attempt-index {
+    color: #9aa1aa;
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+/* Pe Carbon, numărul încercării nu trebuie să arate ca o celulă separată.
+   Păstrăm doar textul + fade-ul de rând, fără contur/fundal propriu. */
+[data-app-theme="carbon"] .attempt-index.cell {
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+[data-app-theme="carbon"] .attempt-index::before {
+    background: linear-gradient(90deg,
+        rgba(146, 152, 159, 0.16) 0%,
+        rgba(111, 116, 122, 0.10) 20%,
+        rgba(63, 67, 71, 0.05) 55%,
+        transparent 94%);
+    opacity: 0.58;
+}
+
+[data-app-theme="carbon"] .attempt-index.attempt-completed {
+    color: #f3f4f6;
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.12);
+}
+
+[data-app-theme="carbon"] .attempt-index.attempt-completed::before {
+    background: linear-gradient(90deg,
+        rgba(180, 186, 193, 0.22) 0%,
+        rgba(120, 126, 134, 0.13) 22%,
+        rgba(80, 85, 92, 0.06) 58%,
+        transparent 94%);
+    opacity: 0.72;
+}
+
+[data-app-theme="neon"] .attempt-index::before {
+    background: linear-gradient(90deg,
+        rgba(0, 240, 255, 0.12) 0%,
+        rgba(0, 240, 255, 0.07) 24%,
+        rgba(255, 0, 127, 0.035) 54%,
+        transparent 94%);
+}
+
+[data-app-theme="neon"] .attempt-index.attempt-completed::before {
+    background: linear-gradient(90deg,
+        rgba(0, 240, 255, 0.18) 0%,
+        rgba(0, 240, 255, 0.10) 24%,
+        rgba(255, 0, 127, 0.045) 56%,
+        transparent 94%);
+    box-shadow: none;
+}
+
+/* --- PALETA DE CULORI NEON / MODERNIZATĂ --- */
+.green { 
+    background: linear-gradient(135deg, var(--success) 0%, var(--success-dark) 100%); 
+    border-color: var(--success); color: var(--text-on-accent); 
+    box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+}
+.red { 
+    background: linear-gradient(135deg, var(--danger) 0%, var(--danger-dark) 100%); 
+    border-color: var(--danger); color: var(--text-on-accent); 
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
+}
+.orange { 
+    background: linear-gradient(135deg, var(--orange) 0%, var(--orange-dark) 100%); 
+    border-color: var(--orange); color: var(--text-on-accent); 
+    box-shadow: 0 0 15px rgba(249, 115, 22, 0.25);
+}
+.purple { 
+    background: linear-gradient(135deg, var(--purple) 0%, var(--purple-dark) 100%); 
+    border-color: var(--purple); color: var(--text-on-accent); 
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.25);
+}
+.yellow { 
+    background: linear-gradient(135deg, var(--warning) 0%, var(--warning-dark) 100%); 
+    border-color: var(--warning); color: #111827; 
+    box-shadow: 0 0 15px rgba(234, 179, 8, 0.25);
+}
+
+
+
+/* --- TEMA CARBON: culori de rezultat cu contrast mai bun --- */
+/* Pe fundalul de carbon, culorile standard erau prea apropiate vizual.
+   Aceste override-uri păstrează aceeași semantică, dar fac stările mai ușor de distins. */
+[data-app-theme="carbon"] .green {
+    background: linear-gradient(135deg, #22c55e 0%, #15803d 100%);
+    border-color: #4ade80;
+    color: #f8fafc;
+    box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.45), 0 0 18px rgba(34, 197, 94, 0.28);
+}
+
+[data-app-theme="carbon"] .red {
+    background: linear-gradient(135deg, #ef4444 0%, #991b1b 100%);
+    border-color: #f87171;
+    color: #fff7f7;
+    box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.45), 0 0 18px rgba(239, 68, 68, 0.25);
+}
+
+[data-app-theme="carbon"] .yellow {
+    background: linear-gradient(135deg, #facc15 0%, #b45309 100%);
+    border-color: #fde047;
+    color: #111827;
+    box-shadow: 0 0 0 1px rgba(253, 224, 71, 0.5), 0 0 18px rgba(250, 204, 21, 0.28);
+}
+
+[data-app-theme="carbon"] .orange {
+    background: linear-gradient(135deg, #fb923c 0%, #c2410c 100%);
+    border-color: #fdba74;
+    color: #fff7ed;
+    box-shadow: 0 0 0 1px rgba(253, 186, 116, 0.42), 0 0 18px rgba(251, 146, 60, 0.25);
+}
+
+[data-app-theme="carbon"] .purple {
+    background: linear-gradient(135deg, #c084fc 0%, #7e22ce 100%);
+    border-color: #d8b4fe;
+    color: #faf5ff;
+    box-shadow: 0 0 0 1px rgba(216, 180, 254, 0.45), 0 0 18px rgba(192, 132, 252, 0.26);
+}
+
+/* SĂGEȚI ALINIATE ȘI SUBTILE */
+.cell-arrow { display: flex; align-items: center; justify-content: center; gap: var(--space-sm); }
+.arrow-indicator { font-size: 13px; font-weight: 900; animation: bounce 1.5s infinite ease-in-out; }
+@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+

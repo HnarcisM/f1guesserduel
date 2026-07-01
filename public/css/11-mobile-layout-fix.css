@@ -1,0 +1,360 @@
+/* --- MOBILE LAYOUT FIXES: header overlap + centered game area --- */
+/* Acest fișier stă ultimul în lista de importuri și conține doar override-uri mobile. */
+
+@media (max-width: 768px) {
+    .site-header {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        column-gap: var(--space-lg);
+        box-sizing: border-box;
+    }
+
+    .hamburger {
+        justify-self: start;
+    }
+
+    .site-header h1 {
+        position: static;
+        left: auto;
+        transform: none;
+        justify-self: center;
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .site-header h1:hover,
+    .site-header h1:active {
+        transform: none;
+    }
+
+    .header-actions {
+        justify-self: end;
+        min-width: 0;
+    }
+
+    .auth-open-btn {
+        max-width: 112px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .container {
+        width: 100%;
+        max-width: min(var(--game-layout-max-width), 100%);
+        margin-left: auto;
+        margin-right: auto;
+        box-sizing: border-box;
+    }
+
+    #status,
+    #diff-display-label {
+        width: 100%;
+        margin-left: auto;
+        margin-right: auto;
+        text-align: center;
+    }
+
+    #gameZone {
+        width: min(var(--guess-controls-width), 100%);
+        max-width: 100%;
+        margin-left: auto;
+        margin-right: auto;
+        box-sizing: border-box;
+    }
+
+    .grid {
+        max-width: 100%;
+        margin-left: auto;
+        margin-right: auto;
+        box-sizing: border-box;
+    }
+}
+
+@media (max-width: 520px) {
+    .site-header {
+        column-gap: var(--space-sm);
+    }
+
+    .site-header h1 {
+        font-size: 12px;
+        letter-spacing: 0.45px;
+        max-width: 100%;
+    }
+
+    .header-actions {
+        gap: var(--space-xs);
+    }
+
+    .auth-open-btn {
+        width: var(--header-control-size);
+        min-width: var(--header-control-size);
+        height: var(--header-control-size);
+        padding: 0;
+        font-size: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .auth-open-btn::before {
+        content: "👤";
+        font-size: 16px;
+        line-height: 1;
+    }
+
+    #status {
+        margin-top: var(--space-4xl);
+        font-size: 16px;
+        line-height: 1.3;
+    }
+
+    #diff-display-label {
+        margin-bottom: var(--space-4xl);
+    }
+
+    #gameZone {
+        justify-content: center;
+    }
+
+    .grid {
+        grid-template-columns: minmax(24px, 0.34fr) minmax(62px, 1.35fr) repeat(5, minmax(38px, 0.85fr));
+        justify-content: center;
+        gap: 5px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: var(--space-sm);
+    }
+
+    .cell {
+        min-width: 0;
+        min-height: 38px;
+        padding: 6px 3px;
+        font-size: 9.5px;
+        line-height: 1.15;
+        overflow-wrap: anywhere;
+    }
+
+    .cell.header {
+        min-height: 28px;
+        padding: 4px 2px;
+        font-size: 8.5px;
+        letter-spacing: 0.15px;
+    }
+
+    .cell-driver {
+        padding: 4px 3px;
+    }
+
+    .cell-driver-id {
+        font-size: 10px;
+        margin-bottom: 2px;
+    }
+
+    .cell-driver-name,
+    .cell-media-label {
+        font-size: 8px;
+        line-height: 1.1;
+    }
+
+    .attempt-index,
+    .attempt-header {
+        min-width: 0;
+        padding-left: 2px;
+        padding-right: 2px;
+    }
+}
+
+/* --- FOLDABLE / TABLET PORTRAIT FIXES --- */
+/*
+   Galaxy Fold pe display-ul interior are viewport mai pătrat decât un telefon normal.
+   Îl tratăm separat față de telefonul îngust, ca să nu folosim layout-ul prea compact
+   de pe ecranul exterior, dar nici layout-ul larg de desktop.
+*/
+@media (min-width: 521px) and (max-width: 920px) and (min-height: 620px) and (max-aspect-ratio: 1/1) {
+    :root {
+        --header-padding-x: var(--space-3xl);
+        --space-page-top: 82px;
+    }
+
+    body {
+        padding-left: var(--space-2xl);
+        padding-right: var(--space-2xl);
+    }
+
+    .site-header {
+        grid-template-columns: auto minmax(120px, 1fr) minmax(0, auto);
+        column-gap: var(--space-md);
+    }
+
+    .site-header h1 {
+        font-size: 15px;
+        letter-spacing: 1px;
+        max-width: 100%;
+        text-align: center;
+    }
+
+    .header-actions {
+        max-width: min(46vw, 300px);
+        gap: var(--space-sm);
+        overflow: hidden;
+    }
+
+    .auth-open-btn {
+        max-width: 96px;
+        min-width: var(--header-control-size);
+    }
+
+    .share-btn {
+        max-width: 168px;
+        min-width: var(--header-control-size);
+        overflow: hidden;
+    }
+
+    #roomBtnText {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .container {
+        width: min(720px, 100%);
+        max-width: 720px;
+    }
+
+    #gameZone {
+        width: min(620px, 100%);
+    }
+
+    .search-container {
+        width: auto;
+    }
+
+    .grid {
+        width: min(720px, 100%);
+        grid-template-columns: minmax(34px, 0.34fr) minmax(118px, 1.25fr) minmax(95px, 1fr) minmax(110px, 1.1fr) repeat(3, minmax(78px, 0.85fr));
+        justify-content: center;
+        gap: var(--space-sm);
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .cell {
+        min-width: 0;
+        min-height: 42px;
+        padding: var(--space-lg) var(--space-sm);
+        font-size: 11px;
+        line-height: 1.18;
+        overflow-wrap: anywhere;
+    }
+
+    .cell.header {
+        min-height: 30px;
+        padding: var(--space-sm) var(--space-xs);
+        font-size: 9px;
+        letter-spacing: 0.35px;
+    }
+}
+
+/* --- FOLD INNER HEADER OVERLAP FIX --- */
+/*
+   Pe display-ul interior de Fold, viewport-ul poate fi lat dar scund în landscape,
+   deci nu intră în regulile de telefon îngust. Protejăm zona titlului doar în header,
+   fără să atingem gridul/inputul.
+*/
+@media (min-width: 521px) and (max-width: 920px) {
+    .site-header {
+        display: grid;
+        grid-template-columns: var(--header-control-size) minmax(0, 1fr) minmax(0, auto);
+        align-items: center;
+        column-gap: var(--space-md);
+        box-sizing: border-box;
+    }
+
+    .site-header h1 {
+        position: static;
+        left: auto;
+        transform: none;
+        justify-self: center;
+        min-width: 0;
+        max-width: min(34vw, 260px);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        text-align: center;
+        font-size: clamp(13px, 2vw, 16px);
+        letter-spacing: clamp(0.4px, 0.12vw, 1.2px);
+    }
+
+    .site-header h1:hover,
+    .site-header h1:active {
+        transform: none;
+    }
+
+    .header-actions {
+        justify-self: end;
+        min-width: 0;
+        max-width: min(42vw, 300px);
+        gap: var(--space-sm);
+        overflow: hidden;
+    }
+
+    .auth-open-btn {
+        flex: 0 1 auto;
+        max-width: 92px;
+        min-width: var(--header-control-size);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .share-btn {
+        flex: 1 1 auto;
+        max-width: 150px;
+        min-width: var(--header-control-size);
+        padding-left: var(--space-lg);
+        padding-right: var(--space-lg);
+        overflow: hidden;
+    }
+
+    #roomBtnText {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+@media (min-width: 521px) and (max-width: 920px) and (max-height: 560px) {
+    .site-header h1 {
+        max-width: min(30vw, 220px);
+        font-size: 13px;
+        letter-spacing: 0.45px;
+    }
+
+    .header-actions {
+        max-width: min(44vw, 280px);
+        gap: var(--space-xs);
+    }
+
+    .auth-open-btn {
+        max-width: var(--header-control-size);
+        width: var(--header-control-size);
+        padding: 0;
+        font-size: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .auth-open-btn::before {
+        content: "👤";
+        font-size: 16px;
+        line-height: 1;
+    }
+
+    .share-btn {
+        max-width: 132px;
+    }
+}

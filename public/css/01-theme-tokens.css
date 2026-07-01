@@ -1,0 +1,190 @@
+/**
+ * F1 Guesser Duel - stylesheet principal.
+ *
+ * Organizare:
+ * - variabile de temă în :root și override-uri pentru Neon / Carbon;
+ * - layout general, header și meniuri;
+ * - ecran selectare dificultate;
+ * - zona de joc, grid, autocomplete;
+ * - popup final și statistici;
+ * - responsive CSS pentru mobil/tabletă.
+ *
+ * Principiu: HTML-ul definește structura, JavaScript-ul schimbă stări prin clase,
+ * iar CSS-ul decide cum arată fiecare stare.
+ */
+
+/* --- CONFIGURARE TEME PRIN VARIABILE CSS --- */
+:root {
+    /* Culori principale */
+    --bg-gradient:
+        radial-gradient(circle at 50% 0%, rgba(255, 24, 1, 0.10) 0%, transparent 34%),
+        linear-gradient(180deg, #111118 0%, #09090d 100%);
+    --bg-overlay: transparent;
+    --bg-size: auto;
+    --bg-overlay-size: auto;
+    --bg-overlay-opacity: 1;
+    --text-primary: #f3f4f6;
+    --text-secondary: #9ca3af;
+    --text-muted: #6b7280;
+    --text-on-accent: #ffffff;
+
+    /* Suprafețe */
+    --header-bg: rgba(20, 20, 27, 0.85);
+    --surface-main: #14141b;
+    --surface-card: #1e1e27;
+    --surface-elevated: rgba(255, 255, 255, 0.05);
+    --surface-elevated-hover: rgba(255, 255, 255, 0.15);
+    --surface-overlay: rgba(10, 10, 14, 0.95);
+    --surface-media-label: rgba(0, 0, 0, 0.5);
+
+    /* Borduri */
+    --border-color: #2a2a3a;
+    --border-soft: rgba(255, 255, 255, 0.08);
+    --border-subtle: rgba(255, 255, 255, 0.05);
+    --border-muted: rgba(255, 255, 255, 0.03);
+
+    /* Accente */
+    --accent-f1: #ff1801;
+    --accent-f1-hover: #e01200;
+    --success: #10b981;
+    --success-dark: #059669;
+    --danger: #ef4444;
+    --danger-dark: #dc2626;
+    --warning: #eab308;
+    --warning-dark: #ca8a04;
+    --orange: #f97316;
+    --orange-dark: #ea580c;
+    --purple: #a855f7;
+    --purple-dark: #9333ea;
+    --gold: #ffd700;
+
+    /* Spațieri reutilizabile */
+    --space-2xs: 2px;
+    --space-xs: 4px;
+    --space-sm: 5px;
+    --space-md: 8px;
+    --space-lg: 10px;
+    --space-xl: 12px;
+    --space-2xl: 14px;
+    --space-3xl: 15px;
+    --space-4xl: 16px;
+    --space-5xl: 20px;
+    --space-6xl: 24px;
+    --space-7xl: 25px;
+    --space-8xl: 30px;
+    --space-page-top: 88px;
+    --space-page-bottom: 60px;
+
+    /* Dimensiuni reutilizabile */
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 10px;
+    --radius-xl: 12px;
+    --radius-2xl: 16px;
+    --radius-pill: 20px;
+
+    /* Grid joc */
+    --game-layout-max-width: 980px;
+    --guess-controls-width: min(840px, 100%);
+    --game-grid-gap: var(--space-xl);
+    --game-cell-min-height: 58px;
+    --game-cell-font-size: 14px;
+
+    /* Header */
+    --header-height: 62px;
+    --header-padding-x: var(--space-6xl);
+    --header-control-size: 40px;
+
+    /* Umbre și tranziții */
+    --shadow-sm: 0 4px 10px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 10px 25px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 15px 35px rgba(0, 0, 0, 0.7);
+    --shadow-xl: 0 20px 50px rgba(0, 0, 0, 0.6);
+    --transition-fast: 0.2s ease;
+    --transition-medium: 0.3s ease;
+}
+/* 1. TEMA NEON (Night Race - Singapore/Vegas) */
+[data-app-theme="neon"] {
+    --bg-gradient:
+        radial-gradient(circle at 18% 0%, rgba(0, 240, 255, 0.13) 0%, transparent 32%),
+        radial-gradient(circle at 82% 12%, rgba(255, 0, 127, 0.10) 0%, transparent 30%),
+        linear-gradient(180deg, #080910 0%, #100818 100%);
+    --text-primary: var(--text-on-accent);
+    --header-bg: rgba(15, 10, 25, 0.85);
+    --surface-card: #1a0f2b;
+    --surface-main: #1a0f2b;
+    --border-color: #ff007f;
+    --accent-f1: #00f0ff; /* Cyan electric în loc de roșu */
+}
+
+/* 2. TEMA CARBON & CHECKERS (Fibră de Carbon + Steag Carouri discret) */
+[data-app-theme="carbon"] {
+    /* Fundal carbon mai subtil: păstrăm textura, dar reducem contrastul pattern-ului. */
+    --bg-gradient:
+        linear-gradient(45deg, rgba(255,255,255,0.018) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.018) 75%),
+        linear-gradient(-45deg, rgba(255,255,255,0.014) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.014) 75%),
+        radial-gradient(circle at 50% 0%, #1b1d1f 0%, #08090a 72%);
+    --bg-size: 26px 26px, 26px 26px, 100% 100%;
+    /* Overlay-ul de carouri rămâne prezent, dar mult mai fin. */
+    --bg-overlay:
+        linear-gradient(45deg, rgba(255,255,255,0.012) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.012) 75%),
+        linear-gradient(45deg, rgba(255,255,255,0.012) 25%, transparent 25%, transparent 75%, rgba(255,255,255,0.012) 75%);
+    --bg-overlay-size: 56px 56px;
+    --bg-overlay-opacity: 0.45;
+    --text-primary: #f3f4f6;
+    --header-bg: rgba(10, 10, 10, 0.9);
+    --surface-card: #1c1c1c;
+    --surface-main: #1c1c1c;
+    --border-color: #444;
+    --accent-f1: var(--text-on-accent); /* Accente albe de steag */
+}
+
+
+[data-app-theme="carbon"] .site-header h1 {
+    color: #f3f4f6;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.18);
+}
+
+[data-app-theme="carbon"] .hamburger,
+[data-app-theme="carbon"] .share-btn,
+[data-app-theme="carbon"] .player-badge {
+    background: linear-gradient(180deg, #222528 0%, #17191b 100%);
+    border-color: #3f4347;
+}
+
+[data-app-theme="carbon"] .cell {
+    background: linear-gradient(180deg, #2a2d30 0%, #1e2022 100%);
+    border-color: #3f4347;
+}
+
+[data-app-theme="carbon"] .cell.header {
+    background: #17191b;
+    border-color: #33373b;
+    color: #c9ced4;
+}
+
+/* --- Stiluri globale bazate pe variabilele de temă --- */
+body { 
+    background: var(--bg-gradient);
+    background-size: var(--bg-size);
+    color: var(--text-primary); 
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif; 
+    text-align: center; 
+    margin: 0; 
+    padding: var(--space-page-top) var(--space-5xl) var(--space-page-bottom) var(--space-5xl); 
+    min-height: 100vh;
+    box-sizing: border-box;
+    transition: background 0.5s ease, color 0.5s ease;
+}
+
+/* Pseudo-element pentru overlay-ul cu carouri la tema Carbon */
+body::before {
+    content: "";
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: var(--bg-overlay);
+    background-size: var(--bg-overlay-size);
+    opacity: var(--bg-overlay-opacity);
+    z-index: -1;
+    pointer-events: none;
+}
+

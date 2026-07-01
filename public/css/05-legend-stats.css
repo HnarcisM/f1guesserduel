@@ -1,0 +1,410 @@
+/* --- SUB-SOLUL PAGINII (LEGENDĂ) --- */
+.site-footer {
+    margin-top: 60px;
+    text-align: left;
+}
+
+/* Card premium pentru legenda culorilor din grid.
+   Nu schimbă logica jocului, doar face explicațiile mai clare și mai ușor de scanat. */
+.legend-card {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, rgba(255,255,255,0.075), rgba(255,255,255,0.025));
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-6xl);
+    box-shadow: var(--shadow-md);
+    backdrop-filter: blur(14px);
+}
+
+.legend-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--success), var(--warning), var(--orange), var(--purple), var(--danger));
+}
+
+.legend-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xl);
+    margin-bottom: var(--space-5xl);
+    padding-bottom: var(--space-4xl);
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.legend-icon {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius-xl);
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-soft);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.legend-eyebrow {
+    margin: 0 0 var(--space-xs) 0;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+}
+
+.site-footer h3 {
+    margin: 0;
+    color: var(--text-on-accent);
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+}
+
+.legend-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-xl);
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.legend-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-xl);
+    min-height: 56px;
+    padding: var(--space-xl);
+    color: var(--text-secondary);
+    line-height: 1.4;
+    background: rgba(255,255,255,0.035);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    transition: transform var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.legend-item:hover {
+    transform: translateY(-2px);
+    background: var(--surface-elevated);
+    border-color: var(--border-soft);
+}
+
+.legend-box {
+    width: 18px;
+    height: 18px;
+    margin-top: var(--space-2xs);
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+}
+
+.legend-copy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    font-size: 13px;
+}
+
+.legend-copy strong {
+    color: var(--text-primary);
+    font-size: 13.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.legend-copy span {
+    color: var(--text-secondary);
+}
+
+[data-app-theme="carbon"] .legend-card {
+    background: linear-gradient(135deg, rgba(255,255,255,0.065), rgba(255,255,255,0.02));
+    border-color: rgba(255,255,255,0.12);
+}
+
+[data-app-theme="carbon"] .legend-icon,
+[data-app-theme="carbon"] .legend-item {
+    background: rgba(255,255,255,0.045);
+}
+
+[data-app-theme="neon"] .legend-card {
+    box-shadow: 0 0 24px rgba(0, 240, 255, 0.08), var(--shadow-md);
+}
+
+
+/* --- ANIMAȚII POPUP FINAL --- */
+
+/* Stil special și animație de respirație dacă ai CÂȘTIGAT */
+.end-game-popup.win-style {
+    border: 3px solid var(--gold);
+    box-shadow: 0 0 25px rgba(255, 215, 0, 0.5);
+    animation: pulseWin 2s infinite alternate;
+}
+
+/* Stil special dacă ai PIERDUT (Am eliminat shake-ul care strica translate-ul) */
+.end-game-popup.lose-style {
+    border: 3px solid var(--danger);
+    box-shadow: 0 0 25px rgba(255, 59, 48, 0.4);
+}
+
+@keyframes pulseWin {
+    0% { box-shadow: 0 0 15px rgba(255, 215, 0, 0.3); }
+    100% { box-shadow: 0 0 30px rgba(255, 215, 0, 0.6); }
+}
+
+/* --- STILURI GENERALE PENTRU GRAFIC STATISTICI --- */
+.dist-row {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+    font-weight: bold;
+    gap: var(--space-md);
+}
+.dist-label {
+    width: 10px;
+    color: var(--text-secondary);
+}
+/* Bara de progres a distribuției încercărilor. Lățimea .dist-bar este dinamică din JS. */
+.dist-bar-container {
+    flex-grow: 1;
+    background: var(--surface-card);
+    border-radius: var(--radius-sm);
+    height: 16px;
+    overflow: hidden;
+}
+.dist-bar {
+    background-color: var(--accent-f1); /* Roșu F1 implicit */
+    height: 100%;
+    width: 0%; /* Va crește din JS */
+    color: var(--text-on-accent);
+    text-align: right;
+    padding-right: var(--space-sm);
+    font-size: 10px;
+    line-height: 16px;
+    box-sizing: border-box;
+    transition: width 0.6s ease;
+    border-radius: var(--radius-sm);
+}
+/* Adaptare automată la variabila de accent dacă se dorește ulterior */
+[data-app-theme="neon"] .dist-bar { background-color: var(--accent-f1); }
+[data-app-theme="light"] .dist-bar-container { background: #e5e7eb; }
+
+/* --- UTILITARE DE STARE --- */
+.is-hidden {
+    display: none !important;
+}
+
+
+/* --- STATISTICI POPUP FINAL --- */
+.game-zone-hidden {
+    display: none;
+    white-space: nowrap;
+}
+
+/* Cardul de statistici locale, completat din localStorage în game.js. */
+.stats-container {
+    margin: var(--space-5xl) 0;
+    border-top: 1px solid var(--border-color);
+    padding-top: var(--space-3xl);
+    text-align: left;
+}
+
+.stats-title {
+    text-align: center;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: var(--space-xl);
+    color: var(--accent-f1);
+    font-weight: 800;
+}
+
+.stats-summary {
+    display: flex;
+    justify-content: space-around;
+    text-align: center;
+    margin-bottom: var(--space-3xl);
+}
+
+.stats-value {
+    font-size: 20px;
+    font-weight: 800;
+}
+
+.stats-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.distribution-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-sm);
+}
+
+.guess-distribution {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.fallback-copy-textarea {
+    position: fixed;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+
+/* --- CLASE PENTRU STĂRI ȘI CELULE GENERATE DIN JS --- */
+.diff-display-label.difficulty-easy {
+    color: #00ff88;
+}
+
+.diff-display-label.difficulty-medium {
+    color: #ffaa00;
+}
+
+.diff-display-label.difficulty-hard {
+    color: #ff3333;
+}
+
+.cell-driver {
+    flex-direction: column;
+    line-height: 1.3;
+    padding: var(--space-md) var(--space-sm);
+    justify-content: space-between;
+    align-items: stretch;
+}
+
+.cell-driver-id {
+    font-size: 14px;
+    font-weight: 800;
+    display: block;
+    letter-spacing: 0.5px;
+    margin-bottom: var(--space-2xs);
+}
+
+.cell-driver-name {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: none;
+    color: var(--text-on-accent);
+    display: block;
+    background: rgba(0, 0, 0, 0.4);
+    padding: var(--space-2xs) var(--space-xs);
+    border-radius: var(--radius-sm);
+    word-break: break-word;
+}
+
+.cell-media {
+    display: flex;
+    position: relative;
+    padding: 0;
+    overflow: hidden;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: stretch;
+}
+
+.cell-country-flag {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.55;
+    z-index: 1;
+}
+
+.cell-team-logo {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -55%);
+    width: 80%;
+    height: 80%;
+    object-fit: contain;
+    opacity: 0.55;
+    z-index: 1;
+}
+
+.cell-media-label {
+    position: relative;
+    z-index: 2;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--text-on-accent);
+    background: var(--surface-media-label);
+    padding: var(--space-2xs) var(--space-xs);
+    border-radius: var(--radius-sm);
+    margin: var(--space-2xs);
+    text-align: center;
+}
+
+/* --- TEMA CARBON: buton trimitere mai vizibil --- */
+[data-app-theme="carbon"] button#sendGuessBtn {
+    background: linear-gradient(180deg, #5f6368 0%, #3f4347 100%);
+    color: #ffffff;
+    border: 1px solid #7a7f85;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+[data-app-theme="carbon"] button#sendGuessBtn:hover {
+    background: linear-gradient(180deg, #6f747a 0%, #4b5055 100%);
+    border-color: #92989f;
+}
+
+[data-app-theme="carbon"] button#sendGuessBtn:active {
+    background: linear-gradient(180deg, #3c4044 0%, #303337 100%);
+}
+
+/* --- TEMA CARBON: autocomplete și restart button mai vizibile --- */
+[data-app-theme="carbon"] .suggestions-list li:hover,
+[data-app-theme="carbon"] .suggestions-list li.active {
+    background: linear-gradient(180deg, #5f6368 0%, #3f4347 100%);
+    color: #ffffff;
+}
+
+[data-app-theme="carbon"] .end-game-popup .restart-inline-btn,
+[data-app-theme="carbon"] .restart-inline-btn {
+    background: linear-gradient(180deg, #5f6368 0%, #3f4347 100%);
+    color: #ffffff;
+    border: 1px solid #7a7f85;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+[data-app-theme="carbon"] .end-game-popup .restart-inline-btn:hover,
+[data-app-theme="carbon"] .restart-inline-btn:hover {
+    background: linear-gradient(180deg, #6f747a 0%, #4b5055 100%);
+    border-color: #92989f;
+}
+
+[data-app-theme="carbon"] .end-game-popup .restart-inline-btn:active,
+[data-app-theme="carbon"] .restart-inline-btn:active {
+    background: linear-gradient(180deg, #3c4044 0%, #303337 100%);
+}
+
+/* --- TEMA CARBON: bare statistici mai vizibile --- */
+[data-app-theme="carbon"] .dist-bar-container {
+    background: #232629;
+    border: 1px solid #3f4347;
+}
+
+[data-app-theme="carbon"] .dist-bar {
+    background: linear-gradient(180deg, #6f747a 0%, #4b5055 100%);
+    color: #ffffff;
+    border-right: 1px solid #92989f;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+

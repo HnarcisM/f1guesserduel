@@ -1,0 +1,515 @@
+/* --- RESPONSIVE DESKTOP/LAPTOP: viewport mai mic pe înălțime --- */
+/* Pe laptopuri de 15.6" browserul are mai puțină înălțime utilă decât pe monitoare mari.
+   Compactăm doar spațierile și înălțimile, fără să schimbăm structura paginii. */
+@media (max-height: 820px) and (min-width: 769px) {
+    :root {
+        --header-height: 56px;
+        --header-control-size: 36px;
+        --space-page-top: 68px;
+        --space-page-bottom: 32px;
+        --game-grid-gap: var(--space-md);
+        --game-cell-min-height: 46px;
+        --game-cell-font-size: 12px;
+    }
+
+    body {
+        padding-top: var(--space-page-top);
+        padding-bottom: var(--space-page-bottom);
+    }
+
+    .site-header h1 {
+        font-size: 18px;
+    }
+
+    .dropdown {
+        width: 220px;
+        padding: var(--space-sm);
+    }
+
+    .menu-item {
+        min-height: 32px;
+        padding: var(--space-sm) var(--space-lg);
+        font-size: 12px;
+    }
+
+    .menu-item + .menu-item {
+        margin-top: var(--space-2xs);
+    }
+
+    .menu-section-title {
+        padding: var(--space-sm) var(--space-lg) var(--space-xs);
+        margin-top: var(--space-sm);
+        font-size: 9px;
+    }
+
+    #status {
+        margin: var(--space-lg) 0 var(--space-xs) 0;
+        font-size: 17px;
+    }
+
+    #diff-display-label {
+        margin-bottom: var(--space-xl);
+    }
+
+    #gameZone {
+        margin-bottom: var(--space-5xl);
+    }
+
+    .round-timer {
+        margin-top: var(--space-xs);
+        margin-bottom: var(--space-xl);
+        padding: var(--space-sm) var(--space-xl) var(--space-md);
+    }
+
+    .timer-track {
+        height: 28px;
+    }
+
+    .grid {
+        margin: var(--space-4xl) auto;
+    }
+
+    .cell {
+        padding: var(--space-lg) var(--space-md);
+    }
+
+    .cell.header {
+        min-height: 28px;
+    }
+
+    .site-footer {
+        margin-top: var(--space-8xl);
+    }
+
+    .legend-card {
+        padding: var(--space-5xl);
+    }
+}
+
+@media (max-height: 760px) and (min-width: 769px) {
+    .overlay {
+        align-items: flex-start;
+        padding-top: calc(var(--header-height) + var(--space-lg));
+    }
+
+    .menu-container {
+        max-width: 660px;
+        padding: var(--space-5xl);
+    }
+
+    .menu-container h2 {
+        font-size: 2.6rem;
+        margin-bottom: var(--space-xs);
+    }
+
+    .subtitle {
+        margin-bottom: var(--space-5xl);
+        font-size: 1rem;
+    }
+
+    .timer-mode-card {
+        margin-bottom: var(--space-4xl);
+        padding: var(--space-sm);
+    }
+
+    .timer-mode-option {
+        padding: var(--space-xs) var(--space-lg);
+        font-size: 0.78rem;
+    }
+
+    .difficulty-grid {
+        gap: var(--space-4xl);
+    }
+
+    .btn-diff {
+        width: 170px;
+        height: 160px;
+        padding: var(--space-4xl);
+    }
+
+    .diff-title {
+        font-size: 1.25rem;
+    }
+
+    .diff-desc {
+        font-size: 0.78rem;
+    }
+}
+
+/* --- RESPONSIVE POLISH: TABLETĂ ȘI MOBIL --- */
+/* Responsive tabletă / telefon mare. Desktop-ul rămâne neatins. */
+@media (max-width: 768px) {
+    :root {
+        --header-height: 58px;
+        --header-control-size: 36px;
+        --header-padding-x: var(--space-4xl);
+        --space-page-top: 78px;
+        --space-page-bottom: 40px;
+    }
+
+    body {
+        padding-left: var(--space-xl);
+        padding-right: var(--space-xl);
+    }
+
+    .site-header {
+        height: var(--header-height);
+        padding: 0 var(--header-padding-x);
+    }
+
+    .site-header h1 {
+        font-size: 16px;
+        letter-spacing: 1.3px;
+        max-width: 55vw;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .hamburger {
+        font-size: 20px;
+    }
+
+    .header-actions {
+        gap: var(--space-md);
+    }
+
+    .share-btn {
+        font-size: 10px;
+        padding: 0 var(--space-lg);
+    }
+
+    .player-badge {
+        font-size: 10px;
+        padding: 0 var(--space-lg);
+    }
+
+    .dropdown {
+        top: var(--header-height);
+        left: var(--space-xl);
+        width: min(220px, calc(100vw - 24px));
+    }
+
+    .container {
+        max-width: 100%;
+    }
+
+    .search-container {
+        width: calc(100% - 96px);
+    }
+
+    input {
+        font-size: 15px;
+        padding: var(--space-xl) var(--space-4xl);
+    }
+
+    button#sendGuessBtn {
+        min-width: 88px;
+        font-size: 15px;
+        padding: var(--space-xl) var(--space-4xl);
+    }
+
+    .grid {
+        grid-template-columns: minmax(36px, 0.34fr) repeat(6, minmax(98px, 1fr));
+        gap: var(--space-md);
+        margin: var(--space-5xl) auto;
+        overflow-x: auto;
+        padding-bottom: var(--space-md);
+    }
+
+    .cell {
+        min-width: 88px;
+        min-height: 44px;
+        font-size: 12px;
+        padding: var(--space-xl) var(--space-xs);
+    }
+
+    .cell.header {
+        font-size: 10px;
+    }
+
+    .menu-container {
+        width: 100%;
+        max-width: 620px;
+        padding: var(--space-6xl);
+        box-sizing: border-box;
+    }
+
+    .menu-container h2 {
+        font-size: 2.4rem;
+        letter-spacing: 2px;
+    }
+
+    .subtitle {
+        margin-bottom: var(--space-8xl);
+    }
+
+    .btn-diff {
+        width: 170px;
+        height: 170px;
+    }
+
+    .end-game-popup {
+        width: min(420px, calc(100vw - 32px));
+        padding: var(--space-6xl);
+        box-sizing: border-box;
+    }
+}
+
+/* Responsive telefon mic. */
+@media (max-width: 520px) {
+    :root {
+        --header-height: 54px;
+        --header-control-size: 34px;
+        --header-padding-x: var(--space-xl);
+        --space-page-top: 72px;
+        --space-page-bottom: 32px;
+    }
+
+    body {
+        padding-left: var(--space-lg);
+        padding-right: var(--space-lg);
+    }
+
+    .site-header {
+        height: var(--header-height);
+        padding: 0 var(--header-padding-x);
+    }
+
+    .site-header h1 {
+        font-size: 13px;
+        letter-spacing: 0.8px;
+        max-width: 48vw;
+    }
+
+    .hamburger {
+        font-size: 19px;
+    }
+
+    .share-btn {
+        min-width: var(--header-control-size);
+        font-size: 0;
+        padding: 0;
+        gap: 0;
+    }
+
+    .share-btn::before {
+        content: "🔗";
+        font-size: 16px;
+    }
+
+    .share-tooltip {
+        right: 0;
+        left: auto;
+        transform: none;
+    }
+
+    .share-tooltip::before {
+        left: auto;
+        right: var(--space-lg);
+        transform: none;
+    }
+
+    .player-badge {
+        display: none;
+    }
+
+    .dropdown {
+        top: var(--header-height);
+        left: var(--space-lg);
+    }
+
+    #status {
+        font-size: 17px;
+    }
+
+    #gameZone {
+        display: flex;
+        gap: var(--space-md);
+        align-items: stretch;
+        margin-bottom: var(--space-6xl);
+    }
+
+    #gameZone.game-zone-hidden,
+    #gameZone.is-hidden {
+        display: none !important;
+    }
+
+    .search-container {
+        width: auto;
+        flex: 1;
+        display: block;
+    }
+
+    input {
+        height: 48px;
+        font-size: 14px;
+        padding: 0 var(--space-xl);
+        border-radius: var(--radius-lg);
+    }
+
+    button#sendGuessBtn {
+        min-width: 76px;
+        height: 48px;
+        font-size: 14px;
+        padding: 0 var(--space-xl);
+        border-radius: var(--radius-lg);
+    }
+
+    .suggestions-list {
+        border-radius: var(--radius-lg);
+    }
+
+    .grid {
+        grid-template-columns: minmax(32px, 0.34fr) repeat(6, minmax(76px, 1fr));
+        gap: var(--space-sm);
+        margin: var(--space-5xl) auto;
+    }
+
+    .cell {
+        min-width: 76px;
+        min-height: 42px;
+        font-size: 11px;
+        border-radius: var(--radius-md);
+    }
+
+    .cell-driver-id {
+        font-size: 12px;
+    }
+
+    .cell-driver-name,
+    .cell-media-label {
+        font-size: 9px;
+    }
+
+    .menu-container {
+        padding: var(--space-5xl) var(--space-xl);
+    }
+
+    .menu-container h2 {
+        font-size: 1.85rem;
+    }
+
+    .difficulty-grid {
+        gap: var(--space-xl);
+    }
+
+    .btn-diff {
+        width: 100%;
+        max-width: 320px;
+        height: auto;
+        min-height: 118px;
+        padding: var(--space-4xl);
+    }
+
+    .diff-title {
+        font-size: 1.25rem;
+    }
+
+    .site-footer {
+        margin-top: var(--space-8xl);
+    }
+
+    .legend-card {
+        padding: var(--space-5xl);
+    }
+
+    .legend-list {
+        grid-template-columns: 1fr;
+    }
+
+    .legend-item {
+        min-height: auto;
+        padding: var(--space-lg) var(--space-xl);
+    }
+
+    .legend-copy {
+        font-size: 12px;
+    }
+
+    .end-game-popup {
+        width: calc(100vw - 24px);
+        padding: var(--space-5xl);
+        border-radius: var(--radius-xl);
+    }
+
+    .end-game-popup h2 {
+        font-size: 20px;
+    }
+
+    .stats-summary {
+        gap: var(--space-md);
+    }
+
+    .stats-value {
+        font-size: 18px;
+    }
+}
+
+
+/* --- TEMA CARBON: dropdown mai curat și mai lizibil --- */
+[data-app-theme="carbon"] .dropdown {
+    background: linear-gradient(180deg, #202326 0%, #151719 100%);
+    border-color: #3f4347;
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+[data-app-theme="carbon"] .menu-item:hover {
+    background: linear-gradient(90deg, rgba(111, 116, 122, 0.35) 0%, rgba(63, 67, 71, 0.18) 100%);
+    color: #ffffff;
+    border-color: #5f6368;
+}
+
+[data-app-theme="carbon"] .menu-item:hover::before {
+    background: #92989f;
+}
+
+/* --- TEMA NEON: dropdown cu accent discret, fără încărcare vizuală --- */
+[data-app-theme="neon"] .dropdown {
+    background: rgba(6, 8, 24, 0.94);
+    border-color: rgba(0, 247, 255, 0.24);
+    box-shadow: 0 18px 40px rgba(0, 247, 255, 0.12);
+}
+
+[data-app-theme="neon"] .menu-item:hover {
+    color: #ffffff;
+}
+
+
+
+@media (max-width: 768px) {
+    .attempt-index,
+    .attempt-header {
+        min-width: 34px;
+        padding-left: var(--space-xs);
+        padding-right: var(--space-xs);
+    }
+
+    .attempt-index::before {
+        left: 0;
+        width: min(780px, calc(100vw - 48px));
+        height: calc(100% + 6px);
+    }
+}
+
+@media (max-width: 520px) {
+    .attempt-index,
+    .attempt-header {
+        min-width: 30px;
+        font-size: 10px;
+    }
+
+    .attempt-index::before {
+        left: 0;
+        width: min(620px, calc(100vw - 36px));
+        opacity: 0.46;
+    }
+}
+
+/* Respectă preferința utilizatorilor care au animațiile reduse în sistem. */
+@media (prefers-reduced-motion: reduce) {
+    .cell-reveal {
+        animation: none;
+    }
+}
+

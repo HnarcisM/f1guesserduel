@@ -1,0 +1,181 @@
+/* --- DIFICULTATE OVERLAY MODAL --- */
+/* Overlay-ul inițial blochează jocul până la alegerea dificultății. */
+.overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: var(--surface-overlay); backdrop-filter: blur(8px);
+    display: flex; justify-content: center; align-items: center; z-index: 9999;
+    box-sizing: border-box;
+    padding: var(--space-5xl);
+    overflow-y: auto;
+}
+.overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.menu-container { text-align: center; max-width: 700px; padding: var(--space-8xl); }
+.menu-container h2 { font-size: 3.5rem; color: var(--text-on-accent); margin-bottom: var(--space-sm); text-transform: uppercase; letter-spacing: 4px; font-weight: 900; }
+.subtitle { color: var(--text-muted); font-size: 1.1rem; margin-bottom: 45px; font-weight: 500; }
+/* Cardurile de dificultate sunt responsive: pe desktop stau în grid, pe mobil se stivuiesc. */
+.difficulty-grid {
+    display: flex;
+    gap: var(--space-5xl);
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-diff {
+    --diff-accent: var(--accent-f1);
+    --diff-accent-rgb: 255, 24, 1;
+
+    position: relative;
+    overflow: hidden;
+    width: 200px;
+    height: 200px;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--surface-main) 92%, white) 0%, var(--surface-main) 100%);
+    border: 1px solid color-mix(in srgb, var(--diff-accent) 70%, var(--border-soft));
+    box-sizing: border-box;
+    border-radius: var(--radius-2xl);
+    color: var(--text-on-accent);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: var(--space-5xl);
+    text-align: left;
+    transition: transform var(--transition-medium), border-color var(--transition-medium), box-shadow var(--transition-medium), background var(--transition-medium);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+}
+
+/* Accentul dificultății este uniform pe border; ::before oferă doar o lumină subtilă în interior, fără margine laterală. */
+.btn-diff::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(var(--diff-accent-rgb), 0.10), transparent 52%);
+    opacity: 0.45;
+    pointer-events: none;
+}
+
+.btn-diff::after {
+    content: "";
+    position: absolute;
+    top: var(--space-4xl);
+    right: var(--space-4xl);
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--diff-accent);
+    box-shadow: 0 0 14px rgba(var(--diff-accent-rgb), 0.55);
+}
+
+.diff-title,
+.diff-desc {
+    position: relative;
+    z-index: 1;
+}
+
+.diff-title {
+    font-size: 1.5rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    margin-bottom: var(--space-lg);
+    letter-spacing: 1.2px;
+}
+
+.diff-desc {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.btn-diff:hover {
+    transform: translateY(-5px);
+    border-color: color-mix(in srgb, var(--diff-accent) 70%, var(--border-soft));
+    background: linear-gradient(180deg, rgba(var(--diff-accent-rgb), 0.08) 0%, var(--surface-main) 100%);
+    box-shadow: 0 16px 32px rgba(0,0,0,0.38), 0 0 24px rgba(var(--diff-accent-rgb), 0.22);
+}
+
+.btn-diff.easy { --diff-accent: var(--success); --diff-accent-rgb: 16, 185, 129; }
+.btn-diff.medium { --diff-accent: var(--warning); --diff-accent-rgb: 234, 179, 8; }
+.btn-diff.hard { --diff-accent: var(--danger); --diff-accent-rgb: 239, 68, 68; }
+
+.btn-diff.easy .diff-title { color: var(--success); }
+.btn-diff.medium .diff-title { color: var(--warning); }
+.btn-diff.hard .diff-title { color: var(--danger); }
+
+[data-app-theme="carbon"] .btn-diff {
+    background: linear-gradient(180deg, #24272a 0%, #191b1d 100%);
+    border-color: color-mix(in srgb, var(--diff-accent) 70%, #3f4347);
+    box-shadow: 0 12px 28px rgba(0,0,0,0.45);
+}
+
+[data-app-theme="carbon"] .btn-diff:hover {
+    background: linear-gradient(180deg, rgba(var(--diff-accent-rgb), 0.12) 0%, #191b1d 100%);
+    box-shadow: 0 16px 34px rgba(0,0,0,0.5), 0 0 24px rgba(var(--diff-accent-rgb), 0.28);
+}
+
+[data-app-theme="neon"] .btn-diff {
+    box-shadow: 0 10px 25px rgba(0,0,0,0.35), inset 0 0 0 1px rgba(255,255,255,0.03);
+}
+
+/* --- POPUP FINAL MECI --- */
+/* Overlay final: estompează fundalul când jocul se termină, astfel încât popup-ul să fie focusul vizual. */
+.end-game-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 6, 10, 0.58);
+    backdrop-filter: blur(5px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.35s ease, visibility 0.35s ease;
+    z-index: 9998;
+}
+
+.end-game-backdrop.show {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+/* Popup final: apare cu clasa .show după ce serverul anunță finalul rundei. */
+.end-game-popup {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    background: var(--surface-main);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-2xl);
+    padding: var(--space-8xl);
+    margin: var(--space-7xl) auto;
+    max-width: 420px;
+    box-shadow: var(--shadow-xl);
+    transform: translate(-50%, -50%) scale(0.7);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), visibility 0.4s;
+    z-index: 9999;
+}
+
+.end-game-popup.show {
+    display: block;
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.end-game-popup h2 { margin-top: 0; font-size: 24px; font-weight: 800; letter-spacing: 1px; }
+.end-game-popup p { color: var(--text-secondary); font-size: 15px; margin-bottom: var(--space-7xl); line-height: 1.5; }
+.end-game-popup .restart-inline-btn { padding: var(--space-2xl) var(--space-8xl); background: var(--accent-f1); color: var(--text-on-accent); border: none; font-size: 16px; border-radius: var(--radius-lg); width: 100%; box-sizing: border-box;}
+.end-game-popup .restart-inline-btn:hover { background: var(--accent-f1-hover); }
+
+
+/* Overlay-ul final păstrează personalitatea fiecărei teme fără să afecteze popup-ul. */
+[data-app-theme="neon"] .end-game-backdrop {
+    background: rgba(2, 4, 15, 0.66);
+    backdrop-filter: blur(6px);
+}
+
+[data-app-theme="carbon"] .end-game-backdrop {
+    background: rgba(6, 7, 8, 0.68);
+    backdrop-filter: blur(6px);
+}
+

@@ -1,0 +1,130 @@
+/* --- DAILY CHALLENGE --- */
+.daily-challenge-card {
+    width: min(820px, 100%);
+    box-sizing: border-box;
+    margin: 0 auto var(--space-5xl);
+    padding: var(--space-xl);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-xl);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.025));
+    border: 1px solid color-mix(in srgb, var(--accent-f1) 35%, var(--border-soft));
+    border-radius: var(--radius-2xl);
+    box-shadow: var(--shadow-md);
+}
+
+.daily-challenge-copy {
+    display: grid;
+    gap: var(--space-xs);
+    text-align: left;
+}
+
+.daily-eyebrow {
+    color: var(--accent-f1);
+    font-size: 0.76rem;
+    font-weight: 900;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+}
+
+.daily-challenge-copy strong {
+    color: var(--text-primary);
+    font-size: 1.15rem;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+}
+
+.daily-challenge-copy small {
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.daily-challenge-actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+}
+
+.daily-challenge-btn {
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-pill);
+    padding: var(--space-sm) var(--space-xl);
+    background: rgba(255, 255, 255, 0.045);
+    color: var(--text-primary);
+    font-size: 0.83rem;
+    font-weight: 900;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+}
+
+.daily-challenge-btn.easy { border-color: color-mix(in srgb, var(--success) 65%, var(--border-soft)); }
+.daily-challenge-btn.medium { border-color: color-mix(in srgb, var(--warning) 65%, var(--border-soft)); }
+.daily-challenge-btn.hard { border-color: color-mix(in srgb, var(--danger) 65%, var(--border-soft)); }
+
+.daily-challenge-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 18px color-mix(in srgb, var(--accent-f1) 18%, transparent);
+}
+
+.diff-display-label.daily-mode {
+    border-color: color-mix(in srgb, var(--accent-f1) 60%, var(--border-soft));
+    box-shadow: 0 0 18px color-mix(in srgb, var(--accent-f1) 18%, transparent);
+}
+
+@media (max-width: 760px) {
+    .daily-challenge-card {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .daily-challenge-actions {
+        justify-content: stretch;
+    }
+
+    .daily-challenge-btn {
+        flex: 1 1 100%;
+    }
+}
+
+@media (max-height: 760px) and (min-width: 769px) {
+    .daily-challenge-card {
+        margin-bottom: var(--space-xl);
+        padding: var(--space-md);
+    }
+
+    .daily-challenge-copy strong {
+        font-size: 0.98rem;
+    }
+
+    .daily-challenge-btn {
+        padding: var(--space-xs) var(--space-md);
+        font-size: 0.76rem;
+    }
+}
+
+body.daily-active #liveDuelBoard {
+    display: none !important;
+}
+
+.daily-challenge-btn.daily-completed,
+.menu-item.daily-completed {
+    opacity: 0.68;
+    cursor: not-allowed;
+    filter: grayscale(0.25);
+}
+
+.daily-challenge-btn:disabled {
+    transform: none;
+    box-shadow: none;
+}
+
+.daily-challenge-btn:disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.daily-challenge-copy #dailyResetInfo {
+    color: var(--text-secondary);
+}
