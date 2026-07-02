@@ -4,6 +4,7 @@ const DEFAULT_DUEL_LEVEL = 'easy';
 
 let selectedDuelLevel = DEFAULT_DUEL_LEVEL;
 let selectPlayerHandler = null;
+let leaveRoomHandler = null;
 let latestRoomState = null;
 
 function getLobbyPanel() {
@@ -190,8 +191,16 @@ function renderSettingsState(roomState = {}) {
     syncLevelButtons();
 }
 
-export function setupDuelLobbyView({ onStartRound, onSelectPlayer, timer } = {}) {
+export function createDuelLobbyLeaveClickHandler(onLeaveRoom) {
+    const handler = typeof onLeaveRoom === 'function' ? onLeaveRoom : null;
+    return () => {
+        handler?.();
+    };
+}
+
+export function setupDuelLobbyView({ onStartRound, onSelectPlayer, onLeaveRoom, timer } = {}) {
     selectPlayerHandler = typeof onSelectPlayer === 'function' ? onSelectPlayer : null;
+    leaveRoomHandler = typeof onLeaveRoom === 'function' ? onLeaveRoom : null;
     syncLevelButtons();
 
     document.querySelectorAll('[data-duel-lobby-level]').forEach(button => {
@@ -225,6 +234,11 @@ export function setupDuelLobbyView({ onStartRound, onSelectPlayer, timer } = {})
             }
             onStartRound?.(selectedDuelLevel);
         });
+    }
+
+    const leaveButton = document.getElementById('duelLobbyLeaveBtn');
+    if (leaveButton) {
+        leaveButton.addEventListener('click', createDuelLobbyLeaveClickHandler(leaveRoomHandler));
     }
 }
 

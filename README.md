@@ -530,6 +530,8 @@ Pentru pornirea jocului/serverului:
 F1GuesserDuel.bat
 ```
 
+La pornire, scriptul Windows verifică portul aplicației, implicit `3000` sau valoarea din variabila de mediu `PORT`. Dacă găsește deja un server/proces care ascultă pe acel port, îl închide automat înainte să pornească noul server.
+
 Pentru rularea testelor backend + E2E cu browser real:
 
 ```bat
@@ -664,3 +666,10 @@ Dacă un player dă refresh accidental în timpul unei runde active, aplicația 
 ```
 
 Panelul nu afișează piloții ghiciți de adversar. Rezultatul final și scoreboard-ul apar doar după ce ambii playeri activi au terminat runda.
+
+
+### Fix test Windows lobby leave handler
+
+- Stabilized `test/frontendDuelLobbyView.test.js` by testing the exported leave-click handler directly instead of relying on a mocked DOM click event.
+- Added `createDuelLobbyLeaveClickHandler()` in `public/js/duelLobbyView.js` and reused it from the real lobby leave button.
+- This keeps the real lobby leave behavior unchanged while avoiding Windows-specific DOM mock flakiness.

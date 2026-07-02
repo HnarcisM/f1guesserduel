@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "savedAt": "2026-07-01T23:55:43.512Z",
+  "savedAt": "2026-07-02T00:12:09.814Z",
   "rooms": [
     {
       "roomId": "vr9wqps",
@@ -4673,8 +4673,21 @@
       "hostId": null,
       "players": {},
       "spectators": {},
-      "nextGuestNumber": 4,
-      "targetDriver": null,
+      "nextGuestNumber": 5,
+      "targetDriver": {
+        "id": "KVY",
+        "name": "Daniil Kvyat",
+        "nat": "RUS",
+        "team": [
+          "AlphaTauri",
+          "Toro Rosso",
+          "Red Bull"
+        ],
+        "age": 32,
+        "debut": 2014,
+        "wins": 0,
+        "difficulty": "easy"
+      },
       "difficulty": "easy",
       "driversList": [
         {
@@ -5197,8 +5210,644 @@
           "difficulty": "easy"
         }
       ],
-      "timed": false,
+      "timed": true,
       "timeLimitSeconds": 60,
+      "roundStartedAt": 1782950192025,
+      "roundState": "playing",
+      "roundResult": null,
+      "isDailyChallenge": false,
+      "dailyDate": null,
+      "dailyChallengeId": null
+    },
+    {
+      "roomId": "q305qqj",
+      "hostId": null,
+      "players": {},
+      "spectators": {},
+      "nextGuestNumber": 4,
+      "targetDriver": null,
+      "difficulty": "hard",
+      "driversList": [
+        {
+          "id": "DEV",
+          "name": "Nyck de Vries",
+          "nat": "NED",
+          "team": [
+            "AlphaTauri",
+            "Williams"
+          ],
+          "age": 31,
+          "debut": 2022,
+          "wins": 0,
+          "difficulty": "hard"
+        },
+        {
+          "id": "MAZ",
+          "name": "Nikita Mazepin",
+          "nat": "RUS",
+          "team": [
+            "Haas"
+          ],
+          "age": 27,
+          "debut": 2021,
+          "wins": 0,
+          "difficulty": "hard"
+        },
+        {
+          "id": "AIT",
+          "name": "Jack Aitken",
+          "nat": "GBR",
+          "team": [
+            "Williams"
+          ],
+          "age": 30,
+          "debut": 2020,
+          "wins": 0,
+          "difficulty": "hard"
+        },
+        {
+          "id": "FIT",
+          "name": "Pietro Fittipaldi",
+          "nat": "BRA",
+          "team": [
+            "Haas"
+          ],
+          "age": 30,
+          "debut": 2020,
+          "wins": 0,
+          "difficulty": "hard"
+        },
+        {
+          "id": "SIR",
+          "name": "Sergey Sirotkin",
+          "nat": "RUS",
+          "team": [
+            "Williams"
+          ],
+          "age": 30,
+          "debut": 2018,
+          "wins": 0,
+          "difficulty": "hard"
+        },
+        {
+          "id": "HAR_R",
+          "name": "Rio Haryanto",
+          "nat": "IND",
+          "team": [
+            "Manor"
+          ],
+          "age": 33,
+          "debut": 2016,
+          "wins": 0,
+          "difficulty": "hard"
+        },
+        {
+          "id": "ROS_A",
+          "name": "Alexander Rossi",
+          "nat": "USA",
+          "team": [
+            "Manor"
+          ],
+          "age": 34,
+          "debut": 2015,
+          "wins": 0,
+          "difficulty": "hard"
+        },
+        {
+          "id": "MER",
+          "name": "Roberto Merhi",
+          "nat": "ESP",
+          "team": [
+            "Manor"
+          ],
+          "age": 35,
+          "debut": 2015,
+          "wins": 0,
+          "difficulty": "hard"
+        },
+        {
+          "id": "LOT",
+          "name": "Andre Lotterer",
+          "nat": "GER",
+          "team": [
+            "Caterham"
+          ],
+          "age": 44,
+          "debut": 2014,
+          "wins": 0,
+          "difficulty": "hard"
+        },
+        {
+          "id": "STE",
+          "name": "Will Stevens",
+          "nat": "GBR",
+          "team": [
+            "Manor",
+            "Caterham"
+          ],
+          "age": 35,
+          "debut": 2014,
+          "wins": 0,
+          "difficulty": "hard"
+        },
+        {
+          "id": "VDG",
+          "name": "Giedo van der Garde",
+          "nat": "NED",
+          "team": [
+            "Caterham"
+          ],
+          "age": 41,
+          "debut": 2013,
+          "wins": 0,
+          "difficulty": "hard"
+        },
+        {
+          "id": "CHI",
+          "name": "Max Chilton",
+          "nat": "GBR",
+          "team": [
+            "Marussia"
+          ],
+          "age": 35,
+          "debut": 2013,
+          "wins": 0,
+          "difficulty": "hard"
+        },
+        {
+          "id": "PIC",
+          "name": "Charles Pic",
+          "nat": "FRA",
+          "team": [
+            "Caterham",
+            "Marussia"
+          ],
+          "age": 36,
+          "debut": 2012,
+          "wins": 0,
+          "difficulty": "hard"
+        },
+        {
+          "id": "DAM",
+          "name": "Jerome d'Ambrosio",
+          "nat": "BEL",
+          "team": [
+            "Lotus",
+            "Virgin"
+          ],
+          "age": 40,
+          "debut": 2011,
+          "wins": 0,
+          "difficulty": "hard"
+        },
+        {
+          "id": "GEN",
+          "name": "Marc Gene",
+          "nat": "ESP",
+          "team": [
+            "Williams",
+            "Minardi"
+          ],
+          "age": 52,
+          "debut": 1999,
+          "wins": 0,
+          "difficulty": "hard"
+        },
+        {
+          "id": "DE_LA",
+          "name": "Pedro de la Rosa",
+          "nat": "ESP",
+          "team": [
+            "HRT",
+            "Sauber",
+            "McLaren",
+            "Jaguar",
+            "Arrows"
+          ],
+          "age": 55,
+          "debut": 1999,
+          "wins": 0,
+          "difficulty": "hard"
+        },
+        {
+          "id": "ZON",
+          "name": "Ricardo Zonta",
+          "nat": "BRA",
+          "team": [
+            "Toyota",
+            "BAR"
+          ],
+          "age": 50,
+          "debut": 1999,
+          "wins": 0,
+          "difficulty": "hard"
+        },
+        {
+          "id": "VUR",
+          "name": "Alexander Wurz",
+          "nat": "AUT",
+          "team": [
+            "Williams",
+            "McLaren",
+            "Benetton"
+          ],
+          "age": 52,
+          "debut": 1997,
+          "wins": 0,
+          "difficulty": "hard"
+        },
+        {
+          "id": "TRU",
+          "name": "Jarno Trulli",
+          "nat": "ITA",
+          "team": [
+            "Caterham",
+            "Lotus",
+            "Toyota",
+            "Renault",
+            "Jordan",
+            "Prost",
+            "Minardi"
+          ],
+          "age": 51,
+          "debut": 1997,
+          "wins": 1,
+          "difficulty": "hard"
+        },
+        {
+          "id": "RAL",
+          "name": "Ralf Schumacher",
+          "nat": "GER",
+          "team": [
+            "Toyota",
+            "Williams",
+            "Jordan"
+          ],
+          "age": 50,
+          "debut": 1997,
+          "wins": 6,
+          "difficulty": "hard"
+        },
+        {
+          "id": "FIS",
+          "name": "Giancarlo Fisichella",
+          "nat": "ITA",
+          "team": [
+            "Ferrari",
+            "Force India",
+            "Renault",
+            "Sauber",
+            "Jordan",
+            "Benetton",
+            "Minardi"
+          ],
+          "age": 53,
+          "debut": 1996,
+          "wins": 3,
+          "difficulty": "hard"
+        },
+        {
+          "id": "MAR",
+          "name": "Tarso Marques",
+          "nat": "BRA",
+          "team": [
+            "Minardi"
+          ],
+          "age": 50,
+          "debut": 1996,
+          "wins": 0,
+          "difficulty": "hard"
+        },
+        {
+          "id": "DIN",
+          "name": "Pedro Diniz",
+          "nat": "BRA",
+          "team": [
+            "Sauber",
+            "Arrows",
+            "Ligier",
+            "Forti"
+          ],
+          "age": 56,
+          "debut": 1995,
+          "wins": 0,
+          "difficulty": "hard"
+        },
+        {
+          "id": "VER_J",
+          "name": "Jos Verstappen",
+          "nat": "NED",
+          "team": [
+            "Minardi",
+            "Arrows",
+            "Stewart",
+            "Tyrrell",
+            "Simtek",
+            "Benetton"
+          ],
+          "age": 54,
+          "debut": 1994,
+          "wins": 0,
+          "difficulty": "hard"
+        },
+        {
+          "id": "SAL",
+          "name": "Mika Salo",
+          "nat": "FIN",
+          "team": [
+            "Toyota",
+            "Sauber",
+            "Ferrari",
+            "BAR",
+            "Arrows",
+            "Lotus"
+          ],
+          "age": 59,
+          "debut": 1994,
+          "wins": 0,
+          "difficulty": "hard"
+        },
+        {
+          "id": "PAN_O",
+          "name": "Olivier Panis",
+          "nat": "FRA",
+          "team": [
+            "Toyota",
+            "BAR",
+            "Prost",
+            "Ligier"
+          ],
+          "age": 59,
+          "debut": 1994,
+          "wins": 1,
+          "difficulty": "hard"
+        },
+        {
+          "id": "BAD",
+          "name": "Luca Badoer",
+          "nat": "ITA",
+          "team": [
+            "Ferrari",
+            "Forti",
+            "Minardi",
+            "Scuderia Italia"
+          ],
+          "age": 55,
+          "debut": 1993,
+          "wins": 0,
+          "difficulty": "hard"
+        },
+        {
+          "id": "HER",
+          "name": "Johnny Herbert",
+          "nat": "GBR",
+          "team": [
+            "Jaguar",
+            "Stewart",
+            "Sauber",
+            "Benetton",
+            "Ligier",
+            "Lotus",
+            "Tyrrell"
+          ],
+          "age": 62,
+          "debut": 1989,
+          "wins": 3,
+          "difficulty": "hard"
+        },
+        {
+          "id": "ALB_M",
+          "name": "Michele Alboreto",
+          "nat": "ITA",
+          "team": [
+            "Minardi",
+            "Footwork",
+            "Ferrari",
+            "Tyrrell"
+          ],
+          "age": 44,
+          "debut": 1981,
+          "wins": 5,
+          "difficulty": "hard"
+        },
+        {
+          "id": "ROS_K",
+          "name": "Keke Rosberg",
+          "nat": "FIN",
+          "team": [
+            "McLaren",
+            "Williams",
+            "ATS",
+            "Wolf"
+          ],
+          "age": 77,
+          "debut": 1978,
+          "wins": 5,
+          "difficulty": "hard"
+        },
+        {
+          "id": "ARN",
+          "name": "René Arnoux",
+          "nat": "FRA",
+          "team": [
+            "Ligier",
+            "Ferrari",
+            "Renault",
+            "Martini"
+          ],
+          "age": 78,
+          "debut": 1978,
+          "wins": 7,
+          "difficulty": "hard"
+        },
+        {
+          "id": "LAF",
+          "name": "Jacques Laffite",
+          "nat": "FRA",
+          "team": [
+            "Ligier",
+            "Williams"
+          ],
+          "age": 82,
+          "debut": 1974,
+          "wins": 6,
+          "difficulty": "hard"
+        },
+        {
+          "id": "HUN",
+          "name": "James Hunt",
+          "nat": "GBR",
+          "team": [
+            "Wolf",
+            "McLaren",
+            "Hesketh"
+          ],
+          "age": 45,
+          "debut": 1973,
+          "wins": 10,
+          "difficulty": "hard"
+        },
+        {
+          "id": "WAT",
+          "name": "John Watson",
+          "nat": "GBR",
+          "team": [
+            "McLaren",
+            "Brabham",
+            "Penske",
+            "Lotus"
+          ],
+          "age": 80,
+          "debut": 1973,
+          "wins": 5,
+          "difficulty": "hard"
+        },
+        {
+          "id": "REU",
+          "name": "Carlos Reutemann",
+          "nat": "ARG",
+          "team": [
+            "Williams",
+            "Lotus",
+            "Ferrari",
+            "Brabham"
+          ],
+          "age": 79,
+          "debut": 1972,
+          "wins": 12,
+          "difficulty": "hard"
+        },
+        {
+          "id": "REGA",
+          "name": "Clay Regazzoni",
+          "nat": "SUI",
+          "team": [
+            "Ensign",
+            "Williams",
+            "Shadow",
+            "BRM",
+            "Ferrari"
+          ],
+          "age": 67,
+          "debut": 1970,
+          "wins": 5,
+          "difficulty": "hard"
+        },
+        {
+          "id": "CEV",
+          "name": "François Cevert",
+          "nat": "FRA",
+          "team": [
+            "Tyrrell",
+            "March"
+          ],
+          "age": 29,
+          "debut": 1970,
+          "wins": 1,
+          "difficulty": "hard"
+        },
+        {
+          "id": "PET_R",
+          "name": "Ronnie Peterson",
+          "nat": "SWE",
+          "team": [
+            "Lotus",
+            "Tyrrell",
+            "March"
+          ],
+          "age": 34,
+          "debut": 1970,
+          "wins": 10,
+          "difficulty": "hard"
+        },
+        {
+          "id": "ICK",
+          "name": "Jacky Ickx",
+          "nat": "BEL",
+          "team": [
+            "Ligier",
+            "Ensign",
+            "Lotus",
+            "Brabham",
+            "Ferrari",
+            "Cooper"
+          ],
+          "age": 81,
+          "debut": 1967,
+          "wins": 8,
+          "difficulty": "hard"
+        },
+        {
+          "id": "DEN_H",
+          "name": "Denny Hulme",
+          "nat": "NZL",
+          "team": [
+            "McLaren",
+            "Brabham"
+          ],
+          "age": 58,
+          "debut": 1965,
+          "wins": 8,
+          "difficulty": "hard"
+        },
+        {
+          "id": "RIND",
+          "name": "Jochen Rindt",
+          "nat": "AUT",
+          "team": [
+            "Lotus",
+            "Brabham",
+            "Cooper"
+          ],
+          "age": 28,
+          "debut": 1964,
+          "wins": 6,
+          "difficulty": "hard"
+        },
+        {
+          "id": "HAW",
+          "name": "Mike Hawthorn",
+          "nat": "GBR",
+          "team": [
+            "Ferrari",
+            "BRM",
+            "Vanwall"
+          ],
+          "age": 29,
+          "debut": 1952,
+          "wins": 5,
+          "difficulty": "hard"
+        },
+        {
+          "id": "FAR",
+          "name": "Giuseppe Farina",
+          "nat": "ITA",
+          "team": [
+            "Ferrari",
+            "Maserati",
+            "Alfa Romeo"
+          ],
+          "age": 59,
+          "debut": 1950,
+          "wins": 5,
+          "difficulty": "hard"
+        },
+        {
+          "id": "GON",
+          "name": "José Froilán González",
+          "nat": "ARG",
+          "team": [
+            "Ferrari",
+            "Maserati"
+          ],
+          "age": 90,
+          "debut": 1950,
+          "wins": 2,
+          "difficulty": "hard"
+        }
+      ],
+      "timed": true,
+      "timeLimitSeconds": 120,
       "roundStartedAt": null,
       "roundState": "waiting",
       "roundResult": {
@@ -5206,7 +5855,7 @@
         "reason": "player-aborted",
         "winnerSocketId": null,
         "winnerUsername": null,
-        "resolvedAt": 1782950132121,
+        "resolvedAt": 1782951129558,
         "target": null,
         "players": []
       },
