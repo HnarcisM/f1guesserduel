@@ -10,6 +10,7 @@ const {
     removePlayerFromRoom,
     markRoomMemberDisconnectedBySocketId,
     selectSpectatorAsPlayer,
+    updateDuelLobbySettings,
     refreshRoomMemberAuth,
     getPlayer,
     hasRoomMember,
@@ -155,6 +156,39 @@ function registerSocketHandlers(io, dependencies) {
             }
         });
 
+
+        socket.on('updateDuelLobbySettings', (payload) => {
+            if (!currentRoom) return;
+
+            const room = roomStore.get(currentRoom);
+            if (!room) return;
+
+            if (isSpectator(room, socket.id)) {
+                socket.emit('errorMessage', 'Ești spectator. Doar hostul poate modifica setările din lobby.');
+                return;
+            }
+
+            if (!isHost(room, socket.id)) {
+                socket.emit('errorMessage', 'Doar hostul camerei poate modifica setările din lobby.');
+                return;
+            }
+
+            if (room.roundState === 'playing') {
+                socket.emit('errorMessage', 'Setările pot fi schimbate doar în lobby, după finalul rundei.');
+                return;
+            }
+
+            const roundOptions = normalizeRoundOptions(payload);
+            if (!roundOptions) {
+                socket.emit('errorMessage', 'Setările selectate nu sunt valide.');
+                return;
+            }
+
+            updateDuelLobbySettings(room, roundOptions);
+            roomStore.markDirty?.();
+            emitRoomStateUpdate(currentRoom, 'lobby-settings-updated');
+        });
+
         socket.on('setDifficulty', (payload) => {
             if (!currentRoom) return;
 
@@ -182,6 +216,7 @@ function registerSocketHandlers(io, dependencies) {
                 return;
             }
 
+            updateDuelLobbySettings(room, roundOptions);
             const initPayload = gameService.startNewRound(room, roundOptions);
             if (!initPayload) {
                 socket.emit('errorMessage', 'Nu am putut porni runda pentru dificultatea selectată.');

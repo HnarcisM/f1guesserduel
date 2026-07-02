@@ -5,6 +5,8 @@ const DEFAULT_DUEL_LEVEL = 'easy';
 let selectedDuelLevel = DEFAULT_DUEL_LEVEL;
 let selectPlayerHandler = null;
 let leaveRoomHandler = null;
+let settingsChangeHandler = null;
+let timerController = null;
 let latestRoomState = null;
 
 function getLobbyPanel() {
@@ -103,6 +105,25 @@ function setControlsDisabled(selector, disabled) {
     });
 }
 
+function getLobbySettings(roomState = latestRoomState || {}) {
+    const settings = roomState?.lobbySettings || {};
+    return {
+        difficulty: settings.difficulty || roomState?.difficulty || selectedDuelLevel || DEFAULT_DUEL_LEVEL,
+        timed: settings.timed === true,
+        timeLimitSeconds: settings.timeLimitSeconds || roomState?.timeLimitSeconds || timerController?.getSelectedTimeLimitSeconds?.() || 60
+    };
+}
+
+function emitLobbySettingsChange() {
+    if (typeof settingsChangeHandler !== 'function') return;
+
+    settingsChangeHandler({
+        level: selectedDuelLevel || DEFAULT_DUEL_LEVEL,
+        timed: Boolean(timerController?.isTimedModeEnabled?.()),
+        timeLimitSeconds: timerController?.getSelectedTimeLimitSeconds?.() || 60
+    });
+}
+
 function syncLevelButtons() {
     document.querySelectorAll('[data-duel-lobby-level]').forEach(button => {
         const isActive = button.dataset.duelLobbyLevel === selectedDuelLevel;
@@ -162,6 +183,20 @@ function renderMembers(roomState = {}) {
     }
 }
 
+function syncLobbyTimerButtons(roomState = {}) {
+    const settings = getLobbySettings(roomState);
+
+    document.querySelectorAll('#duelLobbyPanel [data-timer-mode]').forEach(button => {
+        const value = button.dataset.timerMode;
+        const isActive = value === 'off'
+            ? !settings.timed
+            : settings.timed && Number(value) === Number(settings.timeLimitSeconds);
+
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-pressed', String(isActive));
+    });
+}
+
 function renderSettingsState(roomState = {}) {
     const { isHost, isSpectator, isPlaying, canInteract } = getLobbyPermissions(roomState);
     const hint = document.getElementById('duelLobbySettingsHint');
@@ -189,6 +224,7 @@ function renderSettingsState(roomState = {}) {
     }
 
     syncLevelButtons();
+    syncLobbyTimerButtons(roomState);
 }
 
 export function createDuelLobbyLeaveClickHandler(onLeaveRoom) {
@@ -198,9 +234,11 @@ export function createDuelLobbyLeaveClickHandler(onLeaveRoom) {
     };
 }
 
-export function setupDuelLobbyView({ onStartRound, onSelectPlayer, onLeaveRoom, timer } = {}) {
+export function setupDuelLobbyView({ onStartRound, onSelectPlayer, onLeaveRoom, onSettingsChange, timer } = {}) {
     selectPlayerHandler = typeof onSelectPlayer === 'function' ? onSelectPlayer : null;
     leaveRoomHandler = typeof onLeaveRoom === 'function' ? onLeaveRoom : null;
+    settingsChangeHandler = typeof onSettingsChange === 'function' ? onSettingsChange : null;
+    timerController = timer || null;
     syncLevelButtons();
 
     document.querySelectorAll('[data-duel-lobby-level]').forEach(button => {
@@ -211,6 +249,7 @@ export function setupDuelLobbyView({ onStartRound, onSelectPlayer, onLeaveRoom, 
             }
             selectedDuelLevel = button.dataset.duelLobbyLevel || DEFAULT_DUEL_LEVEL;
             syncLevelButtons();
+            emitLobbySettingsChange();
         });
     });
 
@@ -222,6 +261,14 @@ export function setupDuelLobbyView({ onStartRound, onSelectPlayer, onLeaveRoom, 
             }
             const value = button.dataset.timerMode;
             timer?.setTimedMode?.(value !== 'off', value);
+            syncLobbyTimerButtons({
+                lobbySettings: {
+                    difficulty: selectedDuelLevel,
+                    timed: value !== 'off',
+                    timeLimitSeconds: value === 'off' ? timer?.getSelectedTimeLimitSeconds?.() : Number(value)
+                }
+            });
+            emitLobbySettingsChange();
         });
     });
 
@@ -247,6 +294,13 @@ export function renderDuelLobby(roomState = {}, options = {}) {
     if (!panel) return;
 
     latestRoomState = roomState && typeof roomState === 'object' ? roomState : null;
+
+    const lobbySettings = getLobbySettings(roomState);
+    selectedDuelLevel = lobbySettings.difficulty || DEFAULT_DUEL_LEVEL;
+    if (roomState.roundState !== 'playing') {
+        timerController?.applySelectedTimerSettings?.(lobbySettings.timed, lobbySettings.timeLimitSeconds, { persist: false });
+    }
+
     const shouldShow = Boolean(options.forceVisible) || roomState.roundState !== 'playing';
     setHidden(panel, !shouldShow);
     panel.classList.toggle('is-playing', roomState.roundState === 'playing');

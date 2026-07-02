@@ -1,6 +1,8 @@
 const {
     DEFAULT_TIME_LIMIT_SECONDS,
-    MAX_PLAYERS_PER_ROOM
+    MAX_PLAYERS_PER_ROOM,
+    normalizeTimeLimitSeconds,
+    isValidDifficulty
 } = require('../config/constants');
 const {
     getPlayerIds,
@@ -35,6 +37,47 @@ const {
     syncScoreboardWithPlayers
 } = require('./scoreboardService');
 
+const DEFAULT_LOBBY_DIFFICULTY = 'easy';
+
+function normalizeDuelLobbySettings(options = {}) {
+    const difficulty = isValidDifficulty(options.difficulty) ? options.difficulty : DEFAULT_LOBBY_DIFFICULTY;
+    return {
+        difficulty,
+        timed: options.timed === true,
+        timeLimitSeconds: normalizeTimeLimitSeconds(options.timeLimitSeconds)
+    };
+}
+
+function updateDuelLobbySettings(room, options = {}) {
+    if (!room || room.roundState === 'playing') {
+        return { changed: false, reason: 'round-active' };
+    }
+
+    const nextSettings = normalizeDuelLobbySettings({
+        difficulty: options.difficulty || room.lobbyDifficulty || room.difficulty || DEFAULT_LOBBY_DIFFICULTY,
+        timed: options.timed === true,
+        timeLimitSeconds: options.timeLimitSeconds || room.lobbyTimeLimitSeconds || room.timeLimitSeconds || DEFAULT_TIME_LIMIT_SECONDS
+    });
+
+    const changed = room.lobbyDifficulty !== nextSettings.difficulty
+        || Boolean(room.lobbyTimed) !== nextSettings.timed
+        || Number(room.lobbyTimeLimitSeconds || DEFAULT_TIME_LIMIT_SECONDS) !== nextSettings.timeLimitSeconds;
+
+    room.lobbyDifficulty = nextSettings.difficulty;
+    room.lobbyTimed = nextSettings.timed;
+    room.lobbyTimeLimitSeconds = nextSettings.timeLimitSeconds;
+
+    return { changed, settings: nextSettings };
+}
+
+function getDuelLobbySettings(room) {
+    return normalizeDuelLobbySettings({
+        difficulty: room?.lobbyDifficulty || room?.difficulty || DEFAULT_LOBBY_DIFFICULTY,
+        timed: room?.lobbyTimed === true,
+        timeLimitSeconds: room?.lobbyTimeLimitSeconds || room?.timeLimitSeconds || DEFAULT_TIME_LIMIT_SECONDS
+    });
+}
+
 function createRoom(roomId, hostSocketId, authUser = null, options = {}) {
     const room = {
         roomId,
@@ -47,6 +90,9 @@ function createRoom(roomId, hostSocketId, authUser = null, options = {}) {
         driversList: [],
         timed: false,
         timeLimitSeconds: DEFAULT_TIME_LIMIT_SECONDS,
+        lobbyDifficulty: DEFAULT_LOBBY_DIFFICULTY,
+        lobbyTimed: false,
+        lobbyTimeLimitSeconds: DEFAULT_TIME_LIMIT_SECONDS,
         roundStartedAt: null,
         roundState: 'waiting',
         roundResult: null,
@@ -420,6 +466,8 @@ module.exports = {
     findRoomMemberByLobbyId,
     markRoomMemberDisconnectedBySocketId,
     selectSpectatorAsPlayer,
+    updateDuelLobbySettings,
+    getDuelLobbySettings,
     removePlayerFromRoom,
     removeInactiveRoomMembers,
     refreshRoomMemberAuth,

@@ -466,6 +466,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	setupDuelLobbyView({
 		timer,
 		onStartRound: (level) => startRoundFromSelection(level, { source: 'duel-lobby' }),
+		onSettingsChange: (settings) => socketController?.emit('updateDuelLobbySettings', settings),
 		onSelectPlayer: (lobbyId) => socketController?.emit('selectDuelPlayer', { lobbyId }),
 		onLeaveRoom: () => confirmDuelExit('home')
 	});

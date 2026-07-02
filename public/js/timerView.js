@@ -73,6 +73,18 @@ export function createTimerView({ getSocket, isRoundFinished, onHostOnlyMessage 
 		updateTimerControlsLock();
 	}
 
+	function applySelectedTimerSettings(enabled, timeLimitSeconds = selectedTimeLimitSeconds, options = {}) {
+		isTimedModeEnabled = Boolean(enabled);
+		selectedTimeLimitSeconds = normalizeTimeLimitSeconds(timeLimitSeconds);
+
+		if (options.persist !== false) {
+			localStorage.setItem('f1-guesser-timed-mode', isTimedModeEnabled ? 'on' : 'off');
+			localStorage.setItem('f1-guesser-time-limit', String(selectedTimeLimitSeconds));
+		}
+
+		syncTimerModeControls();
+	}
+
 	function setTimedMode(enabled, timeLimitSeconds = selectedTimeLimitSeconds) {
 		if (areRoundSettingsLocked) {
 			const status = document.getElementById("status");
@@ -87,11 +99,7 @@ export function createTimerView({ getSocket, isRoundFinished, onHostOnlyMessage 
 			return;
 		}
 
-		isTimedModeEnabled = enabled;
-		selectedTimeLimitSeconds = normalizeTimeLimitSeconds(timeLimitSeconds);
-		localStorage.setItem('f1-guesser-timed-mode', enabled ? 'on' : 'off');
-		localStorage.setItem('f1-guesser-time-limit', String(selectedTimeLimitSeconds));
-		syncTimerModeControls();
+		applySelectedTimerSettings(enabled, timeLimitSeconds, { persist: true });
 
 		const status = document.getElementById("status");
 		if (status && !isRoundFinished()) {
@@ -176,6 +184,7 @@ export function createTimerView({ getSocket, isRoundFinished, onHostOnlyMessage 
 		setHostStatus,
 		setRoundSettingsLocked,
 		setTimedMode,
+		applySelectedTimerSettings,
 		startRoundTimer,
 		hideRoundTimer,
 		stopRoundTimer,

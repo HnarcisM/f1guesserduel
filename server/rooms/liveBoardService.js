@@ -1,4 +1,4 @@
-const { MAX_PLAYERS_PER_ROOM } = require('../config/constants');
+const { MAX_PLAYERS_PER_ROOM, DEFAULT_TIME_LIMIT_SECONDS } = require('../config/constants');
 const { buildPublicRoundResult } = require('./roundResultService');
 const { buildPublicScoreboard } = require('./scoreboardService');
 
@@ -55,6 +55,14 @@ function buildLiveBoardState(room) {
     };
 }
 
+function buildPublicLobbySettings(room) {
+    return {
+        difficulty: room.lobbyDifficulty || room.difficulty || 'easy',
+        timed: room.lobbyTimed === true,
+        timeLimitSeconds: room.lobbyTimeLimitSeconds || room.timeLimitSeconds || DEFAULT_TIME_LIMIT_SECONDS
+    };
+}
+
 function buildPublicRoomState(room, options = {}) {
     const recipientSocketId = options.recipientSocketId || null;
     const players = Object.values(room.players || {}).map(member => serializeRoomMemberSummary(member, {
@@ -76,6 +84,7 @@ function buildPublicRoomState(room, options = {}) {
         difficulty: room.difficulty || null,
         timed: Boolean(room.timed),
         timeLimitSeconds: room.timeLimitSeconds || null,
+        lobbySettings: buildPublicLobbySettings(room),
         roundStartedAt: room.roundStartedAt || null,
         you: recipientSocketId ? serializeRoomMemberSummary((room.players || {})[recipientSocketId] || (room.spectators || {})[recipientSocketId] || {}, { isYou: true }) : null,
         isDailyChallenge: Boolean(room.isDailyChallenge),
@@ -90,5 +99,6 @@ module.exports = {
     serializeRoomMember,
     serializeRoomMemberSummary,
     buildLiveBoardState,
+    buildPublicLobbySettings,
     buildPublicRoomState
 };

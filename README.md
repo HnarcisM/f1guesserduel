@@ -606,6 +606,7 @@ Această separare este fundația pentru feature-urile de cameră: winner logic p
 - lobby-ul apare doar în mode-duel;
 - afișează Player 1, Player 2, spectatorii și hostul;
 - doar hostul poate modifica dificultatea, timerul și componența jucătorilor activi;
+- când hostul schimbă dificultatea sau timerul în lobby, playerul 2 și spectatorii văd imediat setarea nouă;
 - hostul poate selecta un spectator ca Player 2; dacă există deja Player 2, acesta devine spectator;
 - schimbarea Player 2 resetează automat scorul camerei la 0 - 0;
 - spectatorii pot vedea lobby-ul, dar nu pot interacționa cu setările sau selecția jucătorilor;
@@ -673,3 +674,10 @@ Panelul nu afișează piloții ghiciți de adversar. Rezultatul final și scoreb
 - Stabilized `test/frontendDuelLobbyView.test.js` by testing the exported leave-click handler directly instead of relying on a mocked DOM click event.
 - Added `createDuelLobbyLeaveClickHandler()` in `public/js/duelLobbyView.js` and reused it from the real lobby leave button.
 - This keeps the real lobby leave behavior unchanged while avoiding Windows-specific DOM mock flakiness.
+
+### Sync setări lobby Duel
+
+- Hostul poate schimba dificultatea și timerul în lobby, iar serverul salvează setările ca `lobbySettings`.
+- Player 2 și spectatorii primesc `roomStateUpdate` imediat și văd setările actualizate fără refresh.
+- Setările lobby-ului sunt blocate în timpul rundei active și se pot modifica doar când camera este în lobby.
+- Setările rămân strict pentru `Duel`; Single Play și Daily Challenge nu folosesc lobby.

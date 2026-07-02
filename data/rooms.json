@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "savedAt": "2026-07-02T00:12:09.814Z",
+  "savedAt": "2026-07-02T00:26:37.199Z",
   "rooms": [
     {
       "roomId": "vr9wqps",
@@ -548,6 +548,9 @@
       ],
       "timed": true,
       "timeLimitSeconds": 120,
+      "lobbyDifficulty": "easy",
+      "lobbyTimed": false,
+      "lobbyTimeLimitSeconds": 120,
       "roundStartedAt": 1782943219510,
       "roundState": "finished",
       "roundResult": {
@@ -556,6 +559,9 @@
         "winnerSocketId": null,
         "winnerUsername": "Guest 5",
         "resolvedAt": 1782943256393,
+        "finishedAt": null,
+        "allPlayersFinished": false,
+        "scoreApplied": false,
         "target": {
           "name": "Carlos Sainz"
         },
@@ -582,6 +588,7 @@
           }
         ]
       },
+      "scoreboard": {},
       "isDailyChallenge": false,
       "dailyDate": null,
       "dailyChallengeId": null
@@ -1132,9 +1139,13 @@
       ],
       "timed": false,
       "timeLimitSeconds": 60,
+      "lobbyDifficulty": "easy",
+      "lobbyTimed": false,
+      "lobbyTimeLimitSeconds": 60,
       "roundStartedAt": 1782944008738,
       "roundState": "playing",
       "roundResult": null,
+      "scoreboard": {},
       "isDailyChallenge": false,
       "dailyDate": null,
       "dailyChallengeId": null
@@ -1682,9 +1693,13 @@
       ],
       "timed": false,
       "timeLimitSeconds": 60,
+      "lobbyDifficulty": "easy",
+      "lobbyTimed": false,
+      "lobbyTimeLimitSeconds": 60,
       "roundStartedAt": 1782944248664,
       "roundState": "playing",
       "roundResult": null,
+      "scoreboard": {},
       "isDailyChallenge": false,
       "dailyDate": null,
       "dailyChallengeId": null
@@ -2233,6 +2248,9 @@
       ],
       "timed": true,
       "timeLimitSeconds": 90,
+      "lobbyDifficulty": "easy",
+      "lobbyTimed": false,
+      "lobbyTimeLimitSeconds": 90,
       "roundStartedAt": 1782944584196,
       "roundState": "finished",
       "roundResult": {
@@ -2241,6 +2259,9 @@
         "winnerSocketId": null,
         "winnerUsername": null,
         "resolvedAt": 1782944674206,
+        "finishedAt": null,
+        "allPlayersFinished": false,
+        "scoreApplied": false,
         "target": {
           "name": "Daniil Kvyat"
         },
@@ -2257,6 +2278,7 @@
           }
         ]
       },
+      "scoreboard": {},
       "isDailyChallenge": false,
       "dailyDate": null,
       "dailyChallengeId": null
@@ -2805,9 +2827,13 @@
       ],
       "timed": true,
       "timeLimitSeconds": 120,
+      "lobbyDifficulty": "easy",
+      "lobbyTimed": false,
+      "lobbyTimeLimitSeconds": 120,
       "roundStartedAt": 1782946264268,
       "roundState": "playing",
       "roundResult": null,
+      "scoreboard": {},
       "isDailyChallenge": false,
       "dailyDate": null,
       "dailyChallengeId": null
@@ -2823,9 +2849,13 @@
       "driversList": [],
       "timed": false,
       "timeLimitSeconds": 60,
+      "lobbyDifficulty": "easy",
+      "lobbyTimed": false,
+      "lobbyTimeLimitSeconds": 60,
       "roundStartedAt": null,
       "roundState": "waiting",
       "roundResult": null,
+      "scoreboard": {},
       "isDailyChallenge": false,
       "dailyDate": null,
       "dailyChallengeId": null
@@ -3373,6 +3403,9 @@
       ],
       "timed": true,
       "timeLimitSeconds": 120,
+      "lobbyDifficulty": "easy",
+      "lobbyTimed": false,
+      "lobbyTimeLimitSeconds": 120,
       "roundStartedAt": 1782946430119,
       "roundState": "finished",
       "roundResult": {
@@ -3381,6 +3414,9 @@
         "winnerSocketId": null,
         "winnerUsername": "Guest 3",
         "resolvedAt": 1782946445302,
+        "finishedAt": null,
+        "allPlayersFinished": false,
+        "scoreApplied": false,
         "target": {
           "name": "Gabriel Bortoleto"
         },
@@ -3407,6 +3443,7 @@
           }
         ]
       },
+      "scoreboard": {},
       "isDailyChallenge": false,
       "dailyDate": null,
       "dailyChallengeId": null
@@ -3422,9 +3459,13 @@
       "driversList": [],
       "timed": false,
       "timeLimitSeconds": 60,
+      "lobbyDifficulty": "easy",
+      "lobbyTimed": false,
+      "lobbyTimeLimitSeconds": 60,
       "roundStartedAt": null,
       "roundState": "waiting",
       "roundResult": null,
+      "scoreboard": {},
       "isDailyChallenge": false,
       "dailyDate": null,
       "dailyChallengeId": null
@@ -3971,9 +4012,13 @@
       ],
       "timed": true,
       "timeLimitSeconds": 120,
+      "lobbyDifficulty": "easy",
+      "lobbyTimed": false,
+      "lobbyTimeLimitSeconds": 120,
       "roundStartedAt": 1782946584839,
       "roundState": "playing",
       "roundResult": null,
+      "scoreboard": {},
       "isDailyChallenge": false,
       "dailyDate": null,
       "dailyChallengeId": null
@@ -3989,9 +4034,13 @@
       "driversList": [],
       "timed": false,
       "timeLimitSeconds": 60,
+      "lobbyDifficulty": "easy",
+      "lobbyTimed": false,
+      "lobbyTimeLimitSeconds": 60,
       "roundStartedAt": null,
       "roundState": "waiting",
       "roundResult": null,
+      "scoreboard": {},
       "isDailyChallenge": false,
       "dailyDate": null,
       "dailyChallengeId": null
@@ -4527,6 +4576,9 @@
       ],
       "timed": true,
       "timeLimitSeconds": 120,
+      "lobbyDifficulty": "easy",
+      "lobbyTimed": false,
+      "lobbyTimeLimitSeconds": 120,
       "roundStartedAt": null,
       "roundState": "waiting",
       "roundResult": {
@@ -4535,9 +4587,13 @@
         "winnerSocketId": null,
         "winnerUsername": null,
         "resolvedAt": 1782947639367,
+        "finishedAt": null,
+        "allPlayersFinished": false,
+        "scoreApplied": false,
         "target": null,
         "players": []
       },
+      "scoreboard": {},
       "isDailyChallenge": false,
       "dailyDate": null,
       "dailyChallengeId": null
@@ -4553,9 +4609,13 @@
       "driversList": [],
       "timed": false,
       "timeLimitSeconds": 60,
+      "lobbyDifficulty": "easy",
+      "lobbyTimed": false,
+      "lobbyTimeLimitSeconds": 60,
       "roundStartedAt": null,
       "roundState": "waiting",
       "roundResult": null,
+      "scoreboard": {},
       "isDailyChallenge": false,
       "dailyDate": null,
       "dailyChallengeId": null
@@ -4571,9 +4631,13 @@
       "driversList": [],
       "timed": false,
       "timeLimitSeconds": 60,
+      "lobbyDifficulty": "easy",
+      "lobbyTimed": false,
+      "lobbyTimeLimitSeconds": 60,
       "roundStartedAt": null,
       "roundState": "waiting",
       "roundResult": null,
+      "scoreboard": {},
       "isDailyChallenge": false,
       "dailyDate": null,
       "dailyChallengeId": null
@@ -4589,9 +4653,13 @@
       "driversList": [],
       "timed": false,
       "timeLimitSeconds": 60,
+      "lobbyDifficulty": "easy",
+      "lobbyTimed": false,
+      "lobbyTimeLimitSeconds": 60,
       "roundStartedAt": null,
       "roundState": "waiting",
       "roundResult": null,
+      "scoreboard": {},
       "isDailyChallenge": false,
       "dailyDate": null,
       "dailyChallengeId": null
@@ -4607,9 +4675,13 @@
       "driversList": [],
       "timed": false,
       "timeLimitSeconds": 60,
+      "lobbyDifficulty": "easy",
+      "lobbyTimed": false,
+      "lobbyTimeLimitSeconds": 60,
       "roundStartedAt": null,
       "roundState": "waiting",
       "roundResult": null,
+      "scoreboard": {},
       "isDailyChallenge": false,
       "dailyDate": null,
       "dailyChallengeId": null
@@ -4625,9 +4697,13 @@
       "driversList": [],
       "timed": false,
       "timeLimitSeconds": 60,
+      "lobbyDifficulty": "easy",
+      "lobbyTimed": false,
+      "lobbyTimeLimitSeconds": 60,
       "roundStartedAt": null,
       "roundState": "waiting",
       "roundResult": null,
+      "scoreboard": {},
       "isDailyChallenge": false,
       "dailyDate": null,
       "dailyChallengeId": null
@@ -4643,9 +4719,13 @@
       "driversList": [],
       "timed": false,
       "timeLimitSeconds": 60,
+      "lobbyDifficulty": "easy",
+      "lobbyTimed": false,
+      "lobbyTimeLimitSeconds": 60,
       "roundStartedAt": null,
       "roundState": "waiting",
       "roundResult": null,
+      "scoreboard": {},
       "isDailyChallenge": false,
       "dailyDate": null,
       "dailyChallengeId": null
@@ -4661,9 +4741,13 @@
       "driversList": [],
       "timed": false,
       "timeLimitSeconds": 60,
+      "lobbyDifficulty": "easy",
+      "lobbyTimed": false,
+      "lobbyTimeLimitSeconds": 60,
       "roundStartedAt": null,
       "roundState": "waiting",
       "roundResult": null,
+      "scoreboard": {},
       "isDailyChallenge": false,
       "dailyDate": null,
       "dailyChallengeId": null
@@ -5212,9 +5296,13 @@
       ],
       "timed": true,
       "timeLimitSeconds": 60,
+      "lobbyDifficulty": "easy",
+      "lobbyTimed": false,
+      "lobbyTimeLimitSeconds": 60,
       "roundStartedAt": 1782950192025,
       "roundState": "playing",
       "roundResult": null,
+      "scoreboard": {},
       "isDailyChallenge": false,
       "dailyDate": null,
       "dailyChallengeId": null
@@ -5848,6 +5936,9 @@
       ],
       "timed": true,
       "timeLimitSeconds": 120,
+      "lobbyDifficulty": "hard",
+      "lobbyTimed": false,
+      "lobbyTimeLimitSeconds": 120,
       "roundStartedAt": null,
       "roundState": "waiting",
       "roundResult": {
@@ -5856,8 +5947,603 @@
         "winnerSocketId": null,
         "winnerUsername": null,
         "resolvedAt": 1782951129558,
+        "finishedAt": null,
+        "allPlayersFinished": false,
+        "scoreApplied": false,
         "target": null,
         "players": []
+      },
+      "scoreboard": {},
+      "isDailyChallenge": false,
+      "dailyDate": null,
+      "dailyChallengeId": null
+    },
+    {
+      "roomId": "jk1oj25",
+      "hostId": null,
+      "players": {},
+      "spectators": {},
+      "nextGuestNumber": 4,
+      "targetDriver": null,
+      "difficulty": null,
+      "driversList": [],
+      "timed": false,
+      "timeLimitSeconds": 60,
+      "lobbyDifficulty": "easy",
+      "lobbyTimed": true,
+      "lobbyTimeLimitSeconds": 90,
+      "roundStartedAt": null,
+      "roundState": "waiting",
+      "roundResult": null,
+      "scoreboard": {
+        "user:3": {
+          "scoreKey": "user:3",
+          "username": "mihai",
+          "wins": 0
+        },
+        "user:2": {
+          "scoreKey": "user:2",
+          "username": "bonib0n",
+          "wins": 0
+        },
+        "guest:Guest 3": {
+          "scoreKey": "guest:Guest 3",
+          "username": "Guest 3",
+          "wins": 0
+        }
+      },
+      "isDailyChallenge": false,
+      "dailyDate": null,
+      "dailyChallengeId": null
+    },
+    {
+      "roomId": "bv067vk",
+      "hostId": null,
+      "players": {},
+      "spectators": {},
+      "nextGuestNumber": 4,
+      "targetDriver": null,
+      "difficulty": "easy",
+      "driversList": [
+        {
+          "id": "LIN",
+          "name": "Arvid Lindblad",
+          "nat": "GBR",
+          "team": [
+            "Racing Bulls"
+          ],
+          "age": 18,
+          "debut": 2026,
+          "wins": 0,
+          "difficulty": "easy"
+        },
+        {
+          "id": "ANT",
+          "name": "Andrea Kimi Antonelli",
+          "nat": "ITA",
+          "team": [
+            "Mercedes"
+          ],
+          "age": 19,
+          "debut": 2025,
+          "wins": 5,
+          "difficulty": "easy"
+        },
+        {
+          "id": "BOR",
+          "name": "Gabriel Bortoleto",
+          "nat": "BRA",
+          "team": [
+            "Audi",
+            "Sauber"
+          ],
+          "age": 21,
+          "debut": 2025,
+          "wins": 0,
+          "difficulty": "easy"
+        },
+        {
+          "id": "HAD",
+          "name": "Isack Hadjar",
+          "nat": "FRA",
+          "team": [
+            "Red Bull",
+            "Racing Bulls"
+          ],
+          "age": 21,
+          "debut": 2025,
+          "wins": 0,
+          "difficulty": "easy"
+        },
+        {
+          "id": "COL",
+          "name": "Franco Colapinto",
+          "nat": "ARG",
+          "team": [
+            "Alpine",
+            "Williams"
+          ],
+          "age": 23,
+          "debut": 2024,
+          "wins": 0,
+          "difficulty": "easy"
+        },
+        {
+          "id": "BEA",
+          "name": "Oliver Bearman",
+          "nat": "GBR",
+          "team": [
+            "Haas",
+            "Ferrari"
+          ],
+          "age": 21,
+          "debut": 2024,
+          "wins": 0,
+          "difficulty": "easy"
+        },
+        {
+          "id": "LAW",
+          "name": "Liam Lawson",
+          "nat": "NZL",
+          "team": [
+            "Racing Bulls",
+            "RB",
+            "AlphaTauri"
+          ],
+          "age": 24,
+          "debut": 2023,
+          "wins": 0,
+          "difficulty": "easy"
+        },
+        {
+          "id": "PIA",
+          "name": "Oscar Piastri",
+          "nat": "AUS",
+          "team": [
+            "McLaren"
+          ],
+          "age": 25,
+          "debut": 2023,
+          "wins": 9,
+          "difficulty": "easy"
+        },
+        {
+          "id": "ALB",
+          "name": "Alexander Albon",
+          "nat": "THA",
+          "team": [
+            "Williams",
+            "Red Bull",
+            "Toro Rosso"
+          ],
+          "age": 30,
+          "debut": 2019,
+          "wins": 0,
+          "difficulty": "easy"
+        },
+        {
+          "id": "RUS",
+          "name": "George Russell",
+          "nat": "GBR",
+          "team": [
+            "Mercedes",
+            "Williams"
+          ],
+          "age": 28,
+          "debut": 2019,
+          "wins": 7,
+          "difficulty": "easy"
+        },
+        {
+          "id": "NOR",
+          "name": "Lando Norris",
+          "nat": "GBR",
+          "team": [
+            "McLaren"
+          ],
+          "age": 26,
+          "debut": 2019,
+          "wins": 11,
+          "difficulty": "easy"
+        },
+        {
+          "id": "LEC",
+          "name": "Charles Leclerc",
+          "nat": "MON",
+          "team": [
+            "Ferrari",
+            "Sauber"
+          ],
+          "age": 28,
+          "debut": 2018,
+          "wins": 9,
+          "difficulty": "easy"
+        },
+        {
+          "id": "STR",
+          "name": "Lance Stroll",
+          "nat": "CAN",
+          "team": [
+            "Aston Martin",
+            "Racing Point",
+            "Williams"
+          ],
+          "age": 27,
+          "debut": 2017,
+          "wins": 0,
+          "difficulty": "easy"
+        },
+        {
+          "id": "GAS",
+          "name": "Pierre Gasly",
+          "nat": "FRA",
+          "team": [
+            "Alpine",
+            "AlphaTauri",
+            "Toro Rosso",
+            "Red Bull"
+          ],
+          "age": 30,
+          "debut": 2017,
+          "wins": 1,
+          "difficulty": "easy"
+        },
+        {
+          "id": "OCO",
+          "name": "Esteban Ocon",
+          "nat": "FRA",
+          "team": [
+            "Haas",
+            "Alpine",
+            "Renault",
+            "Force India",
+            "Manor"
+          ],
+          "age": 29,
+          "debut": 2016,
+          "wins": 1,
+          "difficulty": "easy"
+        },
+        {
+          "id": "SAI",
+          "name": "Carlos Sainz",
+          "nat": "ESP",
+          "team": [
+            "Williams",
+            "Ferrari",
+            "McLaren",
+            "Renault",
+            "Toro Rosso"
+          ],
+          "age": 31,
+          "debut": 2015,
+          "wins": 4,
+          "difficulty": "easy"
+        },
+        {
+          "id": "VER",
+          "name": "Max Verstappen",
+          "nat": "NED",
+          "team": [
+            "Red Bull",
+            "Toro Rosso"
+          ],
+          "age": 28,
+          "debut": 2015,
+          "wins": 71,
+          "difficulty": "easy"
+        },
+        {
+          "id": "BOT",
+          "name": "Valtteri Bottas",
+          "nat": "FIN",
+          "team": [
+            "Cadillac",
+            "Sauber",
+            "Alfa Romeo",
+            "Mercedes",
+            "Williams"
+          ],
+          "age": 36,
+          "debut": 2013,
+          "wins": 10,
+          "difficulty": "easy"
+        },
+        {
+          "id": "PER",
+          "name": "Sergio Perez",
+          "nat": "MEX",
+          "team": [
+            "Cadillac",
+            "Red Bull",
+            "Racing Point",
+            "Force India",
+            "McLaren",
+            "Sauber"
+          ],
+          "age": 36,
+          "debut": 2011,
+          "wins": 6,
+          "difficulty": "easy"
+        },
+        {
+          "id": "HUL",
+          "name": "Nico Hulkenberg",
+          "nat": "GER",
+          "team": [
+            "Audi",
+            "Sauber",
+            "Haas",
+            "Aston Martin",
+            "Renault",
+            "Force India",
+            "Williams"
+          ],
+          "age": 38,
+          "debut": 2010,
+          "wins": 0,
+          "difficulty": "easy"
+        },
+        {
+          "id": "HAM",
+          "name": "Lewis Hamilton",
+          "nat": "GBR",
+          "team": [
+            "Ferrari",
+            "Mercedes",
+            "McLaren"
+          ],
+          "age": 41,
+          "debut": 2007,
+          "wins": 106,
+          "difficulty": "easy"
+        },
+        {
+          "id": "ALO",
+          "name": "Fernando Alonso",
+          "nat": "ESP",
+          "team": [
+            "Aston Martin",
+            "Alpine",
+            "McLaren",
+            "Ferrari",
+            "Renault",
+            "Minardi"
+          ],
+          "age": 44,
+          "debut": 2001,
+          "wins": 32,
+          "difficulty": "easy"
+        },
+        {
+          "id": "VET",
+          "name": "Sebastian Vettel",
+          "nat": "GER",
+          "team": [
+            "Aston Martin",
+            "Ferrari",
+            "Red Bull",
+            "Toro Rosso",
+            "BMW"
+          ],
+          "age": 38,
+          "debut": 2007,
+          "wins": 53,
+          "difficulty": "easy"
+        },
+        {
+          "id": "ROS",
+          "name": "Nico Rosberg",
+          "nat": "GER",
+          "team": [
+            "Mercedes",
+            "Williams"
+          ],
+          "age": 40,
+          "debut": 2006,
+          "wins": 23,
+          "difficulty": "easy"
+        },
+        {
+          "id": "RAI",
+          "name": "Kimi Raikkonen",
+          "nat": "FIN",
+          "team": [
+            "Alfa Romeo",
+            "Ferrari",
+            "Lotus",
+            "McLaren",
+            "Sauber"
+          ],
+          "age": 46,
+          "debut": 2001,
+          "wins": 21,
+          "difficulty": "easy"
+        },
+        {
+          "id": "BUT",
+          "name": "Jenson Button",
+          "nat": "GBR",
+          "team": [
+            "McLaren",
+            "Brawn",
+            "Honda",
+            "BAR",
+            "Renault",
+            "Williams"
+          ],
+          "age": 46,
+          "debut": 2000,
+          "wins": 15,
+          "difficulty": "easy"
+        },
+        {
+          "id": "KVY",
+          "name": "Daniil Kvyat",
+          "nat": "RUS",
+          "team": [
+            "AlphaTauri",
+            "Toro Rosso",
+            "Red Bull"
+          ],
+          "age": 32,
+          "debut": 2014,
+          "wins": 0,
+          "difficulty": "easy"
+        },
+        {
+          "id": "RIC",
+          "name": "Daniel Ricciardo",
+          "nat": "AUS",
+          "team": [
+            "RB",
+            "AlphaTauri",
+            "McLaren",
+            "Renault",
+            "Red Bull",
+            "Toro Rosso",
+            "HRT"
+          ],
+          "age": 36,
+          "debut": 2011,
+          "wins": 8,
+          "difficulty": "easy"
+        },
+        {
+          "id": "MAL",
+          "name": "Pastor Maldonado",
+          "nat": "VEN",
+          "team": [
+            "Lotus",
+            "Williams"
+          ],
+          "age": 41,
+          "debut": 2011,
+          "wins": 1,
+          "difficulty": "easy"
+        },
+        {
+          "id": "GRO",
+          "name": "Romain Grosjean",
+          "nat": "FRA",
+          "team": [
+            "Haas",
+            "Lotus",
+            "Renault"
+          ],
+          "age": 40,
+          "debut": 2009,
+          "wins": 0,
+          "difficulty": "easy"
+        },
+        {
+          "id": "KUB",
+          "name": "Robert Kubica",
+          "nat": "POL",
+          "team": [
+            "Alfa Romeo",
+            "Williams",
+            "Renault",
+            "BMW"
+          ],
+          "age": 41,
+          "debut": 2006,
+          "wins": 1,
+          "difficulty": "easy"
+        },
+        {
+          "id": "MAS",
+          "name": "Felipe Massa",
+          "nat": "BRA",
+          "team": [
+            "Williams",
+            "Ferrari",
+            "Sauber"
+          ],
+          "age": 45,
+          "debut": 2002,
+          "wins": 11,
+          "difficulty": "easy"
+        },
+        {
+          "id": "WEB",
+          "name": "Mark Webber",
+          "nat": "AUS",
+          "team": [
+            "Red Bull",
+            "Williams",
+            "Jaguar",
+            "Minardi"
+          ],
+          "age": 49,
+          "debut": 2002,
+          "wins": 9,
+          "difficulty": "easy"
+        },
+        {
+          "id": "MON",
+          "name": "Juan Pablo Montoya",
+          "nat": "COL",
+          "team": [
+            "McLaren",
+            "Williams"
+          ],
+          "age": 50,
+          "debut": 2001,
+          "wins": 7,
+          "difficulty": "easy"
+        },
+        {
+          "id": "COU",
+          "name": "David Coulthard",
+          "nat": "GBR",
+          "team": [
+            "Red Bull",
+            "McLaren",
+            "Williams"
+          ],
+          "age": 55,
+          "debut": 1994,
+          "wins": 13,
+          "difficulty": "easy"
+        },
+        {
+          "id": "BAR",
+          "name": "Rubens Barrichello",
+          "nat": "BRA",
+          "team": [
+            "Williams",
+            "Brawn",
+            "Honda",
+            "Ferrari",
+            "Stewart",
+            "Jordan"
+          ],
+          "age": 54,
+          "debut": 1993,
+          "wins": 11,
+          "difficulty": "easy"
+        }
+      ],
+      "timed": true,
+      "timeLimitSeconds": 120,
+      "lobbyDifficulty": "easy",
+      "lobbyTimed": true,
+      "lobbyTimeLimitSeconds": 120,
+      "roundStartedAt": null,
+      "roundState": "waiting",
+      "roundResult": null,
+      "scoreboard": {
+        "user:3": {
+          "scoreKey": "user:3",
+          "username": "mihai",
+          "wins": 0
+        },
+        "guest:Guest 3": {
+          "scoreKey": "guest:Guest 3",
+          "username": "Guest 3",
+          "wins": 0
+        }
       },
       "isDailyChallenge": false,
       "dailyDate": null,
