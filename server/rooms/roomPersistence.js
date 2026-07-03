@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const ROOM_PERSISTENCE_VERSION = 1;
+const ROOM_PERSISTENCE_VERSION = 2;
 
 function cloneRoundResult(roundResult) {
     if (!roundResult || typeof roundResult !== 'object') return null;
@@ -44,6 +44,48 @@ function cloneDriver(driver) {
     return { ...driver };
 }
 
+function getDriverId(driver) {
+    if (typeof driver === 'string' && driver.trim()) return driver.trim();
+    if (!driver || typeof driver !== 'object') return null;
+    return typeof driver.id === 'string' && driver.id.trim() ? driver.id.trim() : null;
+}
+
+function resolveDriversFromRepository(driversRepository, difficulty) {
+    if (!driversRepository || typeof driversRepository.getDriversByDifficulty !== 'function') return [];
+    if (!difficulty) return [];
+
+    try {
+        const drivers = driversRepository.getDriversByDifficulty(difficulty);
+        return Array.isArray(drivers) ? drivers.map(cloneDriver).filter(Boolean) : [];
+    } catch {
+        return [];
+    }
+}
+
+function resolveDriversList(rawRoom, options = {}) {
+    const repositoryDrivers = resolveDriversFromRepository(options.driversRepository, rawRoom?.difficulty);
+    if (repositoryDrivers.length > 0) return repositoryDrivers;
+
+    if (Array.isArray(rawRoom?.driversList)) {
+        return rawRoom.driversList.map(cloneDriver).filter(Boolean);
+    }
+
+    return [];
+}
+
+function resolveTargetDriver(rawRoom, driversList) {
+    const targetDriverId = getDriverId(rawRoom?.targetDriverId) || getDriverId(rawRoom?.targetDriver);
+    if (!targetDriverId) return null;
+
+    const targetFromList = driversList.find(driver => getDriverId(driver) === targetDriverId);
+    if (targetFromList) return cloneDriver(targetFromList);
+
+    const legacyTarget = cloneDriver(rawRoom?.targetDriver);
+    if (legacyTarget) return legacyTarget;
+
+    return { id: targetDriverId };
+}
+
 function serializeRoom(room) {
     if (!room || typeof room !== 'object' || !room.roomId) return null;
 
@@ -53,9 +95,8 @@ function serializeRoom(room) {
         players: {},
         spectators: {},
         nextGuestNumber: typeof room.nextGuestNumber === 'number' ? room.nextGuestNumber : 1,
-        targetDriver: cloneDriver(room.targetDriver),
+        targetDriverId: getDriverId(room.targetDriver) || getDriverId(room.targetDriverId),
         difficulty: room.difficulty || null,
-        driversList: Array.isArray(room.driversList) ? room.driversList.map(cloneDriver).filter(Boolean) : [],
         timed: Boolean(room.timed),
         timeLimitSeconds: room.timeLimitSeconds,
         lobbyDifficulty: room.lobbyDifficulty || room.difficulty || 'easy',
@@ -71,13 +112,18 @@ function serializeRoom(room) {
     };
 }
 
-function deserializeRoom(rawRoom) {
+function deserializeRoom(rawRoom, options = {}) {
     const room = serializeRoom(rawRoom);
     if (!room) return null;
+
+    const driversList = resolveDriversList(rawRoom, options);
 
     room.hostId = null;
     room.players = {};
     room.spectators = {};
+    room.driversList = driversList;
+    room.targetDriver = resolveTargetDriver(rawRoom, driversList);
+
     return room;
 }
 
@@ -91,7 +137,7 @@ function serializeRooms(rooms) {
     };
 }
 
-function readPersistedRooms(filePath) {
+function readPersistedRooms(filePath, options = {}) {
     if (!filePath || !fs.existsSync(filePath)) return [];
 
     const raw = fs.readFileSync(filePath, 'utf8');
@@ -102,7 +148,7 @@ function readPersistedRooms(filePath) {
     if (!Array.isArray(rawRooms)) return [];
 
     return rawRooms
-        .map(deserializeRoom)
+        .map(rawRoom => deserializeRoom(rawRoom, options))
         .filter(Boolean);
 }
 

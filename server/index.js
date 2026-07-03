@@ -39,7 +39,8 @@ const driversRepository = createDriversRepository({
 const gameService = createGameService(driversRepository);
 const roomStore = createPersistentRoomStore({
     persistenceFilePath: config.rooms.persistenceFilePath,
-    saveDebounceMs: config.rooms.saveDebounceMs
+    saveDebounceMs: config.rooms.saveDebounceMs,
+    driversRepository
 });
 const db = createDatabase({
     dbFilePath: config.dbFilePath,

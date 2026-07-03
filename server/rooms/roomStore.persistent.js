@@ -12,7 +12,11 @@ function createPersistentRoomStore(options = {}) {
     let saveTimer = null;
     let lastSaveError = null;
 
-    for (const room of readPersistedRooms(persistenceFilePath)) {
+    const persistenceOptions = {
+        driversRepository: options.driversRepository
+    };
+
+    for (const room of readPersistedRooms(persistenceFilePath, persistenceOptions)) {
         rooms.set(room.roomId, room);
     }
 
