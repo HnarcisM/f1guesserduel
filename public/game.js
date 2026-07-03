@@ -275,6 +275,11 @@ function sendGuess() {
 	autocomplete.clearSelectedDriverId();
 }
 
+function resetDailyModeForDuel() {
+	dailyChallengeController?.setStartPending?.(false);
+	dailyChallengeController?.setMode?.(false);
+}
+
 function startDailyFromSelection(level) {
 	const leaveResult = confirmDuelExit('daily');
 	if (leaveResult === false || leaveResult === 'to-lobby') return;
@@ -349,6 +354,8 @@ function enterSingleMode(message = 'Single Play: selectează dificultatea pentru
 }
 
 function enterDuelMode(roomId = null) {
+	resetDailyModeForDuel();
+
 	const joinedRoomId = setupRoom({
 		getSocket: socketController.getSocket,
 		roomId,

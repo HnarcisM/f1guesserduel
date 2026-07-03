@@ -9,3 +9,6 @@ node_modules/
 /data/*.sqlite
 /data/*.sqlite-shm
 /data/*.sqlite-wal
+
+# Runtime room persistence file
+/data/rooms.json

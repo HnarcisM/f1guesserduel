@@ -180,3 +180,37 @@ test('test-only forced duel target keeps E2E rounds deterministic without affect
         else process.env.E2E_FIXED_DUEL_TARGET_ID = previousForcedTarget;
     }
 });
+
+
+test('daily frontend reset clears pending state and exits Daily mode before switching to Duel', async () => {
+    const { createGameModeController } = await import('../public/js/gameModeController.js');
+    const { createDailyChallengeController } = await import('../public/js/dailyChallengeController.js');
+
+    const gameModeController = createGameModeController();
+    const dailyController = createDailyChallengeController({
+        gameModeController,
+        roleState: { setSpectatorMode() {} },
+        timer: { hideRoundTimer() {} },
+        getCurrentUser: () => null,
+        getSocket: () => null,
+        setDriversList() {},
+        setRoundFinished() {},
+        exitRematchMode() {},
+        initializeGridStructure() {},
+        resetLiveBoard() {}
+    });
+
+    dailyController.setStartPending(true);
+    dailyController.setMode(true, { difficulty: 'easy' });
+
+    assert.equal(dailyController.isStartPending(), false);
+    assert.equal(dailyController.isMode(), true);
+    assert.equal(gameModeController.isDaily(), true);
+
+    dailyController.setStartPending(false);
+    dailyController.setMode(false);
+
+    assert.equal(dailyController.isStartPending(), false);
+    assert.equal(dailyController.isMode(), false);
+    assert.equal(gameModeController.isDaily(), false);
+});
