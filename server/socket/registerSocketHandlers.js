@@ -106,6 +106,11 @@ function registerSocketHandlers(io, dependencies) {
     io.on('connection', (socket) => {
         let currentRoom = null;
 
+        function clearSoloModeSessions() {
+            singleSessions.delete(socket.id);
+            dailySessions.delete(socket.id);
+        }
+
         socket.on('joinRoom', (payload) => {
             const { roomId, clientId } = normalizeJoinRoomPayload(payload);
             if (!isValidRoomId(roomId)) {
@@ -130,6 +135,8 @@ function registerSocketHandlers(io, dependencies) {
                 socket.emit('roomFull', { maxPlayers: MAX_PLAYERS_PER_ROOM });
                 return;
             }
+
+            clearSoloModeSessions();
 
             currentRoom = roomId;
             socket.join(roomId);
@@ -564,6 +571,9 @@ function registerSocketHandlers(io, dependencies) {
                 return;
             }
 
+            leaveCurrentRoom();
+            singleSessions.delete(socket.id);
+
             dailySessions.set(socket.id, {
                 difficulty: dailyPayload.difficulty,
                 driversList: dailyPayload.drivers,
@@ -745,7 +755,7 @@ function registerSocketHandlers(io, dependencies) {
         socket.on('leaveRoom', leaveCurrentRoom);
         socket.on('disconnecting', markCurrentRoomDisconnected);
         socket.on('disconnect', () => {
-            singleSessions.delete(socket.id);
+            clearSoloModeSessions();
             markCurrentRoomDisconnected();
         });
     });

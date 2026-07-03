@@ -149,3 +149,58 @@ test('duel room state shows guess controls for active local player', async () =>
     assert.equal(calls.showGuessControls, 1);
     assert.equal(calls.hideGuessControls, 0);
 });
+
+test('duel initGame is processed after Daily state is cleared during Daily to Duel transition', async () => {
+    let dailyMode = true;
+    let dailyStartPending = true;
+    let duelMode = false;
+    let receivedDrivers = null;
+    let initializedGrid = 0;
+    const duelStates = [];
+    let enterDuelCalls = 0;
+
+    const { socket, calls } = await setupSocketEvents({
+        isDailyMode: () => dailyMode,
+        isDailyStartPending: () => dailyStartPending,
+        isDuelMode: () => duelMode,
+        setDailyMode(value) { dailyMode = Boolean(value); },
+        setDriversList(drivers) { receivedDrivers = drivers; },
+        initializeGridStructure() { initializedGrid += 1; },
+        exitRematchMode() {},
+        resetDuelLobby() {},
+        resetOpponentProgress() {},
+        enterDuelMode() {
+            enterDuelCalls += 1;
+            duelMode = true;
+        },
+        setDuelRoundState(state) { duelStates.push(state); }
+    });
+
+    const payload = {
+        isSinglePlay: false,
+        isDailyChallenge: false,
+        difficulty: 'easy',
+        timed: false,
+        drivers: [{ id: 'VER', name: 'Max Verstappen' }]
+    };
+
+    socket.emitEvent('initGame', payload);
+
+    assert.equal(receivedDrivers, null);
+    assert.equal(initializedGrid, 0);
+    assert.equal(calls.showGuessControls, 0);
+
+    dailyStartPending = false;
+    dailyMode = false;
+    duelMode = true;
+
+    socket.emitEvent('initGame', payload);
+
+    assert.deepEqual(receivedDrivers, payload.drivers);
+    assert.equal(initializedGrid, 1);
+    assert.equal(enterDuelCalls, 1);
+    assert.deepEqual(duelStates, ['playing']);
+    assert.deepEqual(calls.roundFinished, [false]);
+    assert.equal(calls.showGuessControls, 1);
+});
+
