@@ -2,6 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
+const args = new Set(process.argv.slice(2));
+const strictMode = args.has('--strict') || process.env.F1_STRICT_PLAYWRIGHT_INSTALL === '1';
+
 function log(message) {
     console.log(`[playwright] ${message}`);
 }
@@ -40,6 +43,17 @@ function installChromium() {
     runCommand(npxCommand, ['playwright', 'install', 'chromium']);
 }
 
+function failOrWarn(error) {
+    warn('Nu am putut verifica/instala automat Chromium pentru Playwright.');
+    warn(error && error.message ? error.message : String(error));
+    warn('Setup recomandat: npm install && npm run test:e2e:install');
+    warn('Instalare manuală alternativă: npx playwright install chromium');
+
+    if (strictMode) {
+        process.exit(1);
+    }
+}
+
 try {
     const { chromium } = require('playwright');
     const chromiumPath = chromium.executablePath();
@@ -50,15 +64,9 @@ try {
     }
 
     log('Chromium pentru testele E2E lipsește. Îl instalez automat...');
-    log('Vei vedea progresul descarcarii direct in consola Playwright.');
+    log('Vei vedea progresul descărcării direct în consola Playwright.');
     installChromium();
     log('Chromium pentru testele E2E a fost instalat.');
 } catch (error) {
-    warn('Nu am putut verifica/instala automat Chromium pentru Playwright.');
-    warn(error && error.message ? error.message : String(error));
-    warn('Poți rula manual: npx playwright install chromium');
-
-    if (process.env.F1_STRICT_PLAYWRIGHT_INSTALL === '1') {
-        process.exit(1);
-    }
+    failOrWarn(error);
 }

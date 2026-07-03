@@ -13,8 +13,10 @@
     "dev": "node server/index.js",
     "test": "node --test test/*.test.js",
     "test:e2e": "node --test --test-timeout=60000 test/e2e/*.test.js",
+    "pretest:e2e": "node scripts/ensure-playwright-browser.js --strict",
+    "test:e2e:install": "node scripts/ensure-playwright-browser.js --strict",
     "test:all": "npm test && npm run test:e2e",
-    "e2e:install": "node scripts/ensure-playwright-browser.js"
+    "e2e:install": "npm run test:e2e:install"
   },
   "engines": {
     "node": "22.x"

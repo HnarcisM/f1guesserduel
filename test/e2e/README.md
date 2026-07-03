@@ -30,14 +30,18 @@ Setup inițial:
 
 ```bash
 npm install
-npm run e2e:install
+npm run test:e2e:install
 ```
+
+`npm run e2e:install` rămâne disponibil ca alias pentru compatibilitate.
 
 Teste E2E:
 
 ```bash
 npm run test:e2e
 ```
+
+`npm run test:e2e` rulează automat `pretest:e2e`, care verifică Chromium înainte de pornirea browserului. Dacă Chromium lipsește, scriptul încearcă instalarea și oprește testele cu mesaj explicit dacă instalarea nu reușește.
 
 Testele E2E au timeout de siguranță de 60 de secunde, ca să nu rămână blocate fără rezultat.
 
@@ -68,4 +72,4 @@ Daily Challenge se resetează la miezul nopții local al browserului și este bl
 
 ## Test launcher progress
 
-`F1GuesserDuel_Tests.bat` afișează mesaje `[progress]` pentru comenzile lungi, inclusiv `npm install`, instalarea Chromium Playwright și testele E2E.
+`F1GuesserDuel_Tests.bat` și `F1GuesserDuel_Tests_cachyos.sh` afișează mesaje `[progress]` pentru comenzile lungi, inclusiv `npm install`, instalarea Chromium Playwright și testele E2E.

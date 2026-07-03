@@ -13,6 +13,7 @@ Aplicația rulează cu **Node.js**, **Express** și **Socket.IO**, iar interfaț
 - [Tehnologii folosite](#tehnologii-folosite)
 - [Structura proiectului](#structura-proiectului)
 - [Instalare și rulare locală](#instalare-și-rulare-locală)
+- [Testare locală și E2E](#testare-locală-și-e2e)
 - [Testare pe telefon](#testare-pe-telefon)
 - [Moduri de dificultate](#moduri-de-dificultate)
 - [Teme vizuale](#teme-vizuale)
@@ -136,6 +137,46 @@ node server/index.js
 http://localhost:3000
 ```
 
+
+---
+
+## Testare locală și E2E
+
+### Teste backend/unitare
+
+```bash
+npm test
+```
+
+### Setup Playwright pentru E2E
+
+După `npm install`, instalează browserul Chromium folosit de Playwright:
+
+```bash
+npm run test:e2e:install
+```
+
+Aliasul vechi rămâne disponibil:
+
+```bash
+npm run e2e:install
+```
+
+### Teste E2E
+
+```bash
+npm run test:e2e
+```
+
+`npm run test:e2e` verifică automat Chromium înainte de rulare, prin scriptul `pretest:e2e`. Dacă browserul lipsește, încearcă să îl instaleze și oprește testele cu mesaj clar dacă instalarea eșuează.
+
+### Toate testele
+
+```bash
+npm run test:all
+```
+
+Detalii suplimentare pentru scenariile E2E sunt în `test/e2e/README.md`.
 
 ---
 
