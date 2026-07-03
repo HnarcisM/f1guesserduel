@@ -1,10 +1,11 @@
 import { DEFAULT_TIME_LIMIT_SECONDS, normalizeTimeLimitSeconds } from './constants.js';
+import { safeGetItem, safeSetItem } from './safeStorage.js';
 
 /** Controller pentru UI-ul timerului și preferința locală a hostului. */
 export function createTimerView({ getSocket, isRoundFinished, onHostOnlyMessage }) {
 	let isCurrentRoomHost = false;
-	let isTimedModeEnabled = localStorage.getItem('f1-guesser-timed-mode') === 'on';
-	let selectedTimeLimitSeconds = Number(localStorage.getItem('f1-guesser-time-limit')) || DEFAULT_TIME_LIMIT_SECONDS;
+	let isTimedModeEnabled = safeGetItem('f1-guesser-timed-mode') === 'on';
+	let selectedTimeLimitSeconds = Number(safeGetItem('f1-guesser-time-limit')) || DEFAULT_TIME_LIMIT_SECONDS;
 	let currentRoundTimed = false;
 	let currentTimeLimitSeconds = DEFAULT_TIME_LIMIT_SECONDS;
 	let areRoundSettingsLocked = false;
@@ -78,8 +79,8 @@ export function createTimerView({ getSocket, isRoundFinished, onHostOnlyMessage 
 		selectedTimeLimitSeconds = normalizeTimeLimitSeconds(timeLimitSeconds);
 
 		if (options.persist !== false) {
-			localStorage.setItem('f1-guesser-timed-mode', isTimedModeEnabled ? 'on' : 'off');
-			localStorage.setItem('f1-guesser-time-limit', String(selectedTimeLimitSeconds));
+			safeSetItem('f1-guesser-timed-mode', isTimedModeEnabled ? 'on' : 'off');
+			safeSetItem('f1-guesser-time-limit', String(selectedTimeLimitSeconds));
 		}
 
 		syncTimerModeControls();

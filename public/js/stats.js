@@ -1,5 +1,6 @@
 /** Local browser statistics rendering. */
 import { createTextElement, setTextContentById } from './domUtils.js';
+import { safeGetItem, safeRemoveItem, safeSetItem } from './safeStorage.js';
 
 /**
  * Citește statisticile locale din localStorage.
@@ -15,10 +16,10 @@ export function getStats() {
 
 	let stats = null;
 	try {
-		const rawStats = localStorage.getItem('f1-guesser-stats');
+		const rawStats = safeGetItem('f1-guesser-stats');
 		stats = rawStats ? JSON.parse(rawStats) : null;
 	} catch (error) {
-		localStorage.removeItem?.('f1-guesser-stats');
+		safeRemoveItem('f1-guesser-stats');
 		return defaultStats;
 	}
 
@@ -47,7 +48,7 @@ export function updateStats(isWin, attempts) {
 		stats.streak = 0; // Resetăm streak-ul la înfrângere
 	}
 	
-	localStorage.setItem('f1-guesser-stats', JSON.stringify(stats));
+	safeSetItem('f1-guesser-stats', JSON.stringify(stats));
 }
 
 /** Calculează procentul de victorii, rotunjit la cel mai apropiat întreg. */

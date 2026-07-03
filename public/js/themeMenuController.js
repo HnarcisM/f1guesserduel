@@ -1,5 +1,7 @@
+import { safeGetItem, safeSetItem } from './safeStorage.js';
+
 export function setupThemeMenu(menu) {
-	const savedTheme = localStorage.getItem('f1-guesser-theme') || 'default';
+	const savedTheme = safeGetItem('f1-guesser-theme', 'default');
 	document.body.setAttribute('data-app-theme', savedTheme);
 
 	document.querySelectorAll('.theme-item').forEach(item => {
@@ -7,7 +9,7 @@ export function setupThemeMenu(menu) {
 			e.stopPropagation();
 			const selectedTheme = this.getAttribute('data-theme');
 			document.body.setAttribute('data-app-theme', selectedTheme);
-			localStorage.setItem('f1-guesser-theme', selectedTheme);
+			safeSetItem('f1-guesser-theme', selectedTheme);
 			if (menu) menu.classList.add('hidden');
 		});
 	});

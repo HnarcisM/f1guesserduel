@@ -1,3 +1,5 @@
+import { safeGetItem, safeSetItem } from './safeStorage.js';
+
 const DAILY_CHALLENGE_VERSION = 'f1-daily-v1';
 const DAILY_COMPLETION_PREFIX = 'f1-daily-completed';
 
@@ -55,7 +57,7 @@ export function createDailyChallengeState({ getCurrentUser } = {}) {
 
 	function isCompleted(level) {
 		const challengeId = getTodayChallengeId(level);
-		return Boolean(localStorage.getItem(getCompletionStorageKey(challengeId, getCurrentOwnerKey())));
+		return Boolean(safeGetItem(getCompletionStorageKey(challengeId, getCurrentOwnerKey())));
 	}
 
 	function markCompleted({ level, challengeId, dailyDate }) {
@@ -65,7 +67,7 @@ export function createDailyChallengeState({ getCurrentUser } = {}) {
 
 		const finalChallengeId = challengeId || getTodayChallengeId(level);
 		const ownerKey = getCurrentOwnerKey();
-		localStorage.setItem(getCompletionStorageKey(finalChallengeId, ownerKey), JSON.stringify({
+		safeSetItem(getCompletionStorageKey(finalChallengeId, ownerKey), JSON.stringify({
 			completedAt: new Date().toISOString(),
 			level,
 			dailyDate: dailyDate || getLocalDateKey(),
