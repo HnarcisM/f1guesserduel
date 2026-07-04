@@ -14,6 +14,7 @@ Aplicația rulează cu **Node.js**, **Express** și **Socket.IO**, iar interfaț
 - [Structura proiectului](#structura-proiectului)
 - [Instalare și rulare locală](#instalare-și-rulare-locală)
 - [Testare locală și E2E](#testare-locală-și-e2e)
+- [Build CSS bundle](#build-css-bundle)
 - [Creare release ZIP curat](#creare-release-zip-curat)
 - [Testare pe telefon](#testare-pe-telefon)
 - [Moduri de dificultate](#moduri-de-dificultate)
@@ -217,9 +218,29 @@ Există și un fișier `.env.example` cu un exemplu de configurare. Aplicația n
 
 ---
 
+## Build CSS bundle
+
+CSS-ul este păstrat modular în `public/css/`, iar `public/style.css` rămâne fișierul sursă care definește ordinea modulelor. Browserul încarcă varianta generată:
+
+```text
+public/style.bundle.css
+```
+
+După ce modifici fișierele din `public/css/` sau ordinea importurilor din `public/style.css`, rulează:
+
+```bash
+npm run build:css
+```
+
+Asta regenerează bundle-ul fără reguli runtime `@import`, reducând numărul de request-uri CSS la încărcarea paginii. Scriptul de release rulează automat build-ul CSS înainte să creeze arhiva ZIP.
+
+---
+
 ## Creare release ZIP curat
 
 Pentru a genera o arhivă de distribuție fără fișiere de development sau runtime, rulează:
+
+> Comanda regenerează automat `public/style.bundle.css` înainte de arhivare.
 
 ```bash
 npm run release:zip
@@ -411,6 +432,7 @@ Responsabilități:
 - Uniformizare spacing și border-radius.
 - Fixuri de contrast pentru tema Carbon.
 - Responsive design pentru ecrane mici.
+- Bundle CSS generat din modulele din `public/css/`, încărcat direct de `public/index.html`.
 
 ### JavaScript
 

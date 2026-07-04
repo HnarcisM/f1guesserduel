@@ -11,14 +11,15 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node server/index.js",
+    "build:css": "node scripts/build-css-bundle.js",
     "test": "node --test test/*.test.js",
     "test:e2e": "node --test --test-timeout=60000 test/e2e/*.test.js",
     "pretest:e2e": "node scripts/ensure-playwright-browser.js --strict",
     "test:e2e:install": "node scripts/ensure-playwright-browser.js --strict",
     "test:all": "npm test && npm run test:e2e",
     "e2e:install": "npm run test:e2e:install",
-    "release:zip": "node scripts/create-release-zip.js",
-    "release:zip:with-tests": "node scripts/create-release-zip.js --with-tests"
+    "release:zip": "npm run build:css && node scripts/create-release-zip.js",
+    "release:zip:with-tests": "npm run build:css && node scripts/create-release-zip.js --with-tests"
   },
   "engines": {
     "node": "22.x"

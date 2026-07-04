@@ -1,8 +1,9 @@
 /**
  * F1 Guesser Duel main stylesheet.
  *
- * This file only preserves the loading order for the split CSS modules.
+ * Source entry for the generated bundle loaded by public/index.html.
  * Keep imports ordered because later modules intentionally override earlier rules.
+ * After editing CSS modules, run: npm run build:css
  */
 
 @import url("/css/01-theme-tokens.css?v=duel-lobby-exit-main-1");
