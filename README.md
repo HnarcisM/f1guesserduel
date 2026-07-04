@@ -14,6 +14,7 @@ Aplicația rulează cu **Node.js**, **Express** și **Socket.IO**, iar interfaț
 - [Structura proiectului](#structura-proiectului)
 - [Instalare și rulare locală](#instalare-și-rulare-locală)
 - [Testare locală și E2E](#testare-locală-și-e2e)
+- [Creare release ZIP curat](#creare-release-zip-curat)
 - [Testare pe telefon](#testare-pe-telefon)
 - [Moduri de dificultate](#moduri-de-dificultate)
 - [Teme vizuale](#teme-vizuale)
@@ -213,6 +214,46 @@ Validarea configului este strictă: dacă o variabilă este setată cu o valoare
 - path-urile configurate explicit nu pot fi stringuri goale.
 
 Există și un fișier `.env.example` cu un exemplu de configurare. Aplicația nu încarcă automat `.env`, ca să nu adăugăm dependințe noi; setează variabilele direct în mediul de rulare sau folosește un loader extern dacă ai nevoie.
+
+---
+
+## Creare release ZIP curat
+
+Pentru a genera o arhivă de distribuție fără fișiere de development sau runtime, rulează:
+
+```bash
+npm run release:zip
+```
+
+Arhiva este creată în folderul `dist/`, de exemplu:
+
+```text
+dist/f1guesserduel-v1.0.0.zip
+```
+
+Release-ul exclude automat:
+
+- `.git/`;
+- `node_modules/`;
+- `dist/`;
+- `.env`;
+- `data/rooms.json`;
+- baze SQLite runtime din `data/`;
+- loguri, backup-uri, patch-uri și fișiere temporare;
+- folderul `test/`, implicit;
+- folderul `.github/`, implicit.
+
+Dacă vrei o arhivă care să includă și testele, rulează:
+
+```bash
+npm run release:zip:with-tests
+```
+
+Pentru verificare fără generarea arhivei, poți rula:
+
+```bash
+node scripts/create-release-zip.js --dry-run
+```
 
 ---
 
