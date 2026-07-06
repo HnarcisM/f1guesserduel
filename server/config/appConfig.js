@@ -10,6 +10,7 @@ const DEV_SESSION_SECRET = 'f1-guesser-duel-dev-session-secret';
 const DEV_SOCKET_AUTH_SECRET = 'f1-guesser-duel-dev-socket-auth-secret';
 const ALLOWED_NODE_ENV_VALUES = new Set(['development', 'test', 'production']);
 const ALLOWED_SAME_SITE_VALUES = new Set(['lax', 'strict', 'none']);
+const ALLOWED_PERSISTENCE_MODE_VALUES = new Set(['local', 'ephemeral', 'persistent']);
 const COOKIE_NAME_PATTERN = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
 const DEFAULT_LOCAL_ORIGIN_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
 
@@ -88,6 +89,35 @@ function parseSameSiteEnv(env, name, fallback = 'lax') {
         throw new Error(`${name} must be one of: lax, strict, none.`);
     }
     return normalized;
+}
+
+function normalizePersistenceMode(value) {
+    if (value === undefined || value === null || value === '') return null;
+    if (typeof value !== 'string') throw new Error('PERSISTENCE_MODE must be a string.');
+
+    const normalized = value.trim().toLowerCase();
+    if (!ALLOWED_PERSISTENCE_MODE_VALUES.has(normalized)) {
+        throw new Error('PERSISTENCE_MODE must be one of: local, ephemeral, persistent.');
+    }
+    return normalized;
+}
+
+function isEphemeralDataDirectory(dataDir) {
+    if (typeof dataDir !== 'string' || dataDir.trim().length === 0) return false;
+
+    const normalized = path.resolve(dataDir);
+    return normalized === '/tmp'
+        || normalized.startsWith('/tmp/')
+        || normalized === '/var/tmp'
+        || normalized.startsWith('/var/tmp/');
+}
+
+function resolvePersistenceMode(env, { isProduction, dataDir }) {
+    const configuredMode = normalizePersistenceMode(env.PERSISTENCE_MODE);
+    if (configuredMode) return configuredMode;
+
+    if (!isProduction) return 'local';
+    return isEphemeralDataDirectory(dataDir) ? 'ephemeral' : 'persistent';
 }
 
 function normalizeNodeEnv(value) {
@@ -188,6 +218,10 @@ function createAppConfig(env = process.env, options = {}) {
     const nodeEnv = normalizeNodeEnv(env.NODE_ENV);
     const isProduction = nodeEnv === 'production';
     const dataDir = resolveOptionalPath(env, 'DATA_DIR', path.join(projectRoot, 'data'));
+    const persistenceMode = resolvePersistenceMode(env, {
+        isProduction,
+        dataDir
+    });
     const sessionMaxAgeDays = parseIntegerEnv(
         env,
         'SESSION_MAX_AGE_DAYS',
@@ -227,6 +261,10 @@ function createAppConfig(env = process.env, options = {}) {
         port,
         projectRoot,
         dataDir,
+        persistence: {
+            mode: persistenceMode,
+            isEphemeral: persistenceMode === 'ephemeral'
+        },
         trustProxy: parseBooleanEnv(env, 'TRUST_PROXY', false),
         driversFilePath: resolveOptionalPath(env, 'DRIVERS_FILE_PATH', path.join(projectRoot, 'data', 'drivers.json')),
         dbFilePath: resolveOptionalPath(env, 'DB_FILE_PATH', path.join(dataDir, 'f1guesser.sqlite')),
@@ -277,6 +315,7 @@ module.exports = {
     parsePositiveInteger,
     normalizeSameSite,
     normalizeAllowedOrigin,
+    normalizePersistenceMode,
     resolveSocketAllowedOrigins,
     DEFAULT_PORT,
     DEFAULT_SESSION_COOKIE_NAME,

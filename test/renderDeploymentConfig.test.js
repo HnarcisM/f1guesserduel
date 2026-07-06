@@ -18,6 +18,7 @@ test('Render blueprint documents production web service settings', () => {
     assert.match(source, /buildCommand:\s*npm ci && npm run build:css/);
     assert.match(source, /startCommand:\s*npm start/);
     assert.match(source, /healthCheckPath:\s*\/api\/health/);
+    assert.match(source, /key:\s*PERSISTENCE_MODE\s+value:\s*ephemeral/s);
 });
 
 test('Render blueprint keeps production secrets out of Git', () => {
@@ -35,6 +36,7 @@ test('example environment uses Render-safe production defaults', () => {
 
     assert.match(source, /NODE_ENV=production/);
     assert.match(source, /DATA_DIR=\/tmp\/f1guesserduel/);
+    assert.match(source, /PERSISTENCE_MODE=ephemeral/);
     assert.match(source, /ROOMS_FILE_PATH=\/tmp\/f1guesserduel\/rooms\.json/);
     assert.match(source, /COOKIE_SECURE=true/);
     assert.match(source, /COOKIE_SAMESITE=lax/);
@@ -53,4 +55,6 @@ test('deployment guide includes manual Render checks and secret generation', () 
     assert.match(source, /Nu seta manual `PORT`/);
     assert.match(source, /PUBLIC_ORIGIN=https:\/\/numele-serviciului-tau\.onrender\.com/);
     assert.match(source, /SOCKET_ALLOWED_ORIGINS/);
+    assert.match(source, /PERSISTENCE_MODE=ephemeral/);
+    assert.match(source, /\/api\/health.*persistence/s);
 });

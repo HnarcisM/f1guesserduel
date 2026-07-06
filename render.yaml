@@ -25,6 +25,8 @@ services:
         value: 900000
       - key: ROOM_SAVE_DEBOUNCE_MS
         value: 250
+      - key: PERSISTENCE_MODE
+        value: ephemeral
       - key: DATA_DIR
         value: /tmp/f1guesserduel
       - key: PUBLIC_ORIGIN

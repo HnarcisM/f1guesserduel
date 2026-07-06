@@ -25,6 +25,23 @@ const config = createAppConfig(process.env, {
     projectRoot: path.join(__dirname, '..')
 });
 
+function logPersistenceMode(currentConfig) {
+    if (currentConfig.persistence?.isEphemeral) {
+        console.warn([
+            '[persistence] Rulează în mod ephemeral/demo.',
+            `DATA_DIR=${currentConfig.dataDir}`,
+            'Datele SQLite și rooms.json pot fi pierdute la restart/redeploy/sleep pe hosting free.'
+        ].join(' '));
+        return;
+    }
+
+    if (currentConfig.isProduction) {
+        console.log(`[persistence] Rulează în mod ${currentConfig.persistence?.mode || 'unknown'}. DATA_DIR=${currentConfig.dataDir}`);
+    }
+}
+
+logPersistenceMode(config);
+
 const app = express();
 if (config.trustProxy) {
     app.set('trust proxy', 1);
@@ -83,7 +100,9 @@ app.use(createSecurityHeadersMiddleware({
 app.use(express.json({ limit: '32kb' }));
 app.use(cookieParser());
 app.use(createAuthMiddleware(sessionService));
-app.use('/api', createHealthRoutes());
+app.use('/api', createHealthRoutes({
+    persistenceMode: config.persistence.mode
+}));
 app.use('/api/auth', createAuthRoutes({
     authService,
     sessionService,

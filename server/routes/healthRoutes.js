@@ -1,9 +1,21 @@
-function createHealthPayload({ clock = () => new Date(), getUptime = () => process.uptime() } = {}) {
-    return {
+function createHealthPayload({
+    clock = () => new Date(),
+    getUptime = () => process.uptime(),
+    persistenceMode = null
+} = {}) {
+    const payload = {
         status: 'ok',
         uptimeSeconds: Math.floor(getUptime()),
         timestamp: clock().toISOString()
     };
+
+    if (persistenceMode) {
+        payload.persistence = {
+            mode: persistenceMode
+        };
+    }
+
+    return payload;
 }
 
 function createHealthHandler(options = {}) {

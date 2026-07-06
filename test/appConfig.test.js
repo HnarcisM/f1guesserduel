@@ -16,6 +16,8 @@ test('app config provides safe development defaults', () => {
     assert.equal(config.nodeEnv, 'development');
     assert.equal(config.port, 3000);
     assert.equal(config.dataDir, path.join(projectRoot, 'data'));
+    assert.equal(config.persistence.mode, 'local');
+    assert.equal(config.persistence.isEphemeral, false);
     assert.equal(config.dbFilePath, path.join(projectRoot, 'data', 'f1guesser.sqlite'));
     assert.equal(config.auth.cookie.secure, false);
     assert.equal(config.auth.cookie.sameSite, 'lax');
@@ -36,6 +38,7 @@ test('app config reads production values from environment', () => {
         NODE_ENV: 'production',
         PORT: '8080',
         DATA_DIR: '/var/lib/f1guesser',
+        PERSISTENCE_MODE: 'persistent',
         SESSION_SECRET: 'session-secret',
         SOCKET_AUTH_SECRET: 'socket-secret',
         COOKIE_SECURE: 'false',
@@ -54,6 +57,8 @@ test('app config reads production values from environment', () => {
     assert.equal(config.isProduction, true);
     assert.equal(config.port, 8080);
     assert.equal(config.dataDir, '/var/lib/f1guesser');
+    assert.equal(config.persistence.mode, 'persistent');
+    assert.equal(config.persistence.isEphemeral, false);
     assert.equal(path.normalize(config.dbFilePath), path.normalize('/var/lib/f1guesser/f1guesser.sqlite'));
     assert.equal(config.trustProxy, true);
     assert.equal(config.auth.sessionSecret, 'session-secret');
@@ -100,6 +105,33 @@ test('app config rejects invalid numeric environment values', () => {
     );
 });
 
+test('app config resolves explicit and inferred persistence modes', () => {
+    const projectRoot = path.join('/tmp', 'f1guesserduel');
+
+    const explicitEphemeral = createAppConfig({
+        NODE_ENV: 'production',
+        SESSION_SECRET: 'session-secret',
+        DATA_DIR: '/tmp/f1guesserduel',
+        PERSISTENCE_MODE: 'ephemeral'
+    }, { projectRoot });
+    assert.equal(explicitEphemeral.persistence.mode, 'ephemeral');
+    assert.equal(explicitEphemeral.persistence.isEphemeral, true);
+
+    const inferredEphemeral = createAppConfig({
+        NODE_ENV: 'production',
+        SESSION_SECRET: 'session-secret',
+        DATA_DIR: '/tmp/f1guesserduel'
+    }, { projectRoot });
+    assert.equal(inferredEphemeral.persistence.mode, 'ephemeral');
+
+    const inferredPersistent = createAppConfig({
+        NODE_ENV: 'production',
+        SESSION_SECRET: 'session-secret',
+        DATA_DIR: '/var/data'
+    }, { projectRoot });
+    assert.equal(inferredPersistent.persistence.mode, 'persistent');
+});
+
 test('app config rejects invalid boolean and enum values', () => {
     assert.throws(
         () => createAppConfig({ COOKIE_SECURE: 'maybe' }),
@@ -112,6 +144,10 @@ test('app config rejects invalid boolean and enum values', () => {
     assert.throws(
         () => createAppConfig({ NODE_ENV: 'prod' }),
         /NODE_ENV must be one of/
+    );
+    assert.throws(
+        () => createAppConfig({ PERSISTENCE_MODE: 'temporary' }),
+        /PERSISTENCE_MODE must be one of/
     );
 });
 

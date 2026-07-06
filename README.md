@@ -191,6 +191,7 @@ Aplicația poate fi configurată prin variabile de mediu. Pentru rulare locală 
 | --- | --- | --- |
 | `NODE_ENV` | `development` | Folosește `production` pe server public. |
 | `PORT` | `3000` | Portul pe care pornește aplicația. |
+| `PERSISTENCE_MODE` | `local` în development, inferat în production | Modul de persistență: `local`, `ephemeral` sau `persistent`. Pentru Render Free folosește `ephemeral`. |
 | `DATA_DIR` | `./data` | Folderul în care se salvează baza SQLite. |
 | `SESSION_SECRET` | dev fallback local | Secret pentru sesiuni; obligatoriu în production. |
 | `SOCKET_AUTH_SECRET` | `SESSION_SECRET` sau dev fallback | Secret pentru token-ul scurt folosit de socket auth refresh. |
@@ -209,6 +210,7 @@ Aplicația poate fi configurată prin variabile de mediu. Pentru rulare locală 
 Validarea configului este strictă: dacă o variabilă este setată cu o valoare invalidă, serverul se oprește cu un mesaj clar. Reguli importante:
 
 - `NODE_ENV` trebuie să fie `development`, `test` sau `production`;
+- `PERSISTENCE_MODE` poate fi `local`, `ephemeral` sau `persistent`;
 - `PORT` trebuie să fie între `1` și `65535`;
 - valorile numerice de durată/interval trebuie să fie întregi în limite rezonabile;
 - `COOKIE_SECURE`, `TRUST_PROXY` acceptă doar valori de tip `true/false`, `1/0`, `yes/no`, `on/off`;
@@ -226,7 +228,7 @@ Pentru Render, repo-ul include și:
 - `render.yaml` pentru Blueprint opțional;
 - setări recomandate pentru `NODE_ENV=production`, cookie securizat, proxy, health check și `PUBLIC_ORIGIN` pentru Socket.IO.
 
-Pe Render Free, folosește `DATA_DIR=/tmp/f1guesserduel` pentru demo. Pentru persistent disk plătit, poți muta `DATA_DIR`, `DB_FILE_PATH` și `ROOMS_FILE_PATH` în `/var/data`.
+Pe Render Free, folosește `PERSISTENCE_MODE=ephemeral` și `DATA_DIR=/tmp/f1guesserduel` pentru demo. În acest mod, `/api/health` afișează `persistence.mode=ephemeral`, iar datele locale pot fi pierdute la restart/redeploy/sleep. Pentru persistent disk plătit, setează `PERSISTENCE_MODE=persistent` și mută `DATA_DIR`, `DB_FILE_PATH` și `ROOMS_FILE_PATH` în `/var/data`.
 
 ---
 

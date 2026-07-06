@@ -35,6 +35,18 @@ test('health payload reports ok status with uptime and timestamp', () => {
     });
 });
 
+test('health payload can expose non-sensitive persistence mode', () => {
+    const payload = createHealthPayload({
+        clock: () => new Date('2026-07-01T12:00:00.000Z'),
+        getUptime: () => 1,
+        persistenceMode: 'ephemeral'
+    });
+
+    assert.deepEqual(payload.persistence, {
+        mode: 'ephemeral'
+    });
+});
+
 test('health handler responds with no-store cache headers', () => {
     const res = createMockResponse();
     const handler = createHealthHandler({

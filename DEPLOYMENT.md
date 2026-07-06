@@ -2,7 +2,7 @@
 
 Acest ghid descrie configurarea recomandată pentru publicarea aplicației pe Render ca **Web Service Node.js** conectat la GitHub.
 
-> Notă importantă: Render Free este potrivit pentru demo/test. Serviciul poate intra în sleep după inactivitate, iar filesystem-ul este efemer. Datele locale SQLite și `rooms.json` pot fi pierdute la restart/redeploy/sleep. Pentru utilizatori permanenți ai nevoie de persistent disk sau de o bază de date externă.
+> Notă importantă: Render Free este potrivit pentru demo/test. Serviciul poate intra în sleep după inactivitate, iar filesystem-ul este efemer. În această variantă folosim explicit `PERSISTENCE_MODE=ephemeral`, deci datele locale SQLite și `rooms.json` pot fi pierdute la restart/redeploy/sleep. Pentru utilizatori permanenți ai nevoie de persistent disk sau de o bază de date externă.
 
 ---
 
@@ -62,6 +62,7 @@ SESSION_MAX_AGE_DAYS=7
 SOCKET_AUTH_TOKEN_MAX_AGE_MS=120000
 SESSION_CLEANUP_INTERVAL_MS=900000
 ROOM_SAVE_DEBOUNCE_MS=250
+PERSISTENCE_MODE=ephemeral
 DATA_DIR=/tmp/f1guesserduel
 ROOMS_FILE_PATH=/tmp/f1guesserduel/rooms.json
 PUBLIC_ORIGIN=https://numele-serviciului-tau.onrender.com
@@ -111,6 +112,7 @@ Fișierul setează automat:
 - start command;
 - health check path;
 - variabile non-secrete de production;
+- `PERSISTENCE_MODE=ephemeral` pentru varianta demo/free;
 - `PUBLIC_ORIGIN` ca variabilă nesincronizată, pe care o completezi cu URL-ul Render real;
 - `SESSION_SECRET` și `SOCKET_AUTH_SECRET` ca variabile nesincronizate, care trebuie completate în Render.
 
@@ -120,24 +122,37 @@ Nu pune niciodată valorile reale ale secretelor în Git.
 
 ## 5. Persistență date
 
-### Variantă demo/free
+### Variantă A: demo/free cu storage efemer
 
 Folosește:
 
 ```env
+PERSISTENCE_MODE=ephemeral
 DATA_DIR=/tmp/f1guesserduel
 ROOMS_FILE_PATH=/tmp/f1guesserduel/rooms.json
 ```
 
-Avantaj: simplu și gratuit.
+Această variantă păstrează implementarea actuală: SQLite local pentru utilizatori/sesiuni/statistici și `rooms.json` pentru camere active. Este simplă, gratuită și suficientă pentru demo/test.
 
-Dezavantaj: datele sunt efemere.
+Dezavantaj: datele sunt efemere. Conturile, sesiunile, camerele și scorurile locale pot dispărea la restart, redeploy sau sleep pe Render Free. La pornire serverul scrie și un warning în log când rulează în `ephemeral/demo`.
+
+Endpoint-ul `/api/health` include și `persistence.mode`, de exemplu:
+
+```json
+{
+  "status": "ok",
+  "persistence": {
+    "mode": "ephemeral"
+  }
+}
+```
 
 ### Variantă cu persistent disk
 
 Dacă activezi persistent disk plătit în Render, folosește:
 
 ```env
+PERSISTENCE_MODE=persistent
 DATA_DIR=/var/data
 DB_FILE_PATH=/var/data/f1guesser.sqlite
 ROOMS_FILE_PATH=/var/data/rooms.json
