@@ -36,9 +36,10 @@ function registerSoloGameSocketHandlers({
     socket,
     singleSessions,
     gameService,
-    leaveCurrentRoom
+    leaveCurrentRoom,
+    onSocketEvent = socket.on.bind(socket)
 }) {
-    socket.on('startSingleGame', (payload) => {
+    onSocketEvent('startSingleGame', (payload) => {
         const roundOptions = normalizeRoundOptions(payload);
         if (!roundOptions) {
             socket.emit('errorMessage', 'Dificultatea selectată nu este validă.');
@@ -57,7 +58,7 @@ function registerSoloGameSocketHandlers({
         socket.emit('initGame', buildSingleInitPayload(singlePayload));
     });
 
-    socket.on('submitSingleGuess', (driverId) => {
+    onSocketEvent('submitSingleGuess', (driverId) => {
         const singleSession = singleSessions.get(socket.id);
         if (!singleSession || singleSession.finished) return;
 
@@ -109,7 +110,7 @@ function registerSoloGameSocketHandlers({
         socket.emit('guessResult', responseData);
     });
 
-    socket.on('restartSingleGame', (payload = {}) => {
+    onSocketEvent('restartSingleGame', (payload = {}) => {
         const previousSession = singleSessions.get(socket.id);
         const restartPayload = gameService.restartSingleRound(previousSession, normalizeRestartOptions(payload));
         if (!restartPayload) {

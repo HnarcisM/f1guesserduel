@@ -206,6 +206,8 @@ Aplicația poate fi configurată prin variabile de mediu. Pentru rulare locală 
 | `TRUST_PROXY` | `false` | Setează `true` când rulezi în spatele unui proxy/load balancer. |
 | `PUBLIC_ORIGIN` | none | Origin-ul public acceptat pentru Socket.IO în production, de exemplu `https://numele-serviciului.onrender.com`. |
 | `SOCKET_ALLOWED_ORIGINS` | localhost automat în development | Origini suplimentare acceptate pentru Socket.IO, separate prin virgulă. |
+| `SOCKET_RATE_LIMIT_ENABLED` | `true` | Activează protecția anti-spam pentru event-urile Socket.IO sensibile. |
+| `SOCKET_RATE_LIMIT_WINDOW_MS` | `60000` | Fereastra de timp pentru limitele Socket.IO, în milisecunde. |
 
 Validarea configului este strictă: dacă o variabilă este setată cu o valoare invalidă, serverul se oprește cu un mesaj clar. Reguli importante:
 
@@ -218,7 +220,8 @@ Validarea configului este strictă: dacă o variabilă este setată cu o valoare
 - `COOKIE_SAMESITE=none` cere obligatoriu `COOKIE_SECURE=true`;
 - `SESSION_COOKIE_NAME` nu poate conține spații, semicolon sau separatori invalizi;
 - path-urile configurate explicit nu pot fi stringuri goale;
-- origin-urile Socket.IO trebuie să fie URL-uri `http`/`https` fără path, query sau hash.
+- origin-urile Socket.IO trebuie să fie URL-uri `http`/`https` fără path, query sau hash;
+- `SOCKET_RATE_LIMIT_WINDOW_MS` trebuie să fie între `1000` și `3600000`.
 
 Există și un fișier `.env.example` cu un exemplu de configurare. Aplicația nu încarcă automat `.env`, ca să nu adăugăm dependințe noi; setează variabilele direct în mediul de rulare sau folosește un loader extern dacă ai nevoie.
 
@@ -229,6 +232,12 @@ Pentru Render, repo-ul include și:
 - setări recomandate pentru `NODE_ENV=production`, cookie securizat, proxy, health check și `PUBLIC_ORIGIN` pentru Socket.IO.
 
 Pe Render Free, folosește `PERSISTENCE_MODE=ephemeral` și `DATA_DIR=/tmp/f1guesserduel` pentru demo. În acest mod, `/api/health` afișează `persistence.mode=ephemeral`, iar datele locale pot fi pierdute la restart/redeploy/sleep. Pentru persistent disk plătit, setează `PERSISTENCE_MODE=persistent` și mută `DATA_DIR`, `DB_FILE_PATH` și `ROOMS_FILE_PATH` în `/var/data`.
+
+### Protecție Socket.IO anti-spam
+
+Serverul limitează event-urile Socket.IO sensibile per socket, ca să reducă spam-ul din consolă sau scripturi automate. Sunt protejate acțiuni precum `joinRoom`, `setDifficulty`, `submitGuess`, `startSingleGame`, `submitSingleGuess`, `startDailyChallenge`, `submitDailyGuess`, `restartGame`, `refreshAuthUser` și `abortDuelRound`.
+
+Dacă limita este depășită, serverul emite `socketRateLimited` și un `errorMessage` generic, fără să execute handlerul original. `leaveRoom`, `disconnecting` și `disconnect` nu sunt limitate, ca jucătorul să poată părăsi camera sau să se deconecteze normal.
 
 ---
 

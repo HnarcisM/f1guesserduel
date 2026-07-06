@@ -6,6 +6,7 @@ const DEFAULT_SESSION_MAX_AGE_DAYS = 7;
 const DEFAULT_SOCKET_AUTH_TOKEN_MAX_AGE_MS = 2 * 60 * 1000;
 const DEFAULT_SESSION_CLEANUP_INTERVAL_MS = 15 * 60 * 1000;
 const DEFAULT_ROOM_SAVE_DEBOUNCE_MS = 250;
+const DEFAULT_SOCKET_RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const DEV_SESSION_SECRET = 'f1-guesser-duel-dev-session-secret';
 const DEV_SOCKET_AUTH_SECRET = 'f1-guesser-duel-dev-socket-auth-secret';
 const ALLOWED_NODE_ENV_VALUES = new Set(['development', 'test', 'production']);
@@ -280,7 +281,16 @@ function createAppConfig(env = process.env, options = {}) {
             )
         },
         socket: {
-            allowedOrigins: socketAllowedOrigins
+            allowedOrigins: socketAllowedOrigins,
+            rateLimit: {
+                enabled: parseBooleanEnv(env, 'SOCKET_RATE_LIMIT_ENABLED', true),
+                windowMs: parseIntegerEnv(
+                    env,
+                    'SOCKET_RATE_LIMIT_WINDOW_MS',
+                    DEFAULT_SOCKET_RATE_LIMIT_WINDOW_MS,
+                    { min: 1_000, max: 60 * 60 * 1000 }
+                )
+            }
         },
         auth: {
             sessionSecret,
@@ -322,5 +332,6 @@ module.exports = {
     DEFAULT_SESSION_MAX_AGE_DAYS,
     DEFAULT_SOCKET_AUTH_TOKEN_MAX_AGE_MS,
     DEFAULT_SESSION_CLEANUP_INTERVAL_MS,
-    DEFAULT_ROOM_SAVE_DEBOUNCE_MS
+    DEFAULT_ROOM_SAVE_DEBOUNCE_MS,
+    DEFAULT_SOCKET_RATE_LIMIT_WINDOW_MS
 };

@@ -117,7 +117,8 @@ app.use(express.static(config.publicDir, {
 registerSocketHandlers(io, {
     roomStore,
     gameService,
-    sessionService
+    sessionService,
+    socketRateLimit: config.socket.rateLimit
 });
 
 app.get('/', (req, res, next) => {

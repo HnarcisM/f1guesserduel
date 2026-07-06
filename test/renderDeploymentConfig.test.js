@@ -19,6 +19,8 @@ test('Render blueprint documents production web service settings', () => {
     assert.match(source, /startCommand:\s*npm start/);
     assert.match(source, /healthCheckPath:\s*\/api\/health/);
     assert.match(source, /key:\s*PERSISTENCE_MODE\s+value:\s*ephemeral/s);
+    assert.match(source, /key:\s*SOCKET_RATE_LIMIT_ENABLED\s+value:\s*true/s);
+    assert.match(source, /key:\s*SOCKET_RATE_LIMIT_WINDOW_MS\s+value:\s*60000/s);
 });
 
 test('Render blueprint keeps production secrets out of Git', () => {
@@ -42,6 +44,8 @@ test('example environment uses Render-safe production defaults', () => {
     assert.match(source, /COOKIE_SAMESITE=lax/);
     assert.match(source, /TRUST_PROXY=true/);
     assert.match(source, /PUBLIC_ORIGIN=https:\/\/f1guesserduel\.onrender\.com/);
+    assert.match(source, /SOCKET_RATE_LIMIT_ENABLED=true/);
+    assert.match(source, /SOCKET_RATE_LIMIT_WINDOW_MS=60000/);
     assert.doesNotMatch(source, /^PORT=/m);
 });
 
@@ -55,6 +59,8 @@ test('deployment guide includes manual Render checks and secret generation', () 
     assert.match(source, /Nu seta manual `PORT`/);
     assert.match(source, /PUBLIC_ORIGIN=https:\/\/numele-serviciului-tau\.onrender\.com/);
     assert.match(source, /SOCKET_ALLOWED_ORIGINS/);
+    assert.match(source, /SOCKET_RATE_LIMIT_ENABLED=true/);
+    assert.match(source, /SOCKET_RATE_LIMIT_WINDOW_MS=60000/);
     assert.match(source, /PERSISTENCE_MODE=ephemeral/);
     assert.match(source, /\/api\/health.*persistence/s);
 });

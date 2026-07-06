@@ -38,11 +38,13 @@ const {
 } = require('./socketRoomPayloads');
 const { registerSoloGameSocketHandlers } = require('./soloGameSocketHandlers');
 const { registerDailyChallengeSocketHandlers } = require('./dailyChallengeSocketHandlers');
+const { createSocketEventRateLimiter } = require('./socketEventRateLimit');
 
 function registerSocketHandlers(io, dependencies) {
     const { roomStore, gameService, sessionService } = dependencies;
     const dailySessions = new Map();
     const singleSessions = new Map();
+    const socketEventRateLimiter = createSocketEventRateLimiter(dependencies.socketRateLimit);
 
     attachSocketAuth(io, sessionService);
 
@@ -79,12 +81,16 @@ function registerSocketHandlers(io, dependencies) {
         let currentRoom = null;
         let hasMarkedCurrentRoomDisconnected = false;
 
+        function onSocketEvent(eventName, handler) {
+            socketEventRateLimiter.register(socket, eventName, handler);
+        }
+
         function clearSoloModeSessions() {
             singleSessions.delete(socket.id);
             dailySessions.delete(socket.id);
         }
 
-        socket.on('joinRoom', (payload) => {
+        onSocketEvent('joinRoom', (payload) => {
             const { roomId, clientId } = normalizeJoinRoomPayload(payload);
             if (!isValidRoomId(roomId)) {
                 socket.emit('errorMessage', 'Camera este invalidă. Folosește un room ID de 3-20 caractere.');
@@ -138,7 +144,7 @@ function registerSocketHandlers(io, dependencies) {
         });
 
 
-        socket.on('updateDuelLobbySettings', (payload) => {
+        onSocketEvent('updateDuelLobbySettings', (payload) => {
             if (!currentRoom) return;
 
             const room = roomStore.get(currentRoom);
@@ -170,7 +176,7 @@ function registerSocketHandlers(io, dependencies) {
             emitRoomStateUpdate(currentRoom, 'lobby-settings-updated');
         });
 
-        socket.on('setDifficulty', (payload) => {
+        onSocketEvent('setDifficulty', (payload) => {
             if (!currentRoom) return;
 
             const room = roomStore.get(currentRoom);
@@ -210,7 +216,7 @@ function registerSocketHandlers(io, dependencies) {
             emitRoomStateUpdate(currentRoom, 'round-started');
         });
 
-        socket.on('submitGuess', (driverId) => {
+        onSocketEvent('submitGuess', (driverId) => {
             if (!currentRoom) return;
 
             const room = roomStore.get(currentRoom);
@@ -295,7 +301,7 @@ function registerSocketHandlers(io, dependencies) {
             }
         });
 
-        socket.on('timeExpired', () => {
+        onSocketEvent('timeExpired', () => {
             if (!currentRoom) {
                 const singleSession = singleSessions.get(socket.id);
                 if (!singleSession || singleSession.finished || !singleSession.timed || !singleSession.roundStartedAt) return;
@@ -340,7 +346,7 @@ function registerSocketHandlers(io, dependencies) {
             }
         });
 
-        socket.on('selectDuelPlayer', (payload = {}) => {
+        onSocketEvent('selectDuelPlayer', (payload = {}) => {
             if (!currentRoom) return;
 
             const room = roomStore.get(currentRoom);
@@ -376,7 +382,7 @@ function registerSocketHandlers(io, dependencies) {
             emitRoomStateUpdate(currentRoom, 'player-selected');
         });
 
-        socket.on('restartGame' , (payload = {}) => {
+        onSocketEvent('restartGame' , (payload = {}) => {
             if (!currentRoom) return;
 
             const room = roomStore.get(currentRoom);
@@ -414,16 +420,18 @@ function registerSocketHandlers(io, dependencies) {
             socket,
             singleSessions,
             gameService,
-            leaveCurrentRoom
+            leaveCurrentRoom,
+            onSocketEvent
         });
         registerDailyChallengeSocketHandlers({
             socket,
             dailySessions,
             singleSessions,
             gameService,
-            leaveCurrentRoom
+            leaveCurrentRoom,
+            onSocketEvent
         });
-        socket.on('refreshAuthUser', (payload = {}) => {
+        onSocketEvent('refreshAuthUser', (payload = {}) => {
             const room = currentRoom ? roomStore.get(currentRoom) : null;
             const socketAuthToken = payload && typeof payload === 'object'
                 ? payload.socketAuthToken
@@ -492,7 +500,7 @@ function registerSocketHandlers(io, dependencies) {
             emitRoomRoleStatuses(room);
         }
 
-        socket.on('abortDuelRound', () => {
+        onSocketEvent('abortDuelRound', () => {
             if (!currentRoom) return;
 
             const room = roomStore.get(currentRoom);
@@ -538,6 +546,7 @@ function registerSocketHandlers(io, dependencies) {
         socket.on('disconnect', () => {
             clearSoloModeSessions();
             markCurrentRoomDisconnected();
+            socketEventRateLimiter.clearSocket(socket.id);
         });
     });
 }

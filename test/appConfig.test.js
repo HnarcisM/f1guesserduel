@@ -30,6 +30,10 @@ test('app config provides safe development defaults', () => {
         'http://[::1]:3000',
         'https://[::1]:3000'
     ]);
+    assert.deepEqual(config.socket.rateLimit, {
+        enabled: true,
+        windowMs: 60_000
+    });
 });
 
 test('app config reads production values from environment', () => {
@@ -51,7 +55,9 @@ test('app config reads production values from environment', () => {
         ROOM_SAVE_DEBOUNCE_MS: '500',
         TRUST_PROXY: 'true',
         PUBLIC_ORIGIN: 'https://f1guesserduel.onrender.com/',
-        SOCKET_ALLOWED_ORIGINS: 'https://preview.example.com, http://localhost:5173'
+        SOCKET_ALLOWED_ORIGINS: 'https://preview.example.com, http://localhost:5173',
+        SOCKET_RATE_LIMIT_ENABLED: 'false',
+        SOCKET_RATE_LIMIT_WINDOW_MS: '30000'
     }, { projectRoot });
 
     assert.equal(config.isProduction, true);
@@ -76,6 +82,10 @@ test('app config reads production values from environment', () => {
         'http://localhost:5173',
         'https://f1guesserduel.onrender.com'
     ]);
+    assert.deepEqual(config.socket.rateLimit, {
+        enabled: false,
+        windowMs: 30_000
+    });
 });
 
 test('production config requires SESSION_SECRET', () => {
@@ -102,6 +112,10 @@ test('app config rejects invalid numeric environment values', () => {
     assert.throws(
         () => createAppConfig({ SOCKET_AUTH_TOKEN_MAX_AGE_MS: 'fast' }),
         /SOCKET_AUTH_TOKEN_MAX_AGE_MS must be an integer/
+    );
+    assert.throws(
+        () => createAppConfig({ SOCKET_RATE_LIMIT_WINDOW_MS: 'fast' }),
+        /SOCKET_RATE_LIMIT_WINDOW_MS must be an integer/
     );
 });
 
@@ -136,6 +150,10 @@ test('app config rejects invalid boolean and enum values', () => {
     assert.throws(
         () => createAppConfig({ COOKIE_SECURE: 'maybe' }),
         /COOKIE_SECURE must be one of/
+    );
+    assert.throws(
+        () => createAppConfig({ SOCKET_RATE_LIMIT_ENABLED: 'maybe' }),
+        /SOCKET_RATE_LIMIT_ENABLED must be one of/
     );
     assert.throws(
         () => createAppConfig({ COOKIE_SAMESITE: 'external' }),

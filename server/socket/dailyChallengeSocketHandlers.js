@@ -35,9 +35,10 @@ function registerDailyChallengeSocketHandlers({
     dailySessions,
     singleSessions,
     gameService,
-    leaveCurrentRoom
+    leaveCurrentRoom,
+    onSocketEvent = socket.on.bind(socket)
 }) {
-    socket.on('startDailyChallenge', (payload) => {
+    onSocketEvent('startDailyChallenge', (payload) => {
         const dailyOptions = normalizeRoundOptions(payload);
         if (!dailyOptions) {
             socket.emit('dailyChallengeError', 'Dificultatea Daily Challenge nu este validă.');
@@ -57,7 +58,7 @@ function registerDailyChallengeSocketHandlers({
         socket.emit('initDailyChallenge', buildDailyInitPayload(dailyPayload));
     });
 
-    socket.on('submitDailyGuess', (driverId) => {
+    onSocketEvent('submitDailyGuess', (driverId) => {
         const dailySession = dailySessions.get(socket.id);
         if (!dailySession || dailySession.finished) return;
 

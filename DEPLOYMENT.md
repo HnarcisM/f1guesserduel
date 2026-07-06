@@ -84,6 +84,17 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 Rulează comanda de două ori: o dată pentru `SESSION_SECRET`, o dată pentru `SOCKET_AUTH_SECRET`.
 
 
+### Socket.IO rate limit
+
+Pentru deploy public, păstrează activă protecția anti-spam pe event-urile Socket.IO:
+
+```env
+SOCKET_RATE_LIMIT_ENABLED=true
+SOCKET_RATE_LIMIT_WINDOW_MS=60000
+```
+
+Limitele sunt aplicate per socket și sunt diferite pe categorii: acțiunile de lobby/start/restart au limite mai stricte, iar guess-urile au o limită mai mare ca să nu afecteze jocul normal. Dacă un client face spam, serverul emite `socketRateLimited` și nu mai execută handlerul pentru event-ul blocat.
+
 ### Socket.IO allowed origins
 
 Pentru deploy online setează `PUBLIC_ORIGIN` la adresa publică exactă a aplicației, fără slash sau path la final:
@@ -170,6 +181,7 @@ Configurația include:
 - Content-Security-Policy cu `script-src 'self'`;
 - `connect-src 'self' ws: wss:` pentru Socket.IO;
 - allowlist de origin pentru Socket.IO prin `PUBLIC_ORIGIN` / `SOCKET_ALLOWED_ORIGINS`;
+- rate limit Socket.IO pentru event-uri sensibile, prin `SOCKET_RATE_LIMIT_ENABLED` / `SOCKET_RATE_LIMIT_WINDOW_MS`;
 - `img-src 'self' data:` pentru assets locale;
 - `frame-ancestors 'none'`;
 - `object-src 'none'`;

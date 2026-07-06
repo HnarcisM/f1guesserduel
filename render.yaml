@@ -27,6 +27,10 @@ services:
         value: 250
       - key: PERSISTENCE_MODE
         value: ephemeral
+      - key: SOCKET_RATE_LIMIT_ENABLED
+        value: true
+      - key: SOCKET_RATE_LIMIT_WINDOW_MS
+        value: 60000
       - key: DATA_DIR
         value: /tmp/f1guesserduel
       - key: PUBLIC_ORIGIN
