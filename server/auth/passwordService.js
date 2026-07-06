@@ -1,19 +1,25 @@
 const crypto = require('crypto');
+const { promisify } = require('util');
+
+const pbkdf2Async = promisify(crypto.pbkdf2);
 
 const PBKDF2_ITERATIONS = 120000;
 const KEY_LENGTH = 64;
 const DIGEST = 'sha512';
 
-function hashPassword(password) {
+async function derivePasswordHash(password, salt, iterations) {
+    const hash = await pbkdf2Async(password, salt, iterations, KEY_LENGTH, DIGEST);
+    return hash.toString('hex');
+}
+
+async function hashPassword(password) {
     const salt = crypto.randomBytes(16).toString('hex');
-    const hash = crypto
-        .pbkdf2Sync(password, salt, PBKDF2_ITERATIONS, KEY_LENGTH, DIGEST)
-        .toString('hex');
+    const hash = await derivePasswordHash(password, salt, PBKDF2_ITERATIONS);
 
     return `pbkdf2$${PBKDF2_ITERATIONS}$${salt}$${hash}`;
 }
 
-function verifyPassword(password, storedHash) {
+async function verifyPassword(password, storedHash) {
     if (typeof storedHash !== 'string') return false;
 
     const [algorithm, iterationsText, salt, expectedHash] = storedHash.split('$');
@@ -22,10 +28,7 @@ function verifyPassword(password, storedHash) {
     const iterations = Number(iterationsText);
     if (!Number.isInteger(iterations) || iterations <= 0) return false;
 
-    const actualHash = crypto
-        .pbkdf2Sync(password, salt, iterations, KEY_LENGTH, DIGEST)
-        .toString('hex');
-
+    const actualHash = await derivePasswordHash(password, salt, iterations);
     const expectedBuffer = Buffer.from(expectedHash, 'hex');
     const actualBuffer = Buffer.from(actualHash, 'hex');
 

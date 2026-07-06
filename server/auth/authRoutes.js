@@ -45,9 +45,9 @@ function createAuthRoutes({ authService, sessionService, rateLimiters = {}, cook
         };
     }
 
-    router.post('/register', registerRateLimiter, (req, res, next) => {
+    router.post('/register', registerRateLimiter, async (req, res, next) => {
         try {
-            const result = authService.register(req.body || {});
+            const result = await authService.register(req.body || {});
             if (!result.ok) {
                 return res.status(result.status || 400).json({ message: result.message });
             }
@@ -59,9 +59,9 @@ function createAuthRoutes({ authService, sessionService, rateLimiters = {}, cook
         }
     });
 
-    router.post('/login', loginRateLimiter, (req, res, next) => {
+    router.post('/login', loginRateLimiter, async (req, res, next) => {
         try {
-            const result = authService.login(req.body || {});
+            const result = await authService.login(req.body || {});
             if (!result.ok) {
                 return res.status(result.status || 400).json({ message: result.message });
             }

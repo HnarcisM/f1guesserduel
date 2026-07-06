@@ -62,7 +62,7 @@ function createAuthService(db, sessionService) {
         return null;
     }
 
-    function register({ username, email, password }) {
+    async function register({ username, email, password }) {
         const validationError = validateRegisterInput({ username, email, password });
         if (validationError) {
             return { ok: false, status: 400, message: validationError };
@@ -75,7 +75,7 @@ function createAuthService(db, sessionService) {
             const result = createUserStmt.run({
                 username: cleanUsername,
                 email: cleanEmail,
-                passwordHash: hashPassword(password)
+                passwordHash: await hashPassword(password)
             });
 
             const user = findByIdStmt.get(result.lastInsertRowid);
@@ -90,14 +90,14 @@ function createAuthService(db, sessionService) {
         }
     }
 
-    function login({ email, password }) {
+    async function login({ email, password }) {
         const cleanEmail = normalizeEmail(email);
         if (!EMAIL_REGEX.test(cleanEmail) || typeof password !== 'string' || password.length === 0) {
             return { ok: false, status: 400, message: 'Email sau parolă invalidă.' };
         }
 
         const userRow = findByEmailStmt.get(cleanEmail);
-        if (!userRow || !verifyPassword(password, userRow.password_hash)) {
+        if (!userRow || !(await verifyPassword(password, userRow.password_hash))) {
             return { ok: false, status: 401, message: 'Email sau parolă greșită.' };
         }
 
