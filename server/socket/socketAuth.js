@@ -14,13 +14,17 @@ function parseCookieHeader(cookieHeader) {
 }
 
 function attachSocketAuth(io, sessionService) {
-    io.use((socket, next) => {
-        if (!sessionService) return next();
+    io.use(async (socket, next) => {
+        try {
+            if (!sessionService) return next();
 
-        const cookies = parseCookieHeader(socket.handshake.headers.cookie);
-        const token = cookies[sessionService.cookieName];
-        socket.user = sessionService.getUserByToken(token);
-        return next();
+            const cookies = parseCookieHeader(socket.handshake.headers.cookie);
+            const token = cookies[sessionService.cookieName];
+            socket.user = await sessionService.getUserByToken(token);
+            return next();
+        } catch (error) {
+            return next(error);
+        }
     });
 }
 

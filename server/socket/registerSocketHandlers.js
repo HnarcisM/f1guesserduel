@@ -459,13 +459,13 @@ function registerSocketHandlers(io, dependencies) {
             leaveCurrentRoom,
             onSocketEvent
         });
-        onSocketEvent('refreshAuthUser', (payload = {}) => {
+        onSocketEvent('refreshAuthUser', async (payload = {}) => {
             const room = currentRoom ? roomStore.get(currentRoom) : null;
             const socketAuthToken = payload && typeof payload === 'object'
                 ? payload.socketAuthToken
                 : null;
             const authUser = socketAuthToken
-                ? sessionService.getUserBySocketAuthToken(socketAuthToken)
+                ? await sessionService.getUserBySocketAuthToken(socketAuthToken)
                 : null;
 
             socket.user = authUser;

@@ -7,7 +7,8 @@ const {
     parseBoolean,
     normalizeSameSite,
     normalizeAllowedOrigin,
-    normalizeLogLevel
+    normalizeLogLevel,
+    normalizeDatabaseProvider
 } = require('../server/config/appConfig');
 
 test('app config provides safe development defaults', () => {
@@ -19,6 +20,11 @@ test('app config provides safe development defaults', () => {
     assert.equal(config.dataDir, path.join(projectRoot, 'data'));
     assert.equal(config.persistence.mode, 'local');
     assert.equal(config.persistence.isEphemeral, false);
+    assert.deepEqual(config.database, {
+        provider: 'sqlite',
+        url: null,
+        postgresSsl: true
+    });
     assert.equal(config.dbFilePath, path.join(projectRoot, 'data', 'f1guesser.sqlite'));
     assert.equal(config.auth.cookie.secure, false);
     assert.equal(config.auth.cookie.sameSite, 'lax');
@@ -48,6 +54,9 @@ test('app config reads production values from environment', () => {
         PORT: '8080',
         DATA_DIR: '/var/lib/f1guesser',
         PERSISTENCE_MODE: 'persistent',
+        DATABASE_PROVIDER: 'postgres',
+        DATABASE_URL: 'postgresql://example.com/f1',
+        POSTGRES_SSL: 'false',
         SESSION_SECRET: 'session-secret',
         SOCKET_AUTH_SECRET: 'socket-secret',
         COOKIE_SECURE: 'false',
@@ -72,6 +81,11 @@ test('app config reads production values from environment', () => {
     assert.equal(config.dataDir, '/var/lib/f1guesser');
     assert.equal(config.persistence.mode, 'persistent');
     assert.equal(config.persistence.isEphemeral, false);
+    assert.deepEqual(config.database, {
+        provider: 'postgres',
+        url: 'postgresql://example.com/f1',
+        postgresSsl: false
+    });
     assert.equal(path.normalize(config.dbFilePath), path.normalize('/var/lib/f1guesser/f1guesser.sqlite'));
     assert.equal(config.trustProxy, true);
     assert.equal(config.auth.sessionSecret, 'session-secret');
@@ -108,6 +122,7 @@ test('boolean and sameSite parsing are defensive', () => {
     assert.equal(parseBoolean('off', true), false);
     assert.equal(parseBoolean('unexpected', true), true);
     assert.equal(normalizeSameSite('None'), 'none');
+    assert.equal(normalizeDatabaseProvider('POSTGRES'), 'postgres');
     assert.equal(normalizeSameSite('invalid'), 'lax');
 });
 
@@ -179,12 +194,24 @@ test('app config rejects invalid boolean and enum values', () => {
         /PERSISTENCE_MODE must be one of/
     );
     assert.throws(
+        () => createAppConfig({ DATABASE_PROVIDER: 'mysql' }),
+        /DATABASE_PROVIDER must be one of/
+    );
+    assert.throws(
+        () => createAppConfig({ DATABASE_PROVIDER: 'postgres' }),
+        /DATABASE_URL must be set/
+    );
+    assert.throws(
         () => createAppConfig({ LOG_LEVEL: 'verbose' }),
         /LOG_LEVEL must be one of/
     );
     assert.throws(
         () => createAppConfig({ REQUEST_LOGGING_ENABLED: 'maybe' }),
         /REQUEST_LOGGING_ENABLED must be one of/
+    );
+    assert.throws(
+        () => createAppConfig({ DATABASE_PROVIDER: 'postgres', DATABASE_URL: 'postgresql://example.com/f1', POSTGRES_SSL: 'maybe' }),
+        /POSTGRES_SSL must be one of/
     );
 });
 

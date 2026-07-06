@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const { createAuthService } = require('../server/auth/authService');
 const { verifyPassword } = require('../server/auth/passwordService');
 
-function createFakeDb() {
+function createFakeAuthRepository() {
     let nextUserId = 1;
     const users = new Map();
 
@@ -24,58 +24,39 @@ function createFakeDb() {
 
     return {
         users,
-        prepare(sql) {
-            if (sql.includes('INSERT INTO users')) {
-                return {
-                    run({ username, email, passwordHash }) {
-                        if (hasUsername(username) || findUserByEmail(email)) {
-                            const error = new Error('unique constraint failed');
-                            error.code = 'SQLITE_CONSTRAINT_UNIQUE';
-                            throw error;
-                        }
-
-                        const id = nextUserId;
-                        nextUserId += 1;
-                        users.set(id, {
-                            id,
-                            username,
-                            email,
-                            password_hash: passwordHash,
-                            createdAt: '2026-07-06T00:00:00.000Z',
-                            last_seen_at: null
-                        });
-                        return { lastInsertRowid: id };
-                    }
-                };
+        isUniqueConstraintError(error) {
+            return error?.code === '23505' || error?.code === 'SQLITE_CONSTRAINT_UNIQUE';
+        },
+        async createUser({ username, email, passwordHash }) {
+            if (hasUsername(username) || findUserByEmail(email)) {
+                const error = new Error('unique constraint failed');
+                error.code = '23505';
+                throw error;
             }
 
-            if (sql.includes('FROM users') && sql.includes('WHERE email')) {
-                return {
-                    get(email) {
-                        return findUserByEmail(email);
-                    }
-                };
-            }
-
-            if (sql.includes('FROM users') && sql.includes('WHERE id')) {
-                return {
-                    get(id) {
-                        return users.get(Number(id)) || null;
-                    }
-                };
-            }
-
-            if (sql.includes('UPDATE users SET last_seen_at')) {
-                return {
-                    run(id) {
-                        const user = users.get(Number(id));
-                        if (user) user.last_seen_at = 'updated';
-                        return { changes: user ? 1 : 0 };
-                    }
-                };
-            }
-
-            throw new Error(`Unexpected SQL in fake db: ${sql}`);
+            const id = nextUserId;
+            nextUserId += 1;
+            const user = {
+                id,
+                username,
+                email,
+                password_hash: passwordHash,
+                createdAt: '2026-07-06T00:00:00.000Z',
+                last_seen_at: null
+            };
+            users.set(id, user);
+            return user;
+        },
+        async findUserByEmail(email) {
+            return findUserByEmail(email);
+        },
+        async findUserById(id) {
+            return users.get(Number(id)) || null;
+        },
+        async updateLastSeen(id) {
+            const user = users.get(Number(id));
+            if (user) user.last_seen_at = 'updated';
+            return { changes: user ? 1 : 0 };
         }
     };
 }
@@ -83,15 +64,15 @@ function createFakeDb() {
 function createFakeSessionService() {
     let nextToken = 1;
     return {
-        createSession(userId) {
+        async createSession(userId) {
             return { userId, token: `session-${nextToken++}` };
         }
     };
 }
 
 test('auth service registers users with async password hashing', async () => {
-    const db = createFakeDb();
-    const authService = createAuthService(db, createFakeSessionService());
+    const repository = createFakeAuthRepository();
+    const authService = createAuthService(repository, createFakeSessionService());
 
     const result = await authService.register({
         username: 'Narcis',
@@ -104,14 +85,14 @@ test('auth service registers users with async password hashing', async () => {
     assert.equal(result.user.email, 'narcis@example.com');
     assert.equal(result.session.token, 'session-1');
 
-    const storedUser = db.users.get(result.user.id);
+    const storedUser = repository.users.get(result.user.id);
     assert.notEqual(storedUser.password_hash, 'StrongPassword123!');
     assert.equal(await verifyPassword('StrongPassword123!', storedUser.password_hash), true);
 });
 
 test('auth service login awaits async password verification', async () => {
-    const db = createFakeDb();
-    const authService = createAuthService(db, createFakeSessionService());
+    const repository = createFakeAuthRepository();
+    const authService = createAuthService(repository, createFakeSessionService());
 
     await authService.register({
         username: 'Narcis',
@@ -133,4 +114,24 @@ test('auth service login awaits async password verification', async () => {
     assert.equal(loginResult.ok, true);
     assert.equal(loginResult.user.username, 'Narcis');
     assert.equal(loginResult.session.token, 'session-2');
+});
+
+test('auth service returns conflict when repository reports unique constraint', async () => {
+    const repository = createFakeAuthRepository();
+    const authService = createAuthService(repository, createFakeSessionService());
+
+    await authService.register({
+        username: 'Narcis',
+        email: 'narcis@example.com',
+        password: 'StrongPassword123!'
+    });
+
+    const duplicate = await authService.register({
+        username: 'Narcis',
+        email: 'other@example.com',
+        password: 'StrongPassword123!'
+    });
+
+    assert.equal(duplicate.ok, false);
+    assert.equal(duplicate.status, 409);
 });

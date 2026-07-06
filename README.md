@@ -43,6 +43,7 @@ Aplicația rulează cu **Node.js**, **Express** și **Socket.IO**, iar interfaț
 - Popup final pentru câștig sau pierdere.
 - Restart rundă fără schimbarea camerei.
 - Statistici locale salvate în browser.
+- Conturi și sesiuni persistente în Postgres extern pentru deploy free pe Render + Neon.
 - Teme vizuale multiple.
 - Layout responsive pentru desktop și telefon.
 - Asset-uri locale pentru steaguri și logo-uri de echipe.
@@ -79,6 +80,7 @@ Răspunsul corect este ținut pe server până la finalul jocului, pentru a evit
 - **CSS3** – layout, teme, responsive design și animații.
 - **JavaScript vanilla** – logica din browser.
 - **LocalStorage** – salvarea statisticilor locale.
+- **SQLite / PostgreSQL** – stocare conturi și sesiuni, configurabilă prin `DATABASE_PROVIDER`.
 
 ---
 
@@ -192,7 +194,11 @@ Aplicația poate fi configurată prin variabile de mediu. Pentru rulare locală 
 | `NODE_ENV` | `development` | Folosește `production` pe server public. |
 | `PORT` | `3000` | Portul pe care pornește aplicația. |
 | `PERSISTENCE_MODE` | `local` în development, inferat în production | Modul de persistență: `local`, `ephemeral` sau `persistent`. Pentru Render Free folosește `ephemeral`. |
-| `DATA_DIR` | `./data` | Folderul în care se salvează baza SQLite. |
+| `DATA_DIR` | `./data` | Folder local pentru SQLite/rooms.json. Pe Render Free rămâne efemer. |
+| `DATABASE_PROVIDER` | `sqlite` | Provider DB pentru conturi/sesiuni: `sqlite` sau `postgres`. |
+| `DATABASE_URL` | none | Connection string Postgres, obligatoriu când `DATABASE_PROVIDER=postgres`. |
+| `POSTGRES_SSL` | `true` | Activează SSL pentru Postgres extern, recomandat pentru Neon/hosting cloud. |
+| `DB_FILE_PATH` | `<DATA_DIR>/f1guesser.sqlite` | Path SQLite local, folosit doar când `DATABASE_PROVIDER=sqlite`. |
 | `SESSION_SECRET` | dev fallback local | Secret pentru sesiuni; obligatoriu în production. |
 | `SOCKET_AUTH_SECRET` | `SESSION_SECRET` sau dev fallback | Secret pentru token-ul scurt folosit de socket auth refresh. |
 | `SESSION_COOKIE_NAME` | `f1_session` | Numele cookie-ului de sesiune. |
@@ -215,6 +221,8 @@ Validarea configului este strictă: dacă o variabilă este setată cu o valoare
 
 - `NODE_ENV` trebuie să fie `development`, `test` sau `production`;
 - `PERSISTENCE_MODE` poate fi `local`, `ephemeral` sau `persistent`;
+- `DATABASE_PROVIDER` poate fi `sqlite` sau `postgres`;
+- `DATABASE_URL` este obligatoriu când `DATABASE_PROVIDER=postgres`;
 - `PORT` trebuie să fie între `1` și `65535`;
 - valorile numerice de durată/interval trebuie să fie întregi în limite rezonabile;
 - `COOKIE_SECURE`, `TRUST_PROXY` acceptă doar valori de tip `true/false`, `1/0`, `yes/no`, `on/off`;
@@ -235,6 +243,25 @@ Pentru Render, repo-ul include și:
 - setări recomandate pentru `NODE_ENV=production`, cookie securizat, proxy, health check și `PUBLIC_ORIGIN` pentru Socket.IO.
 
 Pe Render Free, folosește `PERSISTENCE_MODE=ephemeral` și `DATA_DIR=/tmp/f1guesserduel` pentru demo. În acest mod, `/api/health` afișează `persistence.mode=ephemeral`, `version`, `nodeEnv`, `uptimeSeconds` și check-uri non-sensibile pentru `database`, `drivers` și `rooms`, iar datele locale pot fi pierdute la restart/redeploy/sleep. Pentru persistent disk plătit, setează `PERSISTENCE_MODE=persistent` și mută `DATA_DIR`, `DB_FILE_PATH` și `ROOMS_FILE_PATH` în `/var/data`.
+
+### Conturi persistente pe Render Free cu Neon Postgres
+
+Pentru a păstra conturile după redeploy pe Render Free, folosește un Postgres extern și setează în Render:
+
+```env
+DATABASE_PROVIDER=postgres
+DATABASE_URL=postgresql://user:password@host/database?sslmode=require
+POSTGRES_SSL=true
+PERSISTENCE_MODE=ephemeral
+```
+
+În această variantă, `users` și `sessions` sunt salvate în Postgres, iar camerele active rămân în `rooms.json` efemer. Este intenționat: conturile trebuie păstrate, dar camerele active pot dispărea normal la restart/redeploy/sleep.
+
+Local poți rămâne pe SQLite, fără `DATABASE_URL`:
+
+```env
+DATABASE_PROVIDER=sqlite
+```
 
 ### Protecție Socket.IO anti-spam
 

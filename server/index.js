@@ -34,9 +34,14 @@ const logger = createLogger({
 });
 
 function logPersistenceMode(currentConfig) {
+    const databaseProvider = currentConfig.database?.provider || 'sqlite';
+
     if (currentConfig.persistence?.isEphemeral) {
-        logger.warn('Rulează în mod ephemeral/demo. Datele SQLite și rooms.json pot fi pierdute la restart/redeploy/sleep pe hosting free.', {
+        logger.warn(databaseProvider === 'postgres'
+            ? 'Rulează cu rooms.json efemer și conturi persistente în Postgres. Camerele active pot fi pierdute la restart/redeploy/sleep.'
+            : 'Rulează în mod ephemeral/demo. Datele SQLite și rooms.json pot fi pierdute la restart/redeploy/sleep pe hosting free.', {
             persistenceMode: currentConfig.persistence.mode,
+            databaseProvider,
             dataDir: currentConfig.dataDir
         });
         return;
@@ -45,6 +50,7 @@ function logPersistenceMode(currentConfig) {
     if (currentConfig.isProduction) {
         logger.info('Persistence mode resolved.', {
             persistenceMode: currentConfig.persistence?.mode || 'unknown',
+            databaseProvider,
             dataDir: currentConfig.dataDir
         });
     }
@@ -52,6 +58,7 @@ function logPersistenceMode(currentConfig) {
 
 logPersistenceMode(config);
 
+async function startServer() {
 const app = express();
 if (config.trustProxy) {
     app.set('trust proxy', 1);
@@ -71,9 +78,14 @@ const roomStore = createPersistentRoomStore({
     driversRepository,
     logger
 });
-const db = createDatabase({
+const db = await createDatabase({
+    provider: config.database.provider,
+    databaseUrl: config.database.url,
+    postgresSsl: config.database.postgresSsl,
     dbFilePath: config.dbFilePath,
-    schemaFilePath: config.schemaFilePath
+    schemaFilePath: config.schemaFilePath,
+    postgresSchemaFilePath: config.postgresSchemaFilePath,
+    logger
 });
 const sessionService = createSessionService(db, {
     cookieName: config.auth.sessionCookieName,
@@ -120,6 +132,7 @@ app.use('/api', createHealthRoutes({
     appVersion: packageJson.version,
     nodeEnv: config.nodeEnv,
     persistenceMode: config.persistence.mode,
+    databaseProvider: config.database.provider,
     checks: createHealthChecks({
         db,
         driversRepository,
@@ -190,6 +203,16 @@ server.listen(config.port, () => {
     logger.info('F1 Guesser Duel server started.', {
         port: config.port,
         nodeEnv: config.nodeEnv,
-        persistenceMode: config.persistence.mode
+        persistenceMode: config.persistence.mode,
+        databaseProvider: config.database.provider
     });
+});
+
+return { app, server, io, db, roomStore };
+}
+
+
+startServer().catch(error => {
+    logger.error('F1 Guesser Duel server failed to start.', { error });
+    process.exitCode = 1;
 });

@@ -27,6 +27,12 @@ services:
         value: 250
       - key: PERSISTENCE_MODE
         value: ephemeral
+      - key: DATABASE_PROVIDER
+        value: postgres
+      - key: POSTGRES_SSL
+        value: true
+      - key: DATABASE_URL
+        sync: false
       - key: SOCKET_RATE_LIMIT_ENABLED
         value: true
       - key: SOCKET_RATE_LIMIT_WINDOW_MS

@@ -51,7 +51,12 @@ function hasFailedChecks(checks = {}) {
 function createHealthChecks({ db = null, driversRepository = null, roomStore = null } = {}) {
     const checks = {};
 
-    if (db?.prepare) {
+    if (db?.check) {
+        checks.database = async () => {
+            await db.check();
+            return { status: CHECK_STATUS_OK };
+        };
+    } else if (db?.prepare) {
         checks.database = () => {
             db.prepare('SELECT 1 AS ok').get();
             return { status: CHECK_STATUS_OK };
@@ -92,6 +97,7 @@ async function createHealthPayload({
     appVersion = null,
     nodeEnv = null,
     persistenceMode = null,
+    databaseProvider = null,
     checks = {}
 } = {}) {
     const resolvedChecks = await resolveHealthChecks(checks);
@@ -113,6 +119,12 @@ async function createHealthPayload({
     if (persistenceMode) {
         payload.persistence = {
             mode: persistenceMode
+        };
+    }
+
+    if (databaseProvider) {
+        payload.database = {
+            provider: databaseProvider
         };
     }
 

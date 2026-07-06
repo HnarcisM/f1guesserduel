@@ -12,6 +12,7 @@ const DEV_SOCKET_AUTH_SECRET = 'f1-guesser-duel-dev-socket-auth-secret';
 const ALLOWED_NODE_ENV_VALUES = new Set(['development', 'test', 'production']);
 const ALLOWED_SAME_SITE_VALUES = new Set(['lax', 'strict', 'none']);
 const ALLOWED_PERSISTENCE_MODE_VALUES = new Set(['local', 'ephemeral', 'persistent']);
+const ALLOWED_DATABASE_PROVIDER_VALUES = new Set(['sqlite', 'postgres']);
 const ALLOWED_LOG_LEVEL_VALUES = new Set(['silent', 'error', 'warn', 'info', 'debug']);
 const COOKIE_NAME_PATTERN = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
 const DEFAULT_LOCAL_ORIGIN_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
@@ -111,6 +112,17 @@ function normalizePersistenceMode(value) {
     const normalized = value.trim().toLowerCase();
     if (!ALLOWED_PERSISTENCE_MODE_VALUES.has(normalized)) {
         throw new Error('PERSISTENCE_MODE must be one of: local, ephemeral, persistent.');
+    }
+    return normalized;
+}
+
+function normalizeDatabaseProvider(value) {
+    if (value === undefined || value === null || value === '') return 'sqlite';
+    if (typeof value !== 'string') throw new Error('DATABASE_PROVIDER must be a string.');
+
+    const normalized = value.trim().toLowerCase();
+    if (!ALLOWED_DATABASE_PROVIDER_VALUES.has(normalized)) {
+        throw new Error('DATABASE_PROVIDER must be one of: sqlite, postgres.');
     }
     return normalized;
 }
@@ -231,6 +243,11 @@ function createAppConfig(env = process.env, options = {}) {
     const nodeEnv = normalizeNodeEnv(env.NODE_ENV);
     const isProduction = nodeEnv === 'production';
     const dataDir = resolveOptionalPath(env, 'DATA_DIR', path.join(projectRoot, 'data'));
+    const databaseProvider = normalizeDatabaseProvider(env.DATABASE_PROVIDER);
+    const databaseUrl = getOptionalEnvString(env, 'DATABASE_URL');
+    if (databaseProvider === 'postgres' && !databaseUrl) {
+        throw new Error('DATABASE_URL must be set when DATABASE_PROVIDER=postgres.');
+    }
     const persistenceMode = resolvePersistenceMode(env, {
         isProduction,
         dataDir
@@ -282,6 +299,12 @@ function createAppConfig(env = process.env, options = {}) {
         driversFilePath: resolveOptionalPath(env, 'DRIVERS_FILE_PATH', path.join(projectRoot, 'data', 'drivers.json')),
         dbFilePath: resolveOptionalPath(env, 'DB_FILE_PATH', path.join(dataDir, 'f1guesser.sqlite')),
         schemaFilePath: resolveOptionalPath(env, 'DB_SCHEMA_FILE_PATH', path.join(projectRoot, 'server', 'db', 'schema.sql')),
+        postgresSchemaFilePath: resolveOptionalPath(env, 'POSTGRES_SCHEMA_FILE_PATH', path.join(projectRoot, 'server', 'db', 'postgresSchema.sql')),
+        database: {
+            provider: databaseProvider,
+            url: databaseUrl,
+            postgresSsl: parseBooleanEnv(env, 'POSTGRES_SSL', true)
+        },
         publicDir: resolveOptionalPath(env, 'PUBLIC_DIR', path.join(projectRoot, 'public')),
         rooms: {
             persistenceFilePath: resolveOptionalPath(env, 'ROOMS_FILE_PATH', path.join(dataDir, 'rooms.json')),
@@ -343,6 +366,7 @@ module.exports = {
     normalizeAllowedOrigin,
     normalizePersistenceMode,
     normalizeLogLevel,
+    normalizeDatabaseProvider,
     resolveSocketAllowedOrigins,
     DEFAULT_PORT,
     DEFAULT_SESSION_COOKIE_NAME,

@@ -3,11 +3,12 @@
   "version": "1.0.0",
   "main": "server/index.js",
   "dependencies": {
+    "better-sqlite3": "^11.10.0",
+    "cookie-parser": "^1.4.7",
     "express": "^4.19.2",
     "helmet": "^8.2.0",
-    "socket.io": "^4.7.5",
-    "better-sqlite3": "^11.10.0",
-    "cookie-parser": "^1.4.7"
+    "pg": "^8.22.0",
+    "socket.io": "^4.7.5"
   },
   "scripts": {
     "start": "node server/index.js",

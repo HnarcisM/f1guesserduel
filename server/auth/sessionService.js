@@ -5,6 +5,7 @@ const {
     DEFAULT_SOCKET_AUTH_TOKEN_MAX_AGE_MS,
     DEFAULT_SESSION_CLEANUP_INTERVAL_MS
 } = require('../config/appConfig');
+const { createAuthRepository } = require('./authRepository');
 
 const SESSION_COOKIE_NAME = DEFAULT_SESSION_COOKIE_NAME;
 const SESSION_MAX_AGE_DAYS = DEFAULT_SESSION_MAX_AGE_DAYS;
@@ -37,40 +38,16 @@ function safeEqual(a, b) {
     return left.length === right.length && crypto.timingSafeEqual(left, right);
 }
 
-function createSessionService(db, options = {}) {
+function createSessionService(databaseOrRepository, options = {}) {
+    const repository = createAuthRepository(databaseOrRepository);
     const cookieName = options.cookieName || SESSION_COOKIE_NAME;
     const maxAgeMs = options.sessionMaxAgeMs || SESSION_MAX_AGE_MS;
     const socketAuthTokenMaxAgeMs = options.socketAuthTokenMaxAgeMs || SOCKET_AUTH_TOKEN_MAX_AGE_MS;
     const sessionCleanupIntervalMs = options.sessionCleanupIntervalMs ?? DEFAULT_SESSION_CLEANUP_INTERVAL_MS;
     const socketAuthSecret = options.socketAuthSecret || DEFAULT_SOCKET_AUTH_SECRET;
 
-    const createSessionStmt = db.prepare(`
-        INSERT INTO sessions (user_id, token_hash, expires_at)
-        VALUES (@userId, @tokenHash, @expiresAt)
-    `);
-
-    const getSessionUserStmt = db.prepare(`
-        SELECT
-            users.id,
-            users.username,
-            users.email,
-            users.created_at AS createdAt
-        FROM sessions
-        JOIN users ON users.id = sessions.user_id
-        WHERE sessions.token_hash = ?
-          AND datetime(sessions.expires_at) > datetime('now')
-    `);
-
-    const deleteSessionStmt = db.prepare(`
-        DELETE FROM sessions WHERE token_hash = ?
-    `);
-
-    const deleteExpiredStmt = db.prepare(`
-        DELETE FROM sessions WHERE datetime(expires_at) <= datetime('now')
-    `);
-
-    function cleanupExpiredSessions() {
-        return deleteExpiredStmt.run();
+    async function cleanupExpiredSessions() {
+        return repository.deleteExpiredSessions();
     }
 
     function startExpiredSessionCleanup({ intervalMs = sessionCleanupIntervalMs, logger = console } = {}) {
@@ -79,11 +56,9 @@ function createSessionService(db, options = {}) {
         }
 
         const timer = setInterval(() => {
-            try {
-                cleanupExpiredSessions();
-            } catch (error) {
+            cleanupExpiredSessions().catch(error => {
                 logger?.error?.('[sessions] Failed to clean up expired sessions.', { error });
-            }
+            });
         }, intervalMs);
 
         timer.unref?.();
@@ -91,32 +66,32 @@ function createSessionService(db, options = {}) {
         return () => clearInterval(timer);
     }
 
-    function createSession(userId) {
-        cleanupExpiredSessions();
+    async function createSession(userId) {
+        await cleanupExpiredSessions();
 
         const token = crypto.randomBytes(32).toString('hex');
         const tokenHash = hashToken(token);
         const expiresAt = new Date(Date.now() + maxAgeMs).toISOString();
 
-        createSessionStmt.run({ userId, tokenHash, expiresAt });
+        await repository.createSession({ userId, tokenHash, expiresAt });
         return { token, expiresAt };
     }
 
-    function getUserBySessionHash(sessionHash) {
+    async function getUserBySessionHash(sessionHash) {
         if (!sessionHash || typeof sessionHash !== 'string') return null;
-        return getSessionUserStmt.get(sessionHash) || null;
+        return repository.getSessionUserByHash(sessionHash);
     }
 
-    function getUserByToken(token) {
+    async function getUserByToken(token) {
         if (!token || typeof token !== 'string') return null;
         return getUserBySessionHash(hashToken(token));
     }
 
-    function createSocketAuthToken(sessionToken) {
+    async function createSocketAuthToken(sessionToken) {
         if (!sessionToken || typeof sessionToken !== 'string') return null;
 
         const sessionHash = hashToken(sessionToken);
-        const user = getUserBySessionHash(sessionHash);
+        const user = await getUserBySessionHash(sessionHash);
         if (!user) return null;
 
         const payload = {
@@ -129,7 +104,7 @@ function createSessionService(db, options = {}) {
         return `${encodedPayload}.${signature}`;
     }
 
-    function getUserBySocketAuthToken(socketAuthToken) {
+    async function getUserBySocketAuthToken(socketAuthToken) {
         if (!socketAuthToken || typeof socketAuthToken !== 'string') return null;
 
         const [encodedPayload, signature] = socketAuthToken.split('.');
@@ -148,9 +123,9 @@ function createSessionService(db, options = {}) {
         }
     }
 
-    function destroySession(token) {
+    async function destroySession(token) {
         if (!token || typeof token !== 'string') return;
-        deleteSessionStmt.run(hashToken(token));
+        await repository.deleteSessionByHash(hashToken(token));
     }
 
     return {
@@ -169,6 +144,7 @@ function createSessionService(db, options = {}) {
 
 module.exports = {
     createSessionService,
+    hashToken,
     SESSION_COOKIE_NAME,
     SOCKET_AUTH_TOKEN_MAX_AGE_MS,
     DEFAULT_SESSION_CLEANUP_INTERVAL_MS

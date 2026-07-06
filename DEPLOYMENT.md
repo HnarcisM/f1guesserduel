@@ -2,7 +2,7 @@
 
 Acest ghid descrie configurarea recomandată pentru publicarea aplicației pe Render ca **Web Service Node.js** conectat la GitHub.
 
-> Notă importantă: Render Free este potrivit pentru demo/test. Serviciul poate intra în sleep după inactivitate, iar filesystem-ul este efemer. În această variantă folosim explicit `PERSISTENCE_MODE=ephemeral`, deci datele locale SQLite și `rooms.json` pot fi pierdute la restart/redeploy/sleep. Pentru utilizatori permanenți ai nevoie de persistent disk sau de o bază de date externă.
+> Notă importantă: Render Free este potrivit pentru demo/test. Serviciul poate intra în sleep după inactivitate, iar filesystem-ul local este efemer. Pentru conturi persistente pe varianta free folosim Postgres extern prin `DATABASE_PROVIDER=postgres` și `DATABASE_URL`, iar `rooms.json` rămâne efemer pentru camere active.
 
 ---
 
@@ -65,6 +65,9 @@ ROOM_SAVE_DEBOUNCE_MS=250
 PERSISTENCE_MODE=ephemeral
 DATA_DIR=/tmp/f1guesserduel
 ROOMS_FILE_PATH=/tmp/f1guesserduel/rooms.json
+DATABASE_PROVIDER=postgres
+DATABASE_URL=<connection-string-neon>
+POSTGRES_SSL=true
 PUBLIC_ORIGIN=https://numele-serviciului-tau.onrender.com
 LOG_LEVEL=info
 REQUEST_LOGGING_ENABLED=true
@@ -85,6 +88,32 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 Rulează comanda de două ori: o dată pentru `SESSION_SECRET`, o dată pentru `SOCKET_AUTH_SECRET`.
 
+
+### Conturi persistente cu Neon Postgres
+
+Pentru varianta free recomandată:
+
+1. Creează un proiect Postgres în Neon.
+2. Copiază connection string-ul de tip `postgresql://...`.
+3. În Render → Environment setează:
+
+```env
+DATABASE_PROVIDER=postgres
+DATABASE_URL=postgresql://user:password@host/database?sslmode=require
+POSTGRES_SSL=true
+PERSISTENCE_MODE=ephemeral
+```
+
+Important: `DATABASE_URL` trebuie setat în Render înainte de redeploy dacă `DATABASE_PROVIDER=postgres`. Dacă lipsește, serverul se oprește intenționat cu mesaj clar, ca să nu pornească accidental pe SQLite efemer.
+
+La pornire, aplicația creează automat tabelele Postgres necesare:
+
+```text
+users
+sessions
+```
+
+Conturile și sesiunile se păstrează în Postgres. Camerele active rămân în `rooms.json` pe `/tmp`, deci pot dispărea la restart/redeploy/sleep.
 
 ### Socket.IO rate limit
 
@@ -138,7 +167,9 @@ Fișierul setează automat:
 - start command;
 - health check path;
 - variabile non-secrete de production;
-- `PERSISTENCE_MODE=ephemeral` pentru varianta demo/free;
+- `PERSISTENCE_MODE=ephemeral` pentru Render Free;
+- `DATABASE_PROVIDER=postgres` pentru conturi persistente prin Postgres extern;
+- `DATABASE_URL` ca variabilă nesincronizată, completată manual în Render;
 - `PUBLIC_ORIGIN` ca variabilă nesincronizată, pe care o completezi cu URL-ul Render real;
 - `SESSION_SECRET` și `SOCKET_AUTH_SECRET` ca variabile nesincronizate, care trebuie completate în Render.
 
@@ -148,7 +179,7 @@ Nu pune niciodată valorile reale ale secretelor în Git.
 
 ## 5. Persistență date
 
-### Variantă A: demo/free cu storage efemer
+### Variantă A: Render Free + Neon Postgres pentru conturi
 
 Folosește:
 
@@ -156,11 +187,26 @@ Folosește:
 PERSISTENCE_MODE=ephemeral
 DATA_DIR=/tmp/f1guesserduel
 ROOMS_FILE_PATH=/tmp/f1guesserduel/rooms.json
+DATABASE_PROVIDER=postgres
+DATABASE_URL=postgresql://user:password@host/database?sslmode=require
+POSTGRES_SSL=true
 ```
 
-Această variantă păstrează implementarea actuală: SQLite local pentru utilizatori/sesiuni/statistici și `rooms.json` pentru camere active. Este simplă, gratuită și suficientă pentru demo/test.
+Această variantă păstrează aplicația pe Render Free, dar mută conturile și sesiunile în Postgres extern. Astfel, conturile nu mai dispar la redeploy.
 
-Dezavantaj: datele sunt efemere. Conturile, sesiunile, camerele și scorurile locale pot dispărea la restart, redeploy sau sleep pe Render Free. La pornire serverul scrie și un warning în log când rulează în `ephemeral/demo`.
+Camerele active rămân efemere în `rooms.json`. Este acceptabil pentru Duel, pentru că o cameră activă poate fi recreată după restart/redeploy/sleep.
+
+### Variantă A veche: demo/free 100% local efemer
+
+Dacă nu setezi Postgres și rămâi pe:
+
+```env
+DATABASE_PROVIDER=sqlite
+PERSISTENCE_MODE=ephemeral
+DATA_DIR=/tmp/f1guesserduel
+```
+
+atunci conturile și sesiunile rămân în SQLite local și pot dispărea la restart, redeploy sau sleep pe Render Free.
 
 Endpoint-ul `/api/health` include informații non-sensibile utile pentru Render și debugging:
 
@@ -173,6 +219,9 @@ Endpoint-ul `/api/health` include informații non-sensibile utile pentru Render 
   "timestamp": "2026-07-07T00:00:00.000Z",
   "persistence": {
     "mode": "ephemeral"
+  },
+  "database": {
+    "provider": "postgres"
   },
   "checks": {
     "database": { "status": "ok" },

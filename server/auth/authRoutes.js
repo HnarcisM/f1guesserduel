@@ -38,10 +38,10 @@ function createAuthRoutes({ authService, sessionService, rateLimiters = {}, cook
         res.clearCookie(sessionService.cookieName, clearOptions);
     }
 
-    function buildAuthResponse(user, sessionToken = null) {
+    async function buildAuthResponse(user, sessionToken = null) {
         return {
             user: user || null,
-            socketAuthToken: sessionService.createSocketAuthToken(sessionToken)
+            socketAuthToken: await sessionService.createSocketAuthToken(sessionToken)
         };
     }
 
@@ -53,7 +53,7 @@ function createAuthRoutes({ authService, sessionService, rateLimiters = {}, cook
             }
 
             setSessionCookie(res, result.session.token);
-            return res.status(201).json(buildAuthResponse(result.user, result.session.token));
+            return res.status(201).json(await buildAuthResponse(result.user, result.session.token));
         } catch (error) {
             return next(error);
         }
@@ -67,26 +67,34 @@ function createAuthRoutes({ authService, sessionService, rateLimiters = {}, cook
             }
 
             setSessionCookie(res, result.session.token);
-            return res.json(buildAuthResponse(result.user, result.session.token));
+            return res.json(await buildAuthResponse(result.user, result.session.token));
         } catch (error) {
             return next(error);
         }
     });
 
-    router.post('/logout', (req, res) => {
-        const token = req.cookies ? req.cookies[sessionService.cookieName] : null;
-        sessionService.destroySession(token);
-        clearSessionCookie(res);
-        return res.json({ ok: true, user: null, socketAuthToken: null });
+    router.post('/logout', async (req, res, next) => {
+        try {
+            const token = req.cookies ? req.cookies[sessionService.cookieName] : null;
+            await sessionService.destroySession(token);
+            clearSessionCookie(res);
+            return res.json({ ok: true, user: null, socketAuthToken: null });
+        } catch (error) {
+            return next(error);
+        }
     });
 
-    router.get('/me', (req, res) => {
-        if (!req.user) {
-            return res.json({ user: null, socketAuthToken: null });
-        }
+    router.get('/me', async (req, res, next) => {
+        try {
+            if (!req.user) {
+                return res.json({ user: null, socketAuthToken: null });
+            }
 
-        const token = req.cookies ? req.cookies[sessionService.cookieName] : null;
-        return res.json(buildAuthResponse(req.user, token));
+            const token = req.cookies ? req.cookies[sessionService.cookieName] : null;
+            return res.json(await buildAuthResponse(req.user, token));
+        } catch (error) {
+            return next(error);
+        }
     });
 
     return router;

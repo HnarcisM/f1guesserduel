@@ -1,4 +1,5 @@
 const { hashPassword, verifyPassword } = require('./passwordService');
+const { createAuthRepository } = require('./authRepository');
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -21,27 +22,8 @@ function sanitizeUser(row) {
     };
 }
 
-function createAuthService(db, sessionService) {
-    const createUserStmt = db.prepare(`
-        INSERT INTO users (username, email, password_hash, last_seen_at)
-        VALUES (@username, @email, @passwordHash, datetime('now'))
-    `);
-
-    const findByEmailStmt = db.prepare(`
-        SELECT id, username, email, password_hash, created_at AS createdAt
-        FROM users
-        WHERE email = ?
-    `);
-
-    const findByIdStmt = db.prepare(`
-        SELECT id, username, email, created_at AS createdAt
-        FROM users
-        WHERE id = ?
-    `);
-
-    const updateLastSeenStmt = db.prepare(`
-        UPDATE users SET last_seen_at = datetime('now') WHERE id = ?
-    `);
+function createAuthService(databaseOrRepository, sessionService) {
+    const repository = createAuthRepository(databaseOrRepository);
 
     function validateRegisterInput({ username, email, password }) {
         const cleanUsername = normalizeUsername(username);
@@ -72,17 +54,16 @@ function createAuthService(db, sessionService) {
         const cleanEmail = normalizeEmail(email);
 
         try {
-            const result = createUserStmt.run({
+            const user = await repository.createUser({
                 username: cleanUsername,
                 email: cleanEmail,
                 passwordHash: await hashPassword(password)
             });
 
-            const user = findByIdStmt.get(result.lastInsertRowid);
-            const session = sessionService.createSession(user.id);
+            const session = await sessionService.createSession(user.id);
             return { ok: true, user: sanitizeUser(user), session };
         } catch (error) {
-            if (error && error.code === 'SQLITE_CONSTRAINT_UNIQUE') {
+            if (repository.isUniqueConstraintError?.(error)) {
                 return { ok: false, status: 409, message: 'Username-ul sau email-ul este deja folosit.' };
             }
 
@@ -96,18 +77,18 @@ function createAuthService(db, sessionService) {
             return { ok: false, status: 400, message: 'Email sau parolă invalidă.' };
         }
 
-        const userRow = findByEmailStmt.get(cleanEmail);
+        const userRow = await repository.findUserByEmail(cleanEmail);
         if (!userRow || !(await verifyPassword(password, userRow.password_hash))) {
             return { ok: false, status: 401, message: 'Email sau parolă greșită.' };
         }
 
-        updateLastSeenStmt.run(userRow.id);
-        const session = sessionService.createSession(userRow.id);
+        await repository.updateLastSeen(userRow.id);
+        const session = await sessionService.createSession(userRow.id);
         return { ok: true, user: sanitizeUser(userRow), session };
     }
 
-    function getUserById(userId) {
-        return sanitizeUser(findByIdStmt.get(userId));
+    async function getUserById(userId) {
+        return sanitizeUser(await repository.findUserById(userId));
     }
 
     return {
@@ -118,5 +99,8 @@ function createAuthService(db, sessionService) {
 }
 
 module.exports = {
-    createAuthService
+    createAuthService,
+    normalizeEmail,
+    normalizeUsername,
+    sanitizeUser
 };

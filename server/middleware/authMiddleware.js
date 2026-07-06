@@ -1,8 +1,12 @@
 function createAuthMiddleware(sessionService) {
-    return function authMiddleware(req, res, next) {
-        const token = req.cookies ? req.cookies[sessionService.cookieName] : null;
-        req.user = sessionService.getUserByToken(token);
-        next();
+    return async function authMiddleware(req, res, next) {
+        try {
+            const token = req.cookies ? req.cookies[sessionService.cookieName] : null;
+            req.user = await sessionService.getUserByToken(token);
+            next();
+        } catch (error) {
+            next(error);
+        }
     };
 }
 

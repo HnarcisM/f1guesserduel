@@ -19,6 +19,9 @@ test('Render blueprint documents production web service settings', () => {
     assert.match(source, /startCommand:\s*npm start/);
     assert.match(source, /healthCheckPath:\s*\/api\/health/);
     assert.match(source, /key:\s*PERSISTENCE_MODE\s+value:\s*ephemeral/s);
+    assert.match(source, /key:\s*DATABASE_PROVIDER\s+value:\s*postgres/s);
+    assert.match(source, /key:\s*POSTGRES_SSL\s+value:\s*true/s);
+    assert.match(source, /key:\s*DATABASE_URL\s+sync:\s*false/s);
     assert.match(source, /key:\s*SOCKET_RATE_LIMIT_ENABLED\s+value:\s*true/s);
     assert.match(source, /key:\s*SOCKET_RATE_LIMIT_WINDOW_MS\s+value:\s*60000/s);
     assert.match(source, /key:\s*LOG_LEVEL\s+value:\s*info/s);
@@ -31,6 +34,7 @@ test('Render blueprint keeps production secrets out of Git', () => {
     assert.match(source, /key:\s*SESSION_SECRET\s+sync:\s*false/s);
     assert.match(source, /key:\s*SOCKET_AUTH_SECRET\s+sync:\s*false/s);
     assert.match(source, /key:\s*PUBLIC_ORIGIN\s+sync:\s*false/s);
+    assert.match(source, /key:\s*DATABASE_URL\s+sync:\s*false/s);
     assert.doesNotMatch(source, /change-me-to-a-long-random-secret/);
     assert.doesNotMatch(source, /change-me-to-another-long-random-secret/);
 });
@@ -42,6 +46,9 @@ test('example environment uses Render-safe production defaults', () => {
     assert.match(source, /DATA_DIR=\/tmp\/f1guesserduel/);
     assert.match(source, /PERSISTENCE_MODE=ephemeral/);
     assert.match(source, /ROOMS_FILE_PATH=\/tmp\/f1guesserduel\/rooms\.json/);
+    assert.match(source, /DATABASE_PROVIDER=postgres/);
+    assert.match(source, /DATABASE_URL=postgresql:\/\/user:password@host\/database\?sslmode=require/);
+    assert.match(source, /POSTGRES_SSL=true/);
     assert.match(source, /COOKIE_SECURE=true/);
     assert.match(source, /COOKIE_SAMESITE=lax/);
     assert.match(source, /TRUST_PROXY=true/);
@@ -62,6 +69,9 @@ test('deployment guide includes manual Render checks and secret generation', () 
     assert.match(source, /randomBytes\(32\)\.toString\('hex'\)/);
     assert.match(source, /Nu seta manual `PORT`/);
     assert.match(source, /PUBLIC_ORIGIN=https:\/\/numele-serviciului-tau\.onrender\.com/);
+    assert.match(source, /DATABASE_PROVIDER=postgres/);
+    assert.match(source, /DATABASE_URL=postgresql:\/\/user:password@host\/database\?sslmode=require/);
+    assert.match(source, /Conturi persistente cu Neon Postgres/);
     assert.match(source, /SOCKET_ALLOWED_ORIGINS/);
     assert.match(source, /SOCKET_RATE_LIMIT_ENABLED=true/);
     assert.match(source, /SOCKET_RATE_LIMIT_WINDOW_MS=60000/);
@@ -69,4 +79,5 @@ test('deployment guide includes manual Render checks and secret generation', () 
     assert.match(source, /REQUEST_LOGGING_ENABLED=true/);
     assert.match(source, /PERSISTENCE_MODE=ephemeral/);
     assert.match(source, /\/api\/health.*checks.*database.*drivers.*rooms/s);
+    assert.match(source, /"database".*"provider": "postgres"/s);
 });
