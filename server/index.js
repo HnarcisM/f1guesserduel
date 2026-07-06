@@ -17,6 +17,7 @@ const { createAuthMiddleware } = require('./middleware/authMiddleware');
 const { createErrorMiddleware } = require('./middleware/errorMiddleware');
 const { createServerErrorHandler } = require('./middleware/serverErrorHandler');
 const { createHealthRoutes } = require('./routes/healthRoutes');
+const { createSecurityHeadersMiddleware } = require('./middleware/securityHeaders');
 const { createAppConfig } = require('./config/appConfig');
 
 const config = createAppConfig(process.env, {
@@ -76,6 +77,9 @@ function setStaticCacheHeaders(res, filePath) {
     }
 }
 
+app.use(createSecurityHeadersMiddleware({
+    isProduction: config.isProduction
+}));
 app.use(express.json({ limit: '32kb' }));
 app.use(cookieParser());
 app.use(createAuthMiddleware(sessionService));

@@ -126,7 +126,27 @@ ROOMS_FILE_PATH=/var/data/rooms.json
 
 ---
 
-## 6. Verificări după deploy
+## 6. Security headers
+
+Aplicația activează automat security headers prin `helmet` în `server/middleware/securityHeaders.js`. Nu trebuie setată nicio variabilă specială pe Render pentru acest pas.
+
+Configurația include:
+
+```text
+- Content-Security-Policy cu `script-src 'self'`;
+- `connect-src 'self' ws: wss:` pentru Socket.IO;
+- `img-src 'self' data:` pentru assets locale;
+- `frame-ancestors 'none'`;
+- `object-src 'none'`;
+- `Referrer-Policy: no-referrer`;
+- HSTS doar când `NODE_ENV=production`.
+```
+
+`style-src 'unsafe-inline'` este păstrat intenționat pentru că UI-ul actual setează dinamic dimensiuni/variabile CSS pentru timer și barele de progres.
+
+---
+
+## 7. Verificări după deploy
 
 După deploy, testează:
 
@@ -148,7 +168,7 @@ Checklist manual:
 
 ---
 
-## 7. Probleme frecvente
+## 8. Probleme frecvente
 
 ### Prima accesare este lentă
 

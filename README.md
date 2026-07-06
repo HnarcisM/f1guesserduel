@@ -794,3 +794,19 @@ Panelul nu afișează piloții ghiciți de adversar. Rezultatul final și scoreb
 - Player 2 și spectatorii primesc `roomStateUpdate` imediat și văd setările actualizate fără refresh.
 - Setările lobby-ului sunt blocate în timpul rundei active și se pot modifica doar când camera este în lobby.
 - Setările rămân strict pentru `Duel`; Single Play și Daily Challenge nu folosesc lobby.
+### Security headers pentru production
+
+Serverul Express folosește `helmet` prin `server/middleware/securityHeaders.js`.
+
+Headerele importante includ:
+
+```text
+- Content-Security-Policy pentru scripturi locale, imagini locale/data și WebSocket-uri Socket.IO;
+- frame-ancestors 'none' pentru protecție anti-clickjacking;
+- object-src 'none' pentru blocarea pluginurilor/embed-urilor vechi;
+- Referrer-Policy: no-referrer;
+- Strict-Transport-Security doar în production.
+```
+
+CSP-ul păstrează `style-src 'unsafe-inline'` deoarece unele componente frontend setează dinamic `style.width` și CSS variables pentru timer/progress bar.
+
