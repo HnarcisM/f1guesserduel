@@ -11,6 +11,7 @@ const DEV_SOCKET_AUTH_SECRET = 'f1-guesser-duel-dev-socket-auth-secret';
 const ALLOWED_NODE_ENV_VALUES = new Set(['development', 'test', 'production']);
 const ALLOWED_SAME_SITE_VALUES = new Set(['lax', 'strict', 'none']);
 const COOKIE_NAME_PATTERN = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
+const DEFAULT_LOCAL_ORIGIN_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
 
 function isBlank(value) {
     return typeof value !== 'string' || value.trim().length === 0;
@@ -116,6 +117,64 @@ function resolveOptionalPath(env, name, fallback) {
     return getOptionalEnvString(env, name) || fallback;
 }
 
+
+function normalizeAllowedOrigin(value) {
+    if (typeof value !== 'string' || value.trim().length === 0) {
+        throw new Error('Socket origin values must not be empty.');
+    }
+
+    let parsed;
+    try {
+        parsed = new URL(value.trim());
+    } catch {
+        throw new Error(`Invalid socket origin: ${value}`);
+    }
+
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+        throw new Error(`Invalid socket origin protocol for ${value}. Use http or https.`);
+    }
+
+    if (parsed.username || parsed.password || parsed.search || parsed.hash || parsed.pathname !== '/') {
+        throw new Error(`Invalid socket origin: ${value}. Use only protocol, host and optional port.`);
+    }
+
+    return parsed.origin;
+}
+
+function splitOriginList(value) {
+    if (value === undefined || value === null || value === '') return [];
+    if (typeof value !== 'string') throw new Error('SOCKET_ALLOWED_ORIGINS must be a comma-separated string.');
+
+    return value
+        .split(',')
+        .map(part => part.trim())
+        .filter(Boolean);
+}
+
+function buildLocalOrigins(port) {
+    return DEFAULT_LOCAL_ORIGIN_HOSTS.flatMap(host => [
+        `http://${host}:${port}`,
+        `https://${host}:${port}`
+    ]);
+}
+
+function resolveSocketAllowedOrigins(env, { isProduction, port }) {
+    const configuredOrigins = [
+        ...splitOriginList(env.SOCKET_ALLOWED_ORIGINS),
+        ...splitOriginList(env.PUBLIC_ORIGIN)
+    ];
+
+    const origins = new Set(configuredOrigins.map(normalizeAllowedOrigin));
+
+    if (!isProduction) {
+        for (const origin of buildLocalOrigins(port)) {
+            origins.add(normalizeAllowedOrigin(origin));
+        }
+    }
+
+    return [...origins];
+}
+
 function resolveCookieName(env) {
     const cookieName = getOptionalEnvString(env, 'SESSION_COOKIE_NAME') || DEFAULT_SESSION_COOKIE_NAME;
     if (!COOKIE_NAME_PATTERN.test(cookieName)) {
@@ -156,10 +215,16 @@ function createAppConfig(env = process.env, options = {}) {
         throw new Error('COOKIE_SAMESITE=none requires COOKIE_SECURE=true.');
     }
 
+    const port = parseIntegerEnv(env, 'PORT', DEFAULT_PORT, { min: 1, max: 65535 });
+    const socketAllowedOrigins = resolveSocketAllowedOrigins(env, {
+        isProduction,
+        port
+    });
+
     return {
         nodeEnv,
         isProduction,
-        port: parseIntegerEnv(env, 'PORT', DEFAULT_PORT, { min: 1, max: 65535 }),
+        port,
         projectRoot,
         dataDir,
         trustProxy: parseBooleanEnv(env, 'TRUST_PROXY', false),
@@ -175,6 +240,9 @@ function createAppConfig(env = process.env, options = {}) {
                 DEFAULT_ROOM_SAVE_DEBOUNCE_MS,
                 { min: 0, max: 60_000 }
             )
+        },
+        socket: {
+            allowedOrigins: socketAllowedOrigins
         },
         auth: {
             sessionSecret,
@@ -208,6 +276,8 @@ module.exports = {
     parseBoolean,
     parsePositiveInteger,
     normalizeSameSite,
+    normalizeAllowedOrigin,
+    resolveSocketAllowedOrigins,
     DEFAULT_PORT,
     DEFAULT_SESSION_COOKIE_NAME,
     DEFAULT_SESSION_MAX_AGE_DAYS,

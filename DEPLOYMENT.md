@@ -64,6 +64,7 @@ SESSION_CLEANUP_INTERVAL_MS=900000
 ROOM_SAVE_DEBOUNCE_MS=250
 DATA_DIR=/tmp/f1guesserduel
 ROOMS_FILE_PATH=/tmp/f1guesserduel/rooms.json
+PUBLIC_ORIGIN=https://numele-serviciului-tau.onrender.com
 ```
 
 Adaugă separat două secrete lungi:
@@ -81,6 +82,23 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 Rulează comanda de două ori: o dată pentru `SESSION_SECRET`, o dată pentru `SOCKET_AUTH_SECRET`.
 
+
+### Socket.IO allowed origins
+
+Pentru deploy online setează `PUBLIC_ORIGIN` la adresa publică exactă a aplicației, fără slash sau path la final:
+
+```env
+PUBLIC_ORIGIN=https://numele-serviciului-tau.onrender.com
+```
+
+Această valoare este folosită de Socket.IO pentru a accepta conexiuni doar din site-ul tău. Dacă ai și un preview/staging, poți adăuga origini extra:
+
+```env
+SOCKET_ALLOWED_ORIGINS=https://preview.example.com,https://staging.example.com
+```
+
+În development, aplicația permite automat `localhost`, `127.0.0.1` și `[::1]` pe portul local configurat. În production nu sunt adăugate origini locale automat.
+
 ---
 
 ## 4. Blueprint opțional: `render.yaml`
@@ -93,6 +111,7 @@ Fișierul setează automat:
 - start command;
 - health check path;
 - variabile non-secrete de production;
+- `PUBLIC_ORIGIN` ca variabilă nesincronizată, pe care o completezi cu URL-ul Render real;
 - `SESSION_SECRET` și `SOCKET_AUTH_SECRET` ca variabile nesincronizate, care trebuie completate în Render.
 
 Nu pune niciodată valorile reale ale secretelor în Git.
@@ -135,6 +154,7 @@ Configurația include:
 ```text
 - Content-Security-Policy cu `script-src 'self'`;
 - `connect-src 'self' ws: wss:` pentru Socket.IO;
+- allowlist de origin pentru Socket.IO prin `PUBLIC_ORIGIN` / `SOCKET_ALLOWED_ORIGINS`;
 - `img-src 'self' data:` pentru assets locale;
 - `frame-ancestors 'none'`;
 - `object-src 'none'`;
@@ -183,6 +203,7 @@ NODE_ENV=production
 TRUST_PROXY=true
 COOKIE_SECURE=true
 COOKIE_SAMESITE=lax
+PUBLIC_ORIGIN=https://numele-serviciului-tau.onrender.com
 SESSION_SECRET=<setat>
 ```
 

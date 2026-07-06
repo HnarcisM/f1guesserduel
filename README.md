@@ -203,6 +203,8 @@ Aplicația poate fi configurată prin variabile de mediu. Pentru rulare locală 
 | `COOKIE_SECURE` | `true` în production, altfel `false` | Trimite cookie-ul doar prin HTTPS. |
 | `COOKIE_SAMESITE` | `lax` | Poate fi `lax`, `strict` sau `none`. |
 | `TRUST_PROXY` | `false` | Setează `true` când rulezi în spatele unui proxy/load balancer. |
+| `PUBLIC_ORIGIN` | none | Origin-ul public acceptat pentru Socket.IO în production, de exemplu `https://numele-serviciului.onrender.com`. |
+| `SOCKET_ALLOWED_ORIGINS` | localhost automat în development | Origini suplimentare acceptate pentru Socket.IO, separate prin virgulă. |
 
 Validarea configului este strictă: dacă o variabilă este setată cu o valoare invalidă, serverul se oprește cu un mesaj clar. Reguli importante:
 
@@ -213,7 +215,8 @@ Validarea configului este strictă: dacă o variabilă este setată cu o valoare
 - `COOKIE_SAMESITE` trebuie să fie `lax`, `strict` sau `none`;
 - `COOKIE_SAMESITE=none` cere obligatoriu `COOKIE_SECURE=true`;
 - `SESSION_COOKIE_NAME` nu poate conține spații, semicolon sau separatori invalizi;
-- path-urile configurate explicit nu pot fi stringuri goale.
+- path-urile configurate explicit nu pot fi stringuri goale;
+- origin-urile Socket.IO trebuie să fie URL-uri `http`/`https` fără path, query sau hash.
 
 Există și un fișier `.env.example` cu un exemplu de configurare. Aplicația nu încarcă automat `.env`, ca să nu adăugăm dependințe noi; setează variabilele direct în mediul de rulare sau folosește un loader extern dacă ai nevoie.
 
@@ -221,7 +224,7 @@ Pentru Render, repo-ul include și:
 
 - `DEPLOYMENT.md` cu pașii compleți de publicare;
 - `render.yaml` pentru Blueprint opțional;
-- setări recomandate pentru `NODE_ENV=production`, cookie securizat, proxy și health check.
+- setări recomandate pentru `NODE_ENV=production`, cookie securizat, proxy, health check și `PUBLIC_ORIGIN` pentru Socket.IO.
 
 Pe Render Free, folosește `DATA_DIR=/tmp/f1guesserduel` pentru demo. Pentru persistent disk plătit, poți muta `DATA_DIR`, `DB_FILE_PATH` și `ROOMS_FILE_PATH` în `/var/data`.
 

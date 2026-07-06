@@ -9,6 +9,7 @@ const { createDriversRepository } = require('./data/driversRepository');
 const { createGameService } = require('./game/gameService');
 const { createPersistentRoomStore } = require('./rooms/roomStore.persistent');
 const { registerSocketHandlers } = require('./socket/registerSocketHandlers');
+const { createSocketServerOptions } = require('./socket/socketServerOptions');
 const { createDatabase } = require('./db/database');
 const { createSessionService } = require('./auth/sessionService');
 const { createAuthService } = require('./auth/authService');
@@ -29,10 +30,9 @@ if (config.trustProxy) {
     app.set('trust proxy', 1);
 }
 const server = http.createServer(app);
-const io = new Server(server, {
-    pingInterval: 10000,
-    pingTimeout: 5000
-});
+const io = new Server(server, createSocketServerOptions({
+    allowedOrigins: config.socket.allowedOrigins
+}));
 
 const driversRepository = createDriversRepository({
     driversFilePath: config.driversFilePath

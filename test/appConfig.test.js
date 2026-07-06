@@ -5,7 +5,8 @@ const path = require('path');
 const {
     createAppConfig,
     parseBoolean,
-    normalizeSameSite
+    normalizeSameSite,
+    normalizeAllowedOrigin
 } = require('../server/config/appConfig');
 
 test('app config provides safe development defaults', () => {
@@ -19,6 +20,14 @@ test('app config provides safe development defaults', () => {
     assert.equal(config.auth.cookie.secure, false);
     assert.equal(config.auth.cookie.sameSite, 'lax');
     assert.equal(config.auth.sessionCookieName, 'f1_session');
+    assert.deepEqual(config.socket.allowedOrigins, [
+        'http://localhost:3000',
+        'https://localhost:3000',
+        'http://127.0.0.1:3000',
+        'https://127.0.0.1:3000',
+        'http://[::1]:3000',
+        'https://[::1]:3000'
+    ]);
 });
 
 test('app config reads production values from environment', () => {
@@ -37,7 +46,9 @@ test('app config reads production values from environment', () => {
         SESSION_CLEANUP_INTERVAL_MS: '120000',
         ROOMS_FILE_PATH: '/var/lib/f1guesser/rooms.json',
         ROOM_SAVE_DEBOUNCE_MS: '500',
-        TRUST_PROXY: 'true'
+        TRUST_PROXY: 'true',
+        PUBLIC_ORIGIN: 'https://f1guesserduel.onrender.com/',
+        SOCKET_ALLOWED_ORIGINS: 'https://preview.example.com, http://localhost:5173'
     }, { projectRoot });
 
     assert.equal(config.isProduction, true);
@@ -55,6 +66,11 @@ test('app config reads production values from environment', () => {
     assert.equal(config.auth.sessionCleanupIntervalMs, 120000);
     assert.equal(path.normalize(config.rooms.persistenceFilePath), path.normalize('/var/lib/f1guesser/rooms.json'));
     assert.equal(config.rooms.saveDebounceMs, 500);
+    assert.deepEqual(config.socket.allowedOrigins, [
+        'https://preview.example.com',
+        'http://localhost:5173',
+        'https://f1guesserduel.onrender.com'
+    ]);
 });
 
 test('production config requires SESSION_SECRET', () => {
@@ -112,6 +128,25 @@ test('app config validates cookie settings', () => {
     const config = createAppConfig({ COOKIE_SAMESITE: 'none', COOKIE_SECURE: 'true' });
     assert.equal(config.auth.cookie.sameSite, 'none');
     assert.equal(config.auth.cookie.secure, true);
+});
+
+
+test('app config validates socket origin environment values', () => {
+    assert.equal(normalizeAllowedOrigin('https://example.com/'), 'https://example.com');
+    assert.equal(normalizeAllowedOrigin('http://localhost:3000'), 'http://localhost:3000');
+
+    assert.throws(
+        () => createAppConfig({ SOCKET_ALLOWED_ORIGINS: 'ftp://example.com' }),
+        /Use http or https/
+    );
+    assert.throws(
+        () => createAppConfig({ PUBLIC_ORIGIN: 'https://example.com/path' }),
+        /Use only protocol, host and optional port/
+    );
+    assert.throws(
+        () => createAppConfig({ SOCKET_ALLOWED_ORIGINS: 'https://example.com?x=1' }),
+        /Use only protocol, host and optional port/
+    );
 });
 
 test('app config rejects empty string environment overrides', () => {

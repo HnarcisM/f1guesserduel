@@ -25,6 +25,7 @@ test('Render blueprint keeps production secrets out of Git', () => {
 
     assert.match(source, /key:\s*SESSION_SECRET\s+sync:\s*false/s);
     assert.match(source, /key:\s*SOCKET_AUTH_SECRET\s+sync:\s*false/s);
+    assert.match(source, /key:\s*PUBLIC_ORIGIN\s+sync:\s*false/s);
     assert.doesNotMatch(source, /change-me-to-a-long-random-secret/);
     assert.doesNotMatch(source, /change-me-to-another-long-random-secret/);
 });
@@ -38,6 +39,7 @@ test('example environment uses Render-safe production defaults', () => {
     assert.match(source, /COOKIE_SECURE=true/);
     assert.match(source, /COOKIE_SAMESITE=lax/);
     assert.match(source, /TRUST_PROXY=true/);
+    assert.match(source, /PUBLIC_ORIGIN=https:\/\/f1guesserduel\.onrender\.com/);
     assert.doesNotMatch(source, /^PORT=/m);
 });
 
@@ -49,4 +51,6 @@ test('deployment guide includes manual Render checks and secret generation', () 
     assert.match(source, /Health Check Path: \/api\/health/);
     assert.match(source, /randomBytes\(32\)\.toString\('hex'\)/);
     assert.match(source, /Nu seta manual `PORT`/);
+    assert.match(source, /PUBLIC_ORIGIN=https:\/\/numele-serviciului-tau\.onrender\.com/);
+    assert.match(source, /SOCKET_ALLOWED_ORIGINS/);
 });
