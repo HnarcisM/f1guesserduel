@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: f1guesserduel
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run build:css
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY
+        value: true
+      - key: COOKIE_SECURE
+        value: true
+      - key: COOKIE_SAMESITE
+        value: lax
+      - key: SESSION_COOKIE_NAME
+        value: f1_session
+      - key: SESSION_MAX_AGE_DAYS
+        value: 7
+      - key: SOCKET_AUTH_TOKEN_MAX_AGE_MS
+        value: 120000
+      - key: SESSION_CLEANUP_INTERVAL_MS
+        value: 900000
+      - key: ROOM_SAVE_DEBOUNCE_MS
+        value: 250
+      - key: DATA_DIR
+        value: /tmp/f1guesserduel
+      - key: SESSION_SECRET
+        sync: false
+      - key: SOCKET_AUTH_SECRET
+        sync: false

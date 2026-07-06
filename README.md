@@ -15,6 +15,7 @@ Aplicația rulează cu **Node.js**, **Express** și **Socket.IO**, iar interfaț
 - [Instalare și rulare locală](#instalare-și-rulare-locală)
 - [Testare locală și E2E](#testare-locală-și-e2e)
 - [Build CSS bundle](#build-css-bundle)
+- [Configurare producție și Render](#configurare-producție)
 - [Creare release ZIP curat](#creare-release-zip-curat)
 - [Testare pe telefon](#testare-pe-telefon)
 - [Moduri de dificultate](#moduri-de-dificultate)
@@ -215,6 +216,14 @@ Validarea configului este strictă: dacă o variabilă este setată cu o valoare
 - path-urile configurate explicit nu pot fi stringuri goale.
 
 Există și un fișier `.env.example` cu un exemplu de configurare. Aplicația nu încarcă automat `.env`, ca să nu adăugăm dependințe noi; setează variabilele direct în mediul de rulare sau folosește un loader extern dacă ai nevoie.
+
+Pentru Render, repo-ul include și:
+
+- `DEPLOYMENT.md` cu pașii compleți de publicare;
+- `render.yaml` pentru Blueprint opțional;
+- setări recomandate pentru `NODE_ENV=production`, cookie securizat, proxy și health check.
+
+Pe Render Free, folosește `DATA_DIR=/tmp/f1guesserduel` pentru demo. Pentru persistent disk plătit, poți muta `DATA_DIR`, `DB_FILE_PATH` și `ROOMS_FILE_PATH` în `/var/data`.
 
 ---
 
