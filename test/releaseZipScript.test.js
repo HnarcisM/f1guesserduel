@@ -82,3 +82,50 @@ test('release ZIP is created under dist without including excluded files', () =>
     assert.doesNotMatch(zipText, /data\/rooms\.json/);
     assert.doesNotMatch(zipText, /\.git\/config/);
 });
+
+test('release path filter keeps only required runtime flags and logos by default', () => {
+    const requiredAssets = new Set([
+        'public/flags/un.svg',
+        'public/flags/gb.svg',
+        'public/logos/F1.svg',
+        'public/logos/Mercedes.svg'
+    ]);
+
+    assert.equal(shouldIncludePath('public/flags/gb.svg', { requiredAssets }), true);
+    assert.equal(shouldIncludePath('public/logos/Mercedes.svg', { requiredAssets }), true);
+    assert.equal(shouldIncludePath('public/flags/de.svg', { requiredAssets }), false);
+    assert.equal(shouldIncludePath('public/logos/Ferrari.png', { requiredAssets }), false);
+    assert.equal(shouldIncludePath('public/flags/de.svg', { requiredAssets, includeAllAssets: true }), true);
+});
+
+test('release collector includes assets used by driver data and skips unused assets', () => {
+    const rootDir = createTempProject();
+
+    writeFile(rootDir, 'data/drivers.json', JSON.stringify([
+        { nat: 'GBR', team: ['Mercedes'] },
+        { nat: 'BRA', team: ['Ferrari', 'Unknown Team'] }
+    ]));
+    writeFile(rootDir, 'public/js/constants.js', `
+export const F1_TO_ISO = { "GBR": "gb", "BRA": "br" };
+export const TEAM_LOGO_FILES = { "mercedes": "Mercedes.svg", "ferrari": "Ferrari.png" };
+`);
+    writeFile(rootDir, 'public/flags/un.svg', '<svg></svg>');
+    writeFile(rootDir, 'public/flags/gb.svg', '<svg></svg>');
+    writeFile(rootDir, 'public/flags/br.svg', '<svg></svg>');
+    writeFile(rootDir, 'public/flags/de.svg', '<svg></svg>');
+    writeFile(rootDir, 'public/logos/F1.svg', '<svg></svg>');
+    writeFile(rootDir, 'public/logos/Mercedes.svg', '<svg></svg>');
+    writeFile(rootDir, 'public/logos/Ferrari.png', 'png');
+    writeFile(rootDir, 'public/logos/Unused.svg', '<svg></svg>');
+
+    const files = collectReleaseFiles(rootDir).map(file => file.relativePath).sort();
+
+    assert.ok(files.includes('public/flags/un.svg'));
+    assert.ok(files.includes('public/flags/gb.svg'));
+    assert.ok(files.includes('public/flags/br.svg'));
+    assert.ok(files.includes('public/logos/F1.svg'));
+    assert.ok(files.includes('public/logos/Mercedes.svg'));
+    assert.ok(files.includes('public/logos/Ferrari.png'));
+    assert.equal(files.includes('public/flags/de.svg'), false);
+    assert.equal(files.includes('public/logos/Unused.svg'), false);
+});

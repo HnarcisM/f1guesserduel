@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
+const vm = require('vm');
 
 const DEFAULT_IGNORED_DIRECTORIES = new Set([
     '.git',
@@ -75,6 +76,23 @@ function isRootArtifact(relativePath) {
     return !relativePath.includes('/') && ROOT_ARTIFACT_PATTERNS.some(pattern => pattern.test(relativePath));
 }
 
+function isOptimizableAssetPath(relativePath) {
+    return /^public\/(?:flags|logos)\/[^/]+$/i.test(normalizePath(relativePath));
+}
+
+function shouldIncludeOptimizableAsset(relativePath, options = {}) {
+    if (options.includeAllAssets || !isOptimizableAssetPath(relativePath)) {
+        return true;
+    }
+
+    const requiredAssets = options.requiredAssets;
+    if (!requiredAssets) {
+        return true;
+    }
+
+    return requiredAssets.has(normalizePath(relativePath));
+}
+
 function shouldIncludePath(relativePath, options = {}) {
     const normalizedPath = normalizePath(relativePath);
 
@@ -83,6 +101,7 @@ function shouldIncludePath(relativePath, options = {}) {
     if (isRuntimeDataFile(normalizedPath)) return false;
     if (isTemporaryFile(normalizedPath)) return false;
     if (isRootArtifact(normalizedPath)) return false;
+    if (!shouldIncludeOptimizableAsset(normalizedPath, options)) return false;
 
     const parts = normalizedPath.split('/');
     if (!options.includeTests && parts[0] === 'test') return false;
@@ -91,7 +110,94 @@ function shouldIncludePath(relativePath, options = {}) {
     return !parts.some(part => DEFAULT_IGNORED_DIRECTORIES.has(part));
 }
 
+function extractExportedObject(source, exportName) {
+    const pattern = new RegExp(`export\\s+const\\s+${exportName}\\s*=\\s*({[\\s\\S]*?})\\s*;`);
+    const match = pattern.exec(source);
+    if (!match) {
+        throw new Error(`Nu am găsit exportul ${exportName} în constants.js.`);
+    }
+
+    return vm.runInNewContext(`(${match[1]})`, Object.create(null), { timeout: 1000 });
+}
+
+function readFrontendConstants(rootDir) {
+    const constantsPath = path.join(rootDir, 'public', 'js', 'constants.js');
+    const source = fs.readFileSync(constantsPath, 'utf8');
+
+    return {
+        f1ToIso: extractExportedObject(source, 'F1_TO_ISO'),
+        teamLogoFiles: extractExportedObject(source, 'TEAM_LOGO_FILES')
+    };
+}
+
+function getIsoCode(nationality, f1ToIso) {
+    if (!nationality) return 'un';
+    const value = String(nationality).toUpperCase();
+    return f1ToIso[value] || value.substring(0, 2).toLowerCase();
+}
+
+function normalizeTeamLogoKey(teamName) {
+    return String(teamName || '')
+        .replace(/\s+/g, '')
+        .toLowerCase();
+}
+
+function asArray(value) {
+    if (Array.isArray(value)) return value;
+    return value == null ? [] : [value];
+}
+
+function collectRequiredReleaseAssets(rootDir) {
+    const driversPath = path.join(rootDir, 'data', 'drivers.json');
+    const constantsPath = path.join(rootDir, 'public', 'js', 'constants.js');
+
+    if (!fs.existsSync(driversPath) || !fs.existsSync(constantsPath)) {
+        return null;
+    }
+
+    const requiredAssets = new Set([
+        'public/flags/un.svg',
+        'public/logos/F1.svg'
+    ]);
+
+    const drivers = JSON.parse(fs.readFileSync(driversPath, 'utf8'));
+    const { f1ToIso, teamLogoFiles } = readFrontendConstants(rootDir);
+
+    for (const driver of drivers) {
+        const isoCode = getIsoCode(driver.nat, f1ToIso);
+        if (isoCode) {
+            requiredAssets.add(`public/flags/${isoCode}.svg`);
+        }
+
+        for (const teamName of asArray(driver.team)) {
+            const logoFile = teamLogoFiles[normalizeTeamLogoKey(teamName)];
+            if (logoFile) {
+                requiredAssets.add(`public/logos/${logoFile}`);
+            }
+        }
+    }
+
+    return requiredAssets;
+}
+
+function createReleaseOptions(rootDir, options = {}) {
+    if (options.includeAllAssets) {
+        return { ...options };
+    }
+
+    const requiredAssets = options.requiredAssets || collectRequiredReleaseAssets(rootDir);
+    if (!requiredAssets) {
+        return { ...options };
+    }
+
+    return {
+        ...options,
+        requiredAssets
+    };
+}
+
 function collectReleaseFiles(rootDir, options = {}) {
+    const releaseOptions = createReleaseOptions(rootDir, options);
     const files = [];
 
     function walk(currentDir) {
@@ -102,7 +208,7 @@ function collectReleaseFiles(rootDir, options = {}) {
             const absolutePath = path.join(currentDir, entry.name);
             const relativePath = normalizePath(path.relative(rootDir, absolutePath));
 
-            if (!shouldIncludePath(relativePath, options)) {
+            if (!shouldIncludePath(relativePath, releaseOptions)) {
                 continue;
             }
 
@@ -300,6 +406,7 @@ function parseCliArgs(argv) {
     const options = {
         includeTests: false,
         includeGithub: false,
+        includeAllAssets: false,
         dryRun: false,
         out: null,
         name: null
@@ -312,6 +419,8 @@ function parseCliArgs(argv) {
             options.includeTests = true;
         } else if (arg === '--with-github') {
             options.includeGithub = true;
+        } else if (arg === '--all-assets') {
+            options.includeAllAssets = true;
         } else if (arg === '--dry-run') {
             options.dryRun = true;
         } else if (arg === '--out') {
@@ -340,11 +449,15 @@ function createReleaseZip(rootDir, options = {}) {
     const packageName = sanitizeName(packageJson.name || 'f1guesserduel');
     const releaseName = sanitizeName(options.name || `${packageName}-v${packageJson.version || '0.0.0'}`);
     const outputPath = path.resolve(rootDir, options.out || path.join('dist', `${releaseName}.zip`));
-    const files = collectReleaseFiles(rootDir, options);
+    const releaseOptions = createReleaseOptions(rootDir, options);
+    const files = collectReleaseFiles(rootDir, releaseOptions);
     const totalInputBytes = files.reduce((total, file) => total + fs.statSync(file.absolutePath).size, 0);
 
     if (options.dryRun) {
         console.log(`[release] Dry run pentru ${releaseName}: ${files.length} fișiere, ${formatBytes(totalInputBytes)} înainte de compresie.`);
+        if (!releaseOptions.includeAllAssets && releaseOptions.requiredAssets) {
+            console.log(`[release] Asset-uri runtime incluse: ${releaseOptions.requiredAssets.size}. Folosește --all-assets pentru arhiva completă.`);
+        }
         for (const file of files) {
             console.log(file.relativePath);
         }
@@ -394,6 +507,7 @@ if (require.main === module) {
 
 module.exports = {
     collectReleaseFiles,
+    collectRequiredReleaseAssets,
     createReleaseZip,
     createZipBuffer,
     normalizePath,
