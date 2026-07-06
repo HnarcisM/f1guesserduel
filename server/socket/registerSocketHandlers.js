@@ -32,6 +32,12 @@ const {
     normalizeRoundOptions,
     normalizeRestartOptions
 } = require('./socketPayloadValidators');
+const {
+    normalizeJoinRoomPayload,
+    buildPlayerProgressPayload
+} = require('./socketRoomPayloads');
+const { registerSoloGameSocketHandlers } = require('./soloGameSocketHandlers');
+const { registerDailyChallengeSocketHandlers } = require('./dailyChallengeSocketHandlers');
 
 function registerSocketHandlers(io, dependencies) {
     const { roomStore, gameService, sessionService } = dependencies;
@@ -67,40 +73,6 @@ function registerSocketHandlers(io, dependencies) {
         }
 
         emitRoomStateUpdate(roomId, 'round-resolved');
-    }
-
-    function normalizeJoinRoomPayload(payload) {
-        if (typeof payload === 'string') {
-            return { roomId: payload, clientId: null };
-        }
-
-        if (!payload || typeof payload !== 'object') {
-            return { roomId: null, clientId: null };
-        }
-
-        return {
-            roomId: typeof payload.roomId === 'string' ? payload.roomId : null,
-            clientId: typeof payload.clientId === 'string' ? payload.clientId : null
-        };
-    }
-
-    function buildPlayerProgressPayload(player) {
-        if (!player) return null;
-        return {
-            attempts: typeof player.attempts === 'number' ? player.attempts : 0,
-            finished: Boolean(player.finished),
-            timedOut: Boolean(player.timedOut),
-            correctGuess: Boolean(player.correctGuess),
-            guesses: Array.isArray(player.guesses)
-                ? player.guesses.map(entry => ({
-                    attempt: entry.attempt,
-                    guess: entry.guess,
-                    results: entry.results,
-                    isCorrect: Boolean(entry.isCorrect),
-                    isGameOver: Boolean(entry.isGameOver)
-                }))
-                : []
-        };
     }
 
     io.on('connection', (socket) => {
@@ -438,215 +410,19 @@ function registerSocketHandlers(io, dependencies) {
         });
 
 
-        socket.on('startSingleGame', (payload) => {
-            const roundOptions = normalizeRoundOptions(payload);
-            if (!roundOptions) {
-                socket.emit('errorMessage', 'Dificultatea selectată nu este validă.');
-                return;
-            }
-
-            leaveCurrentRoom();
-
-            const singlePayload = gameService.startSingleRound(roundOptions);
-            if (!singlePayload) {
-                socket.emit('errorMessage', 'Nu am putut porni jocul single pentru dificultatea selectată.');
-                return;
-            }
-
-            singleSessions.set(socket.id, {
-                difficulty: singlePayload.difficulty,
-                driversList: singlePayload.drivers,
-                targetDriver: singlePayload.targetDriver,
-                attempts: 0,
-                finished: false,
-                timed: singlePayload.timed,
-                timeLimitSeconds: singlePayload.timeLimitSeconds,
-                roundStartedAt: singlePayload.roundStartedAt
-            });
-
-            socket.emit('initGame', {
-                drivers: singlePayload.drivers,
-                difficulty: singlePayload.difficulty,
-                timed: singlePayload.timed,
-                timeLimitSeconds: singlePayload.timeLimitSeconds,
-                roundStartedAt: singlePayload.roundStartedAt,
-                isDailyChallenge: false,
-                isSinglePlay: true,
-                dailyDate: null
-            });
+        registerSoloGameSocketHandlers({
+            socket,
+            singleSessions,
+            gameService,
+            leaveCurrentRoom
         });
-
-        socket.on('submitSingleGuess', (driverId) => {
-            const singleSession = singleSessions.get(socket.id);
-            if (!singleSession || singleSession.finished) return;
-
-            if (singleSession.attempts >= MAX_ATTEMPTS) return;
-
-            if (singleSession.timed && singleSession.roundStartedAt && Date.now() - singleSession.roundStartedAt >= singleSession.timeLimitSeconds * 1000) {
-                singleSession.attempts = MAX_ATTEMPTS;
-                singleSession.finished = true;
-                socket.emit('gameTimedOut', { target: { name: singleSession.targetDriver.name }, attempts: MAX_ATTEMPTS });
-                return;
-            }
-
-            const normalizedDriverId = normalizeDriverId(driverId);
-            if (!normalizedDriverId) {
-                socket.emit('errorMessage', 'Pilotul ales nu este valid pentru jocul single.');
-                return;
-            }
-
-            const guessDriver = singleSession.driversList.find(driver => driver.id === normalizedDriverId);
-            if (!guessDriver) {
-                socket.emit('errorMessage', 'Pilotul ales nu este valid pentru jocul single.');
-                return;
-            }
-
-            singleSession.attempts++;
-
-            const target = singleSession.targetDriver;
-            const results = compareGuess(guessDriver, target);
-            const isCorrectGuess = guessDriver.id === target.id;
-            const isGameOver = isCorrectGuess || singleSession.attempts >= MAX_ATTEMPTS;
-
-            if (isGameOver) {
-                singleSession.finished = true;
-            }
-
-            const responseData = {
-                guess: guessDriver,
-                results,
-                attempts: singleSession.attempts,
-                isCorrect: isCorrectGuess,
-                isGameOver,
-                isSinglePlay: true
-            };
-
-            if (isGameOver) {
-                responseData.target = { name: target.name };
-            }
-
-            socket.emit('guessResult', responseData);
+        registerDailyChallengeSocketHandlers({
+            socket,
+            dailySessions,
+            singleSessions,
+            gameService,
+            leaveCurrentRoom
         });
-
-        socket.on('restartSingleGame', (payload = {}) => {
-            const previousSession = singleSessions.get(socket.id);
-            const restartPayload = gameService.restartSingleRound(previousSession, normalizeRestartOptions(payload));
-            if (!restartPayload) {
-                socket.emit('errorMessage', 'Nu am putut reporni jocul single. Alege mai întâi o dificultate.');
-                return;
-            }
-
-            singleSessions.set(socket.id, {
-                difficulty: restartPayload.difficulty,
-                driversList: restartPayload.drivers,
-                targetDriver: restartPayload.targetDriver,
-                attempts: 0,
-                finished: false,
-                timed: restartPayload.timed,
-                timeLimitSeconds: restartPayload.timeLimitSeconds,
-                roundStartedAt: restartPayload.roundStartedAt
-            });
-
-            socket.emit('gameRestarted', {
-                drivers: restartPayload.drivers,
-                difficulty: restartPayload.difficulty,
-                timed: restartPayload.timed,
-                timeLimitSeconds: restartPayload.timeLimitSeconds,
-                roundStartedAt: restartPayload.roundStartedAt,
-                isDailyChallenge: false,
-                isSinglePlay: true,
-                dailyDate: null
-            });
-        });
-
-
-        socket.on('startDailyChallenge', (payload) => {
-            const dailyOptions = normalizeRoundOptions(payload);
-            if (!dailyOptions) {
-                socket.emit('dailyChallengeError', 'Dificultatea Daily Challenge nu este validă.');
-                return;
-            }
-
-            const dailyPayload = gameService.startDailyChallenge(dailyOptions.difficulty, dailyOptions.dailyDate || new Date());
-            if (!dailyPayload) {
-                socket.emit('dailyChallengeError', 'Nu am putut porni Daily Challenge pentru dificultatea selectată.');
-                return;
-            }
-
-            leaveCurrentRoom();
-            singleSessions.delete(socket.id);
-
-            dailySessions.set(socket.id, {
-                difficulty: dailyPayload.difficulty,
-                driversList: dailyPayload.drivers,
-                targetDriver: dailyPayload.targetDriver,
-                attempts: 0,
-                finished: false,
-                dailyDate: dailyPayload.dailyDate,
-                dailyChallengeId: dailyPayload.dailyChallengeId
-            });
-
-            socket.emit('initDailyChallenge', {
-                drivers: dailyPayload.drivers,
-                difficulty: dailyPayload.difficulty,
-                timed: false,
-                timeLimitSeconds: null,
-                roundStartedAt: dailyPayload.roundStartedAt,
-                isDailyChallenge: true,
-                dailyDate: dailyPayload.dailyDate,
-                dailyChallengeId: dailyPayload.dailyChallengeId
-            });
-        });
-
-        socket.on('submitDailyGuess', (driverId) => {
-            const dailySession = dailySessions.get(socket.id);
-            if (!dailySession || dailySession.finished) return;
-
-            if (dailySession.attempts >= MAX_ATTEMPTS) return;
-
-            const normalizedDriverId = normalizeDriverId(driverId);
-            if (!normalizedDriverId) {
-                socket.emit('errorMessage', 'Pilotul ales nu este valid pentru Daily Challenge.');
-                return;
-            }
-
-            const guessDriver = dailySession.driversList.find(driver => driver.id === normalizedDriverId);
-            if (!guessDriver) {
-                socket.emit('errorMessage', 'Pilotul ales nu este valid pentru Daily Challenge.');
-                return;
-            }
-
-            dailySession.attempts++;
-
-            const target = dailySession.targetDriver;
-            const results = compareGuess(guessDriver, target);
-            const isCorrectGuess = guessDriver.id === target.id;
-            const isGameOver = isCorrectGuess || dailySession.attempts >= MAX_ATTEMPTS;
-
-            if (isGameOver) {
-                dailySession.finished = true;
-            }
-
-            const responseData = {
-                guess: guessDriver,
-                results,
-                attempts: dailySession.attempts,
-                isCorrect: isCorrectGuess,
-                isGameOver,
-                isDailyChallenge: true,
-                dailyDate: dailySession.dailyDate,
-                dailyChallengeId: dailySession.dailyChallengeId,
-                difficulty: dailySession.difficulty
-            };
-
-            if (isGameOver) {
-                responseData.target = { name: target.name };
-            }
-
-            socket.emit('dailyGuessResult', responseData);
-        });
-
-
         socket.on('refreshAuthUser', (payload = {}) => {
             const room = currentRoom ? roomStore.get(currentRoom) : null;
             const socketAuthToken = payload && typeof payload === 'object'
