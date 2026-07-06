@@ -105,6 +105,7 @@ function registerSocketHandlers(io, dependencies) {
 
     io.on('connection', (socket) => {
         let currentRoom = null;
+        let hasMarkedCurrentRoomDisconnected = false;
 
         function clearSoloModeSessions() {
             singleSessions.delete(socket.id);
@@ -139,6 +140,7 @@ function registerSocketHandlers(io, dependencies) {
             clearSoloModeSessions();
 
             currentRoom = roomId;
+            hasMarkedCurrentRoomDisconnected = false;
             socket.join(roomId);
             emitHostStatus(socket, room);
             emitRoomStateUpdate(roomId, 'join');
@@ -742,12 +744,15 @@ function registerSocketHandlers(io, dependencies) {
         });
 
         function markCurrentRoomDisconnected() {
-            if (!currentRoom) return;
+            if (!currentRoom || hasMarkedCurrentRoomDisconnected) return;
 
             const room = roomStore.get(currentRoom);
             if (!room) return;
 
-            markRoomMemberDisconnectedBySocketId(room, socket.id);
+            const disconnectedMember = markRoomMemberDisconnectedBySocketId(room, socket.id);
+            if (!disconnectedMember) return;
+
+            hasMarkedCurrentRoomDisconnected = true;
             roomStore.markDirty?.();
             emitRoomStateUpdate(currentRoom, 'disconnect');
         }
