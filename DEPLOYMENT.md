@@ -162,16 +162,27 @@ Această variantă păstrează implementarea actuală: SQLite local pentru utili
 
 Dezavantaj: datele sunt efemere. Conturile, sesiunile, camerele și scorurile locale pot dispărea la restart, redeploy sau sleep pe Render Free. La pornire serverul scrie și un warning în log când rulează în `ephemeral/demo`.
 
-Endpoint-ul `/api/health` include și `persistence.mode`, de exemplu:
+Endpoint-ul `/api/health` include informații non-sensibile utile pentru Render și debugging:
 
 ```json
 {
   "status": "ok",
+  "version": "1.0.0",
+  "nodeEnv": "production",
+  "uptimeSeconds": 123,
+  "timestamp": "2026-07-07T00:00:00.000Z",
   "persistence": {
     "mode": "ephemeral"
+  },
+  "checks": {
+    "database": { "status": "ok" },
+    "drivers": { "status": "ok", "count": 166 },
+    "rooms": { "status": "ok", "activeRooms": 0, "persistence": "ok" }
   }
 }
 ```
+
+Dacă un check critic eșuează, răspunsul devine `status=degraded` și HTTP `503`. Endpoint-ul nu expune path-uri locale, secrete, cookie-uri, token-uri sau conținutul camerelor.
 
 ### Variantă cu persistent disk
 

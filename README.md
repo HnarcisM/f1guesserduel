@@ -234,7 +234,7 @@ Pentru Render, repo-ul include și:
 - `render.yaml` pentru Blueprint opțional;
 - setări recomandate pentru `NODE_ENV=production`, cookie securizat, proxy, health check și `PUBLIC_ORIGIN` pentru Socket.IO.
 
-Pe Render Free, folosește `PERSISTENCE_MODE=ephemeral` și `DATA_DIR=/tmp/f1guesserduel` pentru demo. În acest mod, `/api/health` afișează `persistence.mode=ephemeral`, iar datele locale pot fi pierdute la restart/redeploy/sleep. Pentru persistent disk plătit, setează `PERSISTENCE_MODE=persistent` și mută `DATA_DIR`, `DB_FILE_PATH` și `ROOMS_FILE_PATH` în `/var/data`.
+Pe Render Free, folosește `PERSISTENCE_MODE=ephemeral` și `DATA_DIR=/tmp/f1guesserduel` pentru demo. În acest mod, `/api/health` afișează `persistence.mode=ephemeral`, `version`, `nodeEnv`, `uptimeSeconds` și check-uri non-sensibile pentru `database`, `drivers` și `rooms`, iar datele locale pot fi pierdute la restart/redeploy/sleep. Pentru persistent disk plătit, setează `PERSISTENCE_MODE=persistent` și mută `DATA_DIR`, `DB_FILE_PATH` și `ROOMS_FILE_PATH` în `/var/data`.
 
 ### Protecție Socket.IO anti-spam
 

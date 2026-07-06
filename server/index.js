@@ -17,12 +17,13 @@ const { createAuthRoutes } = require('./auth/authRoutes');
 const { createAuthMiddleware } = require('./middleware/authMiddleware');
 const { createErrorMiddleware } = require('./middleware/errorMiddleware');
 const { createServerErrorHandler } = require('./middleware/serverErrorHandler');
-const { createHealthRoutes } = require('./routes/healthRoutes');
+const { createHealthRoutes, createHealthChecks } = require('./routes/healthRoutes');
 const { createSecurityHeadersMiddleware } = require('./middleware/securityHeaders');
 const { createRequestLoggingMiddleware } = require('./middleware/requestLogging');
 const { createLogger } = require('./logger');
 const { registerProcessErrorHandlers } = require('./runtime/processErrorHandlers');
 const { createAppConfig } = require('./config/appConfig');
+const packageJson = require('../package.json');
 
 const config = createAppConfig(process.env, {
     projectRoot: path.join(__dirname, '..')
@@ -116,7 +117,14 @@ app.use(express.json({ limit: '32kb' }));
 app.use(cookieParser());
 app.use(createAuthMiddleware(sessionService));
 app.use('/api', createHealthRoutes({
-    persistenceMode: config.persistence.mode
+    appVersion: packageJson.version,
+    nodeEnv: config.nodeEnv,
+    persistenceMode: config.persistence.mode,
+    checks: createHealthChecks({
+        db,
+        driversRepository,
+        roomStore
+    })
 }));
 app.use('/api/auth', createAuthRoutes({
     authService,

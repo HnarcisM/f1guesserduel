@@ -68,5 +68,5 @@ test('deployment guide includes manual Render checks and secret generation', () 
     assert.match(source, /LOG_LEVEL=info/);
     assert.match(source, /REQUEST_LOGGING_ENABLED=true/);
     assert.match(source, /PERSISTENCE_MODE=ephemeral/);
-    assert.match(source, /\/api\/health.*persistence/s);
+    assert.match(source, /\/api\/health.*checks.*database.*drivers.*rooms/s);
 });
