@@ -51,6 +51,25 @@ test('CSS bundle is generated without runtime @import rules', () => {
     assert.doesNotMatch(bundle, /@import\s+/);
 });
 
+test('CSS bundle normalizes mixed source line endings to LF only', () => {
+    const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'f1-css-bundle-line-endings-test-'));
+
+    writeFile(rootDir, 'public/style.css', [
+        '/** entry comment */',
+        '@import url("/css/01-base.css?v=1");',
+        '@import url("/css/02-overrides.css?v=1");'
+    ].join('\r\n'));
+    writeFile(rootDir, 'public/css/01-base.css', '.base {\r\n    color: white;\r\n}\r\n');
+    writeFile(rootDir, 'public/css/02-overrides.css', '.override {\r    font-weight: 700;\r}\r');
+
+    const result = buildCssBundle(rootDir);
+    const bundle = fs.readFileSync(path.join(rootDir, result.outputFile), 'utf8');
+
+    assert.doesNotMatch(bundle, /\r/);
+    assert.match(bundle, /\.base \{\n    color: white;\n\}/);
+    assert.match(bundle, /\.override \{\n    font-weight: 700;\n\}/);
+});
+
 test('frontend loads the generated CSS bundle instead of the import-based stylesheet', () => {
     const indexHtml = fs.readFileSync(path.join(process.cwd(), 'public/index.html'), 'utf8');
     const bundleCss = fs.readFileSync(path.join(process.cwd(), 'public/style.bundle.css'), 'utf8');

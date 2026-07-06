@@ -32,6 +32,10 @@ function normalizePathForOutput(inputPath) {
     return String(inputPath || '').replace(/\\/g, '/');
 }
 
+function normalizeLineEndings(content) {
+    return String(content || '').replace(/\r\n?/g, '\n');
+}
+
 function parseCssImports(cssContent) {
     const imports = [];
     const importPattern = /@import\s+(?:url\()?['"]?([^'";)]+)['"]?\)?\s*;/gi;
@@ -60,7 +64,7 @@ function buildCssBundle(rootDir = process.cwd(), options = {}) {
         throw new Error(`CSS entry file not found: ${entryFile}`);
     }
 
-    const entryCss = fs.readFileSync(entryPath, 'utf8');
+    const entryCss = normalizeLineEndings(fs.readFileSync(entryPath, 'utf8'));
     const importPaths = parseCssImports(entryCss);
 
     if (importPaths.length === 0) {
@@ -90,7 +94,7 @@ function buildCssBundle(rootDir = process.cwd(), options = {}) {
             throw new Error(`Imported CSS file not found: ${normalizedImportPath}`);
         }
 
-        const importedCss = fs.readFileSync(absoluteImportPath, 'utf8').trimEnd();
+        const importedCss = normalizeLineEndings(fs.readFileSync(absoluteImportPath, 'utf8')).trimEnd();
         sections.push(`/* Source: ${normalizedImportPath} */\n${importedCss}`);
     }
 
@@ -127,6 +131,7 @@ module.exports = {
     buildCssBundle,
     getNonImportCss,
     normalizeImportPath,
+    normalizeLineEndings,
     parseCssImports,
     resolveImportFile
 };
