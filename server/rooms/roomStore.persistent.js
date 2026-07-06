@@ -11,6 +11,7 @@ function createPersistentRoomStore(options = {}) {
     const rooms = new Map();
     let saveTimer = null;
     let lastSaveError = null;
+    const logger = options.logger || console;
 
     const persistenceOptions = {
         driversRepository: options.driversRepository
@@ -67,7 +68,7 @@ function createPersistentRoomStore(options = {}) {
             try {
                 saveNow();
             } catch (error) {
-                console.error('[rooms] Nu am putut salva camerele persistente:', error.message);
+                logger?.error?.('[rooms] Nu am putut salva camerele persistente.', { error });
             }
         }, saveDebounceMs);
 

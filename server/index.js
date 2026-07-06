@@ -19,24 +19,33 @@ const { createErrorMiddleware } = require('./middleware/errorMiddleware');
 const { createServerErrorHandler } = require('./middleware/serverErrorHandler');
 const { createHealthRoutes } = require('./routes/healthRoutes');
 const { createSecurityHeadersMiddleware } = require('./middleware/securityHeaders');
+const { createRequestLoggingMiddleware } = require('./middleware/requestLogging');
+const { createLogger } = require('./logger');
+const { registerProcessErrorHandlers } = require('./runtime/processErrorHandlers');
 const { createAppConfig } = require('./config/appConfig');
 
 const config = createAppConfig(process.env, {
     projectRoot: path.join(__dirname, '..')
 });
+const logger = createLogger({
+    isProduction: config.isProduction,
+    level: config.logging.level
+});
 
 function logPersistenceMode(currentConfig) {
     if (currentConfig.persistence?.isEphemeral) {
-        console.warn([
-            '[persistence] Rulează în mod ephemeral/demo.',
-            `DATA_DIR=${currentConfig.dataDir}`,
-            'Datele SQLite și rooms.json pot fi pierdute la restart/redeploy/sleep pe hosting free.'
-        ].join(' '));
+        logger.warn('Rulează în mod ephemeral/demo. Datele SQLite și rooms.json pot fi pierdute la restart/redeploy/sleep pe hosting free.', {
+            persistenceMode: currentConfig.persistence.mode,
+            dataDir: currentConfig.dataDir
+        });
         return;
     }
 
     if (currentConfig.isProduction) {
-        console.log(`[persistence] Rulează în mod ${currentConfig.persistence?.mode || 'unknown'}. DATA_DIR=${currentConfig.dataDir}`);
+        logger.info('Persistence mode resolved.', {
+            persistenceMode: currentConfig.persistence?.mode || 'unknown',
+            dataDir: currentConfig.dataDir
+        });
     }
 }
 
@@ -58,7 +67,8 @@ const gameService = createGameService(driversRepository);
 const roomStore = createPersistentRoomStore({
     persistenceFilePath: config.rooms.persistenceFilePath,
     saveDebounceMs: config.rooms.saveDebounceMs,
-    driversRepository
+    driversRepository,
+    logger
 });
 const db = createDatabase({
     dbFilePath: config.dbFilePath,
@@ -73,7 +83,8 @@ const sessionService = createSessionService(db, {
 });
 const authService = createAuthService(db, sessionService);
 sessionService.startExpiredSessionCleanup({
-    intervalMs: config.auth.sessionCleanupIntervalMs
+    intervalMs: config.auth.sessionCleanupIntervalMs,
+    logger
 });
 
 function setStaticCacheHeaders(res, filePath) {
@@ -96,6 +107,10 @@ function setStaticCacheHeaders(res, filePath) {
 
 app.use(createSecurityHeadersMiddleware({
     isProduction: config.isProduction
+}));
+app.use(createRequestLoggingMiddleware({
+    logger,
+    enabled: config.logging.requestLoggingEnabled
 }));
 app.use(express.json({ limit: '32kb' }));
 app.use(cookieParser());
@@ -139,26 +154,34 @@ app.get('/', (req, res, next) => {
 });
 
 app.use(createErrorMiddleware({
-    isProduction: config.isProduction
+    isProduction: config.isProduction,
+    logger
 }));
 
 function shutdownRoomStore() {
     try {
         roomStore.close?.();
     } catch (error) {
-        console.error('[rooms] Nu am putut salva camerele la închidere:', error.message);
+        logger.error('[rooms] Nu am putut salva camerele la închidere.', { error });
     }
 }
 
 process.once('exit', shutdownRoomStore);
 
 server.on('error', createServerErrorHandler({
-    port: config.port
+    port: config.port,
+    logger
 }));
 
+registerProcessErrorHandlers({
+    logger,
+    server
+});
+
 server.listen(config.port, () => {
-    console.log(`===================================================`);
-    console.log(` 🏎️  F1 GUESSER DUEL RULEAZĂ ACUM!`);
-    console.log(` 🌐 Accesează în browser: http://localhost:${config.port}`);
-    console.log(`===================================================`);
+    logger.info('F1 Guesser Duel server started.', {
+        port: config.port,
+        nodeEnv: config.nodeEnv,
+        persistenceMode: config.persistence.mode
+    });
 });

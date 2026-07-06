@@ -12,6 +12,7 @@ const DEV_SOCKET_AUTH_SECRET = 'f1-guesser-duel-dev-socket-auth-secret';
 const ALLOWED_NODE_ENV_VALUES = new Set(['development', 'test', 'production']);
 const ALLOWED_SAME_SITE_VALUES = new Set(['lax', 'strict', 'none']);
 const ALLOWED_PERSISTENCE_MODE_VALUES = new Set(['local', 'ephemeral', 'persistent']);
+const ALLOWED_LOG_LEVEL_VALUES = new Set(['silent', 'error', 'warn', 'info', 'debug']);
 const COOKIE_NAME_PATTERN = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
 const DEFAULT_LOCAL_ORIGIN_HOSTS = ['localhost', '127.0.0.1', '[::1]'];
 
@@ -88,6 +89,17 @@ function parseSameSiteEnv(env, name, fallback = 'lax') {
     const normalized = value.trim().toLowerCase();
     if (!ALLOWED_SAME_SITE_VALUES.has(normalized)) {
         throw new Error(`${name} must be one of: lax, strict, none.`);
+    }
+    return normalized;
+}
+
+function normalizeLogLevel(value, fallback = 'info') {
+    if (value === undefined || value === null || value === '') return fallback;
+    if (typeof value !== 'string') throw new Error('LOG_LEVEL must be a string.');
+
+    const normalized = value.trim().toLowerCase();
+    if (!ALLOWED_LOG_LEVEL_VALUES.has(normalized)) {
+        throw new Error('LOG_LEVEL must be one of: silent, error, warn, info, debug.');
     }
     return normalized;
 }
@@ -280,6 +292,10 @@ function createAppConfig(env = process.env, options = {}) {
                 { min: 0, max: 60_000 }
             )
         },
+        logging: {
+            level: normalizeLogLevel(env.LOG_LEVEL, isProduction ? 'info' : 'debug'),
+            requestLoggingEnabled: parseBooleanEnv(env, 'REQUEST_LOGGING_ENABLED', isProduction)
+        },
         socket: {
             allowedOrigins: socketAllowedOrigins,
             rateLimit: {
@@ -326,6 +342,7 @@ module.exports = {
     normalizeSameSite,
     normalizeAllowedOrigin,
     normalizePersistenceMode,
+    normalizeLogLevel,
     resolveSocketAllowedOrigins,
     DEFAULT_PORT,
     DEFAULT_SESSION_COOKIE_NAME,

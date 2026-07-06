@@ -82,7 +82,7 @@ function createSessionService(db, options = {}) {
             try {
                 cleanupExpiredSessions();
             } catch (error) {
-                logger?.error?.('[sessions] Failed to clean up expired sessions:', error);
+                logger?.error?.('[sessions] Failed to clean up expired sessions.', { error });
             }
         }, intervalMs);
 

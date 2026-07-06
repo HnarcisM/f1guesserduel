@@ -6,7 +6,8 @@ const {
     createAppConfig,
     parseBoolean,
     normalizeSameSite,
-    normalizeAllowedOrigin
+    normalizeAllowedOrigin,
+    normalizeLogLevel
 } = require('../server/config/appConfig');
 
 test('app config provides safe development defaults', () => {
@@ -34,6 +35,10 @@ test('app config provides safe development defaults', () => {
         enabled: true,
         windowMs: 60_000
     });
+    assert.deepEqual(config.logging, {
+        level: 'debug',
+        requestLoggingEnabled: false
+    });
 });
 
 test('app config reads production values from environment', () => {
@@ -57,7 +62,9 @@ test('app config reads production values from environment', () => {
         PUBLIC_ORIGIN: 'https://f1guesserduel.onrender.com/',
         SOCKET_ALLOWED_ORIGINS: 'https://preview.example.com, http://localhost:5173',
         SOCKET_RATE_LIMIT_ENABLED: 'false',
-        SOCKET_RATE_LIMIT_WINDOW_MS: '30000'
+        SOCKET_RATE_LIMIT_WINDOW_MS: '30000',
+        LOG_LEVEL: 'warn',
+        REQUEST_LOGGING_ENABLED: 'true'
     }, { projectRoot });
 
     assert.equal(config.isProduction, true);
@@ -85,6 +92,10 @@ test('app config reads production values from environment', () => {
     assert.deepEqual(config.socket.rateLimit, {
         enabled: false,
         windowMs: 30_000
+    });
+    assert.deepEqual(config.logging, {
+        level: 'warn',
+        requestLoggingEnabled: true
     });
 });
 
@@ -167,6 +178,14 @@ test('app config rejects invalid boolean and enum values', () => {
         () => createAppConfig({ PERSISTENCE_MODE: 'temporary' }),
         /PERSISTENCE_MODE must be one of/
     );
+    assert.throws(
+        () => createAppConfig({ LOG_LEVEL: 'verbose' }),
+        /LOG_LEVEL must be one of/
+    );
+    assert.throws(
+        () => createAppConfig({ REQUEST_LOGGING_ENABLED: 'maybe' }),
+        /REQUEST_LOGGING_ENABLED must be one of/
+    );
 });
 
 test('app config validates cookie settings', () => {
@@ -212,4 +231,19 @@ test('app config rejects empty string environment overrides', () => {
         () => createAppConfig({ SESSION_SECRET: '   ' }),
         /SESSION_SECRET must not be empty/
     );
+});
+
+
+test('logging config defaults to info request logging in production', () => {
+    const config = createAppConfig({
+        NODE_ENV: 'production',
+        SESSION_SECRET: 'session-secret',
+        PUBLIC_ORIGIN: 'https://f1guesserduel.onrender.com'
+    });
+
+    assert.deepEqual(config.logging, {
+        level: 'info',
+        requestLoggingEnabled: true
+    });
+    assert.equal(normalizeLogLevel('ERROR'), 'error');
 });

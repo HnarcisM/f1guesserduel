@@ -42,6 +42,21 @@ function createErrorPayload(error, options = {}) {
     };
 }
 
+function getRequestPath(req) {
+    const originalUrl = req?.originalUrl || req?.url || '';
+    return String(originalUrl).split('?')[0] || '/';
+}
+
+function createErrorLogMeta(error, req, statusCode) {
+    return {
+        requestId: req?.requestId || null,
+        method: req?.method || null,
+        path: getRequestPath(req),
+        statusCode,
+        error
+    };
+}
+
 function createErrorMiddleware(options = {}) {
     const isProduction = options.isProduction === true;
     const logger = options.logger || console;
@@ -54,7 +69,7 @@ function createErrorMiddleware(options = {}) {
         const { statusCode, payload } = createErrorPayload(error, { isProduction });
 
         if (statusCode >= 500 && logger && typeof logger.error === 'function') {
-            logger.error(error);
+            logger.error('Unhandled request error', createErrorLogMeta(error, req, statusCode));
         }
 
         return res.status(statusCode).json(payload);
@@ -65,5 +80,6 @@ module.exports = {
     createErrorMiddleware,
     createErrorPayload,
     getPublicMessage,
-    normalizeStatusCode
+    normalizeStatusCode,
+    createErrorLogMeta
 };

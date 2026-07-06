@@ -208,6 +208,8 @@ Aplicația poate fi configurată prin variabile de mediu. Pentru rulare locală 
 | `SOCKET_ALLOWED_ORIGINS` | localhost automat în development | Origini suplimentare acceptate pentru Socket.IO, separate prin virgulă. |
 | `SOCKET_RATE_LIMIT_ENABLED` | `true` | Activează protecția anti-spam pentru event-urile Socket.IO sensibile. |
 | `SOCKET_RATE_LIMIT_WINDOW_MS` | `60000` | Fereastra de timp pentru limitele Socket.IO, în milisecunde. |
+| `LOG_LEVEL` | `debug` local, `info` production | Nivelul minim de log: `silent`, `error`, `warn`, `info`, `debug`. |
+| `REQUEST_LOGGING_ENABLED` | `false` local, `true` production | Activează logurile HTTP pe request-uri, fără body/query string. |
 
 Validarea configului este strictă: dacă o variabilă este setată cu o valoare invalidă, serverul se oprește cu un mesaj clar. Reguli importante:
 
@@ -221,7 +223,8 @@ Validarea configului este strictă: dacă o variabilă este setată cu o valoare
 - `SESSION_COOKIE_NAME` nu poate conține spații, semicolon sau separatori invalizi;
 - path-urile configurate explicit nu pot fi stringuri goale;
 - origin-urile Socket.IO trebuie să fie URL-uri `http`/`https` fără path, query sau hash;
-- `SOCKET_RATE_LIMIT_WINDOW_MS` trebuie să fie între `1000` și `3600000`.
+- `SOCKET_RATE_LIMIT_WINDOW_MS` trebuie să fie între `1000` și `3600000`;
+- `LOG_LEVEL` trebuie să fie `silent`, `error`, `warn`, `info` sau `debug`.
 
 Există și un fișier `.env.example` cu un exemplu de configurare. Aplicația nu încarcă automat `.env`, ca să nu adăugăm dependințe noi; setează variabilele direct în mediul de rulare sau folosește un loader extern dacă ai nevoie.
 
@@ -238,6 +241,28 @@ Pe Render Free, folosește `PERSISTENCE_MODE=ephemeral` și `DATA_DIR=/tmp/f1gue
 Serverul limitează event-urile Socket.IO sensibile per socket, ca să reducă spam-ul din consolă sau scripturi automate. Sunt protejate acțiuni precum `joinRoom`, `setDifficulty`, `submitGuess`, `startSingleGame`, `submitSingleGuess`, `startDailyChallenge`, `submitDailyGuess`, `restartGame`, `refreshAuthUser` și `abortDuelRound`.
 
 Dacă limita este depășită, serverul emite `socketRateLimited` și un `errorMessage` generic, fără să execute handlerul original. `leaveRoom`, `disconnecting` și `disconnect` nu sunt limitate, ca jucătorul să poată părăsi camera sau să se deconecteze normal.
+
+### Logging și erori production
+
+Serverul folosește un logger centralizat în `server/logger.js` și request logging în `server/middleware/requestLogging.js`. În production logurile sunt JSON, utile pentru Render Logs.
+
+Config recomandat:
+
+```env
+LOG_LEVEL=info
+REQUEST_LOGGING_ENABLED=true
+```
+
+Protecții incluse:
+
+```text
+- nu se loghează body-uri de request;
+- query string-ul este eliminat din path-ul logat;
+- câmpurile sensibile precum password, token, secret, cookie și authorization sunt redactate;
+- fiecare request primește `X-Request-Id`;
+- erorile 500 sunt logate cu requestId/metodă/path/status, dar răspunsul public rămâne generic în production;
+- `uncaughtException` și `unhandledRejection` sunt logate și serverul încearcă un shutdown controlat.
+```
 
 ---
 

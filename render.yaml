@@ -31,6 +31,10 @@ services:
         value: true
       - key: SOCKET_RATE_LIMIT_WINDOW_MS
         value: 60000
+      - key: LOG_LEVEL
+        value: info
+      - key: REQUEST_LOGGING_ENABLED
+        value: true
       - key: DATA_DIR
         value: /tmp/f1guesserduel
       - key: PUBLIC_ORIGIN

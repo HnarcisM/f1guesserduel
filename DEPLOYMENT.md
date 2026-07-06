@@ -66,6 +66,8 @@ PERSISTENCE_MODE=ephemeral
 DATA_DIR=/tmp/f1guesserduel
 ROOMS_FILE_PATH=/tmp/f1guesserduel/rooms.json
 PUBLIC_ORIGIN=https://numele-serviciului-tau.onrender.com
+LOG_LEVEL=info
+REQUEST_LOGGING_ENABLED=true
 ```
 
 Adaugă separat două secrete lungi:
@@ -95,12 +97,25 @@ SOCKET_RATE_LIMIT_WINDOW_MS=60000
 
 Limitele sunt aplicate per socket și sunt diferite pe categorii: acțiunile de lobby/start/restart au limite mai stricte, iar guess-urile au o limită mai mare ca să nu afecteze jocul normal. Dacă un client face spam, serverul emite `socketRateLimited` și nu mai execută handlerul pentru event-ul blocat.
 
+### Logging production
+
+Pentru Render, păstrează:
+
+```env
+LOG_LEVEL=info
+REQUEST_LOGGING_ENABLED=true
+```
+
+Asta produce loguri JSON pentru request-uri și erori, fără să includă body-uri, query string-uri, parole, token-uri, cookie-uri sau secrete. Fiecare request primește și headerul `X-Request-Id`, util când cauți aceeași eroare în Render Logs.
+
 ### Socket.IO allowed origins
 
 Pentru deploy online setează `PUBLIC_ORIGIN` la adresa publică exactă a aplicației, fără slash sau path la final:
 
 ```env
 PUBLIC_ORIGIN=https://numele-serviciului-tau.onrender.com
+LOG_LEVEL=info
+REQUEST_LOGGING_ENABLED=true
 ```
 
 Această valoare este folosită de Socket.IO pentru a accepta conexiuni doar din site-ul tău. Dacă ai și un preview/staging, poți adăuga origini extra:
@@ -182,6 +197,7 @@ Configurația include:
 - `connect-src 'self' ws: wss:` pentru Socket.IO;
 - allowlist de origin pentru Socket.IO prin `PUBLIC_ORIGIN` / `SOCKET_ALLOWED_ORIGINS`;
 - rate limit Socket.IO pentru event-uri sensibile, prin `SOCKET_RATE_LIMIT_ENABLED` / `SOCKET_RATE_LIMIT_WINDOW_MS`;
+- logging production cu `LOG_LEVEL` / `REQUEST_LOGGING_ENABLED` și redactare automată pentru date sensibile;
 - `img-src 'self' data:` pentru assets locale;
 - `frame-ancestors 'none'`;
 - `object-src 'none'`;
@@ -231,6 +247,8 @@ TRUST_PROXY=true
 COOKIE_SECURE=true
 COOKIE_SAMESITE=lax
 PUBLIC_ORIGIN=https://numele-serviciului-tau.onrender.com
+LOG_LEVEL=info
+REQUEST_LOGGING_ENABLED=true
 SESSION_SECRET=<setat>
 ```
 
