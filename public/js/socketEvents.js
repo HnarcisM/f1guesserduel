@@ -5,6 +5,7 @@ export function registerSocketEvents(socket, app) {
 	[
 		'initGame',
 		'roomStateUpdate',
+		'roomListUpdate',
 		'guessResult',
 		'gameRestarted',
 		'gameTimedOut',
@@ -165,6 +166,10 @@ export function registerSocketEvents(socket, app) {
 			}
 		}
 	}
+
+	socket.on('roomListUpdate', (payload) => {
+		app.renderDuelRoomList?.(payload);
+	});
 
 	socket.on('initDailyChallenge', (data) => {
 		app.handleInitDailyChallenge?.(data);

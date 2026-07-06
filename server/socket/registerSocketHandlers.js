@@ -39,6 +39,7 @@ const {
 const { registerSoloGameSocketHandlers } = require('./soloGameSocketHandlers');
 const { registerDailyChallengeSocketHandlers } = require('./dailyChallengeSocketHandlers');
 const { createSocketEventRateLimiter } = require('./socketEventRateLimit');
+const { buildPublicRoomListPayload } = require('./roomListPayloads');
 
 function registerSocketHandlers(io, dependencies) {
     const { roomStore, gameService, sessionService } = dependencies;
@@ -57,6 +58,23 @@ function registerSocketHandlers(io, dependencies) {
         getActiveRoomSockets
     } = createRoomStateEmitter(io, roomStore);
 
+    function cleanupRoomsBeforeList() {
+        if (typeof roomStore?.values !== 'function') return;
+
+        for (const room of roomStore.values()) {
+            if (!room?.roomId) continue;
+            cleanupInactiveMembers(room.roomId, room);
+        }
+    }
+
+    function emitRoomListUpdate(target = io) {
+        cleanupRoomsBeforeList();
+        const payload = buildPublicRoomListPayload(roomStore);
+        if (typeof target?.emit === 'function') {
+            target.emit('roomListUpdate', payload);
+        }
+        return payload;
+    }
 
     function emitRoundResolved(roomId, room, roundResult) {
         if (!room || !roundResult) return;
@@ -75,6 +93,7 @@ function registerSocketHandlers(io, dependencies) {
         }
 
         emitRoomStateUpdate(roomId, 'round-resolved');
+        emitRoomListUpdate();
     }
 
     io.on('connection', (socket) => {
@@ -89,6 +108,10 @@ function registerSocketHandlers(io, dependencies) {
             singleSessions.delete(socket.id);
             dailySessions.delete(socket.id);
         }
+
+        onSocketEvent('requestRoomList', () => {
+            emitRoomListUpdate(socket);
+        });
 
         onSocketEvent('joinRoom', (payload) => {
             const { roomId, clientId } = normalizeJoinRoomPayload(payload);
@@ -122,6 +145,7 @@ function registerSocketHandlers(io, dependencies) {
             socket.join(roomId);
             emitHostStatus(socket, room);
             emitRoomStateUpdate(roomId, 'join');
+            emitRoomListUpdate();
 
             if (room.difficulty && room.roundState === 'playing') {
                 const initPayload = {
@@ -174,6 +198,7 @@ function registerSocketHandlers(io, dependencies) {
             updateDuelLobbySettings(room, roundOptions);
             roomStore.markDirty?.();
             emitRoomStateUpdate(currentRoom, 'lobby-settings-updated');
+            emitRoomListUpdate();
         });
 
         onSocketEvent('setDifficulty', (payload) => {
@@ -214,6 +239,7 @@ function registerSocketHandlers(io, dependencies) {
                 includeLiveBoardForSpectators: true
             });
             emitRoomStateUpdate(currentRoom, 'round-started');
+            emitRoomListUpdate();
         });
 
         onSocketEvent('submitGuess', (driverId) => {
@@ -380,6 +406,7 @@ function registerSocketHandlers(io, dependencies) {
             roomStore.markDirty?.();
             emitRoomRoleStatuses(room);
             emitRoomStateUpdate(currentRoom, 'player-selected');
+            emitRoomListUpdate();
         });
 
         onSocketEvent('restartGame' , (payload = {}) => {
@@ -413,6 +440,7 @@ function registerSocketHandlers(io, dependencies) {
                 includeLiveBoardForSpectators: true
             });
             emitRoomStateUpdate(currentRoom, 'restart');
+            emitRoomListUpdate();
         });
 
 
@@ -454,6 +482,7 @@ function registerSocketHandlers(io, dependencies) {
             emitHostStatus(socket, room);
             emitRoomStateUpdate(currentRoom, 'auth-updated');
             emitRoomRoleStatuses(room);
+            emitRoomListUpdate();
         });
 
         function leaveCurrentRoom() {
@@ -479,6 +508,7 @@ function registerSocketHandlers(io, dependencies) {
                     liveBoard: buildLiveBoardState(room)
                 });
                 emitRoomStateUpdate(roomId, 'duel-aborted');
+                emitRoomListUpdate();
                 return;
             }
 
@@ -493,11 +523,13 @@ function registerSocketHandlers(io, dependencies) {
 
             if (getRoomMemberCount(room) === 0) {
                 roomStore.remove(roomId);
+                emitRoomListUpdate();
                 return;
             }
 
             emitRoomStateUpdate(roomId, 'leave');
             emitRoomRoleStatuses(room);
+            emitRoomListUpdate();
         }
 
         onSocketEvent('abortDuelRound', () => {
@@ -525,6 +557,7 @@ function registerSocketHandlers(io, dependencies) {
                 liveBoard: buildLiveBoardState(room)
             });
             emitRoomStateUpdate(currentRoom, 'duel-aborted');
+            emitRoomListUpdate();
         });
 
         function markCurrentRoomDisconnected() {
@@ -539,6 +572,7 @@ function registerSocketHandlers(io, dependencies) {
             hasMarkedCurrentRoomDisconnected = true;
             roomStore.markDirty?.();
             emitRoomStateUpdate(currentRoom, 'disconnect');
+            emitRoomListUpdate();
         }
 
         socket.on('leaveRoom', leaveCurrentRoom);

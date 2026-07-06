@@ -1045,6 +1045,193 @@ body.mode-daily #duelStatus {
     }
 }
 
+/* --- DUEL ROOM BROWSER --- */
+.duel-room-browser-card {
+    width: min(100%, 820px);
+    margin: 0 auto var(--space-5xl);
+    padding: var(--space-4xl);
+    border: 1px solid color-mix(in srgb, var(--accent-f1) 40%, var(--border-soft));
+    border-radius: var(--radius-2xl);
+    background: color-mix(in srgb, var(--surface-main) 90%, transparent);
+    box-shadow: 0 16px 34px rgba(0, 0, 0, 0.32);
+    text-align: left;
+}
+
+.duel-room-browser-card.is-hidden {
+    display: none;
+}
+
+.duel-room-browser-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-4xl);
+    margin-bottom: var(--space-3xl);
+}
+
+.duel-room-browser-eyebrow {
+    display: block;
+    margin-bottom: 4px;
+    color: var(--accent-f1);
+    font-size: 0.72rem;
+    font-weight: 950;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.duel-room-browser-header strong {
+    display: block;
+    color: var(--text-primary);
+    font-size: 1.15rem;
+    font-weight: 950;
+}
+
+.duel-room-browser-header small {
+    display: block;
+    margin-top: 4px;
+    color: var(--text-secondary);
+    line-height: 1.45;
+}
+
+.duel-room-browser-actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: var(--space-lg);
+}
+
+.duel-room-browser-primary-btn,
+.duel-room-browser-secondary-btn,
+.duel-room-join-btn {
+    border: 1px solid var(--border-soft);
+    border-radius: 999px;
+    padding: 10px 14px;
+    cursor: pointer;
+    font-weight: 950;
+    transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.duel-room-browser-primary-btn,
+.duel-room-join-btn {
+    border-color: color-mix(in srgb, var(--accent-f1) 58%, var(--border-soft));
+    background: color-mix(in srgb, var(--accent-f1) 22%, rgba(255, 255, 255, 0.08));
+    color: var(--text-primary);
+}
+
+.duel-room-browser-secondary-btn {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-secondary);
+}
+
+.duel-room-browser-primary-btn:hover,
+.duel-room-browser-secondary-btn:hover,
+.duel-room-join-btn:hover {
+    transform: translateY(-1px);
+    border-color: var(--accent-f1);
+    background: color-mix(in srgb, var(--accent-f1) 28%, rgba(255, 255, 255, 0.08));
+    color: var(--text-primary);
+}
+
+.duel-room-browser-empty {
+    margin: 0;
+    padding: var(--space-3xl);
+    border: 1px dashed var(--border-soft);
+    border-radius: var(--radius-xl);
+    color: var(--text-secondary);
+    text-align: center;
+    font-weight: 850;
+}
+
+.duel-room-browser-empty.is-hidden {
+    display: none;
+}
+
+.duel-room-list {
+    display: grid;
+    gap: var(--space-2xl);
+}
+
+.duel-room-card {
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-xl);
+    padding: var(--space-3xl);
+    background: rgba(255, 255, 255, 0.045);
+}
+
+.duel-room-card.has-player-slot {
+    border-color: color-mix(in srgb, var(--success) 42%, var(--border-soft));
+}
+
+.duel-room-card.is-playing {
+    border-style: dashed;
+}
+
+.duel-room-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-3xl);
+}
+
+.duel-room-card-title-block {
+    min-width: 0;
+}
+
+.duel-room-card-eyebrow {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+    font-weight: 950;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.duel-room-card-title {
+    display: block;
+    color: var(--text-primary);
+    font-size: 1.02rem;
+    margin-top: 3px;
+}
+
+.duel-room-card-host {
+    display: block;
+    color: var(--text-secondary);
+    margin-top: 3px;
+}
+
+.duel-room-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    margin-top: var(--space-2xl);
+}
+
+.duel-room-card-meta span {
+    border-radius: 999px;
+    padding: 6px 9px;
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--text-secondary);
+    font-size: 0.76rem;
+    font-weight: 850;
+}
+
+@media (max-width: 720px) {
+    .duel-room-browser-header,
+    .duel-room-card-header {
+        flex-direction: column;
+    }
+
+    .duel-room-browser-actions,
+    .duel-room-browser-primary-btn,
+    .duel-room-browser-secondary-btn,
+    .duel-room-join-btn {
+        width: 100%;
+    }
+
+    .duel-room-browser-actions {
+        flex-direction: column;
+    }
+}
+
 /* Source: public/css/05-legend-stats.css */
 /* --- SUB-SOLUL PAGINII (LEGENDĂ) --- */
 .site-footer {

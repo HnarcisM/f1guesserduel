@@ -6,6 +6,7 @@ export function createGameModeSelectionController({
 	gameModeController,
 	startDuelMode,
 	startDailyChallenge,
+	onDuelBrowserRequested,
 	onSingleSelected,
 	confirmDuelExit,
 	abortDuelRound
@@ -20,6 +21,13 @@ export function createGameModeSelectionController({
 
 	function getDailyPanel() {
 		return document.getElementById('dailyChallengePanel');
+	}
+
+	function hideDuelRoomBrowserPanel() {
+		const panel = document.getElementById('duelRoomBrowserPanel');
+		if (!panel) return;
+		panel.classList.add('is-hidden');
+		panel.setAttribute('aria-hidden', 'true');
 	}
 
 	function updateModeSelection(mode) {
@@ -46,22 +54,33 @@ export function createGameModeSelectionController({
 		const leaveResult = confirmDuelExit?.('single');
 		if (leaveResult === false || leaveResult === 'to-lobby') return;
 		gameModeController?.enterSingle?.();
+		hideDuelRoomBrowserPanel();
 		onSingleSelected?.();
 		updateModeSelection('single');
 		const status = document.getElementById('status');
 		if (status) status.textContent = 'Single Play: selectează dificultatea pentru jocul solo.';
 	}
 
-	function selectDuel() {
-		const roomId = startDuelMode?.();
+	function selectDuel(options = {}) {
+		const requestedRoomId = options && typeof options === 'object' ? options.roomId : null;
+		const shouldJoinDirectly = Boolean(requestedRoomId) || typeof onDuelBrowserRequested !== 'function';
+		let roomId = null;
+
 		updateModeSelection('duel');
-		const overlay = document.getElementById('difficulty-overlay');
-		if (overlay) overlay.classList.add('hidden');
+
+		if (shouldJoinDirectly) {
+			roomId = startDuelMode?.(requestedRoomId || null);
+			const overlay = document.getElementById('difficulty-overlay');
+			if (overlay) overlay.classList.add('hidden');
+		} else {
+			onDuelBrowserRequested?.();
+		}
+
 		const status = document.getElementById('status');
 		if (status) {
 			status.textContent = roomId
 				? `Duel activ. Camera: ${roomId}. Selectează dificultatea când ești pregătit.`
-				: 'Duel activ. Selectează dificultatea când ești pregătit.';
+				: 'Duel: alege o cameră existentă sau creează una nouă.';
 		}
 	}
 
@@ -69,6 +88,7 @@ export function createGameModeSelectionController({
 		const leaveResult = confirmDuelExit?.('daily');
 		if (leaveResult === false || leaveResult === 'to-lobby') return;
 		gameModeController?.enterDaily?.({ source: 'mode-selection' });
+		hideDuelRoomBrowserPanel();
 		updateModeSelection('daily');
 		if (level) {
 			startDailyChallenge?.(level);

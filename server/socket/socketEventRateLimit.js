@@ -2,6 +2,7 @@ const DEFAULT_SOCKET_EVENT_RATE_LIMIT_WINDOW_MS = 60_000;
 const DEFAULT_SOCKET_EVENT_RATE_LIMIT_MESSAGE = 'Prea multe acțiuni într-un timp scurt. Așteaptă câteva secunde și încearcă din nou.';
 
 const DEFAULT_SOCKET_EVENT_LIMITS = Object.freeze({
+    requestRoomList: { maxEvents: 60 },
     joinRoom: { maxEvents: 20 },
     updateDuelLobbySettings: { maxEvents: 30 },
     setDifficulty: { maxEvents: 12 },

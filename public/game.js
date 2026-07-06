@@ -5,6 +5,7 @@ import { createAuthView } from './js/authView.js';
 import { renderLiveBoard, renderRoomScoreboard, resetLiveBoard, resetRoomScoreboard } from './js/liveBoardView.js';
 import { renderOpponentProgress, resetOpponentProgress } from './js/opponentProgressView.js';
 import { renderDuelLobby, resetDuelLobby, setupDuelLobbyView } from './js/duelLobbyView.js';
+import { renderDuelRoomBrowser, resetDuelRoomBrowser, setDuelRoomBrowserVisible, setupDuelRoomBrowserView } from './js/duelRoomBrowserView.js';
 import { createRoleState } from './js/roleState.js';
 import { createDailyChallengeController } from './js/dailyChallengeController.js';
 import { createEndGameController } from './js/endGameController.js';
@@ -331,6 +332,7 @@ function enterSingleMode(message = 'Single Play: selectează dificultatea pentru
 	resetLiveBoard();
 	resetOpponentProgress();
 	resetDuelLobby();
+	resetDuelRoomBrowser();
 	resetRoomScoreboard();
 	endGameController?.hideEndGamePopup?.(false);
 	autocomplete?.clearSuggestions?.();
@@ -355,6 +357,7 @@ function enterSingleMode(message = 'Single Play: selectează dificultatea pentru
 
 function enterDuelMode(roomId = null) {
 	resetDailyModeForDuel();
+	setDuelRoomBrowserVisible(false);
 
 	const joinedRoomId = setupRoom({
 		getSocket: socketController.getSocket,
@@ -364,6 +367,45 @@ function enterDuelMode(roomId = null) {
 			gameModeController.enterDuel({ roomId: nextRoomId });
 		}
 	});
+	return joinedRoomId;
+}
+
+function requestDuelRoomList() {
+	socketController?.emit('requestRoomList');
+}
+
+function showDuelRoomBrowser() {
+	resetDailyModeForDuel();
+	activeRoomId = null;
+	lastDuelRoomState = null;
+	clearRoomFromUrl();
+	resetRoomUi();
+	roleState.setSpectatorMode(false);
+	timer.hideRoundTimer();
+	setDuelRoundState('waiting');
+	setRoundFinished(false);
+	resetLiveBoard();
+	resetOpponentProgress();
+	resetDuelLobby();
+	resetRoomScoreboard();
+	setGuessControlsVisible(false);
+	endGameController?.hideEndGamePopup?.(false);
+	gameModeController.enterDuel({ browsingRooms: true });
+	setDuelRoomBrowserVisible(true);
+}
+
+function joinDuelRoomFromBrowser(roomId = null) {
+	const joinedRoomId = enterDuelMode(roomId);
+	gameModeSelectionController?.updateModeSelection?.('duel');
+	const overlay = document.getElementById('difficulty-overlay');
+	if (overlay) overlay.classList.add('hidden');
+	const status = document.getElementById('status');
+	if (status) {
+		status.classList.remove('is-hidden');
+		status.textContent = joinedRoomId
+			? `Duel activ. Camera: ${joinedRoomId}. Așteaptă lobby-ul camerei.`
+			: 'Duel activ. Așteaptă lobby-ul camerei.';
+	}
 	return joinedRoomId;
 }
 
@@ -442,6 +484,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		renderOpponentProgress,
 		resetOpponentProgress,
 		renderDuelLobby,
+		renderDuelRoomList: renderDuelRoomBrowser,
 		resetDuelLobby,
 		updateDuelRoomState,
 		hideGuessControlsAfterLocalFinish,
@@ -470,6 +513,11 @@ document.addEventListener('DOMContentLoaded', () => {
 	setupShareButton();
 	setupAuth();
 	socketController.connect();
+	setupDuelRoomBrowserView({
+		onCreateRoom: () => joinDuelRoomFromBrowser(),
+		onJoinRoom: (roomId) => joinDuelRoomFromBrowser(roomId),
+		onRefreshRooms: requestDuelRoomList
+	});
 	setupDuelLobbyView({
 		timer,
 		onStartRound: (level) => startRoundFromSelection(level, { source: 'duel-lobby' }),
@@ -480,7 +528,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	gameModeSelectionController = createGameModeSelectionController({
 		gameModeController,
-		startDuelMode: () => enterDuelMode(),
+		startDuelMode: (roomId = null) => enterDuelMode(roomId),
+		onDuelBrowserRequested: showDuelRoomBrowser,
 		startDailyChallenge: startDailyFromSelection,
 		onSingleSelected: enterSingleMode,
 		confirmDuelExit,
@@ -490,7 +539,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	const roomIdFromUrl = getRoomIdFromUrl();
 	if (roomIdFromUrl) {
-		gameModeSelectionController.selectDuel();
+		gameModeSelectionController.selectDuel({ roomId: roomIdFromUrl });
 	} else {
 		gameModeSelectionController.selectSingle();
 	}

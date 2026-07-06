@@ -169,3 +169,65 @@ test('mode selection allows Daily after confirmed active duel exit', async () =>
     assert.equal(dom.dailyPanel.classList.contains('is-hidden'), false);
     assert.equal(dom.difficultySection.classList.contains('is-hidden'), true);
 });
+
+test('mode selection opens Duel room browser instead of auto-creating a room when browser callback exists', async () => {
+    const { createGameModeController } = await import('../public/js/gameModeController.js');
+    const { createGameModeSelectionController } = await import('../public/js/gameModeSelectionController.js');
+    const dom = setupModeSelectionDocument();
+    const gameModeController = createGameModeController();
+    let createdRoom = false;
+    let openedBrowser = false;
+
+    const controller = createGameModeSelectionController({
+        gameModeController,
+        startDuelMode: () => {
+            createdRoom = true;
+            return 'ROOM1';
+        },
+        onDuelBrowserRequested: () => {
+            openedBrowser = true;
+            gameModeController.enterDuel({ browsingRooms: true });
+        },
+        startDailyChallenge: () => {},
+        onSingleSelected: () => {}
+    });
+
+    controller.setup();
+    dom.modeControls.find(control => control.dataset.gameModeChoice === 'duel').click();
+
+    assert.equal(createdRoom, false);
+    assert.equal(openedBrowser, true);
+    assert.equal(gameModeController.isDuel(), true);
+    assert.equal(dom.difficultySection.classList.contains('is-hidden'), true);
+    assert.equal(dom.status.textContent, 'Duel: alege o cameră existentă sau creează una nouă.');
+});
+
+test('mode selection still joins Duel directly for room links', async () => {
+    const { createGameModeController } = await import('../public/js/gameModeController.js');
+    const { createGameModeSelectionController } = await import('../public/js/gameModeSelectionController.js');
+    const dom = setupModeSelectionDocument();
+    const gameModeController = createGameModeController();
+    let joinedRoomId = null;
+    let openedBrowser = false;
+
+    const controller = createGameModeSelectionController({
+        gameModeController,
+        startDuelMode: (roomId) => {
+            joinedRoomId = roomId;
+            gameModeController.enterDuel({ roomId });
+            return roomId;
+        },
+        onDuelBrowserRequested: () => {
+            openedBrowser = true;
+        },
+        startDailyChallenge: () => {},
+        onSingleSelected: () => {}
+    });
+
+    controller.selectDuel({ roomId: 'ROOM42' });
+
+    assert.equal(joinedRoomId, 'ROOM42');
+    assert.equal(openedBrowser, false);
+    assert.equal(gameModeController.isDuel(), true);
+    assert.equal(dom.status.textContent, 'Duel activ. Camera: ROOM42. Selectează dificultatea când ești pregătit.');
+});
