@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>F1 Guesser</title>
     <script src="/js/themeBootstrap.js?v=theme-bootstrap-1"></script>
-    <link rel="stylesheet" href="/style.bundle.css?v=frontend-cache-3">
+    <link rel="stylesheet" href="/style.bundle.css?v=frontend-cache-4">
 </head>
 <body>
 
@@ -333,48 +333,60 @@
             </div>
         </div>
 
-        <div class="auth-stats-grid" aria-label="Statistici totale">
-            <div class="auth-stat-card"><strong id="authStatPlayed">0</strong><span>Jocuri</span></div>
-            <div class="auth-stat-card"><strong id="authStatWon">0</strong><span>Victorii</span></div>
-            <div class="auth-stat-card"><strong id="authStatWinRate">0%</strong><span>Win rate</span></div>
-            <div class="auth-stat-card"><strong id="authStatBestStreak">0</strong><span>Best streak</span></div>
+        <div class="auth-profile-tabs" role="tablist" aria-label="Secțiunile profilului">
+            <button type="button" id="authTabOverview" role="tab" aria-selected="true" aria-controls="authPanelOverview" tabindex="0">Prezentare</button>
+            <button type="button" id="authTabStats" role="tab" aria-selected="false" aria-controls="authPanelStats" tabindex="-1">Statistici</button>
+            <button type="button" id="authTabHistory" role="tab" aria-selected="false" aria-controls="authPanelHistory" tabindex="-1">Istoric</button>
         </div>
 
-        <div class="auth-mode-stats" aria-label="Statistici pe mod de joc">
-            <div><strong>Single</strong><span id="authSingleStats">0 jocuri · 0 victorii</span></div>
-            <div><strong>Daily</strong><span id="authDailyStats">0 jocuri · 0 victorii</span></div>
-            <div><strong>Duel</strong><span id="authDuelStats">0 jocuri · 0 victorii · 0 remize</span></div>
-        </div>
+        <section id="authPanelOverview" class="auth-tab-panel" role="tabpanel" aria-labelledby="authTabOverview">
+            <div class="auth-stats-grid" aria-label="Statistici totale">
+                <div class="auth-stat-card"><strong id="authStatPlayed">0</strong><span>Jocuri</span></div>
+                <div class="auth-stat-card"><strong id="authStatWon">0</strong><span>Victorii</span></div>
+                <div class="auth-stat-card"><strong id="authStatWinRate">0%</strong><span>Win rate</span></div>
+                <div class="auth-stat-card"><strong id="authStatBestStreak">0</strong><span>Best streak</span></div>
+            </div>
 
-        <section class="auth-stats-details" aria-labelledby="authStatsDetailsTitle">
-            <div class="auth-section-heading">
-                <h3 id="authStatsDetailsTitle">Statistici detaliate</h3>
-                <div class="auth-mode-selector" aria-label="Alege modul pentru statistici">
-                    <button type="button" id="authStatsModeSingle" class="is-active" aria-pressed="true">Single</button>
-                    <button type="button" id="authStatsModeDaily" aria-pressed="false">Daily</button>
-                    <button type="button" id="authStatsModeDuel" aria-pressed="false">Duel</button>
-                </div>
-            </div>
-            <div class="auth-detail-summary">
-                <span id="authModeOutcomeDetail">0 victorii · 0 înfrângeri</span>
-                <span id="authModeStreakDetail">Streak: 0 · Record: 0</span>
-            </div>
-            <div class="auth-attempt-distribution" aria-label="Distribuția victoriilor pe încercări">
-                <div><span>1</span><i><b id="authGuessBar1"></b></i><strong id="authGuessCount1">0</strong></div>
-                <div><span>2</span><i><b id="authGuessBar2"></b></i><strong id="authGuessCount2">0</strong></div>
-                <div><span>3</span><i><b id="authGuessBar3"></b></i><strong id="authGuessCount3">0</strong></div>
-                <div><span>4</span><i><b id="authGuessBar4"></b></i><strong id="authGuessCount4">0</strong></div>
-                <div><span>5</span><i><b id="authGuessBar5"></b></i><strong id="authGuessCount5">0</strong></div>
-                <div><span>6</span><i><b id="authGuessBar6"></b></i><strong id="authGuessCount6">0</strong></div>
+            <div class="auth-mode-stats" aria-label="Statistici pe mod de joc">
+                <div><strong>Single</strong><span id="authSingleStats">0 jocuri · 0 victorii</span></div>
+                <div><strong>Daily</strong><span id="authDailyStats">0 jocuri · 0 victorii</span></div>
+                <div><strong>Duel</strong><span id="authDuelStats">0 jocuri · 0 victorii · 0 remize</span></div>
             </div>
         </section>
 
-        <section class="auth-history-section" aria-labelledby="authHistoryTitle">
-            <div class="auth-section-heading">
-                <h3 id="authHistoryTitle">Ultimele jocuri</h3>
-                <span>Maximum 10</span>
+        <section id="authPanelStats" class="auth-tab-panel" role="tabpanel" aria-labelledby="authTabStats" hidden>
+            <div class="auth-stats-details" aria-labelledby="authStatsDetailsTitle">
+                <div class="auth-section-heading">
+                    <h3 id="authStatsDetailsTitle">Statistici detaliate</h3>
+                    <div class="auth-mode-selector" aria-label="Alege modul pentru statistici">
+                        <button type="button" id="authStatsModeSingle" class="is-active" aria-pressed="true">Single</button>
+                        <button type="button" id="authStatsModeDaily" aria-pressed="false">Daily</button>
+                        <button type="button" id="authStatsModeDuel" aria-pressed="false">Duel</button>
+                    </div>
+                </div>
+                <div class="auth-detail-summary">
+                    <span id="authModeOutcomeDetail">0 victorii · 0 înfrângeri</span>
+                    <span id="authModeStreakDetail">Streak: 0 · Record: 0</span>
+                </div>
+                <div class="auth-attempt-distribution" aria-label="Distribuția victoriilor pe încercări">
+                    <div><span>1</span><i><b id="authGuessBar1"></b></i><strong id="authGuessCount1">0</strong></div>
+                    <div><span>2</span><i><b id="authGuessBar2"></b></i><strong id="authGuessCount2">0</strong></div>
+                    <div><span>3</span><i><b id="authGuessBar3"></b></i><strong id="authGuessCount3">0</strong></div>
+                    <div><span>4</span><i><b id="authGuessBar4"></b></i><strong id="authGuessCount4">0</strong></div>
+                    <div><span>5</span><i><b id="authGuessBar5"></b></i><strong id="authGuessCount5">0</strong></div>
+                    <div><span>6</span><i><b id="authGuessBar6"></b></i><strong id="authGuessCount6">0</strong></div>
+                </div>
             </div>
-            <div id="authGameHistory" class="auth-game-history"></div>
+        </section>
+
+        <section id="authPanelHistory" class="auth-tab-panel" role="tabpanel" aria-labelledby="authTabHistory" hidden>
+            <div class="auth-history-section" aria-labelledby="authHistoryTitle">
+                <div class="auth-section-heading">
+                    <h3 id="authHistoryTitle">Ultimele jocuri</h3>
+                    <span>Maximum 10</span>
+                </div>
+                <div id="authGameHistory" class="auth-game-history"></div>
+            </div>
         </section>
         <p id="authAccountStatsMessage" class="auth-account-stats-message" aria-live="polite"></p>
     </section>
@@ -403,6 +415,6 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script defer src="/game.bundle.min.js?v=frontend-bundle-4"></script>
+<script defer src="/game.bundle.min.js?v=frontend-bundle-5"></script>
 </body>
 </html>

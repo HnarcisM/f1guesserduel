@@ -5,6 +5,7 @@ export function createAuthView({ onAuthChanged } = {}) {
     let socketAuthToken = null;
     let mode = 'login';
     let authStateVersion = 0;
+    let selectedAccountTab = 'overview';
     let selectedStatsMode = 'single';
     let currentAccountStats = {};
 
@@ -31,6 +32,12 @@ export function createAuthView({ onAuthChanged } = {}) {
             accountUsername: document.getElementById('authAccountUsername'),
             accountEmail: document.getElementById('authAccountEmail'),
             accountMemberSince: document.getElementById('authAccountMemberSince'),
+            tabOverview: document.getElementById('authTabOverview'),
+            tabStats: document.getElementById('authTabStats'),
+            tabHistory: document.getElementById('authTabHistory'),
+            panelOverview: document.getElementById('authPanelOverview'),
+            panelStats: document.getElementById('authPanelStats'),
+            panelHistory: document.getElementById('authPanelHistory'),
             statPlayed: document.getElementById('authStatPlayed'),
             statWon: document.getElementById('authStatWon'),
             statWinRate: document.getElementById('authStatWinRate'),
@@ -46,6 +53,50 @@ export function createAuthView({ onAuthChanged } = {}) {
             gameHistory: document.getElementById('authGameHistory'),
             accountStatsMessage: document.getElementById('authAccountStatsMessage')
         };
+    }
+
+    function selectAccountTab(nextTab, { focus = false } = {}) {
+        if (!['overview', 'stats', 'history'].includes(nextTab)) return;
+        selectedAccountTab = nextTab;
+        const els = getEls();
+        const tabs = {
+            overview: els.tabOverview,
+            stats: els.tabStats,
+            history: els.tabHistory
+        };
+        const panels = {
+            overview: els.panelOverview,
+            stats: els.panelStats,
+            history: els.panelHistory
+        };
+
+        for (const [tabName, tab] of Object.entries(tabs)) {
+            const isSelected = tabName === selectedAccountTab;
+            if (tab) {
+                tab.setAttribute('aria-selected', String(isSelected));
+                tab.setAttribute('tabindex', isSelected ? '0' : '-1');
+                tab.classList.toggle('is-active', isSelected);
+            }
+            if (panels[tabName]) {
+                panels[tabName].hidden = !isSelected;
+                panels[tabName].setAttribute('aria-hidden', String(!isSelected));
+            }
+        }
+
+        if (focus && tabs[selectedAccountTab]?.focus) tabs[selectedAccountTab].focus();
+    }
+
+    function handleAccountTabKeydown(event) {
+        const tabOrder = ['overview', 'stats', 'history'];
+        const currentIndex = tabOrder.indexOf(selectedAccountTab);
+        let nextIndex = currentIndex;
+        if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabOrder.length;
+        else if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + tabOrder.length) % tabOrder.length;
+        else if (event.key === 'Home') nextIndex = 0;
+        else if (event.key === 'End') nextIndex = tabOrder.length - 1;
+        else return;
+        event.preventDefault();
+        selectAccountTab(tabOrder[nextIndex], { focus: true });
     }
 
     function emitAuthChanged() {
@@ -108,6 +159,7 @@ export function createAuthView({ onAuthChanged } = {}) {
             if (els.accountMemberSince) {
                 els.accountMemberSince.textContent = formatMemberSince(currentUser.createdAt);
             }
+            selectAccountTab(selectedAccountTab);
         }
     }
 
@@ -325,6 +377,7 @@ export function createAuthView({ onAuthChanged } = {}) {
 
             currentUser = data.user || null;
             socketAuthToken = data.socketAuthToken || null;
+            selectedAccountTab = 'overview';
             renderAccountDashboard();
             renderUser();
             emitAuthChanged();
@@ -350,6 +403,7 @@ export function createAuthView({ onAuthChanged } = {}) {
 
         currentUser = null;
         socketAuthToken = null;
+        selectedAccountTab = 'overview';
         renderAccountDashboard();
         renderUser();
         emitAuthChanged();
@@ -364,6 +418,16 @@ export function createAuthView({ onAuthChanged } = {}) {
         if (els.backdrop) els.backdrop.addEventListener('click', closePanel);
         if (els.switchBtn) els.switchBtn.addEventListener('click', () => setMode(mode === 'register' ? 'login' : 'register'));
         if (els.logoutBtn) els.logoutBtn.addEventListener('click', logout);
+        const accountTabs = [
+            ['overview', els.tabOverview],
+            ['stats', els.tabStats],
+            ['history', els.tabHistory]
+        ];
+        for (const [tabName, tab] of accountTabs) {
+            if (!tab) continue;
+            tab.addEventListener('click', () => selectAccountTab(tabName));
+            tab.addEventListener('keydown', handleAccountTabKeydown);
+        }
         if (els.statsModeSingle) els.statsModeSingle.addEventListener('click', () => selectStatsMode('single'));
         if (els.statsModeDaily) els.statsModeDaily.addEventListener('click', () => selectStatsMode('daily'));
         if (els.statsModeDuel) els.statsModeDuel.addEventListener('click', () => selectStatsMode('duel'));
@@ -373,6 +437,7 @@ export function createAuthView({ onAuthChanged } = {}) {
         }
 
         setMode('login');
+        selectAccountTab('overview');
         refreshCurrentUser();
     }
 

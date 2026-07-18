@@ -62,7 +62,9 @@ function createAccountDocument() {
         'authUsernameGroup', 'authUsername', 'authEmail', 'authPassword', 'authSubmitBtn',
         'authSwitchBtn', 'authMessage', 'authUserBadge', 'authLogoutBtn', 'authForm',
         'authAccountView', 'authAccountAvatar', 'authAccountUsername', 'authAccountEmail',
-        'authAccountMemberSince', 'authStatPlayed', 'authStatWon', 'authStatWinRate',
+        'authAccountMemberSince', 'authTabOverview', 'authTabStats', 'authTabHistory',
+        'authPanelOverview', 'authPanelStats', 'authPanelHistory',
+        'authStatPlayed', 'authStatWon', 'authStatWinRate',
         'authStatBestStreak', 'authSingleStats', 'authDailyStats', 'authDuelStats',
         'authStatsModeSingle', 'authStatsModeDaily', 'authStatsModeDuel',
         'authModeOutcomeDetail', 'authModeStreakDetail', 'authGameHistory',
@@ -97,7 +99,13 @@ test('authenticated account dashboard is present while the login form remains se
     assert.match(html, /id="authStatsDetailsTitle"/);
     assert.match(html, /id="authGuessBar6"/);
     assert.match(html, /id="authGameHistory"/);
+    assert.match(html, /id="authTabOverview"[^>]*role="tab"/);
+    assert.match(html, /id="authTabStats"[^>]*role="tab"/);
+    assert.match(html, /id="authTabHistory"[^>]*role="tab"/);
+    assert.match(html, /id="authPanelStats"[^>]*role="tabpanel"[^>]*hidden/);
+    assert.match(html, /id="authPanelHistory"[^>]*role="tabpanel"[^>]*hidden/);
     assert.match(css, /\.auth-stats-grid/);
+    assert.match(css, /\.auth-profile-tabs/);
 });
 
 test('server account stats updates are forwarded to the account dashboard', async () => {
@@ -182,6 +190,15 @@ test('a delayed initial auth refresh cannot overwrite a newer login or another a
     assert.equal(elements.authStatPlayed.textContent, '5');
     assert.equal(elements.authGameHistory.children.length, 1);
     assert.match(elements.authGameHistory.children[0].children[0].textContent, /Victorie · Duel/);
+
+    elements.authTabHistory.listeners.get('click')();
+    assert.equal(elements.authTabHistory.getAttribute('aria-selected'), 'true');
+    assert.equal(elements.authPanelHistory.hidden, false);
+    assert.equal(elements.authPanelOverview.hidden, true);
+
+    elements.authTabHistory.listeners.get('keydown')({ key: 'ArrowLeft', preventDefault() {} });
+    assert.equal(elements.authTabStats.getAttribute('aria-selected'), 'true');
+    assert.equal(elements.authPanelStats.hidden, false);
 
     elements.authStatsModeDuel.listeners.get('click')();
     assert.match(elements.authModeOutcomeDetail.textContent, /1 remize/);
