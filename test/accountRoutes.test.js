@@ -49,6 +49,7 @@ function createSettingsRouter({ authService = {}, sessionService = {} } = {}) {
         rateLimiters: {
             updateProfile: allow,
             updatePassword: allow,
+            updateAvatar: allow,
             logoutAll: allow
         },
         cookieOptions: { secure: true, sameSite: 'lax' }
@@ -162,6 +163,33 @@ test('password update revokes other sessions while preserving the current sessio
     assert.deepEqual(calls[0], { userId: 7, currentPassword: 'old-secret', newPassword: 'new-secret' });
     assert.deepEqual(calls[1], { userId: 7, token: 'current-session' });
     assert.equal(response.body.sessionsRevoked, 2);
+    assert.equal(response.body.socketAuthToken, 'fresh-socket-token');
+});
+
+test('avatar update uses the authenticated user and refreshes socket authentication', async () => {
+    const calls = [];
+    const router = createSettingsRouter({
+        authService: {
+            async updateAvatar(payload) {
+                calls.push(payload);
+                return {
+                    ok: true,
+                    user: { id: 7, username: 'Narcis', avatarKey: 'helmet-purple' }
+                };
+            }
+        }
+    });
+    const handler = getFinalRouteHandler(router, '/avatar');
+    const response = createResponse();
+
+    await handler({
+        user: { id: 7 },
+        body: { avatarKey: 'helmet-purple', userId: 999 },
+        cookies: { f1_session: 'current-session' }
+    }, response, error => { throw error; });
+
+    assert.deepEqual(calls, [{ userId: 7, avatarKey: 'helmet-purple' }]);
+    assert.equal(response.body.user.avatarKey, 'helmet-purple');
     assert.equal(response.body.socketAuthToken, 'fresh-socket-token');
 });
 

@@ -5,7 +5,13 @@ const { createSessionService, hashToken } = require('../server/auth/sessionServi
 
 function createFakeSessionRepository() {
     const users = new Map([
-        [1, { id: 1, username: 'Narcis', email: 'narcis@example.com', createdAt: '2026-07-01T00:00:00.000Z' }]
+        [1, {
+            id: 1,
+            username: 'Narcis',
+            email: 'narcis@example.com',
+            avatarKey: 'helmet-green',
+            createdAt: '2026-07-01T00:00:00.000Z'
+        }]
     ]);
     const sessions = new Map();
 
@@ -75,6 +81,7 @@ test('socket auth token resolves the user from an active session', async () => {
 
     assert.equal(user.username, 'Narcis');
     assert.equal(user.email, 'narcis@example.com');
+    assert.equal(user.avatarKey, 'helmet-green');
 });
 
 test('socket auth token rejects tampered payloads', async () => {

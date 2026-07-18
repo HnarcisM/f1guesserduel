@@ -23,21 +23,41 @@ function createSqliteAuthRepository(db) {
     `);
 
     const findByEmailStmt = db.prepare(`
-        SELECT id, username, email, password_hash, created_at AS createdAt
+        SELECT
+            users.id,
+            users.username,
+            users.email,
+            users.password_hash,
+            users.created_at AS createdAt,
+            COALESCE(user_profiles.avatar_key, 'helmet-red') AS avatarKey
         FROM users
-        WHERE email = ?
+        LEFT JOIN user_profiles ON user_profiles.user_id = users.id
+        WHERE users.email = ?
     `);
 
     const findByIdStmt = db.prepare(`
-        SELECT id, username, email, created_at AS createdAt
+        SELECT
+            users.id,
+            users.username,
+            users.email,
+            users.created_at AS createdAt,
+            COALESCE(user_profiles.avatar_key, 'helmet-red') AS avatarKey
         FROM users
-        WHERE id = ?
+        LEFT JOIN user_profiles ON user_profiles.user_id = users.id
+        WHERE users.id = ?
     `);
 
     const findCredentialsByIdStmt = db.prepare(`
-        SELECT id, username, email, password_hash, created_at AS createdAt
+        SELECT
+            users.id,
+            users.username,
+            users.email,
+            users.password_hash,
+            users.created_at AS createdAt,
+            COALESCE(user_profiles.avatar_key, 'helmet-red') AS avatarKey
         FROM users
-        WHERE id = ?
+        LEFT JOIN user_profiles ON user_profiles.user_id = users.id
+        WHERE users.id = ?
     `);
 
     const updateUsernameStmt = db.prepare(`
@@ -46,6 +66,14 @@ function createSqliteAuthRepository(db) {
 
     const updatePasswordHashStmt = db.prepare(`
         UPDATE users SET password_hash = ? WHERE id = ?
+    `);
+
+    const upsertAvatarStmt = db.prepare(`
+        INSERT INTO user_profiles (user_id, avatar_key, updated_at)
+        VALUES (?, ?, datetime('now'))
+        ON CONFLICT(user_id) DO UPDATE SET
+            avatar_key = excluded.avatar_key,
+            updated_at = datetime('now')
     `);
 
     const updateLastSeenStmt = db.prepare(`
@@ -62,9 +90,11 @@ function createSqliteAuthRepository(db) {
             users.id,
             users.username,
             users.email,
-            users.created_at AS createdAt
+            users.created_at AS createdAt,
+            COALESCE(user_profiles.avatar_key, 'helmet-red') AS avatarKey
         FROM sessions
         JOIN users ON users.id = sessions.user_id
+        LEFT JOIN user_profiles ON user_profiles.user_id = users.id
         WHERE sessions.token_hash = ?
           AND datetime(sessions.expires_at) > datetime('now')
     `);
@@ -108,6 +138,10 @@ function createSqliteAuthRepository(db) {
         async updatePasswordHash(userId, passwordHash) {
             return updatePasswordHashStmt.run(passwordHash, userId);
         },
+        async updateAvatar(userId, avatarKey) {
+            upsertAvatarStmt.run(userId, avatarKey);
+            return normalizeUserRow(findByIdStmt.get(userId));
+        },
         async updateLastSeen(userId) {
             return updateLastSeenStmt.run(userId);
         },
@@ -145,41 +179,71 @@ function createPostgresAuthRepository(database) {
             const row = await queryOne(`
                 INSERT INTO users (username, email, password_hash, last_seen_at)
                 VALUES ($1, $2, $3, now())
-                RETURNING id, username, email, created_at AS "createdAt"
+                RETURNING id, username, email, created_at AS "createdAt", 'helmet-red' AS "avatarKey"
             `, [username, email, passwordHash]);
             return normalizeUserRow(row);
         },
         async findUserByEmail(email) {
             const row = await queryOne(`
-                SELECT id, username, email, password_hash, created_at AS "createdAt"
+                SELECT
+                    users.id,
+                    users.username,
+                    users.email,
+                    users.password_hash,
+                    users.created_at AS "createdAt",
+                    COALESCE(user_profiles.avatar_key, 'helmet-red') AS "avatarKey"
                 FROM users
-                WHERE lower(email) = lower($1)
+                LEFT JOIN user_profiles ON user_profiles.user_id = users.id
+                WHERE lower(users.email) = lower($1)
             `, [email]);
             return normalizeUserRow(row);
         },
         async findUserById(userId) {
             const row = await queryOne(`
-                SELECT id, username, email, created_at AS "createdAt"
+                SELECT
+                    users.id,
+                    users.username,
+                    users.email,
+                    users.created_at AS "createdAt",
+                    COALESCE(user_profiles.avatar_key, 'helmet-red') AS "avatarKey"
                 FROM users
-                WHERE id = $1
+                LEFT JOIN user_profiles ON user_profiles.user_id = users.id
+                WHERE users.id = $1
             `, [userId]);
             return normalizeUserRow(row);
         },
         async findUserCredentialsById(userId) {
             const row = await queryOne(`
-                SELECT id, username, email, password_hash, created_at AS "createdAt"
+                SELECT
+                    users.id,
+                    users.username,
+                    users.email,
+                    users.password_hash,
+                    users.created_at AS "createdAt",
+                    COALESCE(user_profiles.avatar_key, 'helmet-red') AS "avatarKey"
                 FROM users
-                WHERE id = $1
+                LEFT JOIN user_profiles ON user_profiles.user_id = users.id
+                WHERE users.id = $1
             `, [userId]);
             return normalizeUserRow(row);
         },
         async updateUsername(userId, username) {
-            const row = await queryOne(`
+            await database.query(`
                 UPDATE users
                 SET username = $2
                 WHERE id = $1
-                RETURNING id, username, email, created_at AS "createdAt"
             `, [userId, username]);
+            const row = await queryOne(`
+                SELECT
+                    users.id,
+                    users.username,
+                    users.email,
+                    users.created_at AS "createdAt",
+                    COALESCE(user_profiles.avatar_key, 'helmet-red') AS "avatarKey"
+                FROM users
+                LEFT JOIN user_profiles ON user_profiles.user_id = users.id
+                WHERE users.id = $1
+            `, [userId]);
             return normalizeUserRow(row);
         },
         async updatePasswordHash(userId, passwordHash) {
@@ -188,6 +252,27 @@ function createPostgresAuthRepository(database) {
                 SET password_hash = $2
                 WHERE id = $1
             `, [userId, passwordHash]);
+        },
+        async updateAvatar(userId, avatarKey) {
+            await database.query(`
+                INSERT INTO user_profiles (user_id, avatar_key, updated_at)
+                VALUES ($1, $2, now())
+                ON CONFLICT (user_id) DO UPDATE SET
+                    avatar_key = EXCLUDED.avatar_key,
+                    updated_at = now()
+            `, [userId, avatarKey]);
+            const row = await queryOne(`
+                SELECT
+                    users.id,
+                    users.username,
+                    users.email,
+                    users.created_at AS "createdAt",
+                    user_profiles.avatar_key AS "avatarKey"
+                FROM users
+                JOIN user_profiles ON user_profiles.user_id = users.id
+                WHERE users.id = $1
+            `, [userId]);
+            return normalizeUserRow(row);
         },
         async updateLastSeen(userId) {
             return database.query('UPDATE users SET last_seen_at = now() WHERE id = $1', [userId]);
@@ -204,9 +289,11 @@ function createPostgresAuthRepository(database) {
                     users.id,
                     users.username,
                     users.email,
-                    users.created_at AS "createdAt"
+                    users.created_at AS "createdAt",
+                    COALESCE(user_profiles.avatar_key, 'helmet-red') AS "avatarKey"
                 FROM sessions
                 JOIN users ON users.id = sessions.user_id
+                LEFT JOIN user_profiles ON user_profiles.user_id = users.id
                 WHERE sessions.token_hash = $1
                   AND sessions.expires_at > now()
             `, [tokenHash]);

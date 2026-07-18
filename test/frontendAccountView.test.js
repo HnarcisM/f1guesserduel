@@ -64,6 +64,10 @@ function createAccountDocument() {
         'authAccountView', 'authAccountAvatar', 'authAccountUsername', 'authAccountEmail',
         'authAccountMemberSince', 'authAccountLevel', 'authTotalXp', 'authXpProgress',
         'authXpProgressBar', 'authLevelProgressText', 'authXpToNextLevel',
+        'authAvatarPresetGrid', 'authAvatarHelmetRed', 'authAvatarHelmetBlue',
+        'authAvatarHelmetYellow', 'authAvatarHelmetGreen', 'authAvatarHelmetOrange',
+        'authAvatarHelmetPurple', 'authAvatarHelmetCyan', 'authAvatarHelmetWhite',
+        'authSaveAvatarBtn',
         'authTabOverview', 'authTabStats', 'authTabHistory',
         'authTabSettings', 'authPanelOverview', 'authPanelStats', 'authPanelHistory',
         'authPanelSettings',
@@ -102,6 +106,8 @@ test('authenticated account dashboard is present while the login form remains se
     assert.match(html, /id="authAccountLevel"/);
     assert.match(html, /id="authXpProgress"[^>]*role="progressbar"/);
     assert.match(html, /id="authXpProgressBar"/);
+    assert.match(html, /id="authAvatarPresetGrid"/);
+    assert.equal((html.match(/class="auth-avatar-option"/g) || []).length, 8);
     assert.match(html, /id="authSingleStats"/);
     assert.match(html, /id="authDailyStats"/);
     assert.match(html, /id="authDuelStats"/);
@@ -118,11 +124,13 @@ test('authenticated account dashboard is present while the login form remains se
     assert.match(html, /id="authUsernameSettingsForm"/);
     assert.match(html, /id="authPasswordSettingsForm"/);
     assert.match(html, /id="authLogoutAllBtn"/);
-    assert.equal((html.match(/<details class="auth-settings-card auth-settings-disclosure">/g) || []).length, 2);
+    assert.equal((html.match(/<details class="auth-settings-card auth-settings-disclosure/g) || []).length, 3);
     assert.doesNotMatch(html, /<details class="auth-settings-card auth-settings-disclosure"[^>]*\sopen(?:\s|>)/);
     assert.match(css, /\.auth-stats-grid/);
     assert.match(css, /\.auth-progress-card/);
     assert.match(css, /\.auth-xp-progress/);
+    assert.match(css, /\.auth-avatar-grid/);
+    assert.match(css, /\.auth-helmet-icon/);
     assert.match(css, /\.auth-profile-tabs/);
     assert.match(css, /\.auth-settings-disclosure\[open\]/);
 });
@@ -254,7 +262,12 @@ test('account settings update credentials and logout every active session', asyn
                 ok: true,
                 async json() {
                     return {
-                        user: { id: 7, username: 'Narcis', email: 'narcis@example.com' },
+                        user: {
+                            id: 7,
+                            username: 'Narcis',
+                            email: 'narcis@example.com',
+                            avatarKey: 'helmet-red'
+                        },
                         socketAuthToken: 'socket-initial'
                     };
                 }
@@ -265,8 +278,29 @@ test('account settings update credentials and logout every active session', asyn
                 ok: true,
                 async json() {
                     return {
-                        user: { id: 7, username: 'Narcis_New', email: 'narcis@example.com' },
+                        user: {
+                            id: 7,
+                            username: 'Narcis_New',
+                            email: 'narcis@example.com',
+                            avatarKey: 'helmet-blue'
+                        },
                         socketAuthToken: 'socket-profile'
+                    };
+                }
+            };
+        }
+        if (url.endsWith('/avatar')) {
+            return {
+                ok: true,
+                async json() {
+                    return {
+                        user: {
+                            id: 7,
+                            username: 'Narcis',
+                            email: 'narcis@example.com',
+                            avatarKey: 'helmet-blue'
+                        },
+                        socketAuthToken: 'socket-avatar'
                     };
                 }
             };
@@ -277,7 +311,12 @@ test('account settings update credentials and logout every active session', asyn
                 async json() {
                     return {
                         ok: true,
-                        user: { id: 7, username: 'Narcis_New', email: 'narcis@example.com' },
+                        user: {
+                            id: 7,
+                            username: 'Narcis_New',
+                            email: 'narcis@example.com',
+                            avatarKey: 'helmet-blue'
+                        },
                         socketAuthToken: 'socket-password',
                         sessionsRevoked: 2
                     };
@@ -310,6 +349,17 @@ test('account settings update credentials and logout every active session', asyn
     elements.authTabSettings.listeners.get('click')();
     assert.equal(elements.authPanelSettings.hidden, false);
     assert.equal(elements.authSettingsUsername.value, 'Narcis');
+    assert.equal(elements.authAccountAvatar.dataset.avatarKey, 'helmet-red');
+
+    elements.authAvatarHelmetBlue.listeners.get('click')();
+    assert.equal(elements.authAccountAvatar.dataset.avatarKey, 'helmet-blue');
+    assert.equal(elements.authAvatarHelmetBlue.getAttribute('aria-pressed'), 'true');
+    await elements.authSaveAvatarBtn.listeners.get('click')();
+    assert.equal(view.getCurrentUser().avatarKey, 'helmet-blue');
+    assert.equal(view.getSocketAuthToken(), 'socket-avatar');
+    assert.deepEqual(JSON.parse(
+        requests.find(request => request.url.endsWith('/avatar')).options.body
+    ), { avatarKey: 'helmet-blue' });
 
     elements.authSettingsUsername.value = 'Narcis_New';
     elements.authSettingsUsername.listeners.get('input')();

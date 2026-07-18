@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>F1 Guesser</title>
     <script src="/js/themeBootstrap.js?v=theme-bootstrap-1"></script>
-    <link rel="stylesheet" href="/style.bundle.css?v=frontend-cache-8">
+<link rel="stylesheet" href="/style.bundle.css?v=frontend-cache-9">
 </head>
 <body>
 
@@ -341,7 +341,9 @@
 
     <section id="authAccountView" class="auth-account-view is-hidden" aria-label="Sumar cont">
         <div class="auth-profile-card">
-            <div id="authAccountAvatar" class="auth-account-avatar" aria-hidden="true">FG</div>
+            <div id="authAccountAvatar" class="auth-account-avatar auth-avatar-visual" data-avatar-key="helmet-red" aria-hidden="true">
+                <span class="auth-helmet-icon"></span>
+            </div>
             <div class="auth-profile-copy">
                 <strong id="authAccountUsername">Utilizator</strong>
                 <span id="authAccountEmail">email@example.com</span>
@@ -422,6 +424,39 @@
         </section>
 
         <section id="authPanelSettings" class="auth-tab-panel" role="tabpanel" aria-labelledby="authTabSettings" hidden>
+            <details class="auth-settings-card auth-settings-disclosure auth-avatar-settings">
+                <summary>
+                    <span><strong>Alege avatarul</strong><small>Selectează una dintre cele 8 căști F1.</small></span>
+                </summary>
+                <div id="authAvatarPresetGrid" class="auth-avatar-grid" role="group" aria-label="Avataruri presetate">
+                    <button type="button" id="authAvatarHelmetRed" class="auth-avatar-option" aria-pressed="true" aria-label="Cască roșie">
+                        <span class="auth-avatar-visual" data-avatar-key="helmet-red" aria-hidden="true"><span class="auth-helmet-icon"></span></span><small>Rosso</small>
+                    </button>
+                    <button type="button" id="authAvatarHelmetBlue" class="auth-avatar-option" aria-pressed="false" aria-label="Cască albastră">
+                        <span class="auth-avatar-visual" data-avatar-key="helmet-blue" aria-hidden="true"><span class="auth-helmet-icon"></span></span><small>Apex</small>
+                    </button>
+                    <button type="button" id="authAvatarHelmetYellow" class="auth-avatar-option" aria-pressed="false" aria-label="Cască galbenă">
+                        <span class="auth-avatar-visual" data-avatar-key="helmet-yellow" aria-hidden="true"><span class="auth-helmet-icon"></span></span><small>Pole</small>
+                    </button>
+                    <button type="button" id="authAvatarHelmetGreen" class="auth-avatar-option" aria-pressed="false" aria-label="Cască verde">
+                        <span class="auth-avatar-visual" data-avatar-key="helmet-green" aria-hidden="true"><span class="auth-helmet-icon"></span></span><small>Emerald</small>
+                    </button>
+                    <button type="button" id="authAvatarHelmetOrange" class="auth-avatar-option" aria-pressed="false" aria-label="Cască portocalie">
+                        <span class="auth-avatar-visual" data-avatar-key="helmet-orange" aria-hidden="true"><span class="auth-helmet-icon"></span></span><small>Papaya</small>
+                    </button>
+                    <button type="button" id="authAvatarHelmetPurple" class="auth-avatar-option" aria-pressed="false" aria-label="Cască violet">
+                        <span class="auth-avatar-visual" data-avatar-key="helmet-purple" aria-hidden="true"><span class="auth-helmet-icon"></span></span><small>Velocity</small>
+                    </button>
+                    <button type="button" id="authAvatarHelmetCyan" class="auth-avatar-option" aria-pressed="false" aria-label="Cască cyan">
+                        <span class="auth-avatar-visual" data-avatar-key="helmet-cyan" aria-hidden="true"><span class="auth-helmet-icon"></span></span><small>Ice</small>
+                    </button>
+                    <button type="button" id="authAvatarHelmetWhite" class="auth-avatar-option" aria-pressed="false" aria-label="Cască albă">
+                        <span class="auth-avatar-visual" data-avatar-key="helmet-white" aria-hidden="true"><span class="auth-helmet-icon"></span></span><small>Monaco</small>
+                    </button>
+                </div>
+                <button type="button" id="authSaveAvatarBtn" class="auth-settings-submit auth-avatar-save">Salvează avatarul</button>
+            </details>
+
             <details class="auth-settings-card auth-settings-disclosure">
                 <summary>
                     <span><strong>Schimbă username-ul</strong><small>Alege un nume nou pentru profil.</small></span>
@@ -497,6 +532,6 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script defer src="/game.bundle.min.js?v=frontend-bundle-8"></script>
+<script defer src="/game.bundle.min.js?v=frontend-bundle-9"></script>
 </body>
 </html>

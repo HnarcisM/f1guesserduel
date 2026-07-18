@@ -71,6 +71,11 @@ function createFakeAuthRepository() {
             if (user) user.password_hash = passwordHash;
             return { changes: user ? 1 : 0 };
         },
+        async updateAvatar(id, avatarKey) {
+            const user = users.get(Number(id));
+            if (user) user.avatarKey = avatarKey;
+            return user || null;
+        },
         async updateLastSeen(id) {
             const user = users.get(Number(id));
             if (user) user.last_seen_at = 'updated';
@@ -101,6 +106,7 @@ test('auth service registers users with async password hashing', async () => {
     assert.equal(result.ok, true);
     assert.equal(result.user.username, 'Narcis');
     assert.equal(result.user.email, 'narcis@example.com');
+    assert.equal(result.user.avatarKey, 'helmet-red');
     assert.equal(result.session.token, 'session-1');
 
     const storedUser = repository.users.get(result.user.id);
@@ -205,4 +211,28 @@ test('account password change validates, hashes and replaces the credential', as
     assert.equal(updated.ok, true);
     assert.equal(await verifyPassword('StrongPassword123!', storedUser.password_hash), false);
     assert.equal(await verifyPassword('AnotherStrongPassword456!', storedUser.password_hash), true);
+});
+
+test('account avatar accepts only server-approved helmet presets', async () => {
+    const repository = createFakeAuthRepository();
+    const authService = createAuthService(repository, createFakeSessionService());
+    const registered = await authService.register({
+        username: 'Narcis',
+        email: 'narcis@example.com',
+        password: 'StrongPassword123!'
+    });
+
+    const rejected = await authService.updateAvatar({
+        userId: registered.user.id,
+        avatarKey: '../../custom-file.svg'
+    });
+    const updated = await authService.updateAvatar({
+        userId: registered.user.id,
+        avatarKey: 'HELMET-BLUE'
+    });
+
+    assert.equal(rejected.status, 400);
+    assert.equal(updated.ok, true);
+    assert.equal(updated.user.avatarKey, 'helmet-blue');
+    assert.equal(repository.users.get(registered.user.id).avatarKey, 'helmet-blue');
 });

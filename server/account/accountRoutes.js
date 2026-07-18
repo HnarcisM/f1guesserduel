@@ -69,6 +69,15 @@ function createAccountRoutes({
         store: rateLimitStore,
         logger
     });
+    const updateAvatarRateLimiter = rateLimiters.updateAvatar || createMemoryRateLimiter({
+        windowMs: 60 * 1000,
+        maxRequests: 20,
+        keyPrefix: 'account-avatar',
+        keyGenerator: getAccountRateLimitKey,
+        message: 'Prea multe schimbări de avatar. Încearcă din nou peste un minut.',
+        store: rateLimitStore,
+        logger
+    });
 
     function getSessionToken(req) {
         return req.cookies ? req.cookies[sessionService.cookieName] : null;
@@ -126,6 +135,26 @@ function createAccountRoutes({
                 user: result.user,
                 socketAuthToken: await sessionService.createSocketAuthToken(token),
                 sessionsRevoked: Number(revoked?.changes ?? revoked?.rowCount) || 0
+            });
+        } catch (error) {
+            return next(error);
+        }
+    });
+
+    router.patch('/avatar', requireAccountAuth, updateAvatarRateLimiter, async (req, res, next) => {
+        try {
+            const result = await authService.updateAvatar({
+                userId: req.user.id,
+                avatarKey: req.body?.avatarKey
+            });
+            if (!result.ok) {
+                return res.status(result.status || 400).json({ message: result.message });
+            }
+
+            const token = getSessionToken(req);
+            return res.json({
+                user: result.user,
+                socketAuthToken: await sessionService.createSocketAuthToken(token)
             });
         } catch (error) {
             return next(error);

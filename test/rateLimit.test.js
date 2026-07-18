@@ -271,13 +271,20 @@ test('sensitive account settings use isolated distributed limits per authenticat
 
     await runAsyncLimiter(getLimiter('/profile'), req);
     await runAsyncLimiter(getLimiter('/password'), req);
+    await runAsyncLimiter(getLimiter('/avatar'), req);
     await runAsyncLimiter(getLimiter('/logout-all'), req);
 
     assert.deepEqual(consumed.map(item => item.key), [
         'account-profile:user-7',
         'account-password:user-7',
+        'account-avatar:user-7',
         'account-logout-all:user-7'
     ]);
-    assert.deepEqual(consumed.map(item => item.maxEvents), [5, 5, 5]);
-    assert.deepEqual(consumed.map(item => item.windowMs), [10 * 60 * 1000, 15 * 60 * 1000, 60 * 1000]);
+    assert.deepEqual(consumed.map(item => item.maxEvents), [5, 5, 20, 5]);
+    assert.deepEqual(consumed.map(item => item.windowMs), [
+        10 * 60 * 1000,
+        15 * 60 * 1000,
+        60 * 1000,
+        60 * 1000
+    ]);
 });

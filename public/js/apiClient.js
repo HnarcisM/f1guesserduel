@@ -62,6 +62,13 @@ export const accountApi = {
         });
     },
 
+    updateAvatar({ avatarKey }) {
+        return requestJson('/api/account/avatar', {
+            method: 'PATCH',
+            body: JSON.stringify({ avatarKey })
+        });
+    },
+
     logoutAll() {
         return requestJson('/api/account/logout-all', {
             method: 'POST',

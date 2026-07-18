@@ -5,6 +5,17 @@ const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
 const MAX_PASSWORD_LENGTH = 128;
+const DEFAULT_AVATAR_KEY = 'helmet-red';
+const AVATAR_PRESET_KEYS = Object.freeze([
+    'helmet-red',
+    'helmet-blue',
+    'helmet-yellow',
+    'helmet-green',
+    'helmet-orange',
+    'helmet-purple',
+    'helmet-cyan',
+    'helmet-white'
+]);
 
 function normalizeEmail(email) {
     return String(email || '').trim().toLowerCase();
@@ -14,13 +25,19 @@ function normalizeUsername(username) {
     return String(username || '').trim();
 }
 
+function normalizeAvatarKey(avatarKey) {
+    const value = String(avatarKey || '').trim().toLowerCase();
+    return AVATAR_PRESET_KEYS.includes(value) ? value : null;
+}
+
 function sanitizeUser(row) {
     if (!row) return null;
     return {
         id: row.id,
         username: row.username,
         email: row.email,
-        createdAt: row.createdAt || row.created_at
+        createdAt: row.createdAt || row.created_at,
+        avatarKey: normalizeAvatarKey(row.avatarKey || row.avatar_key) || DEFAULT_AVATAR_KEY
     };
 }
 
@@ -151,12 +168,27 @@ function createAuthService(databaseOrRepository, sessionService) {
         return { ok: true, user: sanitizeUser(userRow) };
     }
 
+    async function updateAvatar({ userId, avatarKey }) {
+        const normalizedUserId = Number(userId);
+        const cleanAvatarKey = normalizeAvatarKey(avatarKey);
+        if (!Number.isSafeInteger(normalizedUserId) || normalizedUserId <= 0 || !cleanAvatarKey) {
+            return { ok: false, status: 400, message: 'Avatarul selectat nu este valid.' };
+        }
+
+        const updatedUser = await repository.updateAvatar(normalizedUserId, cleanAvatarKey);
+        if (!updatedUser) {
+            return { ok: false, status: 404, message: 'Contul nu a fost găsit.' };
+        }
+        return { ok: true, user: sanitizeUser(updatedUser) };
+    }
+
     return {
         register,
         login,
         getUserById,
         updateUsername,
-        updatePassword
+        updatePassword,
+        updateAvatar
     };
 }
 
@@ -164,7 +196,10 @@ module.exports = {
     createAuthService,
     normalizeEmail,
     normalizeUsername,
+    normalizeAvatarKey,
     sanitizeUser,
+    AVATAR_PRESET_KEYS,
+    DEFAULT_AVATAR_KEY,
     MIN_PASSWORD_LENGTH,
     MAX_PASSWORD_LENGTH
 };

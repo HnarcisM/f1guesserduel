@@ -7,6 +7,16 @@ CREATE TABLE IF NOT EXISTS users (
     last_seen_at TEXT
 );
 
+CREATE TABLE IF NOT EXISTS user_profiles (
+    user_id INTEGER PRIMARY KEY,
+    avatar_key TEXT NOT NULL DEFAULT 'helmet-red' CHECK (avatar_key IN (
+        'helmet-red', 'helmet-blue', 'helmet-yellow', 'helmet-green',
+        'helmet-orange', 'helmet-purple', 'helmet-cyan', 'helmet-white'
+    )),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,

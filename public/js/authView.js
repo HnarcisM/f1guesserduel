@@ -1,5 +1,17 @@
 import { accountApi, authApi } from './apiClient.js';
 
+const DEFAULT_AVATAR_KEY = 'helmet-red';
+const AVATAR_PRESETS = Object.freeze([
+    { key: 'helmet-red', elementId: 'authAvatarHelmetRed' },
+    { key: 'helmet-blue', elementId: 'authAvatarHelmetBlue' },
+    { key: 'helmet-yellow', elementId: 'authAvatarHelmetYellow' },
+    { key: 'helmet-green', elementId: 'authAvatarHelmetGreen' },
+    { key: 'helmet-orange', elementId: 'authAvatarHelmetOrange' },
+    { key: 'helmet-purple', elementId: 'authAvatarHelmetPurple' },
+    { key: 'helmet-cyan', elementId: 'authAvatarHelmetCyan' },
+    { key: 'helmet-white', elementId: 'authAvatarHelmetWhite' }
+]);
+
 export function createAuthView({ onAuthChanged } = {}) {
     let currentUser = null;
     let socketAuthToken = null;
@@ -7,6 +19,7 @@ export function createAuthView({ onAuthChanged } = {}) {
     let authStateVersion = 0;
     let selectedAccountTab = 'overview';
     let selectedStatsMode = 'single';
+    let selectedAvatarKey = DEFAULT_AVATAR_KEY;
     let currentAccountStats = {};
 
     function getEls() {
@@ -32,6 +45,11 @@ export function createAuthView({ onAuthChanged } = {}) {
             accountUsername: document.getElementById('authAccountUsername'),
             accountEmail: document.getElementById('authAccountEmail'),
             accountMemberSince: document.getElementById('authAccountMemberSince'),
+            avatarPresetButtons: AVATAR_PRESETS.map(preset => ({
+                key: preset.key,
+                element: document.getElementById(preset.elementId)
+            })),
+            saveAvatarBtn: document.getElementById('authSaveAvatarBtn'),
             accountLevel: document.getElementById('authAccountLevel'),
             totalXp: document.getElementById('authTotalXp'),
             xpProgress: document.getElementById('authXpProgress'),
@@ -195,9 +213,8 @@ export function createAuthView({ onAuthChanged } = {}) {
         if (isAuthenticated) {
             if (els.title) els.title.textContent = 'Contul meu';
             if (els.subtitle) els.subtitle.textContent = 'Profilul și statisticile tale F1 Guesser Duel.';
-            if (els.accountAvatar) {
-                els.accountAvatar.textContent = String(currentUser.username || 'FG').slice(0, 2).toUpperCase();
-            }
+            selectedAvatarKey = normalizeAvatarKey(currentUser.avatarKey);
+            renderAvatarSelection();
             if (els.accountUsername) els.accountUsername.textContent = currentUser.username || 'Utilizator';
             if (els.accountEmail) els.accountEmail.textContent = currentUser.email || '';
             if (els.accountMemberSince) {
@@ -208,6 +225,33 @@ export function createAuthView({ onAuthChanged } = {}) {
             }
             selectAccountTab(selectedAccountTab);
         }
+    }
+
+    function normalizeAvatarKey(avatarKey) {
+        const value = String(avatarKey || '').trim().toLowerCase();
+        return AVATAR_PRESETS.some(preset => preset.key === value) ? value : DEFAULT_AVATAR_KEY;
+    }
+
+    function renderAvatarSelection() {
+        const els = getEls();
+        selectedAvatarKey = normalizeAvatarKey(selectedAvatarKey);
+        if (els.accountAvatar) els.accountAvatar.dataset.avatarKey = selectedAvatarKey;
+
+        for (const preset of els.avatarPresetButtons) {
+            if (!preset.element) continue;
+            preset.element.setAttribute('aria-pressed', String(preset.key === selectedAvatarKey));
+        }
+
+        if (els.saveAvatarBtn) {
+            const savedAvatarKey = normalizeAvatarKey(currentUser?.avatarKey);
+            els.saveAvatarBtn.disabled = !currentUser || selectedAvatarKey === savedAvatarKey;
+        }
+    }
+
+    function selectAvatarPreset(avatarKey) {
+        if (!currentUser) return;
+        selectedAvatarKey = normalizeAvatarKey(avatarKey);
+        renderAvatarSelection();
     }
 
     function formatMemberSince(createdAt) {
@@ -532,6 +576,31 @@ export function createAuthView({ onAuthChanged } = {}) {
         }
     }
 
+    async function saveAvatar() {
+        if (!currentUser) return;
+        const requestedStateVersion = ++authStateVersion;
+        const { saveAvatarBtn } = getEls();
+        if (saveAvatarBtn) saveAvatarBtn.disabled = true;
+        setSettingsMessage('Se salvează avatarul…');
+
+        try {
+            const data = await accountApi.updateAvatar({ avatarKey: selectedAvatarKey });
+            if (requestedStateVersion !== authStateVersion || !currentUser) return;
+            currentUser = data.user || currentUser;
+            socketAuthToken = data.socketAuthToken || socketAuthToken;
+            selectedAvatarKey = normalizeAvatarKey(currentUser.avatarKey);
+            renderUser();
+            emitAuthChanged();
+            setSettingsMessage('Avatarul a fost actualizat.', 'success');
+        } catch (error) {
+            if (requestedStateVersion !== authStateVersion || !currentUser) return;
+            setSettingsMessage(error.message || 'Avatarul nu a putut fi actualizat.', 'error');
+            renderAvatarSelection();
+        } finally {
+            renderAvatarSelection();
+        }
+    }
+
     function clearAuthenticatedState() {
         currentUser = null;
         socketAuthToken = null;
@@ -604,6 +673,10 @@ export function createAuthView({ onAuthChanged } = {}) {
         if (els.form) els.form.addEventListener('submit', submitAuthForm);
         if (els.usernameSettingsForm) els.usernameSettingsForm.addEventListener('submit', submitUsernameSettings);
         if (els.passwordSettingsForm) els.passwordSettingsForm.addEventListener('submit', submitPasswordSettings);
+        for (const preset of els.avatarPresetButtons) {
+            preset.element?.addEventListener('click', () => selectAvatarPreset(preset.key));
+        }
+        if (els.saveAvatarBtn) els.saveAvatarBtn.addEventListener('click', saveAvatar);
         if (els.settingsUsername) {
             els.settingsUsername.addEventListener('input', () => { els.settingsUsername.dataset.dirty = 'true'; });
         }
