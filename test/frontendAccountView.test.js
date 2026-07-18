@@ -113,8 +113,11 @@ test('authenticated account dashboard is present while the login form remains se
     assert.match(html, /id="authUsernameSettingsForm"/);
     assert.match(html, /id="authPasswordSettingsForm"/);
     assert.match(html, /id="authLogoutAllBtn"/);
+    assert.equal((html.match(/<details class="auth-settings-card auth-settings-disclosure">/g) || []).length, 2);
+    assert.doesNotMatch(html, /<details class="auth-settings-card auth-settings-disclosure"[^>]*\sopen(?:\s|>)/);
     assert.match(css, /\.auth-stats-grid/);
     assert.match(css, /\.auth-profile-tabs/);
+    assert.match(css, /\.auth-settings-disclosure\[open\]/);
 });
 
 test('server account stats updates are forwarded to the account dashboard', async () => {

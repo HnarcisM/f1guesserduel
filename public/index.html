@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>F1 Guesser</title>
     <script src="/js/themeBootstrap.js?v=theme-bootstrap-1"></script>
-    <link rel="stylesheet" href="/style.bundle.css?v=frontend-cache-5">
+    <link rel="stylesheet" href="/style.bundle.css?v=frontend-cache-6">
 </head>
 <body>
 
@@ -391,10 +391,10 @@
         </section>
 
         <section id="authPanelSettings" class="auth-tab-panel" role="tabpanel" aria-labelledby="authTabSettings" hidden>
-            <div class="auth-settings-card">
-                <div class="auth-section-heading">
-                    <h3>Schimbă username-ul</h3>
-                </div>
+            <details class="auth-settings-card auth-settings-disclosure">
+                <summary>
+                    <span><strong>Schimbă username-ul</strong><small>Alege un nume nou pentru profil.</small></span>
+                </summary>
                 <form id="authUsernameSettingsForm" class="auth-settings-form">
                     <label>
                         Username nou
@@ -406,12 +406,12 @@
                     </label>
                     <button type="submit" id="authSaveUsernameBtn" class="auth-settings-submit">Salvează username-ul</button>
                 </form>
-            </div>
+            </details>
 
-            <div class="auth-settings-card">
-                <div class="auth-section-heading">
-                    <h3>Schimbă parola</h3>
-                </div>
+            <details class="auth-settings-card auth-settings-disclosure">
+                <summary>
+                    <span><strong>Schimbă parola</strong><small>Actualizează parola și securizează sesiunile.</small></span>
+                </summary>
                 <form id="authPasswordSettingsForm" class="auth-settings-form">
                     <label>
                         Parola curentă
@@ -428,7 +428,7 @@
                     <button type="submit" id="authSavePasswordBtn" class="auth-settings-submit">Schimbă parola</button>
                 </form>
                 <p class="auth-settings-hint">După schimbare, celelalte sesiuni vor fi deconectate automat.</p>
-            </div>
+            </details>
 
             <div class="auth-settings-card auth-security-card">
                 <div>
