@@ -37,7 +37,12 @@ function createSettingsRouter({ authService = {}, sessionService = {} } = {}) {
     return createAccountRoutes({
         accountStatsService: {
             async getAccountDashboard() {
-                return { stats: {}, recentGames: [], progress: { level: 1, totalXp: 0 } };
+                return {
+                    stats: {},
+                    recentGames: [],
+                    progress: { level: 1, totalXp: 0 },
+                    achievements: []
+                };
             }
         },
         authService,
@@ -79,11 +84,12 @@ test('account summary returns only the authenticated user statistics', async () 
     const stats = { totals: { played: 3 }, modes: {} };
     const recentGames = [{ mode: 'single', outcome: 'win', attempts: 2 }];
     const progress = { level: 2, totalXp: 250, progressPercent: 50 };
+    const achievements = [{ key: 'first-win', unlocked: true }];
     const handler = createAccountSummaryHandler({
         accountStatsService: {
             async getAccountDashboard(userId) {
                 requestedUserIds.push(userId);
-                return { stats, recentGames, progress };
+                return { stats, recentGames, progress, achievements };
             }
         }
     });
@@ -93,7 +99,7 @@ test('account summary returns only the authenticated user statistics', async () 
     await handler({ user, query: { userId: 999 } }, response, error => { throw error; });
 
     assert.deepEqual(requestedUserIds, [7]);
-    assert.deepEqual(response.body, { user, stats, recentGames, progress });
+    assert.deepEqual(response.body, { user, stats, recentGames, progress, achievements });
     assert.equal(response.headers['Cache-Control'], 'no-store');
 });
 

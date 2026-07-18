@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>F1 Guesser</title>
     <script src="/js/themeBootstrap.js?v=theme-bootstrap-1"></script>
-<link rel="stylesheet" href="/style.bundle.css?v=frontend-cache-9">
+<link rel="stylesheet" href="/style.bundle.css?v=frontend-cache-10">
 </head>
 <body>
 
@@ -354,6 +354,7 @@
 
         <div class="auth-profile-tabs" role="tablist" aria-label="Secțiunile profilului">
             <button type="button" id="authTabOverview" role="tab" aria-selected="true" aria-controls="authPanelOverview" tabindex="0">Prezentare</button>
+            <button type="button" id="authTabAchievements" role="tab" aria-selected="false" aria-controls="authPanelAchievements" tabindex="-1">Badge-uri</button>
             <button type="button" id="authTabStats" role="tab" aria-selected="false" aria-controls="authPanelStats" tabindex="-1">Statistici</button>
             <button type="button" id="authTabHistory" role="tab" aria-selected="false" aria-controls="authPanelHistory" tabindex="-1">Istoric</button>
             <button type="button" id="authTabSettings" role="tab" aria-selected="false" aria-controls="authPanelSettings" tabindex="-1">Setări</button>
@@ -385,6 +386,16 @@
                 <div><strong>Single</strong><span id="authSingleStats">0 jocuri · 0 victorii</span></div>
                 <div><strong>Daily</strong><span id="authDailyStats">0 jocuri · 0 victorii</span></div>
                 <div><strong>Duel</strong><span id="authDuelStats">0 jocuri · 0 victorii · 0 remize</span></div>
+            </div>
+        </section>
+
+        <section id="authPanelAchievements" class="auth-tab-panel" role="tabpanel" aria-labelledby="authTabAchievements" hidden>
+            <div class="auth-achievements-section" aria-labelledby="authAchievementsTitle">
+                <div class="auth-section-heading">
+                    <h3 id="authAchievementsTitle">Achievements</h3>
+                    <span id="authAchievementSummary">0 / 8 deblocate</span>
+                </div>
+                <div id="authAchievementGrid" class="auth-achievement-grid" aria-live="polite"></div>
             </div>
         </section>
 
@@ -532,6 +543,6 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script defer src="/game.bundle.min.js?v=frontend-bundle-9"></script>
+<script defer src="/game.bundle.min.js?v=frontend-bundle-10"></script>
 </body>
 </html>

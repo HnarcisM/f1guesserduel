@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 
 const {
+    buildAccountAchievements,
     buildAccountProgress,
     buildAccountStats,
     calculateXpReward,
@@ -147,6 +148,11 @@ test('account stats aggregate modes and ignore duplicate server result keys', as
     assert.equal(dashboard.progress.totalXp, 70);
     assert.equal(dashboard.progress.level, 1);
     assert.equal(dashboard.progress.progressPercent, 70);
+    assert.equal(dashboard.achievements.length, 8);
+    assert.deepEqual(
+        dashboard.achievements.filter(achievement => achievement.unlocked).map(achievement => achievement.key),
+        ['first-lap', 'first-win']
+    );
     assert.deepEqual(dashboard.recentGames[0], {
         mode: 'daily',
         outcome: 'loss',
@@ -174,6 +180,30 @@ test('XP rewards and nonlinear level progress are deterministic', () => {
         xpToNextLevel: 150,
         progressPercent: 50
     });
+});
+
+test('achievements expose bounded progress derived from authoritative account totals', () => {
+    const stats = buildAccountStats([{
+        mode: 'single',
+        games_played: 5,
+        games_won: 3,
+        games_drawn: 0,
+        current_streak: 3,
+        best_streak: 3,
+        guess_1: 1,
+        guess_2: 2,
+        guess_3: 0,
+        guess_4: 0,
+        guess_5: 0,
+        guess_6: 0
+    }]);
+    const achievements = buildAccountAchievements(stats, buildAccountProgress({ total_xp: 500 }));
+
+    assert.equal(achievements.length, 8);
+    assert.equal(achievements.find(item => item.key === 'pole-position').unlocked, true);
+    assert.equal(achievements.find(item => item.key === 'hat-trick').progressPercent, 100);
+    assert.equal(achievements.find(item => item.key === 'daily-regular').progressPercent, 0);
+    assert.equal(achievements.find(item => item.key === 'xp-500').unlocked, true);
 });
 
 test('account stats validation rejects client-like invalid result data', () => {

@@ -69,12 +69,14 @@ function createAccountDocument() {
         'authAvatarHelmetPurple', 'authAvatarHelmetCyan', 'authAvatarHelmetWhite',
         'authSaveAvatarBtn',
         'authTabOverview', 'authTabStats', 'authTabHistory',
-        'authTabSettings', 'authPanelOverview', 'authPanelStats', 'authPanelHistory',
+        'authTabAchievements', 'authTabSettings', 'authPanelOverview',
+        'authPanelAchievements', 'authPanelStats', 'authPanelHistory',
         'authPanelSettings',
         'authStatPlayed', 'authStatWon', 'authStatWinRate',
         'authStatBestStreak', 'authSingleStats', 'authDailyStats', 'authDuelStats',
         'authStatsModeSingle', 'authStatsModeDaily', 'authStatsModeDuel',
         'authModeOutcomeDetail', 'authModeStreakDetail', 'authGameHistory',
+        'authAchievementSummary', 'authAchievementGrid',
         'authGuessCount1', 'authGuessCount2', 'authGuessCount3', 'authGuessCount4',
         'authGuessCount5', 'authGuessCount6', 'authGuessBar1', 'authGuessBar2',
         'authGuessBar3', 'authGuessBar4', 'authGuessBar5', 'authGuessBar6',
@@ -115,10 +117,13 @@ test('authenticated account dashboard is present while the login form remains se
     assert.match(html, /id="authGuessBar6"/);
     assert.match(html, /id="authGameHistory"/);
     assert.match(html, /id="authTabOverview"[^>]*role="tab"/);
+    assert.match(html, /id="authTabAchievements"[^>]*role="tab"/);
     assert.match(html, /id="authTabStats"[^>]*role="tab"/);
     assert.match(html, /id="authTabHistory"[^>]*role="tab"/);
     assert.match(html, /id="authTabSettings"[^>]*role="tab"/);
     assert.match(html, /id="authPanelStats"[^>]*role="tabpanel"[^>]*hidden/);
+    assert.match(html, /id="authPanelAchievements"[^>]*role="tabpanel"[^>]*hidden/);
+    assert.match(html, /id="authAchievementGrid"/);
     assert.match(html, /id="authPanelHistory"[^>]*role="tabpanel"[^>]*hidden/);
     assert.match(html, /id="authPanelSettings"[^>]*role="tabpanel"[^>]*hidden/);
     assert.match(html, /id="authUsernameSettingsForm"/);
@@ -132,6 +137,7 @@ test('authenticated account dashboard is present while the login form remains se
     assert.match(css, /\.auth-avatar-grid/);
     assert.match(css, /\.auth-helmet-icon/);
     assert.match(css, /\.auth-profile-tabs/);
+    assert.match(css, /\.auth-achievement-card/);
     assert.match(css, /\.auth-settings-disclosure\[open\]/);
 });
 
@@ -154,7 +160,13 @@ test('server account stats updates are forwarded to the account dashboard', asyn
     const stats = { totals: { played: 4 }, modes: {} };
     handlers.get('accountStatsUpdated')({ stats });
 
-    assert.deepEqual(received, [{ stats, recentGames: [], progress: null, xpAwarded: 0 }]);
+    assert.deepEqual(received, [{
+        stats,
+        recentGames: [],
+        progress: null,
+        achievements: [],
+        xpAwarded: 0
+    }]);
 });
 
 test('a delayed initial auth refresh cannot overwrite a newer login or another account stats event', async t => {
@@ -220,7 +232,26 @@ test('a delayed initial auth refresh cannot overwrite a newer login or another a
             xpForLevel: 300,
             xpToNextLevel: 150,
             progressPercent: 50
-        }
+        },
+        achievements: [{
+            key: 'first-win',
+            title: 'Prima victorie',
+            description: 'Câștigă primul joc.',
+            icon: '🏆',
+            current: 1,
+            target: 1,
+            unlocked: true,
+            progressPercent: 100
+        }, {
+            key: 'duel-contender',
+            title: 'Duelist',
+            description: 'Joacă 5 dueluri online.',
+            icon: 'VS',
+            current: 1,
+            target: 5,
+            unlocked: false,
+            progressPercent: 20
+        }]
     }, 7);
     assert.equal(elements.authStatPlayed.textContent, '5');
     assert.equal(elements.authAccountLevel.textContent, 'Nivel 2');
@@ -229,6 +260,9 @@ test('a delayed initial auth refresh cannot overwrite a newer login or another a
     assert.equal(elements.authXpProgress.getAttribute('aria-valuenow'), '50');
     assert.equal(elements.authLevelProgressText.textContent, '150 / 300 XP');
     assert.equal(elements.authXpToNextLevel.textContent, '150 XP până la nivelul 3');
+    assert.equal(elements.authAchievementSummary.textContent, '1 / 2 deblocate');
+    assert.equal(elements.authAchievementGrid.children.length, 2);
+    assert.match(elements.authAchievementGrid.children[0].className, /is-unlocked/);
     assert.equal(elements.authGameHistory.children.length, 1);
     assert.match(elements.authGameHistory.children[0].children[0].textContent, /Victorie · Duel/);
 
@@ -237,7 +271,11 @@ test('a delayed initial auth refresh cannot overwrite a newer login or another a
     assert.equal(elements.authPanelHistory.hidden, false);
     assert.equal(elements.authPanelOverview.hidden, true);
 
-    elements.authTabHistory.listeners.get('keydown')({ key: 'ArrowLeft', preventDefault() {} });
+    elements.authTabAchievements.listeners.get('click')();
+    assert.equal(elements.authTabAchievements.getAttribute('aria-selected'), 'true');
+    assert.equal(elements.authPanelAchievements.hidden, false);
+
+    elements.authTabAchievements.listeners.get('keydown')({ key: 'ArrowRight', preventDefault() {} });
     assert.equal(elements.authTabStats.getAttribute('aria-selected'), 'true');
     assert.equal(elements.authPanelStats.hidden, false);
 

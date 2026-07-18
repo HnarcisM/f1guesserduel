@@ -177,6 +177,7 @@ export function registerSocketEvents(socket, app) {
 			stats: payload.stats || null,
 			recentGames: payload.recentGames || [],
 			progress: payload.progress || null,
+			achievements: payload.achievements || [],
 			xpAwarded: Number(payload.xpAwarded) || 0
 		}, payload.userId ?? null);
 	});

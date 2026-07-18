@@ -13,6 +13,43 @@ const XP_REWARDS = Object.freeze({
     difficulties: Object.freeze({ easy: 0, medium: 5, hard: 10 }),
     modes: Object.freeze({ single: 0, daily: 10, duel: 5 })
 });
+const ACCOUNT_ACHIEVEMENT_DEFINITIONS = Object.freeze([
+    Object.freeze({
+        key: 'first-lap', title: 'Primul tur', description: 'Finalizează primul joc.',
+        icon: '🏁', metric: 'played', target: 1
+    }),
+    Object.freeze({
+        key: 'first-win', title: 'Prima victorie', description: 'Câștigă primul joc.',
+        icon: '🏆', metric: 'won', target: 1
+    }),
+    Object.freeze({
+        key: 'pole-position', title: 'Pole Position',
+        description: 'Ghicește pilotul din prima încercare.',
+        icon: '⚡', metric: 'firstAttemptWins', target: 1
+    }),
+    Object.freeze({
+        key: 'hat-trick', title: 'Hat-trick', description: 'Obține 3 victorii.',
+        icon: '3', metric: 'won', target: 3
+    }),
+    Object.freeze({
+        key: 'daily-regular', title: 'Rutina Daily',
+        description: 'Finalizează 5 provocări Daily.',
+        icon: '◷', metric: 'dailyPlayed', target: 5
+    }),
+    Object.freeze({
+        key: 'duel-contender', title: 'Duelist', description: 'Joacă 5 dueluri online.',
+        icon: 'VS', metric: 'duelPlayed', target: 5
+    }),
+    Object.freeze({
+        key: 'hot-streak', title: 'În formă',
+        description: 'Atinge un streak de 3 victorii.',
+        icon: '🔥', metric: 'bestStreak', target: 3
+    }),
+    Object.freeze({
+        key: 'xp-500', title: 'Clubul 500', description: 'Acumulează 500 XP.',
+        icon: '★', metric: 'totalXp', target: 500
+    })
+]);
 
 function createEmptyModeStats(mode) {
     return {
@@ -104,6 +141,36 @@ function buildAccountStats(rows = []) {
     };
 }
 
+function buildAccountAchievements(stats = buildAccountStats(), progress = buildAccountProgress()) {
+    const firstAttemptWins = Object.values(stats.modes || {}).reduce(
+        (total, mode) => total + asNonNegativeInteger(mode?.distribution?.[1]),
+        0
+    );
+    const metrics = {
+        played: asNonNegativeInteger(stats.totals?.played),
+        won: asNonNegativeInteger(stats.totals?.won),
+        firstAttemptWins,
+        dailyPlayed: asNonNegativeInteger(stats.modes?.daily?.played),
+        duelPlayed: asNonNegativeInteger(stats.modes?.duel?.played),
+        bestStreak: asNonNegativeInteger(stats.totals?.bestStreak),
+        totalXp: asNonNegativeInteger(progress.totalXp)
+    };
+
+    return ACCOUNT_ACHIEVEMENT_DEFINITIONS.map(definition => {
+        const current = metrics[definition.metric] || 0;
+        return {
+            key: definition.key,
+            title: definition.title,
+            description: definition.description,
+            icon: definition.icon,
+            current,
+            target: definition.target,
+            unlocked: current >= definition.target,
+            progressPercent: Math.min(100, Math.floor((current / definition.target) * 100))
+        };
+    });
+}
+
 function normalizeUserId(userId) {
     const value = Number(userId);
     return Number.isSafeInteger(value) && value > 0 ? value : null;
@@ -177,10 +244,13 @@ function createAccountStatsService(databaseOrRepository) {
                 ? repository.getProgressRow(normalizedUserId)
                 : null
         ]);
+        const stats = buildAccountStats(rows);
+        const progress = buildAccountProgress(progressRow);
         return {
-            stats: buildAccountStats(rows),
+            stats,
             recentGames: buildRecentGames(recentRows, normalizedLimit),
-            progress: buildAccountProgress(progressRow)
+            progress,
+            achievements: buildAccountAchievements(stats, progress)
         };
     }
 
@@ -189,11 +259,14 @@ function createAccountStatsService(databaseOrRepository) {
         const xpEarned = calculateXpReward(result);
         const repositoryResult = await repository.recordGameResult({ ...result, xpEarned });
         const recorded = Boolean(repositoryResult.recorded);
+        const stats = buildAccountStats(repositoryResult.rows);
+        const progress = buildAccountProgress(repositoryResult.progressRow);
         return {
             recorded,
-            stats: buildAccountStats(repositoryResult.rows),
+            stats,
             recentGames: buildRecentGames(repositoryResult.recentResults),
-            progress: buildAccountProgress(repositoryResult.progressRow),
+            progress,
+            achievements: buildAccountAchievements(stats, progress),
             xpAwarded: recorded ? xpEarned : 0
         };
     }
@@ -227,6 +300,8 @@ module.exports = {
     MAX_ACCOUNT_HISTORY_LIMIT,
     XP_LEVEL_SCALE,
     XP_REWARDS,
+    ACCOUNT_ACHIEVEMENT_DEFINITIONS,
+    buildAccountAchievements,
     buildAccountProgress,
     buildAccountStats,
     buildRecentGames,

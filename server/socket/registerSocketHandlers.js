@@ -118,6 +118,7 @@ function registerSocketHandlers(io, dependencies) {
                         stats: result.stats,
                         recentGames: result.recentGames || [],
                         progress: result.progress || null,
+                        achievements: result.achievements || [],
                         xpAwarded: Number(result.xpAwarded) || 0
                     });
                 }
@@ -402,6 +403,7 @@ function registerSocketHandlers(io, dependencies) {
                             stats: result.stats,
                             recentGames: result.recentGames || [],
                             progress: result.progress || null,
+                            achievements: result.achievements || [],
                             xpAwarded: Number(result.xpAwarded) || 0
                         });
                     }

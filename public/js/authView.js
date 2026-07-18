@@ -57,10 +57,12 @@ export function createAuthView({ onAuthChanged } = {}) {
             levelProgressText: document.getElementById('authLevelProgressText'),
             xpToNextLevel: document.getElementById('authXpToNextLevel'),
             tabOverview: document.getElementById('authTabOverview'),
+            tabAchievements: document.getElementById('authTabAchievements'),
             tabStats: document.getElementById('authTabStats'),
             tabHistory: document.getElementById('authTabHistory'),
             tabSettings: document.getElementById('authTabSettings'),
             panelOverview: document.getElementById('authPanelOverview'),
+            panelAchievements: document.getElementById('authPanelAchievements'),
             panelStats: document.getElementById('authPanelStats'),
             panelHistory: document.getElementById('authPanelHistory'),
             panelSettings: document.getElementById('authPanelSettings'),
@@ -77,6 +79,8 @@ export function createAuthView({ onAuthChanged } = {}) {
             modeOutcomeDetail: document.getElementById('authModeOutcomeDetail'),
             modeStreakDetail: document.getElementById('authModeStreakDetail'),
             gameHistory: document.getElementById('authGameHistory'),
+            achievementSummary: document.getElementById('authAchievementSummary'),
+            achievementGrid: document.getElementById('authAchievementGrid'),
             accountStatsMessage: document.getElementById('authAccountStatsMessage'),
             usernameSettingsForm: document.getElementById('authUsernameSettingsForm'),
             settingsUsername: document.getElementById('authSettingsUsername'),
@@ -93,17 +97,19 @@ export function createAuthView({ onAuthChanged } = {}) {
     }
 
     function selectAccountTab(nextTab, { focus = false } = {}) {
-        if (!['overview', 'stats', 'history', 'settings'].includes(nextTab)) return;
+        if (!['overview', 'achievements', 'stats', 'history', 'settings'].includes(nextTab)) return;
         selectedAccountTab = nextTab;
         const els = getEls();
         const tabs = {
             overview: els.tabOverview,
+            achievements: els.tabAchievements,
             stats: els.tabStats,
             history: els.tabHistory,
             settings: els.tabSettings
         };
         const panels = {
             overview: els.panelOverview,
+            achievements: els.panelAchievements,
             stats: els.panelStats,
             history: els.panelHistory,
             settings: els.panelSettings
@@ -126,7 +132,7 @@ export function createAuthView({ onAuthChanged } = {}) {
     }
 
     function handleAccountTabKeydown(event) {
-        const tabOrder = ['overview', 'stats', 'history', 'settings'];
+        const tabOrder = ['overview', 'achievements', 'stats', 'history', 'settings'];
         const currentIndex = tabOrder.indexOf(selectedAccountTab);
         let nextIndex = currentIndex;
         if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabOrder.length;
@@ -402,11 +408,58 @@ export function createAuthView({ onAuthChanged } = {}) {
         }
     }
 
+    function renderAchievements(achievements = []) {
+        const { achievementGrid, achievementSummary } = getEls();
+        if (!achievementGrid) return;
+        achievementGrid.replaceChildren();
+
+        const items = Array.isArray(achievements)
+            ? achievements.filter(item => item && typeof item === 'object').slice(0, 8)
+            : [];
+        const unlockedCount = items.filter(item => item.unlocked === true).length;
+        if (achievementSummary) {
+            achievementSummary.textContent = `${unlockedCount} / ${items.length || 8} deblocate`;
+        }
+
+        for (const achievement of items) {
+            const current = Math.max(0, Number(achievement.current) || 0);
+            const target = Math.max(1, Number(achievement.target) || 1);
+            const progressPercent = Math.min(100, Math.max(0, Number(achievement.progressPercent) || 0));
+            const unlocked = achievement.unlocked === true;
+            const card = document.createElement('article');
+            const icon = document.createElement('span');
+            const copy = document.createElement('div');
+            const title = document.createElement('strong');
+            const description = document.createElement('span');
+            const progress = document.createElement('div');
+            const track = document.createElement('i');
+            const bar = document.createElement('b');
+            const count = document.createElement('small');
+
+            card.className = `auth-achievement-card${unlocked ? ' is-unlocked' : ''}`;
+            card.setAttribute('aria-label', `${achievement.title || 'Achievement'}: ${unlocked ? 'deblocat' : 'blocat'}`);
+            icon.className = 'auth-achievement-icon';
+            icon.textContent = String(achievement.icon || '★').slice(0, 2);
+            copy.className = 'auth-achievement-copy';
+            title.textContent = achievement.title || 'Achievement';
+            description.textContent = achievement.description || '';
+            progress.className = 'auth-achievement-progress';
+            bar.style.width = `${progressPercent}%`;
+            count.textContent = unlocked ? 'Deblocat' : `${Math.min(current, target)} / ${target}`;
+            track.appendChild(bar);
+            copy.append(title, description);
+            progress.append(track, count);
+            card.append(icon, copy, progress);
+            achievementGrid.appendChild(card);
+        }
+    }
+
     function renderAccountDashboard(summary = {}) {
         const stats = summary.stats || (summary.totals ? summary : {});
         renderAccountStats(stats);
         renderRecentGames(summary.recentGames || []);
         renderAccountProgress(summary.progress || {});
+        renderAchievements(summary.achievements || []);
     }
 
     async function refreshAccountSummary(providedSummary = null, expectedUserId = null) {
@@ -658,6 +711,7 @@ export function createAuthView({ onAuthChanged } = {}) {
         if (els.logoutBtn) els.logoutBtn.addEventListener('click', logout);
         const accountTabs = [
             ['overview', els.tabOverview],
+            ['achievements', els.tabAchievements],
             ['stats', els.tabStats],
             ['history', els.tabHistory],
             ['settings', els.tabSettings]
