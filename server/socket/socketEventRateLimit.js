@@ -1,5 +1,6 @@
 const DEFAULT_SOCKET_EVENT_RATE_LIMIT_WINDOW_MS = 60_000;
 const DEFAULT_SOCKET_EVENT_RATE_LIMIT_MESSAGE = 'Prea multe acțiuni într-un timp scurt. Așteaptă câteva secunde și încearcă din nou.';
+const STORE_ERROR_LOG_INTERVAL_MS = 30_000;
 
 const DEFAULT_SOCKET_EVENT_LIMITS = Object.freeze({
     requestRoomList: { maxEvents: 60 },
@@ -78,10 +79,15 @@ function createSocketEventRateLimiter({
     limits = DEFAULT_SOCKET_EVENT_LIMITS,
     windowMs = DEFAULT_SOCKET_EVENT_RATE_LIMIT_WINDOW_MS,
     message = DEFAULT_SOCKET_EVENT_RATE_LIMIT_MESSAGE,
-    clock = nowMs
+    clock = nowMs,
+    store = null,
+    identityResolver = getSocketId,
+    failOpen = true,
+    logger = console
 } = {}) {
     const normalizedLimits = normalizeLimits(limits, windowMs);
     const buckets = new Map();
+    let lastStoreErrorLogAt = Number.NEGATIVE_INFINITY;
 
     function getLimit(eventName) {
         return normalizedLimits.get(eventName) || null;
@@ -109,18 +115,8 @@ function createSocketEventRateLimiter({
         }
     }
 
-    function consume(socket, eventName) {
-        if (!enabled) {
-            return { allowed: true, remaining: Number.POSITIVE_INFINITY, retryAfterMs: 0 };
-        }
-
-        const limit = getLimit(eventName);
-        if (!limit) {
-            return { allowed: true, remaining: Number.POSITIVE_INFINITY, retryAfterMs: 0 };
-        }
-
-        const currentTime = clock();
-        const key = `${getSocketId(socket)}:${eventName}`;
+    function consumeFromMemory(socket, eventName, limit, currentTime = clock()) {
+        const key = `${identityResolver(socket)}:${eventName}`;
         const bucket = getBucket(key, currentTime, limit);
 
         if (bucket.count >= limit.maxEvents) {
@@ -141,15 +137,74 @@ function createSocketEventRateLimiter({
         };
     }
 
+    function consume(socket, eventName) {
+        if (!enabled) {
+            return { allowed: true, remaining: Number.POSITIVE_INFINITY, retryAfterMs: 0 };
+        }
+
+        const limit = getLimit(eventName);
+        if (!limit) {
+            return { allowed: true, remaining: Number.POSITIVE_INFINITY, retryAfterMs: 0 };
+        }
+
+        const currentTime = clock();
+        const key = `${identityResolver(socket)}:${eventName}`;
+
+        if (store?.consume) {
+            return store.consume({
+                key,
+                eventName,
+                maxEvents: limit.maxEvents,
+                windowMs: limit.windowMs,
+                currentTime
+            });
+        }
+
+        return consumeFromMemory(socket, eventName, limit, currentTime);
+    }
+
+    function logStoreError(error, eventName) {
+        const currentTime = clock();
+        if (currentTime - lastStoreErrorLogAt < STORE_ERROR_LOG_INTERVAL_MS) return;
+
+        lastStoreErrorLogAt = currentTime;
+        logger?.error?.('Redis socket rate limit check failed.', {
+            error,
+            eventName,
+            provider: store?.provider || 'external',
+            fallback: 'memory'
+        });
+    }
+
     function wrap(socket, eventName, handler) {
         return (...args) => {
             const result = consume(socket, eventName);
-            if (!result.allowed) {
-                emitRateLimitError(socket, eventName, result, message);
-                return undefined;
+
+            function handleResult(resolvedResult) {
+                if (!resolvedResult.allowed) {
+                    emitRateLimitError(socket, eventName, resolvedResult, message);
+                    return undefined;
+                }
+
+                return handler(...args);
             }
 
-            return handler(...args);
+            if (result && typeof result.then === 'function') {
+                return result.then(handleResult, error => {
+                    logStoreError(error, eventName);
+                    if (failOpen) {
+                        const limit = getLimit(eventName);
+                        return handleResult(consumeFromMemory(socket, eventName, limit));
+                    }
+
+                    emitRateLimitError(socket, eventName, {
+                        retryAfterMs: getLimit(eventName)?.windowMs || windowMs
+                    }, message);
+                    return undefined;
+                });
+            }
+
+            return handleResult(result);
         };
     }
 
@@ -183,5 +238,6 @@ module.exports = {
     createSocketEventRateLimiter,
     DEFAULT_SOCKET_EVENT_LIMITS,
     DEFAULT_SOCKET_EVENT_RATE_LIMIT_WINDOW_MS,
-    DEFAULT_SOCKET_EVENT_RATE_LIMIT_MESSAGE
+    DEFAULT_SOCKET_EVENT_RATE_LIMIT_MESSAGE,
+    STORE_ERROR_LOG_INTERVAL_MS
 };

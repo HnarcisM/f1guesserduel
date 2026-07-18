@@ -170,6 +170,7 @@ async function writePersistedRooms(filePath, rooms) {
 module.exports = {
     ROOM_PERSISTENCE_VERSION,
     serializeRoom,
+    serializeRooms,
     deserializeRoom,
     readPersistedRooms,
     writePersistedRooms

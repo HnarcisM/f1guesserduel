@@ -8,9 +8,11 @@ const cookieParser = require('cookie-parser');
 const { createDriversRepository } = require('./data/driversRepository');
 const { createGameService } = require('./game/gameService');
 const { createPersistentRoomStore } = require('./rooms/roomStore.persistent');
+const { createRedisRoomStore } = require('./rooms/roomStore.redis');
 const { registerSocketHandlers } = require('./socket/registerSocketHandlers');
 const { createSocketServerOptions } = require('./socket/socketServerOptions');
 const { createDatabase } = require('./db/database');
+const { createRedisClient, closeRedisClient } = require('./redis/redisClient');
 const { createSessionService } = require('./auth/sessionService');
 const { createAuthService } = require('./auth/authService');
 const { createAuthRoutes } = require('./auth/authRoutes');
@@ -22,6 +24,10 @@ const { createSecurityHeadersMiddleware } = require('./middleware/securityHeader
 const { createRequestLoggingMiddleware } = require('./middleware/requestLogging');
 const { createResponseCompressionMiddleware } = require('./middleware/responseCompression');
 const { setStaticCacheHeaders } = require('./middleware/staticCacheHeaders');
+const {
+    createRedisRateLimitStore,
+    getDistributedSocketIdentity
+} = require('./socket/redisRateLimitStore');
 const { createLogger } = require('./logger');
 const { registerProcessErrorHandlers } = require('./runtime/processErrorHandlers');
 const { createAppConfig } = require('./config/appConfig');
@@ -74,12 +80,6 @@ const driversRepository = createDriversRepository({
     driversFilePath: config.driversFilePath
 });
 const gameService = createGameService(driversRepository);
-const roomStore = createPersistentRoomStore({
-    persistenceFilePath: config.rooms.persistenceFilePath,
-    saveDebounceMs: config.rooms.saveDebounceMs,
-    driversRepository,
-    logger
-});
 const db = await createDatabase({
     provider: config.database.provider,
     databaseUrl: config.database.url,
@@ -98,6 +98,39 @@ const db = await createDatabase({
     postgresMigrationsDirPath: config.postgresMigrationsDirPath,
     logger
 });
+let redisClient = null;
+let roomStore;
+
+try {
+    if (config.redis.enabled) {
+        redisClient = await createRedisClient({
+            url: config.redis.url,
+            connectTimeoutMs: config.redis.connectTimeoutMs,
+            logger
+        });
+        roomStore = await createRedisRoomStore({
+            redisClient,
+            keyPrefix: config.redis.keyPrefix,
+            roomTtlSeconds: config.redis.roomTtlSeconds,
+            saveDebounceMs: config.rooms.saveDebounceMs,
+            driversRepository,
+            logger
+        });
+    } else {
+        roomStore = createPersistentRoomStore({
+            persistenceFilePath: config.rooms.persistenceFilePath,
+            saveDebounceMs: config.rooms.saveDebounceMs,
+            driversRepository,
+            logger
+        });
+    }
+} catch (error) {
+    await Promise.allSettled([
+        closeRedisClient(redisClient),
+        db.closeConnection?.()
+    ]);
+    throw error;
+}
 const sessionService = createSessionService(db, {
     cookieName: config.auth.sessionCookieName,
     sessionMaxAgeMs: config.auth.sessionMaxAgeMs,
@@ -129,6 +162,7 @@ app.use('/api', createHealthRoutes({
     databaseProvider: config.database.provider,
     checks: createHealthChecks({
         db,
+        redisClient,
         driversRepository,
         roomStore
     })
@@ -144,11 +178,23 @@ app.use(express.static(config.publicDir, {
     setHeaders: setStaticCacheHeaders
 }));
 
+const socketRateLimit = redisClient
+    ? {
+        ...config.socket.rateLimit,
+        store: createRedisRateLimitStore({
+            redisClient,
+            keyPrefix: config.redis.keyPrefix
+        }),
+        identityResolver: getDistributedSocketIdentity,
+        logger
+    }
+    : config.socket.rateLimit;
+
 registerSocketHandlers(io, {
     roomStore,
     gameService,
     sessionService,
-    socketRateLimit: config.socket.rateLimit
+    socketRateLimit
 });
 
 app.get('/', (req, res, next) => {
@@ -188,7 +234,16 @@ function prepareApplicationShutdown() {
 async function cleanupApplicationResources() {
     stopExpiredSessionCleanup?.();
     await shutdownRoomStore();
-    await db.closeConnection?.();
+    const connectionResults = await Promise.allSettled([
+        db.closeConnection?.(),
+        closeRedisClient(redisClient)
+    ]);
+    const connectionErrors = connectionResults
+        .filter(result => result.status === 'rejected')
+        .map(result => result.reason);
+    if (connectionErrors.length > 0) {
+        throw new AggregateError(connectionErrors, 'Failed to close application connections.');
+    }
 }
 
 process.once('beforeExit', shutdownRoomStore);
@@ -210,11 +265,14 @@ server.listen(config.port, () => {
         port: config.port,
         nodeEnv: config.nodeEnv,
         persistenceMode: config.persistence.mode,
-        databaseProvider: config.database.provider
+        databaseProvider: config.database.provider,
+        redisEnabled: config.redis.enabled,
+        roomPersistenceProvider: roomStore.provider || 'file',
+        rateLimitProvider: redisClient ? 'redis' : 'memory'
     });
 });
 
-return { app, server, io, db, roomStore };
+return { app, server, io, db, redisClient, roomStore };
 }
 
 

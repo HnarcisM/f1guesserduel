@@ -35,6 +35,13 @@ test('app config provides safe development defaults', () => {
             maxLifetimeSeconds: 300
         }
     });
+    assert.deepEqual(config.redis, {
+        enabled: false,
+        url: null,
+        keyPrefix: 'f1guesserduel',
+        connectTimeoutMs: 10_000,
+        roomTtlSeconds: 86_400
+    });
     assert.equal(config.dbFilePath, path.join(projectRoot, 'data', 'f1guesser.sqlite'));
     assert.equal(
         config.postgresMigrationsDirPath,
@@ -80,6 +87,10 @@ test('app config reads production values from environment', () => {
         POSTGRES_KEEP_ALIVE_INITIAL_DELAY_MS: '12000',
         POSTGRES_MAX_LIFETIME_SECONDS: '600',
         POSTGRES_MIGRATIONS_DIR: '/opt/f1/migrations/postgres',
+        REDIS_URL: 'rediss://default:secret@redis.example.com:6379',
+        REDIS_KEY_PREFIX: 'f1:production',
+        REDIS_CONNECT_TIMEOUT_MS: '15000',
+        REDIS_ROOM_TTL_SECONDS: '172800',
         SESSION_SECRET: 'session-secret',
         SOCKET_AUTH_SECRET: 'socket-secret',
         COOKIE_SECURE: 'false',
@@ -118,6 +129,13 @@ test('app config reads production values from environment', () => {
             keepAliveInitialDelayMs: 12_000,
             maxLifetimeSeconds: 600
         }
+    });
+    assert.deepEqual(config.redis, {
+        enabled: true,
+        url: 'rediss://default:secret@redis.example.com:6379',
+        keyPrefix: 'f1:production',
+        connectTimeoutMs: 15_000,
+        roomTtlSeconds: 172_800
     });
     assert.equal(path.normalize(config.dbFilePath), path.normalize('/var/lib/f1guesser/f1guesser.sqlite'));
     assert.equal(config.postgresMigrationsDirPath, '/opt/f1/migrations/postgres');
@@ -209,6 +227,14 @@ test('app config rejects invalid numeric environment values', () => {
         () => createAppConfig({ POSTGRES_MAX_LIFETIME_SECONDS: 'forever' }),
         /POSTGRES_MAX_LIFETIME_SECONDS must be an integer/
     );
+    assert.throws(
+        () => createAppConfig({ REDIS_CONNECT_TIMEOUT_MS: '500' }),
+        /REDIS_CONNECT_TIMEOUT_MS must be an integer/
+    );
+    assert.throws(
+        () => createAppConfig({ REDIS_ROOM_TTL_SECONDS: '30' }),
+        /REDIS_ROOM_TTL_SECONDS must be an integer/
+    );
 });
 
 test('app config resolves explicit and inferred persistence modes', () => {
@@ -278,6 +304,14 @@ test('production config rejects SQLite on ephemeral storage', () => {
 });
 
 test('app config rejects invalid boolean and enum values', () => {
+    assert.throws(
+        () => createAppConfig({ REDIS_URL: 'https://redis.example.com' }),
+        /REDIS_URL must be a valid redis/
+    );
+    assert.throws(
+        () => createAppConfig({ REDIS_KEY_PREFIX: 'invalid prefix!' }),
+        /REDIS_KEY_PREFIX must contain only/
+    );
     assert.throws(
         () => createAppConfig({ COOKIE_SECURE: 'maybe' }),
         /COOKIE_SECURE must be one of/

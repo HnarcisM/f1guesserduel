@@ -24,7 +24,11 @@ function createPersistentRoomStore(options = {}) {
         driversRepository: options.driversRepository
     };
 
-    for (const room of readPersistedRooms(persistenceFilePath, persistenceOptions)) {
+    const restoredRooms = Array.isArray(options.initialRooms)
+        ? options.initialRooms
+        : readPersistedRooms(persistenceFilePath, persistenceOptions);
+
+    for (const room of restoredRooms) {
         rooms.set(room.roomId, room);
     }
 
@@ -143,6 +147,7 @@ function createPersistentRoomStore(options = {}) {
     }
 
     return {
+        provider: 'file',
         get,
         set,
         remove,

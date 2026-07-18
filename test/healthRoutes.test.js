@@ -171,6 +171,33 @@ test('health room check reports persistence error without stack or paths', async
     assert.equal(Object.hasOwn(resolved.rooms, 'stack'), false);
 });
 
+test('health checks report Redis connectivity and the Redis room provider', async () => {
+    let pingCalls = 0;
+    const redisClient = {
+        async ping() {
+            pingCalls += 1;
+            return 'PONG';
+        }
+    };
+    const roomStore = {
+        provider: 'redis',
+        values: () => [],
+        getLastSaveError: () => null
+    };
+
+    const checks = createHealthChecks({ redisClient, roomStore });
+    const resolved = await resolveHealthChecks(checks);
+
+    assert.equal(pingCalls, 1);
+    assert.deepEqual(resolved.redis, { status: 'ok' });
+    assert.deepEqual(resolved.rooms, {
+        status: 'ok',
+        activeRooms: 0,
+        persistence: 'ok',
+        provider: 'redis'
+    });
+});
+
 test('normalizeCheckResult removes sensitive diagnostic fields', () => {
     const normalized = normalizeCheckResult({
         status: 'ok',

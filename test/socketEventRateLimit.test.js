@@ -247,3 +247,99 @@ test('registerSocketHandlers rate limits room joins without creating extra rooms
     assert.equal(socket.emitted('socketRateLimited').length, 1);
     assert.equal(socket.emitted('socketRateLimited')[0].payload.eventName, 'joinRoom');
 });
+
+test('socket event limiter supports an asynchronous distributed store', async () => {
+    const socket = createFakeSocket('socket-distributed');
+    const results = [
+        { allowed: true, remaining: 0, retryAfterMs: 0 },
+        { allowed: false, remaining: 0, retryAfterMs: 2_500 }
+    ];
+    const consumedKeys = [];
+    const limiter = createSocketEventRateLimiter({
+        limits: { submitGuess: { maxEvents: 1, windowMs: 60_000 } },
+        identityResolver: currentSocket => `user:${currentSocket.user.id}`,
+        store: {
+            provider: 'redis',
+            async consume(options) {
+                consumedKeys.push(options.key);
+                return results.shift();
+            }
+        }
+    });
+    socket.user = { id: 'user-42' };
+    let handlerCalls = 0;
+    const wrapped = limiter.wrap(socket, 'submitGuess', async () => {
+        handlerCalls += 1;
+    });
+
+    await wrapped();
+    await wrapped();
+
+    assert.equal(handlerCalls, 1);
+    assert.deepEqual(consumedKeys, ['user:user-42:submitGuess', 'user:user-42:submitGuess']);
+    assert.deepEqual(socket.emitted('socketRateLimited')[0].payload, {
+        eventName: 'submitGuess',
+        retryAfterMs: 2_500
+    });
+});
+
+test('socket event limiter falls back to throttled memory limits when Redis is unavailable', async () => {
+    const socket = createFakeSocket('socket-fail-open');
+    const loggedErrors = [];
+    const limiter = createSocketEventRateLimiter({
+        limits: { submitGuess: { maxEvents: 1, windowMs: 60_000 } },
+        store: {
+            provider: 'redis',
+            async consume() {
+                throw new Error('Redis unavailable');
+            }
+        },
+        logger: {
+            error(message, context) {
+                loggedErrors.push({ message, context });
+            }
+        }
+    });
+    let handlerCalls = 0;
+    const wrapped = limiter.wrap(socket, 'submitGuess', () => {
+        handlerCalls += 1;
+    });
+
+    await wrapped();
+    await wrapped();
+
+    assert.equal(handlerCalls, 1);
+    assert.equal(loggedErrors.length, 1);
+    assert.equal(loggedErrors[0].context.provider, 'redis');
+    assert.equal(loggedErrors[0].context.fallback, 'memory');
+    assert.equal(socket.emitted('socketRateLimited').length, 1);
+});
+
+test('socket event limiter does not treat an asynchronous handler rejection as a store failure', async () => {
+    const socket = createFakeSocket('socket-handler-error');
+    let handlerCalls = 0;
+    let logCalls = 0;
+    const expectedError = new Error('handler failed');
+    const limiter = createSocketEventRateLimiter({
+        limits: { submitGuess: { maxEvents: 1, windowMs: 60_000 } },
+        store: {
+            provider: 'redis',
+            async consume() {
+                return { allowed: true, remaining: 0, retryAfterMs: 0 };
+            }
+        },
+        logger: {
+            error() {
+                logCalls += 1;
+            }
+        }
+    });
+    const wrapped = limiter.wrap(socket, 'submitGuess', async () => {
+        handlerCalls += 1;
+        throw expectedError;
+    });
+
+    await assert.rejects(wrapped(), error => error === expectedError);
+    assert.equal(handlerCalls, 1);
+    assert.equal(logCalls, 0);
+});

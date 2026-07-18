@@ -15,6 +15,9 @@ const DEFAULT_POSTGRES_INIT_RETRY_ATTEMPTS = 3;
 const DEFAULT_POSTGRES_INIT_RETRY_BASE_DELAY_MS = 1000;
 const DEFAULT_POSTGRES_KEEP_ALIVE_INITIAL_DELAY_MS = 10 * 1000;
 const DEFAULT_POSTGRES_MAX_LIFETIME_SECONDS = 5 * 60;
+const DEFAULT_REDIS_CONNECT_TIMEOUT_MS = 10 * 1000;
+const DEFAULT_REDIS_ROOM_TTL_SECONDS = 24 * 60 * 60;
+const DEFAULT_REDIS_KEY_PREFIX = 'f1guesserduel';
 const DEV_SESSION_SECRET = 'f1-guesser-duel-dev-session-secret';
 const DEV_SOCKET_AUTH_SECRET = 'f1-guesser-duel-dev-socket-auth-secret';
 const ALLOWED_NODE_ENV_VALUES = new Set(['development', 'test', 'production']);
@@ -131,6 +134,37 @@ function normalizeDatabaseProvider(value) {
     const normalized = value.trim().toLowerCase();
     if (!ALLOWED_DATABASE_PROVIDER_VALUES.has(normalized)) {
         throw new Error('DATABASE_PROVIDER must be one of: sqlite, postgres.');
+    }
+    return normalized;
+}
+
+function normalizeRedisUrl(value) {
+    if (value === undefined || value === null || value === '') return null;
+    if (typeof value !== 'string' || value.trim().length === 0) {
+        throw new Error('REDIS_URL must not be empty.');
+    }
+
+    let parsed;
+    try {
+        parsed = new URL(value.trim());
+    } catch {
+        throw new Error('REDIS_URL must be a valid redis:// or rediss:// URL.');
+    }
+
+    if (!['redis:', 'rediss:'].includes(parsed.protocol) || !parsed.hostname) {
+        throw new Error('REDIS_URL must be a valid redis:// or rediss:// URL.');
+    }
+
+    return value.trim();
+}
+
+function normalizeRedisKeyPrefix(value) {
+    if (value === undefined || value === null || value === '') return DEFAULT_REDIS_KEY_PREFIX;
+    if (typeof value !== 'string') throw new Error('REDIS_KEY_PREFIX must be a string.');
+
+    const normalized = value.trim();
+    if (!/^[a-z0-9][a-z0-9:_-]{0,63}$/i.test(normalized)) {
+        throw new Error('REDIS_KEY_PREFIX must contain only letters, numbers, colon, underscore or dash.');
     }
     return normalized;
 }
@@ -272,6 +306,7 @@ function createAppConfig(env = process.env, options = {}) {
     const dataDir = resolveOptionalPath(env, 'DATA_DIR', path.join(projectRoot, 'data'));
     const databaseProvider = normalizeDatabaseProvider(env.DATABASE_PROVIDER);
     const databaseUrl = getOptionalEnvString(env, 'DATABASE_URL');
+    const redisUrl = normalizeRedisUrl(env.REDIS_URL);
     if (databaseProvider === 'postgres' && !databaseUrl) {
         throw new Error('DATABASE_URL must be set when DATABASE_PROVIDER=postgres.');
     }
@@ -394,6 +429,23 @@ function createAppConfig(env = process.env, options = {}) {
                 )
             }
         },
+        redis: {
+            enabled: Boolean(redisUrl),
+            url: redisUrl,
+            keyPrefix: normalizeRedisKeyPrefix(env.REDIS_KEY_PREFIX),
+            connectTimeoutMs: parseIntegerEnv(
+                env,
+                'REDIS_CONNECT_TIMEOUT_MS',
+                DEFAULT_REDIS_CONNECT_TIMEOUT_MS,
+                { min: 1_000, max: 120_000 }
+            ),
+            roomTtlSeconds: parseIntegerEnv(
+                env,
+                'REDIS_ROOM_TTL_SECONDS',
+                DEFAULT_REDIS_ROOM_TTL_SECONDS,
+                { min: 60, max: 30 * 24 * 60 * 60 }
+            )
+        },
         publicDir: resolveOptionalPath(env, 'PUBLIC_DIR', path.join(projectRoot, 'public')),
         rooms: {
             persistenceFilePath: resolveOptionalPath(env, 'ROOMS_FILE_PATH', path.join(dataDir, 'rooms.json')),
@@ -456,6 +508,8 @@ module.exports = {
     normalizePersistenceMode,
     normalizeLogLevel,
     normalizeDatabaseProvider,
+    normalizeRedisUrl,
+    normalizeRedisKeyPrefix,
     resolveSocketAllowedOrigins,
     DEFAULT_PORT,
     DEFAULT_SESSION_COOKIE_NAME,
@@ -471,5 +525,8 @@ module.exports = {
     DEFAULT_POSTGRES_INIT_RETRY_ATTEMPTS,
     DEFAULT_POSTGRES_INIT_RETRY_BASE_DELAY_MS,
     DEFAULT_POSTGRES_KEEP_ALIVE_INITIAL_DELAY_MS,
-    DEFAULT_POSTGRES_MAX_LIFETIME_SECONDS
+    DEFAULT_POSTGRES_MAX_LIFETIME_SECONDS,
+    DEFAULT_REDIS_CONNECT_TIMEOUT_MS,
+    DEFAULT_REDIS_ROOM_TTL_SECONDS,
+    DEFAULT_REDIS_KEY_PREFIX
 };

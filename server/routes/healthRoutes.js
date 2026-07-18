@@ -48,7 +48,7 @@ function hasFailedChecks(checks = {}) {
     return Object.values(checks).some(check => check?.status === CHECK_STATUS_ERROR);
 }
 
-function createHealthChecks({ db = null, driversRepository = null, roomStore = null } = {}) {
+function createHealthChecks({ db = null, redisClient = null, driversRepository = null, roomStore = null } = {}) {
     const checks = {};
 
     if (db?.check) {
@@ -59,6 +59,13 @@ function createHealthChecks({ db = null, driversRepository = null, roomStore = n
     } else if (db?.prepare) {
         checks.database = () => {
             db.prepare('SELECT 1 AS ok').get();
+            return { status: CHECK_STATUS_OK };
+        };
+    }
+
+    if (redisClient?.ping) {
+        checks.redis = async () => {
+            await redisClient.ping();
             return { status: CHECK_STATUS_OK };
         };
     }
@@ -80,11 +87,15 @@ function createHealthChecks({ db = null, driversRepository = null, roomStore = n
                 ? roomStore.getLastSaveError()
                 : null;
 
-            return {
+            const result = {
                 status: lastSaveError ? CHECK_STATUS_ERROR : CHECK_STATUS_OK,
                 activeRooms: Array.isArray(rooms) ? rooms.length : 0,
                 persistence: lastSaveError ? 'error' : 'ok'
             };
+            if (typeof roomStore.provider === 'string') {
+                result.provider = roomStore.provider;
+            }
+            return result;
         };
     }
 

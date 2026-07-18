@@ -2,7 +2,7 @@
 
 Acest ghid descrie configurarea recomandată pentru publicarea aplicației pe Render ca **Web Service Node.js** conectat la GitHub.
 
-> Notă importantă: Render Free este potrivit pentru demo/test. Serviciul poate intra în sleep după inactivitate, iar filesystem-ul local este efemer. Pentru conturi persistente pe varianta free folosim Postgres extern prin `DATABASE_PROVIDER=postgres` și `DATABASE_URL`, iar `rooms.json` rămâne efemer pentru camere active.
+> Notă importantă: Render Free este potrivit pentru demo/test. Serviciul poate intra în sleep după inactivitate, iar filesystem-ul local este efemer. Pentru conturi persistente folosim Postgres extern prin `DATABASE_PROVIDER=postgres` și `DATABASE_URL`. Opțional, `REDIS_URL` păstrează snapshot-ul camerelor și contoarele de rate limit în afara filesystem-ului efemer.
 
 ---
 
@@ -115,7 +115,24 @@ users
 sessions
 ```
 
-Conturile și sesiunile se păstrează în Postgres. Camerele active rămân în `rooms.json` pe `/tmp`, deci pot dispărea la restart/redeploy/sleep.
+Conturile și sesiunile se păstrează în Postgres. Fără Redis, camerele active rămân în `rooms.json` pe `/tmp`, deci pot dispărea la restart/redeploy/sleep.
+
+### Redis opțional pentru camere și rate limiting
+
+După ce creezi separat un serviciu Redis, copiază URL-ul lui în Render → Environment. Pentru un provider cloud folosește de preferat conexiunea TLS `rediss://`:
+
+```env
+REDIS_URL=rediss://default:password@host:port
+REDIS_KEY_PREFIX=f1guesserduel
+REDIS_CONNECT_TIMEOUT_MS=10000
+REDIS_ROOM_TTL_SECONDS=86400
+```
+
+Nu este nevoie să modifici `ROOMS_FILE_PATH`: când `REDIS_URL` este prezent, serverul selectează automat Redis pentru snapshot-ul camerelor și pentru rate limiting-ul Socket.IO. Dacă variabila lipsește, fallback-ul rămâne `rooms.json` plus contoare locale în memorie.
+
+La pornire, o conexiune Redis configurată dar indisponibilă oprește deploy-ul cu o eroare clară. După pornire, o întrerupere Redis apare în `/api/health`; rate limiting-ul revine la contoare locale în memorie, iar mesajele Redis repetitive din log sunt limitate.
+
+Această etapă nu include adapterul Socket.IO Redis. Snapshot-ul restaurează camerele după restart pentru o singură instanță, iar rate limiting-ul este distribuit, dar duelurile live nu sunt încă sincronizate complet între mai multe instanțe de server.
 
 ### Socket.IO rate limit
 
@@ -126,7 +143,7 @@ SOCKET_RATE_LIMIT_ENABLED=true
 SOCKET_RATE_LIMIT_WINDOW_MS=60000
 ```
 
-Limitele sunt aplicate per socket și sunt diferite pe categorii: acțiunile de lobby/start/restart au limite mai stricte, iar guess-urile au o limită mai mare ca să nu afecteze jocul normal. Dacă un client face spam, serverul emite `socketRateLimited` și nu mai execută handlerul pentru event-ul blocat.
+Fără Redis, limitele sunt aplicate per socket. Cu `REDIS_URL`, contoarele sunt atomice și distribuite per utilizator autentificat sau adresă anonimă. Limitele sunt diferite pe categorii: acțiunile de lobby/start/restart au limite mai stricte, iar guess-urile au o limită mai mare ca să nu afecteze jocul normal. Dacă un client face spam, serverul emite `socketRateLimited` și nu mai execută handlerul pentru event-ul blocat.
 
 ### Logging production
 
@@ -227,11 +244,14 @@ Endpoint-ul `/api/health` include informații non-sensibile utile pentru Render 
   },
   "checks": {
     "database": { "status": "ok" },
+    "redis": { "status": "ok" },
     "drivers": { "status": "ok", "count": 166 },
-    "rooms": { "status": "ok", "activeRooms": 0, "persistence": "ok" }
+    "rooms": { "status": "ok", "activeRooms": 0, "persistence": "ok", "provider": "redis" }
   }
 }
 ```
+
+Cheia `redis` apare numai când `REDIS_URL` este configurat; altfel `rooms.provider` este `file`.
 
 Dacă un check critic eșuează, răspunsul devine `status=degraded` și HTTP `503`. Endpoint-ul nu expune path-uri locale, secrete, cookie-uri, token-uri sau conținutul camerelor.
 
