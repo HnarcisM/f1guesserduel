@@ -30,27 +30,65 @@ function createSqliteDatabase({ dbFilePath, schemaFilePath }) {
     return db;
 }
 
-async function createPostgresDatabase({ databaseUrl, schemaFilePath, ssl = true, logger = console }) {
+async function createPostgresDatabase({
+    databaseUrl,
+    schemaFilePath,
+    ssl = true,
+    maxConnections = 5,
+    connectionTimeoutMs = 15_000,
+    idleTimeoutMs = 30_000,
+    queryTimeoutMs = 20_000,
+    poolClass = null,
+    logger = console
+}) {
     if (!databaseUrl || typeof databaseUrl !== 'string') {
         throw new Error('DATABASE_URL must be set when DATABASE_PROVIDER=postgres.');
     }
 
-    let Pool;
-    try {
-        ({ Pool } = require('pg'));
-    } catch (error) {
-        throw new Error(
-            "Lipsește dependența 'pg'. Rulează `npm install` înainte de `npm start`."
-        );
+    let PostgresPool = poolClass;
+    if (!PostgresPool) {
+        try {
+            ({ Pool: PostgresPool } = require('pg'));
+        } catch (error) {
+            throw new Error(
+                "Lipsește dependența 'pg'. Rulează `npm install` înainte de `npm start`."
+            );
+        }
     }
 
-    const pool = new Pool({
+    const schema = fs.readFileSync(schemaFilePath, 'utf8');
+    const pool = new PostgresPool({
         connectionString: databaseUrl,
-        ssl: ssl ? { rejectUnauthorized: false } : false
+        ssl: ssl ? { rejectUnauthorized: false } : false,
+        max: maxConnections,
+        connectionTimeoutMillis: connectionTimeoutMs,
+        idleTimeoutMillis: idleTimeoutMs,
+        query_timeout: queryTimeoutMs,
+        statement_timeout: queryTimeoutMs,
+        application_name: 'f1guesserduel'
     });
 
-    const schema = fs.readFileSync(schemaFilePath, 'utf8');
-    await pool.query(schema);
+    pool.on?.('error', error => {
+        logger?.error?.('Unexpected Postgres pool error.', {
+            error,
+            databaseProvider: 'postgres'
+        });
+    });
+
+    try {
+        await pool.query(schema);
+    } catch (error) {
+        try {
+            await pool.end();
+        } catch (closeError) {
+            logger?.error?.('Failed to close Postgres pool after initialization error.', {
+                error: closeError,
+                databaseProvider: 'postgres'
+            });
+        }
+        throw error;
+    }
+
     logger?.info?.('Postgres database initialized.', { databaseProvider: 'postgres' });
 
     return {
@@ -77,6 +115,11 @@ async function createDatabase(options = {}) {
             databaseUrl: options.databaseUrl,
             schemaFilePath: options.postgresSchemaFilePath || options.schemaFilePath,
             ssl: options.postgresSsl ?? true,
+            maxConnections: options.maxConnections,
+            connectionTimeoutMs: options.connectionTimeoutMs,
+            idleTimeoutMs: options.idleTimeoutMs,
+            queryTimeoutMs: options.queryTimeoutMs,
+            poolClass: options.poolClass,
             logger: options.logger
         });
     }

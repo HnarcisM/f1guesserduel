@@ -198,6 +198,10 @@ Aplicația poate fi configurată prin variabile de mediu. Pentru rulare locală 
 | `DATABASE_PROVIDER` | `sqlite` | Provider DB pentru conturi/sesiuni: `sqlite` sau `postgres`. |
 | `DATABASE_URL` | none | Connection string Postgres, obligatoriu când `DATABASE_PROVIDER=postgres`. |
 | `POSTGRES_SSL` | `true` | Activează SSL pentru Postgres extern, recomandat pentru Neon/hosting cloud. |
+| `POSTGRES_POOL_MAX` | `5` | Numărul maxim de conexiuni PostgreSQL deschise simultan de proces. |
+| `POSTGRES_CONNECTION_TIMEOUT_MS` | `15000` | Timpul maxim de așteptare pentru deschiderea unei conexiuni PostgreSQL. |
+| `POSTGRES_IDLE_TIMEOUT_MS` | `30000` | Închide conexiunile nefolosite după acest interval. |
+| `POSTGRES_QUERY_TIMEOUT_MS` | `20000` | Limita client/server pentru o interogare PostgreSQL. |
 | `DB_FILE_PATH` | `<DATA_DIR>/f1guesser.sqlite` | Path SQLite local, folosit doar când `DATABASE_PROVIDER=sqlite`. |
 | `SESSION_SECRET` | dev fallback local | Secret pentru sesiuni; obligatoriu în production. |
 | `SOCKET_AUTH_SECRET` | `SESSION_SECRET` sau dev fallback | Secret pentru token-ul scurt folosit de socket auth refresh. |
@@ -224,6 +228,7 @@ Validarea configului este strictă: dacă o variabilă este setată cu o valoare
 - `DATABASE_PROVIDER` poate fi `sqlite` sau `postgres`;
 - `DATABASE_URL` este obligatoriu când `DATABASE_PROVIDER=postgres`;
 - în production, SQLite este refuzat când `PERSISTENCE_MODE=ephemeral` sau fișierul bazei se află în `/tmp`/`/var/tmp`;
+- pool-ul PostgreSQL acceptă maximum `1-50` conexiuni, iar timeout-urile configurabile sunt validate strict;
 - `PORT` trebuie să fie între `1` și `65535`;
 - valorile numerice de durată/interval trebuie să fie întregi în limite rezonabile;
 - `COOKIE_SECURE`, `TRUST_PROXY` acceptă doar valori de tip `true/false`, `1/0`, `yes/no`, `on/off`;

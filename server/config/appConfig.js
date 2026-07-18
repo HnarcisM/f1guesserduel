@@ -7,6 +7,10 @@ const DEFAULT_SOCKET_AUTH_TOKEN_MAX_AGE_MS = 2 * 60 * 1000;
 const DEFAULT_SESSION_CLEANUP_INTERVAL_MS = 15 * 60 * 1000;
 const DEFAULT_ROOM_SAVE_DEBOUNCE_MS = 250;
 const DEFAULT_SOCKET_RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const DEFAULT_POSTGRES_POOL_MAX = 5;
+const DEFAULT_POSTGRES_CONNECTION_TIMEOUT_MS = 15 * 1000;
+const DEFAULT_POSTGRES_IDLE_TIMEOUT_MS = 30 * 1000;
+const DEFAULT_POSTGRES_QUERY_TIMEOUT_MS = 20 * 1000;
 const DEV_SESSION_SECRET = 'f1-guesser-duel-dev-session-secret';
 const DEV_SOCKET_AUTH_SECRET = 'f1-guesser-duel-dev-socket-auth-secret';
 const ALLOWED_NODE_ENV_VALUES = new Set(['development', 'test', 'production']);
@@ -329,7 +333,33 @@ function createAppConfig(env = process.env, options = {}) {
         database: {
             provider: databaseProvider,
             url: databaseUrl,
-            postgresSsl: parseBooleanEnv(env, 'POSTGRES_SSL', true)
+            postgresSsl: parseBooleanEnv(env, 'POSTGRES_SSL', true),
+            pool: {
+                maxConnections: parseIntegerEnv(
+                    env,
+                    'POSTGRES_POOL_MAX',
+                    DEFAULT_POSTGRES_POOL_MAX,
+                    { min: 1, max: 50 }
+                ),
+                connectionTimeoutMs: parseIntegerEnv(
+                    env,
+                    'POSTGRES_CONNECTION_TIMEOUT_MS',
+                    DEFAULT_POSTGRES_CONNECTION_TIMEOUT_MS,
+                    { min: 1_000, max: 120_000 }
+                ),
+                idleTimeoutMs: parseIntegerEnv(
+                    env,
+                    'POSTGRES_IDLE_TIMEOUT_MS',
+                    DEFAULT_POSTGRES_IDLE_TIMEOUT_MS,
+                    { min: 1_000, max: 600_000 }
+                ),
+                queryTimeoutMs: parseIntegerEnv(
+                    env,
+                    'POSTGRES_QUERY_TIMEOUT_MS',
+                    DEFAULT_POSTGRES_QUERY_TIMEOUT_MS,
+                    { min: 1_000, max: 300_000 }
+                )
+            }
         },
         publicDir: resolveOptionalPath(env, 'PUBLIC_DIR', path.join(projectRoot, 'public')),
         rooms: {
@@ -400,5 +430,9 @@ module.exports = {
     DEFAULT_SOCKET_AUTH_TOKEN_MAX_AGE_MS,
     DEFAULT_SESSION_CLEANUP_INTERVAL_MS,
     DEFAULT_ROOM_SAVE_DEBOUNCE_MS,
-    DEFAULT_SOCKET_RATE_LIMIT_WINDOW_MS
+    DEFAULT_SOCKET_RATE_LIMIT_WINDOW_MS,
+    DEFAULT_POSTGRES_POOL_MAX,
+    DEFAULT_POSTGRES_CONNECTION_TIMEOUT_MS,
+    DEFAULT_POSTGRES_IDLE_TIMEOUT_MS,
+    DEFAULT_POSTGRES_QUERY_TIMEOUT_MS
 };

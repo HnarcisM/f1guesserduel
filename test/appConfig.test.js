@@ -23,7 +23,13 @@ test('app config provides safe development defaults', () => {
     assert.deepEqual(config.database, {
         provider: 'sqlite',
         url: null,
-        postgresSsl: true
+        postgresSsl: true,
+        pool: {
+            maxConnections: 5,
+            connectionTimeoutMs: 15_000,
+            idleTimeoutMs: 30_000,
+            queryTimeoutMs: 20_000
+        }
     });
     assert.equal(config.dbFilePath, path.join(projectRoot, 'data', 'f1guesser.sqlite'));
     assert.equal(config.auth.cookie.secure, false);
@@ -57,6 +63,10 @@ test('app config reads production values from environment', () => {
         DATABASE_PROVIDER: 'postgres',
         DATABASE_URL: 'postgresql://example.com/f1',
         POSTGRES_SSL: 'false',
+        POSTGRES_POOL_MAX: '8',
+        POSTGRES_CONNECTION_TIMEOUT_MS: '25000',
+        POSTGRES_IDLE_TIMEOUT_MS: '45000',
+        POSTGRES_QUERY_TIMEOUT_MS: '30000',
         SESSION_SECRET: 'session-secret',
         SOCKET_AUTH_SECRET: 'socket-secret',
         COOKIE_SECURE: 'false',
@@ -84,7 +94,13 @@ test('app config reads production values from environment', () => {
     assert.deepEqual(config.database, {
         provider: 'postgres',
         url: 'postgresql://example.com/f1',
-        postgresSsl: false
+        postgresSsl: false,
+        pool: {
+            maxConnections: 8,
+            connectionTimeoutMs: 25_000,
+            idleTimeoutMs: 45_000,
+            queryTimeoutMs: 30_000
+        }
     });
     assert.equal(path.normalize(config.dbFilePath), path.normalize('/var/lib/f1guesser/f1guesser.sqlite'));
     assert.equal(config.trustProxy, true);
@@ -142,6 +158,22 @@ test('app config rejects invalid numeric environment values', () => {
     assert.throws(
         () => createAppConfig({ SOCKET_RATE_LIMIT_WINDOW_MS: 'fast' }),
         /SOCKET_RATE_LIMIT_WINDOW_MS must be an integer/
+    );
+    assert.throws(
+        () => createAppConfig({ POSTGRES_POOL_MAX: '0' }),
+        /POSTGRES_POOL_MAX must be an integer/
+    );
+    assert.throws(
+        () => createAppConfig({ POSTGRES_CONNECTION_TIMEOUT_MS: '500' }),
+        /POSTGRES_CONNECTION_TIMEOUT_MS must be an integer/
+    );
+    assert.throws(
+        () => createAppConfig({ POSTGRES_IDLE_TIMEOUT_MS: 'forever' }),
+        /POSTGRES_IDLE_TIMEOUT_MS must be an integer/
+    );
+    assert.throws(
+        () => createAppConfig({ POSTGRES_QUERY_TIMEOUT_MS: '0' }),
+        /POSTGRES_QUERY_TIMEOUT_MS must be an integer/
     );
 });
 
