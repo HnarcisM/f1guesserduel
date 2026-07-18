@@ -30,6 +30,7 @@ function createTempProject() {
     writeFile(rootDir, 'dist/old-release.zip', 'old');
     writeFile(rootDir, 'public/index.html', '<!doctype html>');
     writeFile(rootDir, 'server/index.js', 'console.log("server");');
+    writeFile(rootDir, 'server/db/migrations/postgres/001_initial.sql', 'SELECT 1;');
     writeFile(rootDir, 'data/drivers.json', '[]');
     writeFile(rootDir, 'data/rooms.json', '{}');
     writeFile(rootDir, 'data/f1.sqlite', 'sqlite');
@@ -65,6 +66,7 @@ test('release collector includes only clean runtime files by default', () => {
         'data/drivers.json',
         'package.json',
         'public/index.html',
+        'server/db/migrations/postgres/001_initial.sql',
         'server/index.js'
     ]);
 });
@@ -78,6 +80,7 @@ test('release ZIP is created under dist without including excluded files', () =>
     assert.equal(path.basename(result.outputPath), 'f1guesserduel-v1.2.3.zip');
     assert.ok(zipBuffer.subarray(0, 2).equals(Buffer.from('PK')));
     assert.match(zipText, /f1guesserduel-v1\.2\.3\/public\/index\.html/);
+    assert.match(zipText, /server\/db\/migrations\/postgres\/001_initial\.sql/);
     assert.doesNotMatch(zipText, /node_modules/);
     assert.doesNotMatch(zipText, /data\/rooms\.json/);
     assert.doesNotMatch(zipText, /\.git\/config/);

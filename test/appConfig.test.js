@@ -36,6 +36,10 @@ test('app config provides safe development defaults', () => {
         }
     });
     assert.equal(config.dbFilePath, path.join(projectRoot, 'data', 'f1guesser.sqlite'));
+    assert.equal(
+        config.postgresMigrationsDirPath,
+        path.join(projectRoot, 'server', 'db', 'migrations', 'postgres')
+    );
     assert.equal(config.auth.cookie.secure, false);
     assert.equal(config.auth.cookie.sameSite, 'lax');
     assert.equal(config.auth.sessionCookieName, 'f1_session');
@@ -75,6 +79,7 @@ test('app config reads production values from environment', () => {
         POSTGRES_INIT_RETRY_BASE_DELAY_MS: '1500',
         POSTGRES_KEEP_ALIVE_INITIAL_DELAY_MS: '12000',
         POSTGRES_MAX_LIFETIME_SECONDS: '600',
+        POSTGRES_MIGRATIONS_DIR: '/opt/f1/migrations/postgres',
         SESSION_SECRET: 'session-secret',
         SOCKET_AUTH_SECRET: 'socket-secret',
         COOKIE_SECURE: 'false',
@@ -115,6 +120,7 @@ test('app config reads production values from environment', () => {
         }
     });
     assert.equal(path.normalize(config.dbFilePath), path.normalize('/var/lib/f1guesser/f1guesser.sqlite'));
+    assert.equal(config.postgresMigrationsDirPath, '/opt/f1/migrations/postgres');
     assert.equal(config.trustProxy, true);
     assert.equal(config.auth.sessionSecret, 'session-secret');
     assert.equal(config.auth.socketAuthSecret, 'socket-secret');
@@ -356,6 +362,10 @@ test('app config rejects empty string environment overrides', () => {
     assert.throws(
         () => createAppConfig({ SESSION_SECRET: '   ' }),
         /SESSION_SECRET must not be empty/
+    );
+    assert.throws(
+        () => createAppConfig({ POSTGRES_MIGRATIONS_DIR: '   ' }),
+        /POSTGRES_MIGRATIONS_DIR must not be empty/
     );
 });
 

@@ -206,6 +206,7 @@ Aplicația poate fi configurată prin variabile de mediu. Pentru rulare locală 
 | `POSTGRES_INIT_RETRY_BASE_DELAY_MS` | `1000` | Întârzierea inițială pentru retry; următoarele încercări folosesc backoff exponențial. |
 | `POSTGRES_KEEP_ALIVE_INITIAL_DELAY_MS` | `10000` | Activează TCP keepalive după această perioadă pentru conexiunile PostgreSQL. |
 | `POSTGRES_MAX_LIFETIME_SECONDS` | `300` | Reciclează controlat conexiunile vechi din pool; `0` dezactivează limita. |
+| `POSTGRES_MIGRATIONS_DIR` | `server/db/migrations/postgres` | Directorul cu migrările PostgreSQL numerotate. În mod normal nu trebuie suprascris. |
 | `DB_FILE_PATH` | `<DATA_DIR>/f1guesser.sqlite` | Path SQLite local, folosit doar când `DATABASE_PROVIDER=sqlite`. |
 | `SESSION_SECRET` | dev fallback local | Secret pentru sesiuni; obligatoriu în production. |
 | `SOCKET_AUTH_SECRET` | `SESSION_SECRET` sau dev fallback | Secret pentru token-ul scurt folosit de socket auth refresh. |
@@ -266,6 +267,18 @@ PERSISTENCE_MODE=ephemeral
 ```
 
 În această variantă, `users` și `sessions` sunt salvate în Postgres, iar camerele active rămân în `rooms.json` efemer. Este intenționat: conturile trebuie păstrate, dar camerele active pot dispărea normal la restart/redeploy/sleep.
+
+### Migrații PostgreSQL versionate
+
+La pornire, serverul citește fișierele din `server/db/migrations/postgres` în ordine numerică. Prima migrare este `001_initial_auth_schema.sql`.
+
+- migrările aplicate sunt înregistrate în tabela `schema_migrations` cu versiune, nume, checksum și timestamp;
+- întregul lot rulează într-o tranzacție și este anulat prin rollback dacă o comandă eșuează;
+- un advisory lock PostgreSQL împiedică două instanțe să aplice aceeași migrare simultan;
+- o migrare deja aplicată nu trebuie modificată: checksum-ul diferit oprește pornirea cu o eroare clară;
+- pentru o schimbare nouă se adaugă un fișier precum `002_add_profile_fields.sql`, fără editarea migrărilor vechi.
+
+La primul deploy peste baza existentă, migrarea `001` folosește operații `IF NOT EXISTS`, apoi înregistrează versiunea fără să șteargă utilizatori sau sesiuni. Nu este necesară nicio variabilă Render suplimentară.
 
 Local poți rămâne pe SQLite, fără `DATABASE_URL`:
 

@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { runPostgresMigrations } = require('./postgresMigrator');
 
 const TRANSIENT_POSTGRES_ERROR_CODES = new Set([
     'ETIMEDOUT',
@@ -11,6 +12,8 @@ const TRANSIENT_POSTGRES_ERROR_CODES = new Set([
     'EHOSTUNREACH',
     '53300',
     '53400',
+    '55P03',
+    '57014',
     '57P01',
     '57P02',
     '57P03',
@@ -89,6 +92,7 @@ function createSqliteDatabase({ dbFilePath, schemaFilePath }) {
 async function createPostgresDatabase({
     databaseUrl,
     schemaFilePath,
+    migrationsDirectoryPath,
     ssl = true,
     maxConnections = 5,
     connectionTimeoutMs = 15_000,
@@ -99,6 +103,7 @@ async function createPostgresDatabase({
     keepAliveInitialDelayMs = 10_000,
     maxLifetimeSeconds = 300,
     poolClass = null,
+    migrationRunner = runPostgresMigrations,
     logger = console,
     sleep = wait
 }) {
@@ -117,9 +122,9 @@ async function createPostgresDatabase({
         }
     }
 
-    const schema = fs.readFileSync(schemaFilePath, 'utf8');
     let pool;
     let initializationAttempt = 0;
+    let migrationResult = null;
 
     while (initializationAttempt < initializationRetryAttempts) {
         initializationAttempt += 1;
@@ -145,7 +150,12 @@ async function createPostgresDatabase({
         });
 
         try {
-            await pool.query(schema);
+            migrationResult = await migrationRunner({
+                pool,
+                migrationsDirectoryPath,
+                fallbackSchemaFilePath: schemaFilePath,
+                logger
+            });
             break;
         } catch (error) {
             await closePostgresPool(
@@ -175,7 +185,9 @@ async function createPostgresDatabase({
 
     logger?.info?.('Postgres database initialized.', {
         databaseProvider: 'postgres',
-        initializationAttempts: initializationAttempt
+        initializationAttempts: initializationAttempt,
+        migrationVersion: migrationResult?.currentVersion || null,
+        appliedMigrations: migrationResult?.appliedCount || 0
     });
 
     let closePromise = null;
@@ -207,6 +219,7 @@ async function createDatabase(options = {}) {
         return createPostgresDatabase({
             databaseUrl: options.databaseUrl,
             schemaFilePath: options.postgresSchemaFilePath || options.schemaFilePath,
+            migrationsDirectoryPath: options.postgresMigrationsDirPath || options.migrationsDirectoryPath,
             ssl: options.postgresSsl ?? true,
             maxConnections: options.maxConnections,
             connectionTimeoutMs: options.connectionTimeoutMs,
@@ -217,6 +230,7 @@ async function createDatabase(options = {}) {
             keepAliveInitialDelayMs: options.keepAliveInitialDelayMs,
             maxLifetimeSeconds: options.maxLifetimeSeconds,
             poolClass: options.poolClass,
+            migrationRunner: options.migrationRunner,
             logger: options.logger,
             sleep: options.sleep
         });

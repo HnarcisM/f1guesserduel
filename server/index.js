@@ -93,6 +93,7 @@ const db = await createDatabase({
     dbFilePath: config.dbFilePath,
     schemaFilePath: config.schemaFilePath,
     postgresSchemaFilePath: config.postgresSchemaFilePath,
+    postgresMigrationsDirPath: config.postgresMigrationsDirPath,
     logger
 });
 const sessionService = createSessionService(db, {

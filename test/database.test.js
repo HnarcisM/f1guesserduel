@@ -10,6 +10,11 @@ const {
 } = require('../server/db/database');
 
 const schemaFilePath = path.join(__dirname, '..', 'server', 'db', 'postgresSchema.sql');
+const migrationsDirectoryPath = path.join(__dirname, '..', 'server', 'db', 'migrations', 'postgres');
+
+async function successfulMigrationRunner() {
+    return { appliedCount: 0, currentVersion: 1 };
+}
 
 class FakePool extends EventEmitter {
     static instances = [];
@@ -37,6 +42,7 @@ class FakePool extends EventEmitter {
 test('Postgres pool uses bounded connections, timeouts and an error listener', async () => {
     FakePool.instances.length = 0;
     const errors = [];
+    const migrationCalls = [];
     const logger = {
         info() {},
         error(message, metadata) {
@@ -53,6 +59,11 @@ test('Postgres pool uses bounded connections, timeouts and an error listener', a
         idleTimeoutMs: 34_000,
         queryTimeoutMs: 18_000,
         poolClass: FakePool,
+        migrationsDirectoryPath,
+        migrationRunner: async options => {
+            migrationCalls.push(options);
+            return { appliedCount: 1, currentVersion: 1 };
+        },
         logger
     });
     const pool = FakePool.instances[0];
@@ -70,7 +81,10 @@ test('Postgres pool uses bounded connections, timeouts and an error listener', a
         maxLifetimeSeconds: 300,
         application_name: 'f1guesserduel'
     });
-    assert.match(pool.queries[0].sql, /CREATE TABLE IF NOT EXISTS users/);
+    assert.equal(migrationCalls.length, 1);
+    assert.equal(migrationCalls[0].pool, pool);
+    assert.equal(migrationCalls[0].migrationsDirectoryPath, migrationsDirectoryPath);
+    assert.equal(migrationCalls[0].fallbackSchemaFilePath, schemaFilePath);
 
     const poolError = new Error('connection lost');
     pool.emit('error', poolError);
@@ -91,6 +105,7 @@ test('Postgres pool shutdown is idempotent', async () => {
         databaseUrl: 'postgresql://example.com/f1',
         schemaFilePath,
         poolClass: FakePool,
+        migrationRunner: successfulMigrationRunner,
         logger: { info() {}, error() {} }
     });
     const pool = FakePool.instances[0];
@@ -104,27 +119,24 @@ test('Postgres pool shutdown is idempotent', async () => {
     assert.equal(pool.endCalls, 1);
 });
 
-test('Postgres initialization retries transient connection failures with backoff', async () => {
-    class RecoveringPool extends FakePool {
-        async query(sql, params = []) {
-            if (FakePool.instances.indexOf(this) === 0) {
-                const error = new Error('connection reset');
-                error.code = 'ECONNRESET';
-                throw error;
-            }
-            return super.query(sql, params);
-        }
-    }
-
+test('Postgres initialization retries transient migration connection failures with backoff', async () => {
     FakePool.instances.length = 0;
     const delays = [];
     const warnings = [];
     const database = await createPostgresDatabase({
         databaseUrl: 'postgresql://example.com/f1',
         schemaFilePath,
-        poolClass: RecoveringPool,
+        poolClass: FakePool,
         initializationRetryAttempts: 3,
         initializationRetryBaseDelayMs: 750,
+        migrationRunner: async ({ pool }) => {
+            if (FakePool.instances.indexOf(pool) === 0) {
+                const error = new Error('connection reset');
+                error.code = 'ECONNRESET';
+                throw error;
+            }
+            return { appliedCount: 0, currentVersion: 1 };
+        },
         sleep: async delayMs => delays.push(delayMs),
         logger: {
             info() {},
@@ -144,13 +156,11 @@ test('Postgres initialization retries transient connection failures with backoff
     await database.closeConnection();
 });
 
-test('Postgres initialization does not retry non-transient schema errors', async () => {
-    class InvalidSchemaPool extends FakePool {
-        async query() {
+test('Postgres initialization does not retry non-transient migration errors', async () => {
+    async function invalidMigrationRunner() {
             const error = new Error('syntax error');
             error.code = '42601';
             throw error;
-        }
     }
 
     FakePool.instances.length = 0;
@@ -160,7 +170,8 @@ test('Postgres initialization does not retry non-transient schema errors', async
         createPostgresDatabase({
             databaseUrl: 'postgresql://example.com/f1',
             schemaFilePath,
-            poolClass: InvalidSchemaPool,
+            poolClass: FakePool,
+            migrationRunner: invalidMigrationRunner,
             initializationRetryAttempts: 3,
             sleep: async delayMs => delays.push(delayMs),
             logger: { info() {}, warn() {}, error() {} }
@@ -175,6 +186,8 @@ test('Postgres initialization does not retry non-transient schema errors', async
 
 test('Postgres transient error detection and retry delays are bounded', () => {
     assert.equal(isTransientPostgresError({ code: '08006' }), true);
+    assert.equal(isTransientPostgresError({ code: '55P03' }), true);
+    assert.equal(isTransientPostgresError({ code: '57014' }), true);
     assert.equal(isTransientPostgresError({ code: '57P03' }), true);
     assert.equal(isTransientPostgresError({ code: '28P01' }), false);
     assert.equal(isTransientPostgresError({ cause: { code: 'ETIMEDOUT' } }), true);
@@ -184,19 +197,16 @@ test('Postgres transient error detection and retry delays are bounded', () => {
 });
 
 test('Postgres pool closes when schema initialization fails', async () => {
-    class FailingPool extends FakePool {
-        async query() {
-            throw new Error('schema failed');
-        }
-    }
-
     FakePool.instances.length = 0;
 
     await assert.rejects(
         createPostgresDatabase({
             databaseUrl: 'postgresql://example.com/f1',
             schemaFilePath,
-            poolClass: FailingPool,
+            poolClass: FakePool,
+            migrationRunner: async () => {
+                throw new Error('schema failed');
+            },
             logger: { info() {}, error() {} }
         }),
         /schema failed/

@@ -334,6 +334,11 @@ function createAppConfig(env = process.env, options = {}) {
         dbFilePath,
         schemaFilePath: resolveOptionalPath(env, 'DB_SCHEMA_FILE_PATH', path.join(projectRoot, 'server', 'db', 'schema.sql')),
         postgresSchemaFilePath: resolveOptionalPath(env, 'POSTGRES_SCHEMA_FILE_PATH', path.join(projectRoot, 'server', 'db', 'postgresSchema.sql')),
+        postgresMigrationsDirPath: resolveOptionalPath(
+            env,
+            'POSTGRES_MIGRATIONS_DIR',
+            path.join(projectRoot, 'server', 'db', 'migrations', 'postgres')
+        ),
         database: {
             provider: databaseProvider,
             url: databaseUrl,
