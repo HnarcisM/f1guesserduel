@@ -46,5 +46,26 @@ export const authApi = {
 export const accountApi = {
     summary() {
         return requestJson('/api/account/summary');
+    },
+
+    updateProfile({ username, currentPassword }) {
+        return requestJson('/api/account/profile', {
+            method: 'PATCH',
+            body: JSON.stringify({ username, currentPassword })
+        });
+    },
+
+    updatePassword({ currentPassword, newPassword }) {
+        return requestJson('/api/account/password', {
+            method: 'PATCH',
+            body: JSON.stringify({ currentPassword, newPassword })
+        });
+    },
+
+    logoutAll() {
+        return requestJson('/api/account/logout-all', {
+            method: 'POST',
+            body: JSON.stringify({})
+        });
     }
 };

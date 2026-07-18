@@ -2604,7 +2604,7 @@ button#sendGuessBtn.rematch-submit-btn {
 
 .auth-profile-tabs {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 4px;
     padding: 4px;
     border: 1px solid var(--border-soft);
@@ -2707,7 +2707,8 @@ button#sendGuessBtn.rematch-submit-btn {
 }
 
 .auth-tab-panel .auth-stats-details,
-.auth-tab-panel .auth-history-section {
+.auth-tab-panel .auth-history-section,
+.auth-tab-panel .auth-settings-card {
     animation: auth-tab-enter 0.16s ease-out;
 }
 
@@ -2724,9 +2725,114 @@ button#sendGuessBtn.rematch-submit-btn {
 
 @media (prefers-reduced-motion: reduce) {
     .auth-tab-panel .auth-stats-details,
-    .auth-tab-panel .auth-history-section {
+    .auth-tab-panel .auth-history-section,
+    .auth-tab-panel .auth-settings-card {
         animation: none;
     }
+}
+
+.auth-settings-card {
+    display: grid;
+    gap: 11px;
+    padding: 14px;
+    border: 1px solid var(--border-soft);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.auth-settings-form {
+    display: grid;
+    gap: 10px;
+}
+
+.auth-settings-form label {
+    display: grid;
+    gap: 6px;
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    font-weight: 800;
+}
+
+.auth-settings-form input {
+    width: 100%;
+    border: 1px solid var(--border-soft);
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--text-primary);
+    padding: 10px 11px;
+    outline: none;
+}
+
+.auth-settings-form input:focus {
+    border-color: var(--accent-f1);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-f1) 18%, transparent);
+}
+
+.auth-settings-submit,
+.auth-danger-btn {
+    border: 1px solid color-mix(in srgb, var(--accent-f1) 55%, transparent);
+    border-radius: 11px;
+    padding: 9px 11px;
+    background: color-mix(in srgb, var(--accent-f1) 16%, transparent);
+    color: var(--text-primary);
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.auth-settings-submit:disabled,
+.auth-danger-btn:disabled {
+    cursor: wait;
+    opacity: 0.58;
+}
+
+.auth-settings-hint {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.7rem;
+}
+
+.auth-security-card {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+}
+
+.auth-security-card > div {
+    display: grid;
+    gap: 3px;
+}
+
+.auth-security-card strong {
+    color: var(--text-primary);
+    font-size: 0.86rem;
+}
+
+.auth-security-card span {
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+}
+
+.auth-danger-btn {
+    border-color: color-mix(in srgb, #fb7185 58%, transparent);
+    background: color-mix(in srgb, #fb7185 13%, transparent);
+    color: #fb7185;
+    white-space: nowrap;
+}
+
+.auth-settings-message {
+    min-height: 18px;
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    font-weight: 750;
+    text-align: center;
+}
+
+.auth-settings-message[data-type="success"] {
+    color: #4ade80;
+}
+
+.auth-settings-message[data-type="error"] {
+    color: #fb7185;
 }
 
 .auth-section-heading {
@@ -2939,6 +3045,19 @@ button#sendGuessBtn.rematch-submit-btn {
 
     .auth-stats-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .auth-profile-tabs button {
+        padding-inline: 3px;
+        font-size: 0.7rem;
+    }
+
+    .auth-security-card {
+        grid-template-columns: 1fr;
+    }
+
+    .auth-danger-btn {
+        width: 100%;
     }
 
     .auth-mode-stats > div {

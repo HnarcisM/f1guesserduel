@@ -3,6 +3,8 @@ const { createAuthRepository } = require('./authRepository');
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD_LENGTH = 8;
+const MAX_PASSWORD_LENGTH = 128;
 
 function normalizeEmail(email) {
     return String(email || '').trim().toLowerCase();
@@ -91,10 +93,70 @@ function createAuthService(databaseOrRepository, sessionService) {
         return sanitizeUser(await repository.findUserById(userId));
     }
 
+    async function verifyCurrentPassword(userId, currentPassword) {
+        if (!Number.isSafeInteger(Number(userId)) || Number(userId) <= 0) return null;
+        if (typeof currentPassword !== 'string' || currentPassword.length === 0) return null;
+
+        const userRow = await repository.findUserCredentialsById(Number(userId));
+        if (!userRow || !(await verifyPassword(currentPassword, userRow.password_hash))) return null;
+        return userRow;
+    }
+
+    async function updateUsername({ userId, username, currentPassword }) {
+        const cleanUsername = normalizeUsername(username);
+        if (!USERNAME_REGEX.test(cleanUsername)) {
+            return {
+                ok: false,
+                status: 400,
+                message: 'Username-ul trebuie să aibă 3-20 caractere și poate conține doar litere, cifre sau underscore.'
+            };
+        }
+
+        const userRow = await verifyCurrentPassword(userId, currentPassword);
+        if (!userRow) {
+            return { ok: false, status: 401, message: 'Parola curentă este greșită.' };
+        }
+
+        try {
+            const updatedUser = await repository.updateUsername(userRow.id, cleanUsername);
+            return { ok: true, user: sanitizeUser(updatedUser) };
+        } catch (error) {
+            if (repository.isUniqueConstraintError?.(error)) {
+                return { ok: false, status: 409, message: 'Acest username este deja folosit.' };
+            }
+            throw error;
+        }
+    }
+
+    async function updatePassword({ userId, currentPassword, newPassword }) {
+        if (typeof newPassword !== 'string'
+            || newPassword.length < MIN_PASSWORD_LENGTH
+            || newPassword.length > MAX_PASSWORD_LENGTH) {
+            return {
+                ok: false,
+                status: 400,
+                message: `Parola nouă trebuie să aibă între ${MIN_PASSWORD_LENGTH} și ${MAX_PASSWORD_LENGTH} de caractere.`
+            };
+        }
+
+        const userRow = await verifyCurrentPassword(userId, currentPassword);
+        if (!userRow) {
+            return { ok: false, status: 401, message: 'Parola curentă este greșită.' };
+        }
+        if (newPassword === currentPassword) {
+            return { ok: false, status: 400, message: 'Parola nouă trebuie să fie diferită de parola curentă.' };
+        }
+
+        await repository.updatePasswordHash(userRow.id, await hashPassword(newPassword));
+        return { ok: true, user: sanitizeUser(userRow) };
+    }
+
     return {
         register,
         login,
-        getUserById
+        getUserById,
+        updateUsername,
+        updatePassword
     };
 }
 
@@ -102,5 +164,7 @@ module.exports = {
     createAuthService,
     normalizeEmail,
     normalizeUsername,
-    sanitizeUser
+    sanitizeUser,
+    MIN_PASSWORD_LENGTH,
+    MAX_PASSWORD_LENGTH
 };

@@ -34,6 +34,20 @@ function createSqliteAuthRepository(db) {
         WHERE id = ?
     `);
 
+    const findCredentialsByIdStmt = db.prepare(`
+        SELECT id, username, email, password_hash, created_at AS createdAt
+        FROM users
+        WHERE id = ?
+    `);
+
+    const updateUsernameStmt = db.prepare(`
+        UPDATE users SET username = ? WHERE id = ?
+    `);
+
+    const updatePasswordHashStmt = db.prepare(`
+        UPDATE users SET password_hash = ? WHERE id = ?
+    `);
+
     const updateLastSeenStmt = db.prepare(`
         UPDATE users SET last_seen_at = datetime('now') WHERE id = ?
     `);
@@ -59,6 +73,14 @@ function createSqliteAuthRepository(db) {
         DELETE FROM sessions WHERE token_hash = ?
     `);
 
+    const deleteUserSessionsStmt = db.prepare(`
+        DELETE FROM sessions WHERE user_id = ?
+    `);
+
+    const deleteOtherUserSessionsStmt = db.prepare(`
+        DELETE FROM sessions WHERE user_id = ? AND token_hash <> ?
+    `);
+
     const deleteExpiredStmt = db.prepare(`
         DELETE FROM sessions WHERE datetime(expires_at) <= datetime('now')
     `);
@@ -76,6 +98,16 @@ function createSqliteAuthRepository(db) {
         async findUserById(userId) {
             return normalizeUserRow(findByIdStmt.get(userId));
         },
+        async findUserCredentialsById(userId) {
+            return normalizeUserRow(findCredentialsByIdStmt.get(userId));
+        },
+        async updateUsername(userId, username) {
+            updateUsernameStmt.run(username, userId);
+            return normalizeUserRow(findByIdStmt.get(userId));
+        },
+        async updatePasswordHash(userId, passwordHash) {
+            return updatePasswordHashStmt.run(passwordHash, userId);
+        },
         async updateLastSeen(userId) {
             return updateLastSeenStmt.run(userId);
         },
@@ -87,6 +119,12 @@ function createSqliteAuthRepository(db) {
         },
         async deleteSessionByHash(tokenHash) {
             return deleteSessionStmt.run(tokenHash);
+        },
+        async deleteSessionsByUserId(userId) {
+            return deleteUserSessionsStmt.run(userId);
+        },
+        async deleteOtherSessionsByUserId(userId, currentTokenHash) {
+            return deleteOtherUserSessionsStmt.run(userId, currentTokenHash);
         },
         async deleteExpiredSessions() {
             return deleteExpiredStmt.run();
@@ -127,6 +165,30 @@ function createPostgresAuthRepository(database) {
             `, [userId]);
             return normalizeUserRow(row);
         },
+        async findUserCredentialsById(userId) {
+            const row = await queryOne(`
+                SELECT id, username, email, password_hash, created_at AS "createdAt"
+                FROM users
+                WHERE id = $1
+            `, [userId]);
+            return normalizeUserRow(row);
+        },
+        async updateUsername(userId, username) {
+            const row = await queryOne(`
+                UPDATE users
+                SET username = $2
+                WHERE id = $1
+                RETURNING id, username, email, created_at AS "createdAt"
+            `, [userId, username]);
+            return normalizeUserRow(row);
+        },
+        async updatePasswordHash(userId, passwordHash) {
+            return database.query(`
+                UPDATE users
+                SET password_hash = $2
+                WHERE id = $1
+            `, [userId, passwordHash]);
+        },
         async updateLastSeen(userId) {
             return database.query('UPDATE users SET last_seen_at = now() WHERE id = $1', [userId]);
         },
@@ -152,6 +214,17 @@ function createPostgresAuthRepository(database) {
         },
         async deleteSessionByHash(tokenHash) {
             return database.query('DELETE FROM sessions WHERE token_hash = $1', [tokenHash]);
+        },
+        async deleteSessionsByUserId(userId) {
+            const result = await database.query('DELETE FROM sessions WHERE user_id = $1', [userId]);
+            return { changes: result.rowCount };
+        },
+        async deleteOtherSessionsByUserId(userId, currentTokenHash) {
+            const result = await database.query(`
+                DELETE FROM sessions
+                WHERE user_id = $1 AND token_hash <> $2
+            `, [userId, currentTokenHash]);
+            return { changes: result.rowCount };
         },
         async deleteExpiredSessions() {
             const result = await database.query('DELETE FROM sessions WHERE expires_at <= now()');

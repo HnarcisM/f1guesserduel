@@ -35,9 +35,11 @@ export function createAuthView({ onAuthChanged } = {}) {
             tabOverview: document.getElementById('authTabOverview'),
             tabStats: document.getElementById('authTabStats'),
             tabHistory: document.getElementById('authTabHistory'),
+            tabSettings: document.getElementById('authTabSettings'),
             panelOverview: document.getElementById('authPanelOverview'),
             panelStats: document.getElementById('authPanelStats'),
             panelHistory: document.getElementById('authPanelHistory'),
+            panelSettings: document.getElementById('authPanelSettings'),
             statPlayed: document.getElementById('authStatPlayed'),
             statWon: document.getElementById('authStatWon'),
             statWinRate: document.getElementById('authStatWinRate'),
@@ -51,23 +53,36 @@ export function createAuthView({ onAuthChanged } = {}) {
             modeOutcomeDetail: document.getElementById('authModeOutcomeDetail'),
             modeStreakDetail: document.getElementById('authModeStreakDetail'),
             gameHistory: document.getElementById('authGameHistory'),
-            accountStatsMessage: document.getElementById('authAccountStatsMessage')
+            accountStatsMessage: document.getElementById('authAccountStatsMessage'),
+            usernameSettingsForm: document.getElementById('authUsernameSettingsForm'),
+            settingsUsername: document.getElementById('authSettingsUsername'),
+            usernameCurrentPassword: document.getElementById('authUsernameCurrentPassword'),
+            saveUsernameBtn: document.getElementById('authSaveUsernameBtn'),
+            passwordSettingsForm: document.getElementById('authPasswordSettingsForm'),
+            passwordCurrent: document.getElementById('authPasswordCurrent'),
+            passwordNew: document.getElementById('authPasswordNew'),
+            passwordConfirm: document.getElementById('authPasswordConfirm'),
+            savePasswordBtn: document.getElementById('authSavePasswordBtn'),
+            logoutAllBtn: document.getElementById('authLogoutAllBtn'),
+            settingsMessage: document.getElementById('authSettingsMessage')
         };
     }
 
     function selectAccountTab(nextTab, { focus = false } = {}) {
-        if (!['overview', 'stats', 'history'].includes(nextTab)) return;
+        if (!['overview', 'stats', 'history', 'settings'].includes(nextTab)) return;
         selectedAccountTab = nextTab;
         const els = getEls();
         const tabs = {
             overview: els.tabOverview,
             stats: els.tabStats,
-            history: els.tabHistory
+            history: els.tabHistory,
+            settings: els.tabSettings
         };
         const panels = {
             overview: els.panelOverview,
             stats: els.panelStats,
-            history: els.panelHistory
+            history: els.panelHistory,
+            settings: els.panelSettings
         };
 
         for (const [tabName, tab] of Object.entries(tabs)) {
@@ -87,7 +102,7 @@ export function createAuthView({ onAuthChanged } = {}) {
     }
 
     function handleAccountTabKeydown(event) {
-        const tabOrder = ['overview', 'stats', 'history'];
+        const tabOrder = ['overview', 'stats', 'history', 'settings'];
         const currentIndex = tabOrder.indexOf(selectedAccountTab);
         let nextIndex = currentIndex;
         if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabOrder.length;
@@ -110,6 +125,29 @@ export function createAuthView({ onAuthChanged } = {}) {
         if (!messageEl) return;
         messageEl.textContent = message;
         messageEl.dataset.type = type;
+    }
+
+    function setSettingsMessage(message = '', type = 'info') {
+        const { settingsMessage } = getEls();
+        if (!settingsMessage) return;
+        settingsMessage.textContent = message;
+        settingsMessage.dataset.type = type;
+    }
+
+    function resetAccountSettingsFields({ clearUsername = false } = {}) {
+        const els = getEls();
+        if (els.settingsUsername) {
+            els.settingsUsername.value = clearUsername ? '' : (currentUser?.username || '');
+            els.settingsUsername.dataset.dirty = 'false';
+        }
+        if (els.usernameCurrentPassword) els.usernameCurrentPassword.value = '';
+        if (els.passwordCurrent) els.passwordCurrent.value = '';
+        if (els.passwordNew) els.passwordNew.value = '';
+        if (els.passwordConfirm) els.passwordConfirm.value = '';
+        if (els.saveUsernameBtn) els.saveUsernameBtn.disabled = false;
+        if (els.savePasswordBtn) els.savePasswordBtn.disabled = false;
+        if (els.logoutAllBtn) els.logoutAllBtn.disabled = false;
+        setSettingsMessage('');
     }
 
     function setMode(nextMode) {
@@ -158,6 +196,9 @@ export function createAuthView({ onAuthChanged } = {}) {
             if (els.accountEmail) els.accountEmail.textContent = currentUser.email || '';
             if (els.accountMemberSince) {
                 els.accountMemberSince.textContent = formatMemberSince(currentUser.createdAt);
+            }
+            if (els.settingsUsername && els.settingsUsername.dataset.dirty !== 'true') {
+                els.settingsUsername.value = currentUser.username || '';
             }
             selectAccountTab(selectedAccountTab);
         }
@@ -378,6 +419,7 @@ export function createAuthView({ onAuthChanged } = {}) {
             currentUser = data.user || null;
             socketAuthToken = data.socketAuthToken || null;
             selectedAccountTab = 'overview';
+            resetAccountSettingsFields();
             renderAccountDashboard();
             renderUser();
             emitAuthChanged();
@@ -391,6 +433,109 @@ export function createAuthView({ onAuthChanged } = {}) {
         }
     }
 
+    async function submitUsernameSettings(event) {
+        event.preventDefault();
+        if (!currentUser) return;
+        const requestedStateVersion = ++authStateVersion;
+        const els = getEls();
+        const username = els.settingsUsername?.value.trim() || '';
+        const currentPassword = els.usernameCurrentPassword?.value || '';
+        if (els.saveUsernameBtn) els.saveUsernameBtn.disabled = true;
+        if (els.accountStatsMessage) els.accountStatsMessage.textContent = '';
+        setSettingsMessage('Se salvează username-ul…');
+
+        try {
+            const data = await accountApi.updateProfile({ username, currentPassword });
+            if (requestedStateVersion !== authStateVersion || !currentUser) return;
+            currentUser = data.user || currentUser;
+            socketAuthToken = data.socketAuthToken || socketAuthToken;
+            if (els.settingsUsername) els.settingsUsername.dataset.dirty = 'false';
+            if (els.usernameCurrentPassword) els.usernameCurrentPassword.value = '';
+            renderUser();
+            emitAuthChanged();
+            setSettingsMessage('Username-ul a fost actualizat.', 'success');
+        } catch (error) {
+            if (requestedStateVersion !== authStateVersion || !currentUser) return;
+            setSettingsMessage(error.message || 'Username-ul nu a putut fi actualizat.', 'error');
+        } finally {
+            if (els.saveUsernameBtn) els.saveUsernameBtn.disabled = false;
+        }
+    }
+
+    async function submitPasswordSettings(event) {
+        event.preventDefault();
+        if (!currentUser) return;
+        const els = getEls();
+        const currentPassword = els.passwordCurrent?.value || '';
+        const newPassword = els.passwordNew?.value || '';
+        const confirmPassword = els.passwordConfirm?.value || '';
+        if (newPassword !== confirmPassword) {
+            setSettingsMessage('Confirmarea parolei nu coincide cu parola nouă.', 'error');
+            return;
+        }
+
+        const requestedStateVersion = ++authStateVersion;
+        if (els.savePasswordBtn) els.savePasswordBtn.disabled = true;
+        if (els.accountStatsMessage) els.accountStatsMessage.textContent = '';
+        setSettingsMessage('Se schimbă parola…');
+        try {
+            const data = await accountApi.updatePassword({ currentPassword, newPassword });
+            if (requestedStateVersion !== authStateVersion || !currentUser) return;
+            currentUser = data.user || currentUser;
+            socketAuthToken = data.socketAuthToken || socketAuthToken;
+            if (els.passwordCurrent) els.passwordCurrent.value = '';
+            if (els.passwordNew) els.passwordNew.value = '';
+            if (els.passwordConfirm) els.passwordConfirm.value = '';
+            emitAuthChanged();
+            const revokedCount = Number(data.sessionsRevoked) || 0;
+            setSettingsMessage(
+                revokedCount > 0
+                    ? `Parola a fost schimbată. ${revokedCount} ${revokedCount === 1 ? 'altă sesiune a fost închisă' : 'alte sesiuni au fost închise'}.`
+                    : 'Parola a fost schimbată.',
+                'success'
+            );
+        } catch (error) {
+            if (requestedStateVersion !== authStateVersion || !currentUser) return;
+            setSettingsMessage(error.message || 'Parola nu a putut fi schimbată.', 'error');
+        } finally {
+            if (els.savePasswordBtn) els.savePasswordBtn.disabled = false;
+        }
+    }
+
+    function clearAuthenticatedState() {
+        currentUser = null;
+        socketAuthToken = null;
+        selectedAccountTab = 'overview';
+        resetAccountSettingsFields({ clearUsername: true });
+        renderAccountDashboard();
+        renderUser();
+        emitAuthChanged();
+        setMode('login');
+    }
+
+    async function logoutEverywhere() {
+        if (!currentUser) return;
+        const confirmed = typeof globalThis.confirm === 'function'
+            && globalThis.confirm('Sigur vrei să închizi toate sesiunile acestui cont?');
+        if (!confirmed) return;
+
+        const requestedStateVersion = ++authStateVersion;
+        const { logoutAllBtn } = getEls();
+        if (logoutAllBtn) logoutAllBtn.disabled = true;
+        setSettingsMessage('Se închid toate sesiunile…');
+        try {
+            await accountApi.logoutAll();
+            if (requestedStateVersion !== authStateVersion) return;
+            clearAuthenticatedState();
+            setMessage('Ai ieșit din cont pe toate dispozitivele.', 'success');
+        } catch (error) {
+            if (requestedStateVersion !== authStateVersion || !currentUser) return;
+            setSettingsMessage(error.message || 'Sesiunile nu au putut fi închise.', 'error');
+        } finally {
+            if (logoutAllBtn) logoutAllBtn.disabled = false;
+        }
+    }
+
     async function logout() {
         const requestedStateVersion = ++authStateVersion;
         try {
@@ -401,14 +546,8 @@ export function createAuthView({ onAuthChanged } = {}) {
 
         if (requestedStateVersion !== authStateVersion) return;
 
-        currentUser = null;
-        socketAuthToken = null;
-        selectedAccountTab = 'overview';
-        renderAccountDashboard();
-        renderUser();
-        emitAuthChanged();
+        clearAuthenticatedState();
         setMessage('Ai ieșit din cont.', 'success');
-        setMode('login');
     }
 
     function setup() {
@@ -421,7 +560,8 @@ export function createAuthView({ onAuthChanged } = {}) {
         const accountTabs = [
             ['overview', els.tabOverview],
             ['stats', els.tabStats],
-            ['history', els.tabHistory]
+            ['history', els.tabHistory],
+            ['settings', els.tabSettings]
         ];
         for (const [tabName, tab] of accountTabs) {
             if (!tab) continue;
@@ -431,10 +571,13 @@ export function createAuthView({ onAuthChanged } = {}) {
         if (els.statsModeSingle) els.statsModeSingle.addEventListener('click', () => selectStatsMode('single'));
         if (els.statsModeDaily) els.statsModeDaily.addEventListener('click', () => selectStatsMode('daily'));
         if (els.statsModeDuel) els.statsModeDuel.addEventListener('click', () => selectStatsMode('duel'));
-        if (els.panel) {
-            const form = els.panel.querySelector('form');
-            if (form) form.addEventListener('submit', submitAuthForm);
+        if (els.form) els.form.addEventListener('submit', submitAuthForm);
+        if (els.usernameSettingsForm) els.usernameSettingsForm.addEventListener('submit', submitUsernameSettings);
+        if (els.passwordSettingsForm) els.passwordSettingsForm.addEventListener('submit', submitPasswordSettings);
+        if (els.settingsUsername) {
+            els.settingsUsername.addEventListener('input', () => { els.settingsUsername.dataset.dirty = 'true'; });
         }
+        if (els.logoutAllBtn) els.logoutAllBtn.addEventListener('click', logoutEverywhere);
 
         setMode('login');
         selectAccountTab('overview');

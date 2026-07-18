@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 
 const { createMemoryRateLimiter } = require('../server/middleware/rateLimit');
 const { createAuthRoutes } = require('../server/auth/authRoutes');
+const { createAccountRoutes } = require('../server/account/accountRoutes');
 
 function createMockResponse() {
     return {
@@ -240,4 +241,43 @@ test('auth routes share the distributed store with isolated login and register l
     assert.equal(consumed[1].key, 'auth-register:198.51.100.7');
     assert.equal(consumed[1].maxEvents, 3);
     assert.equal(consumed[1].windowMs, 10 * 60 * 1000);
+});
+
+test('sensitive account settings use isolated distributed limits per authenticated user', async () => {
+    const consumed = [];
+    const rateLimitStore = {
+        provider: 'redis',
+        async consume(options) {
+            consumed.push(options);
+            return {
+                allowed: true,
+                remaining: options.maxEvents - 1,
+                retryAfterMs: 0,
+                resetAt: Date.now() + options.windowMs
+            };
+        }
+    };
+    const router = createAccountRoutes({
+        accountStatsService: {},
+        authService: {},
+        sessionService: { cookieName: 'session' },
+        rateLimitStore,
+        logger: { error() {} }
+    });
+    const getLimiter = routePath => router.stack
+        .find(layer => layer.route?.path === routePath)
+        .route.stack[1].handle;
+    const req = { user: { id: 7 }, ip: '198.51.100.7' };
+
+    await runAsyncLimiter(getLimiter('/profile'), req);
+    await runAsyncLimiter(getLimiter('/password'), req);
+    await runAsyncLimiter(getLimiter('/logout-all'), req);
+
+    assert.deepEqual(consumed.map(item => item.key), [
+        'account-profile:user-7',
+        'account-password:user-7',
+        'account-logout-all:user-7'
+    ]);
+    assert.deepEqual(consumed.map(item => item.maxEvents), [5, 5, 5]);
+    assert.deepEqual(consumed.map(item => item.windowMs), [10 * 60 * 1000, 15 * 60 * 1000, 60 * 1000]);
 });

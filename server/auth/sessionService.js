@@ -128,6 +128,19 @@ function createSessionService(databaseOrRepository, options = {}) {
         await repository.deleteSessionByHash(hashToken(token));
     }
 
+    async function destroyAllSessionsForUser(userId) {
+        if (!Number.isSafeInteger(Number(userId)) || Number(userId) <= 0) return { changes: 0 };
+        return repository.deleteSessionsByUserId(Number(userId));
+    }
+
+    async function destroyOtherSessionsForUser(userId, currentToken) {
+        if (!Number.isSafeInteger(Number(userId)) || Number(userId) <= 0) return { changes: 0 };
+        if (!currentToken || typeof currentToken !== 'string') {
+            return destroyAllSessionsForUser(userId);
+        }
+        return repository.deleteOtherSessionsByUserId(Number(userId), hashToken(currentToken));
+    }
+
     return {
         createSession,
         getUserByToken,
@@ -136,6 +149,8 @@ function createSessionService(databaseOrRepository, options = {}) {
         cleanupExpiredSessions,
         startExpiredSessionCleanup,
         destroySession,
+        destroyAllSessionsForUser,
+        destroyOtherSessionsForUser,
         cookieName,
         maxAgeMs,
         sessionCleanupIntervalMs

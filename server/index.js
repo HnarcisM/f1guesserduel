@@ -183,7 +183,14 @@ app.use('/api/auth', createAuthRoutes({
     logger,
     cookieOptions: config.auth.cookie
 }));
-app.use('/api/account', createAccountRoutes({ accountStatsService }));
+app.use('/api/account', createAccountRoutes({
+    accountStatsService,
+    authService,
+    sessionService,
+    rateLimitStore: redisRateLimitStore,
+    logger,
+    cookieOptions: config.auth.cookie
+}));
 app.use(express.static(config.publicDir, {
     etag: true,
     lastModified: true,

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>F1 Guesser</title>
     <script src="/js/themeBootstrap.js?v=theme-bootstrap-1"></script>
-    <link rel="stylesheet" href="/style.bundle.css?v=frontend-cache-4">
+    <link rel="stylesheet" href="/style.bundle.css?v=frontend-cache-5">
 </head>
 <body>
 
@@ -25,7 +25,7 @@
         <div data-level="easy" class="menu-item">🟢 Easy</div>
         <div data-level="medium" class="menu-item">🟡 Medium</div>
         <div data-level="hard" class="menu-item">🔴 Hard</div>
-        
+
         <div class="menu-section-title">🌅 DAILY CHALLENGE</div>
         <div data-daily-level="easy" class="menu-item daily-item">🟢 Daily Easy</div>
         <div data-daily-level="medium" class="menu-item daily-item">🟡 Daily Medium</div>
@@ -249,7 +249,7 @@
         <button type="button" class="end-game-close" id="closeEndGamePopup" aria-label="Închide popup-ul">×</button>
         <h2 id="endGameTitle">🏆 Felicitări!</h2>
         <p id="endGameMessage">Ai ghicit pilotul.</p>
-        
+
         <div id="stats-container" class="stats-container">
             <p class="stats-title">📊 STATISTICI REALE</p>
             <div class="stats-summary">
@@ -266,7 +266,7 @@
                     <div class="stats-label">Curent Streak</div>
                 </div>
             </div>
-            
+
             <p class="distribution-title">DISTRIBUȚIE ÎNCERCĂRI:</p>
             <div id="guess-distribution" class="guess-distribution">
                 </div>
@@ -337,6 +337,7 @@
             <button type="button" id="authTabOverview" role="tab" aria-selected="true" aria-controls="authPanelOverview" tabindex="0">Prezentare</button>
             <button type="button" id="authTabStats" role="tab" aria-selected="false" aria-controls="authPanelStats" tabindex="-1">Statistici</button>
             <button type="button" id="authTabHistory" role="tab" aria-selected="false" aria-controls="authPanelHistory" tabindex="-1">Istoric</button>
+            <button type="button" id="authTabSettings" role="tab" aria-selected="false" aria-controls="authPanelSettings" tabindex="-1">Setări</button>
         </div>
 
         <section id="authPanelOverview" class="auth-tab-panel" role="tabpanel" aria-labelledby="authTabOverview">
@@ -388,6 +389,56 @@
                 <div id="authGameHistory" class="auth-game-history"></div>
             </div>
         </section>
+
+        <section id="authPanelSettings" class="auth-tab-panel" role="tabpanel" aria-labelledby="authTabSettings" hidden>
+            <div class="auth-settings-card">
+                <div class="auth-section-heading">
+                    <h3>Schimbă username-ul</h3>
+                </div>
+                <form id="authUsernameSettingsForm" class="auth-settings-form">
+                    <label>
+                        Username nou
+                        <input type="text" id="authSettingsUsername" autocomplete="username" minlength="3" maxlength="20" required>
+                    </label>
+                    <label>
+                        Parola curentă
+                        <input type="password" id="authUsernameCurrentPassword" autocomplete="current-password" required>
+                    </label>
+                    <button type="submit" id="authSaveUsernameBtn" class="auth-settings-submit">Salvează username-ul</button>
+                </form>
+            </div>
+
+            <div class="auth-settings-card">
+                <div class="auth-section-heading">
+                    <h3>Schimbă parola</h3>
+                </div>
+                <form id="authPasswordSettingsForm" class="auth-settings-form">
+                    <label>
+                        Parola curentă
+                        <input type="password" id="authPasswordCurrent" autocomplete="current-password" required>
+                    </label>
+                    <label>
+                        Parola nouă
+                        <input type="password" id="authPasswordNew" autocomplete="new-password" minlength="8" maxlength="128" required>
+                    </label>
+                    <label>
+                        Confirmă parola nouă
+                        <input type="password" id="authPasswordConfirm" autocomplete="new-password" minlength="8" maxlength="128" required>
+                    </label>
+                    <button type="submit" id="authSavePasswordBtn" class="auth-settings-submit">Schimbă parola</button>
+                </form>
+                <p class="auth-settings-hint">După schimbare, celelalte sesiuni vor fi deconectate automat.</p>
+            </div>
+
+            <div class="auth-settings-card auth-security-card">
+                <div>
+                    <strong>Logout peste tot</strong>
+                    <span>Închide toate sesiunile contului, inclusiv aceasta.</span>
+                </div>
+                <button type="button" id="authLogoutAllBtn" class="auth-danger-btn">Logout peste tot</button>
+            </div>
+            <p id="authSettingsMessage" class="auth-settings-message" aria-live="polite"></p>
+        </section>
         <p id="authAccountStatsMessage" class="auth-account-stats-message" aria-live="polite"></p>
     </section>
 
@@ -415,6 +466,6 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script defer src="/game.bundle.min.js?v=frontend-bundle-5"></script>
+<script defer src="/game.bundle.min.js?v=frontend-bundle-6"></script>
 </body>
 </html>

@@ -25,6 +25,26 @@ function createFakeSessionRepository() {
             const existed = sessions.delete(tokenHash);
             return { changes: existed ? 1 : 0 };
         },
+        async deleteSessionsByUserId(userId) {
+            let changes = 0;
+            for (const [tokenHash, session] of sessions.entries()) {
+                if (session.userId === userId) {
+                    sessions.delete(tokenHash);
+                    changes += 1;
+                }
+            }
+            return { changes };
+        },
+        async deleteOtherSessionsByUserId(userId, currentTokenHash) {
+            let changes = 0;
+            for (const [tokenHash, session] of sessions.entries()) {
+                if (session.userId === userId && tokenHash !== currentTokenHash) {
+                    sessions.delete(tokenHash);
+                    changes += 1;
+                }
+            }
+            return { changes };
+        },
         async deleteExpiredSessions() {
             let changes = 0;
             for (const [tokenHash, session] of sessions.entries()) {
@@ -106,4 +126,28 @@ test('session service hashes tokens before storing them', async () => {
 
     assert.equal(repository.sessions.has(session.token), false);
     assert.equal(repository.sessions.has(hashToken(session.token)), true);
+});
+
+test('password changes keep the current session and revoke every other user session', async () => {
+    const { repository, sessionService } = createTestSessionService();
+    const currentSession = await sessionService.createSession(1);
+    const otherSession = await sessionService.createSession(1);
+
+    const result = await sessionService.destroyOtherSessionsForUser(1, currentSession.token);
+
+    assert.equal(result.changes, 1);
+    assert.equal(repository.sessions.has(hashToken(currentSession.token)), true);
+    assert.equal(repository.sessions.has(hashToken(otherSession.token)), false);
+});
+
+test('logout everywhere revokes the current session and all other user sessions', async () => {
+    const { repository, sessionService } = createTestSessionService();
+    const firstSession = await sessionService.createSession(1);
+    const secondSession = await sessionService.createSession(1);
+
+    const result = await sessionService.destroyAllSessionsForUser(1);
+
+    assert.equal(result.changes, 2);
+    assert.equal(repository.sessions.has(hashToken(firstSession.token)), false);
+    assert.equal(repository.sessions.has(hashToken(secondSession.token)), false);
 });

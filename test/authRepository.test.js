@@ -38,6 +38,31 @@ function createFakePostgresDatabase() {
                 };
             }
 
+            if (sql.includes('FROM users') && sql.includes('password_hash') && sql.includes('WHERE id = $1')) {
+                return {
+                    rows: [{
+                        id: '7',
+                        username: 'Narcis',
+                        email: 'narcis@example.com',
+                        password_hash: 'hash',
+                        createdAt: '2026-07-07T00:00:00.000Z'
+                    }],
+                    rowCount: 1
+                };
+            }
+
+            if (sql.includes('UPDATE users') && sql.includes('SET username')) {
+                return {
+                    rows: [{
+                        id: '7',
+                        username: params[1],
+                        email: 'narcis@example.com',
+                        createdAt: '2026-07-07T00:00:00.000Z'
+                    }],
+                    rowCount: 1
+                };
+            }
+
             if (sql.includes('FROM sessions') && sql.includes('JOIN users')) {
                 return {
                     rows: [{
@@ -88,4 +113,24 @@ test('unique constraint helper supports sqlite and postgres conflict codes', () 
     assert.equal(isUniqueConstraintError({ code: 'SQLITE_CONSTRAINT_UNIQUE' }), true);
     assert.equal(isUniqueConstraintError({ code: '23505' }), true);
     assert.equal(isUniqueConstraintError({ code: 'ECONNRESET' }), false);
+});
+
+test('postgres account credential updates and session revocation stay parameterized', async () => {
+    const database = createFakePostgresDatabase();
+    const repository = createPostgresAuthRepository(database);
+
+    const credentials = await repository.findUserCredentialsById(7);
+    const user = await repository.updateUsername(7, 'Narcis_Updated');
+    await repository.updatePasswordHash(7, 'pbkdf2$new-hash');
+    await repository.deleteOtherSessionsByUserId(7, 'current-token-hash');
+    await repository.deleteSessionsByUserId(7);
+
+    assert.equal(credentials.password_hash, 'hash');
+    assert.equal(user.username, 'Narcis_Updated');
+    assert.deepEqual(database.queries[0].params, [7]);
+    assert.deepEqual(database.queries[1].params, [7, 'Narcis_Updated']);
+    assert.deepEqual(database.queries[2].params, [7, 'pbkdf2$new-hash']);
+    assert.deepEqual(database.queries[3].params, [7, 'current-token-hash']);
+    assert.deepEqual(database.queries[4].params, [7]);
+    assert.match(database.queries[3].sql, /token_hash <> \$2/);
 });

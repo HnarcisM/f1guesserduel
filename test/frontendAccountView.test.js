@@ -63,7 +63,8 @@ function createAccountDocument() {
         'authSwitchBtn', 'authMessage', 'authUserBadge', 'authLogoutBtn', 'authForm',
         'authAccountView', 'authAccountAvatar', 'authAccountUsername', 'authAccountEmail',
         'authAccountMemberSince', 'authTabOverview', 'authTabStats', 'authTabHistory',
-        'authPanelOverview', 'authPanelStats', 'authPanelHistory',
+        'authTabSettings', 'authPanelOverview', 'authPanelStats', 'authPanelHistory',
+        'authPanelSettings',
         'authStatPlayed', 'authStatWon', 'authStatWinRate',
         'authStatBestStreak', 'authSingleStats', 'authDailyStats', 'authDuelStats',
         'authStatsModeSingle', 'authStatsModeDaily', 'authStatsModeDuel',
@@ -71,7 +72,10 @@ function createAccountDocument() {
         'authGuessCount1', 'authGuessCount2', 'authGuessCount3', 'authGuessCount4',
         'authGuessCount5', 'authGuessCount6', 'authGuessBar1', 'authGuessBar2',
         'authGuessBar3', 'authGuessBar4', 'authGuessBar5', 'authGuessBar6',
-        'authAccountStatsMessage'
+        'authAccountStatsMessage', 'authUsernameSettingsForm', 'authSettingsUsername',
+        'authUsernameCurrentPassword', 'authSaveUsernameBtn', 'authPasswordSettingsForm',
+        'authPasswordCurrent', 'authPasswordNew', 'authPasswordConfirm', 'authSavePasswordBtn',
+        'authLogoutAllBtn', 'authSettingsMessage'
     ];
     const elements = Object.fromEntries(ids.map(id => [id, createElement()]));
     elements.authPanel.querySelector = selector => selector === 'form' ? elements.authForm : null;
@@ -102,8 +106,13 @@ test('authenticated account dashboard is present while the login form remains se
     assert.match(html, /id="authTabOverview"[^>]*role="tab"/);
     assert.match(html, /id="authTabStats"[^>]*role="tab"/);
     assert.match(html, /id="authTabHistory"[^>]*role="tab"/);
+    assert.match(html, /id="authTabSettings"[^>]*role="tab"/);
     assert.match(html, /id="authPanelStats"[^>]*role="tabpanel"[^>]*hidden/);
     assert.match(html, /id="authPanelHistory"[^>]*role="tabpanel"[^>]*hidden/);
+    assert.match(html, /id="authPanelSettings"[^>]*role="tabpanel"[^>]*hidden/);
+    assert.match(html, /id="authUsernameSettingsForm"/);
+    assert.match(html, /id="authPasswordSettingsForm"/);
+    assert.match(html, /id="authLogoutAllBtn"/);
     assert.match(css, /\.auth-stats-grid/);
     assert.match(css, /\.auth-profile-tabs/);
 });
@@ -203,4 +212,105 @@ test('a delayed initial auth refresh cannot overwrite a newer login or another a
     elements.authStatsModeDuel.listeners.get('click')();
     assert.match(elements.authModeOutcomeDetail.textContent, /1 remize/);
     assert.equal(elements.authGuessCount3.textContent, '1');
+});
+
+test('account settings update credentials and logout every active session', async t => {
+    const originalDocument = globalThis.document;
+    const originalFetch = globalThis.fetch;
+    const originalConfirm = globalThis.confirm;
+    const { document, elements } = createAccountDocument();
+    const requests = [];
+    const authChanges = [];
+    globalThis.document = document;
+    globalThis.confirm = () => true;
+    globalThis.fetch = async (url, options = {}) => {
+        requests.push({ url, options });
+        if (url.endsWith('/me')) {
+            return {
+                ok: true,
+                async json() {
+                    return {
+                        user: { id: 7, username: 'Narcis', email: 'narcis@example.com' },
+                        socketAuthToken: 'socket-initial'
+                    };
+                }
+            };
+        }
+        if (url.endsWith('/profile')) {
+            return {
+                ok: true,
+                async json() {
+                    return {
+                        user: { id: 7, username: 'Narcis_New', email: 'narcis@example.com' },
+                        socketAuthToken: 'socket-profile'
+                    };
+                }
+            };
+        }
+        if (url.endsWith('/password')) {
+            return {
+                ok: true,
+                async json() {
+                    return {
+                        ok: true,
+                        user: { id: 7, username: 'Narcis_New', email: 'narcis@example.com' },
+                        socketAuthToken: 'socket-password',
+                        sessionsRevoked: 2
+                    };
+                }
+            };
+        }
+        if (url.endsWith('/logout-all')) {
+            return { ok: true, async json() { return { ok: true, user: null, socketAuthToken: null }; } };
+        }
+        throw new Error(`Unexpected URL: ${url}`);
+    };
+    t.after(() => {
+        if (originalDocument === undefined) delete globalThis.document;
+        else globalThis.document = originalDocument;
+        if (originalFetch === undefined) delete globalThis.fetch;
+        else globalThis.fetch = originalFetch;
+        if (originalConfirm === undefined) delete globalThis.confirm;
+        else globalThis.confirm = originalConfirm;
+    });
+
+    const { createAuthView } = await import('../public/js/authView.js');
+    const view = createAuthView({
+        onAuthChanged(user, token) {
+            authChanges.push({ user, token });
+        }
+    });
+    view.setup();
+    await new Promise(resolve => setImmediate(resolve));
+
+    elements.authTabSettings.listeners.get('click')();
+    assert.equal(elements.authPanelSettings.hidden, false);
+    assert.equal(elements.authSettingsUsername.value, 'Narcis');
+
+    elements.authSettingsUsername.value = 'Narcis_New';
+    elements.authSettingsUsername.listeners.get('input')();
+    elements.authUsernameCurrentPassword.value = 'StrongPassword123!';
+    await elements.authUsernameSettingsForm.listeners.get('submit')({ preventDefault() {} });
+    assert.equal(view.getCurrentUser().username, 'Narcis_New');
+    assert.equal(elements.authAccountUsername.textContent, 'Narcis_New');
+    assert.match(elements.authSettingsMessage.textContent, /actualizat/);
+
+    elements.authPasswordCurrent.value = 'StrongPassword123!';
+    elements.authPasswordNew.value = 'AnotherStrongPassword456!';
+    elements.authPasswordConfirm.value = 'different';
+    const passwordRequestsBeforeMismatch = requests.filter(request => request.url.endsWith('/password')).length;
+    await elements.authPasswordSettingsForm.listeners.get('submit')({ preventDefault() {} });
+    assert.equal(requests.filter(request => request.url.endsWith('/password')).length, passwordRequestsBeforeMismatch);
+    assert.match(elements.authSettingsMessage.textContent, /nu coincide/);
+
+    elements.authPasswordConfirm.value = 'AnotherStrongPassword456!';
+    await elements.authPasswordSettingsForm.listeners.get('submit')({ preventDefault() {} });
+    assert.equal(view.getSocketAuthToken(), 'socket-password');
+    assert.match(elements.authSettingsMessage.textContent, /2 alte sesiuni/);
+
+    await elements.authLogoutAllBtn.listeners.get('click')();
+    assert.equal(view.getCurrentUser(), null);
+    assert.equal(view.getSocketAuthToken(), null);
+    assert.equal(authChanges.at(-1).user, null);
+    assert.equal(requests.filter(request => request.url.endsWith('/logout-all')).length, 1);
 });

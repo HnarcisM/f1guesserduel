@@ -53,6 +53,24 @@ function createFakeAuthRepository() {
         async findUserById(id) {
             return users.get(Number(id)) || null;
         },
+        async findUserCredentialsById(id) {
+            return users.get(Number(id)) || null;
+        },
+        async updateUsername(id, username) {
+            if (hasUsername(username) && users.get(Number(id))?.username.toLowerCase() !== username.toLowerCase()) {
+                const error = new Error('unique constraint failed');
+                error.code = '23505';
+                throw error;
+            }
+            const user = users.get(Number(id));
+            if (user) user.username = username;
+            return user || null;
+        },
+        async updatePasswordHash(id, passwordHash) {
+            const user = users.get(Number(id));
+            if (user) user.password_hash = passwordHash;
+            return { changes: user ? 1 : 0 };
+        },
         async updateLastSeen(id) {
             const user = users.get(Number(id));
             if (user) user.last_seen_at = 'updated';
@@ -134,4 +152,57 @@ test('auth service returns conflict when repository reports unique constraint', 
 
     assert.equal(duplicate.ok, false);
     assert.equal(duplicate.status, 409);
+});
+
+test('account username change requires the current password and preserves safe user fields', async () => {
+    const repository = createFakeAuthRepository();
+    const authService = createAuthService(repository, createFakeSessionService());
+    const registered = await authService.register({
+        username: 'Narcis',
+        email: 'narcis@example.com',
+        password: 'StrongPassword123!'
+    });
+
+    const rejected = await authService.updateUsername({
+        userId: registered.user.id,
+        username: 'Narcis_New',
+        currentPassword: 'wrong-password'
+    });
+    const updated = await authService.updateUsername({
+        userId: registered.user.id,
+        username: 'Narcis_New',
+        currentPassword: 'StrongPassword123!'
+    });
+
+    assert.equal(rejected.status, 401);
+    assert.equal(updated.ok, true);
+    assert.equal(updated.user.username, 'Narcis_New');
+    assert.equal(Object.hasOwn(updated.user, 'password_hash'), false);
+});
+
+test('account password change validates, hashes and replaces the credential', async () => {
+    const repository = createFakeAuthRepository();
+    const authService = createAuthService(repository, createFakeSessionService());
+    const registered = await authService.register({
+        username: 'Narcis',
+        email: 'narcis@example.com',
+        password: 'StrongPassword123!'
+    });
+
+    const samePassword = await authService.updatePassword({
+        userId: registered.user.id,
+        currentPassword: 'StrongPassword123!',
+        newPassword: 'StrongPassword123!'
+    });
+    const updated = await authService.updatePassword({
+        userId: registered.user.id,
+        currentPassword: 'StrongPassword123!',
+        newPassword: 'AnotherStrongPassword456!'
+    });
+    const storedUser = repository.users.get(registered.user.id);
+
+    assert.equal(samePassword.status, 400);
+    assert.equal(updated.ok, true);
+    assert.equal(await verifyPassword('StrongPassword123!', storedUser.password_hash), false);
+    assert.equal(await verifyPassword('AnotherStrongPassword456!', storedUser.password_hash), true);
 });
