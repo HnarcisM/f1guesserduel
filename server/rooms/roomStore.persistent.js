@@ -10,8 +10,15 @@ function createPersistentRoomStore(options = {}) {
         : 250;
     const rooms = new Map();
     let saveTimer = null;
+    let savePromise = null;
+    let closePromise = null;
+    let dirtyRevision = 0;
+    let persistedRevision = 0;
+    let lastSavedRoomCount = 0;
     let lastSaveError = null;
+    let isClosing = false;
     const logger = options.logger || console;
+    const writeRooms = options.writePersistedRooms || writePersistedRooms;
 
     const persistenceOptions = {
         driversRepository: options.driversRepository
@@ -45,31 +52,62 @@ function createPersistentRoomStore(options = {}) {
         return [...rooms.values()];
     }
 
-    function saveNow() {
+    function clearSaveTimer() {
         if (saveTimer) {
             clearTimeout(saveTimer);
             saveTimer = null;
         }
+    }
 
-        try {
-            lastSaveError = null;
-            return writePersistedRooms(persistenceFilePath, values());
-        } catch (error) {
-            lastSaveError = error;
-            throw error;
+    async function drainPendingSaves() {
+        while (persistedRevision < dirtyRevision) {
+            const revisionToPersist = dirtyRevision;
+
+            try {
+                lastSavedRoomCount = await writeRooms(persistenceFilePath, values());
+                persistedRevision = revisionToPersist;
+                lastSaveError = null;
+            } catch (error) {
+                lastSaveError = error;
+                throw error;
+            }
         }
+
+        return lastSavedRoomCount;
+    }
+
+    function saveNow() {
+        clearSaveTimer();
+        if (!persistenceFilePath) return Promise.resolve(0);
+
+        if (dirtyRevision === persistedRevision && !savePromise) {
+            dirtyRevision += 1;
+        }
+
+        if (!savePromise) {
+            const trackedSave = drainPendingSaves().finally(() => {
+                if (savePromise === trackedSave) savePromise = null;
+            });
+            savePromise = trackedSave;
+        }
+
+        return savePromise;
+    }
+
+    function logSaveError(error) {
+        logger?.error?.('[rooms] Nu am putut salva camerele persistente.', { error });
+    }
+
+    function startSave() {
+        saveNow().catch(logSaveError);
     }
 
     function scheduleSave() {
-        if (saveTimer) return;
+        if (saveTimer || isClosing) return;
 
         saveTimer = setTimeout(() => {
             saveTimer = null;
-            try {
-                saveNow();
-            } catch (error) {
-                logger?.error?.('[rooms] Nu am putut salva camerele persistente.', { error });
-            }
+            startSave();
         }, saveDebounceMs);
 
         if (typeof saveTimer.unref === 'function') {
@@ -79,19 +117,25 @@ function createPersistentRoomStore(options = {}) {
 
     function markDirty() {
         if (!persistenceFilePath) return;
+        dirtyRevision += 1;
+
         if (saveDebounceMs === 0) {
-            saveNow();
+            startSave();
             return;
         }
         scheduleSave();
     }
 
     function close() {
-        if (saveTimer) {
-            clearTimeout(saveTimer);
-            saveTimer = null;
-            saveNow();
-        }
+        if (closePromise) return closePromise;
+
+        isClosing = true;
+        clearSaveTimer();
+        closePromise = dirtyRevision > persistedRevision || savePromise
+            ? saveNow()
+            : Promise.resolve(lastSavedRoomCount);
+
+        return closePromise;
     }
 
     function getLastSaveError() {

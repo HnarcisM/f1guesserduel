@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOM_PERSISTENCE_VERSION = 2;
+let tempFileSequence = 0;
 
 function cloneRoundResult(roundResult) {
     if (!roundResult || typeof roundResult !== 'object') return null;
@@ -33,10 +34,6 @@ function cloneScoreboard(scoreboard) {
             username: entry.username || 'Guest',
             wins: typeof entry.wins === 'number' ? entry.wins : 0
         }]));
-}
-
-function ensureDirectoryForFile(filePath) {
-    fs.mkdirSync(path.dirname(filePath), { recursive: true });
 }
 
 function cloneDriver(driver) {
@@ -152,13 +149,20 @@ function readPersistedRooms(filePath, options = {}) {
         .filter(Boolean);
 }
 
-function writePersistedRooms(filePath, rooms) {
-    ensureDirectoryForFile(filePath);
+async function writePersistedRooms(filePath, rooms) {
     const payload = serializeRooms(rooms);
-    const tempFilePath = `${filePath}.tmp`;
+    tempFileSequence += 1;
+    const tempFilePath = `${filePath}.${process.pid}.${tempFileSequence}.tmp`;
 
-    fs.writeFileSync(tempFilePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
-    fs.renameSync(tempFilePath, filePath);
+    await fs.promises.mkdir(path.dirname(filePath), { recursive: true });
+
+    try {
+        await fs.promises.writeFile(tempFilePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+        await fs.promises.rename(tempFilePath, filePath);
+    } catch (error) {
+        await fs.promises.unlink(tempFilePath).catch(() => {});
+        throw error;
+    }
 
     return payload.rooms.length;
 }

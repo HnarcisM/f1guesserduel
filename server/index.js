@@ -187,9 +187,9 @@ app.use(createErrorMiddleware({
     logger
 }));
 
-function shutdownRoomStore() {
+async function shutdownRoomStore() {
     try {
-        roomStore.close?.();
+        await roomStore.close?.();
     } catch (error) {
         logger.error('[rooms] Nu am putut salva camerele la închidere.', { error });
     }
@@ -201,11 +201,11 @@ function prepareApplicationShutdown() {
 
 async function cleanupApplicationResources() {
     stopExpiredSessionCleanup?.();
-    shutdownRoomStore();
+    await shutdownRoomStore();
     await db.closeConnection?.();
 }
 
-process.once('exit', shutdownRoomStore);
+process.once('beforeExit', shutdownRoomStore);
 
 server.on('error', createServerErrorHandler({
     port: config.port,

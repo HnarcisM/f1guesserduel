@@ -44,7 +44,7 @@ function createTestDriversRepository() {
     };
 }
 
-test('persistent room store saves compact rooms and restores round state from driver repository', () => {
+test('persistent room store saves compact rooms and restores round state from driver repository', async () => {
     const filePath = makeTempFile();
     const driversRepository = createTestDriversRepository();
     const store = createPersistentRoomStore({ persistenceFilePath: filePath, saveDebounceMs: 0, driversRepository });
@@ -57,6 +57,7 @@ test('persistent room store saves compact rooms and restores round state from dr
     room.roundStartedAt = 12345;
 
     store.set(room.roomId, room);
+    await store.saveNow();
 
     const persistedPayload = JSON.parse(fs.readFileSync(filePath, 'utf8'));
     assert.equal(persistedPayload.version, 2);
@@ -77,7 +78,7 @@ test('persistent room store saves compact rooms and restores round state from dr
     assert.equal(restoredRooms[0].hostId, null);
 });
 
-test('persistent room store hydrates compact persisted rooms when it starts', () => {
+test('persistent room store hydrates compact persisted rooms when it starts', async () => {
     const filePath = makeTempFile();
     const driversRepository = createTestDriversRepository();
     const originalStore = createPersistentRoomStore({ persistenceFilePath: filePath, saveDebounceMs: 0, driversRepository });
@@ -88,6 +89,7 @@ test('persistent room store hydrates compact persisted rooms when it starts', ()
     room.driversList = testDrivers;
     room.roundState = 'playing';
     originalStore.set(room.roomId, room);
+    await originalStore.saveNow();
 
     const restoredStore = createPersistentRoomStore({ persistenceFilePath: filePath, saveDebounceMs: 0, driversRepository });
     const restoredRoom = restoredStore.get('abc123');
@@ -97,12 +99,13 @@ test('persistent room store hydrates compact persisted rooms when it starts', ()
     assert.equal(restoredRoom.driversList.length, 2);
 });
 
-test('first player joining a restored empty room becomes host', () => {
+test('first player joining a restored empty room becomes host', async () => {
     const filePath = makeTempFile();
     const driversRepository = createTestDriversRepository();
     const originalStore = createPersistentRoomStore({ persistenceFilePath: filePath, saveDebounceMs: 0, driversRepository });
     const room = createRoom('abc123', 'old-socket');
     originalStore.set(room.roomId, room);
+    await originalStore.saveNow();
 
     const restoredStore = createPersistentRoomStore({ persistenceFilePath: filePath, saveDebounceMs: 0, driversRepository });
     const restoredRoom = restoredStore.get('abc123');
@@ -135,4 +138,91 @@ test('legacy persisted rooms with full target and drivers list can still be rest
     assert.equal(restoredRooms[0].targetDriver.name, 'Lewis Hamilton');
     assert.equal(restoredRooms[0].driversList.length, 2);
     assert.equal(restoredRooms[0].roundState, 'playing');
+});
+
+test('async room persistence coalesces changes made while a save is running', async () => {
+    const snapshots = [];
+    let releaseFirstWrite;
+    const firstWriteFinished = new Promise(resolve => {
+        releaseFirstWrite = resolve;
+    });
+    const store = createPersistentRoomStore({
+        persistenceFilePath: makeTempFile(),
+        saveDebounceMs: 0,
+        async writePersistedRooms(filePath, rooms) {
+            snapshots.push(rooms.map(room => room.roomId));
+            if (snapshots.length === 1) await firstWriteFinished;
+            return rooms.length;
+        }
+    });
+
+    store.set('first', createRoom('first', 'socket-1'));
+    store.set('second', createRoom('second', 'socket-2'));
+
+    const flushPromise = store.saveNow();
+    assert.deepEqual(snapshots, [['first']]);
+
+    releaseFirstWrite();
+    const savedRoomCount = await flushPromise;
+
+    assert.equal(savedRoomCount, 2);
+    assert.deepEqual(snapshots, [['first'], ['first', 'second']]);
+});
+
+test('async room persistence records failures and can retry the latest state', async () => {
+    const writeError = new Error('disk unavailable');
+    const loggedErrors = [];
+    let attempts = 0;
+    const store = createPersistentRoomStore({
+        persistenceFilePath: makeTempFile(),
+        saveDebounceMs: 0,
+        async writePersistedRooms(filePath, rooms) {
+            attempts += 1;
+            if (attempts === 1) throw writeError;
+            return rooms.length;
+        },
+        logger: {
+            error(message, metadata) {
+                loggedErrors.push({ message, metadata });
+            }
+        }
+    });
+
+    store.set('retry-room', createRoom('retry-room', 'socket-1'));
+    await assert.rejects(store.saveNow(), /disk unavailable/);
+
+    assert.equal(store.getLastSaveError(), writeError);
+    assert.equal(loggedErrors.length, 1);
+
+    assert.equal(await store.saveNow(), 1);
+    assert.equal(store.getLastSaveError(), null);
+    assert.equal(attempts, 2);
+});
+
+test('room store close waits for pending writes and is idempotent', async () => {
+    let releaseWrite;
+    let writeCalls = 0;
+    const writeFinished = new Promise(resolve => {
+        releaseWrite = resolve;
+    });
+    const store = createPersistentRoomStore({
+        persistenceFilePath: makeTempFile(),
+        saveDebounceMs: 0,
+        async writePersistedRooms(filePath, rooms) {
+            writeCalls += 1;
+            await writeFinished;
+            return rooms.length;
+        }
+    });
+
+    store.set('closing-room', createRoom('closing-room', 'socket-1'));
+    const firstClose = store.close();
+    const secondClose = store.close();
+
+    assert.equal(firstClose, secondClose);
+    assert.equal(writeCalls, 1);
+
+    releaseWrite();
+    assert.equal(await firstClose, 1);
+    assert.equal(writeCalls, 1);
 });

@@ -214,7 +214,7 @@ Aplicația poate fi configurată prin variabile de mediu. Pentru rulare locală 
 | `SOCKET_AUTH_TOKEN_MAX_AGE_MS` | `120000` | Durata token-ului temporar pentru socket refresh. |
 | `SESSION_CLEANUP_INTERVAL_MS` | `900000` | Intervalul la care serverul curăță automat sesiunile expirate. |
 | `ROOMS_FILE_PATH` | `<DATA_DIR>/rooms.json` | Fișierul JSON în care serverul salvează camerele active pentru restart. |
-| `ROOM_SAVE_DEBOUNCE_MS` | `250` | Întârzierea de debounce pentru salvarea camerelor după modificări. |
+| `ROOM_SAVE_DEBOUNCE_MS` | `250` | Întârzierea de debounce pentru salvarea asincronă a camerelor după modificări. |
 | `COOKIE_SECURE` | `true` în production, altfel `false` | Trimite cookie-ul doar prin HTTPS. |
 | `COOKIE_SAMESITE` | `lax` | Poate fi `lax`, `strict` sau `none`. |
 | `TRUST_PROXY` | `false` | Setează `true` când rulezi în spatele unui proxy/load balancer. |
@@ -531,6 +531,13 @@ Responsabilități:
   - asset-uri flag/logo;
   - statistici locale.
 - Organizare internă a fișierului `game.js` pe secțiuni clare.
+
+### Backend și persistență
+
+- Salvarea camerelor în `rooms.json` folosește operații asincrone și nu blochează bucla principală a jocului.
+- Scrierile sunt serializate și modificările apărute în timpul unei salvări sunt combinate într-o salvare ulterioară cu starea cea mai nouă.
+- Fișierul este înlocuit atomic printr-un fișier temporar, iar shutdown-ul controlat așteaptă terminarea salvării.
+- Erorile de scriere sunt păstrate pentru health check și sunt eliminate după prima salvare reușită.
 
 ### Asset-uri
 
@@ -885,4 +892,3 @@ Headerele importante includ:
 ```
 
 CSP-ul păstrează `style-src 'unsafe-inline'` deoarece unele componente frontend setează dinamic `style.width` și CSS variables pentru timer/progress bar.
-
