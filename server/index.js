@@ -95,7 +95,7 @@ const sessionService = createSessionService(db, {
     socketAuthSecret: config.auth.socketAuthSecret
 });
 const authService = createAuthService(db, sessionService);
-sessionService.startExpiredSessionCleanup({
+const stopExpiredSessionCleanup = sessionService.startExpiredSessionCleanup({
     intervalMs: config.auth.sessionCleanupIntervalMs,
     logger
 });
@@ -187,6 +187,16 @@ function shutdownRoomStore() {
     }
 }
 
+function prepareApplicationShutdown() {
+    io.disconnectSockets?.(true);
+}
+
+async function cleanupApplicationResources() {
+    stopExpiredSessionCleanup?.();
+    shutdownRoomStore();
+    await db.closeConnection?.();
+}
+
 process.once('exit', shutdownRoomStore);
 
 server.on('error', createServerErrorHandler({
@@ -196,7 +206,9 @@ server.on('error', createServerErrorHandler({
 
 registerProcessErrorHandlers({
     logger,
-    server
+    server,
+    beforeShutdown: prepareApplicationShutdown,
+    cleanup: cleanupApplicationResources
 });
 
 server.listen(config.port, () => {
