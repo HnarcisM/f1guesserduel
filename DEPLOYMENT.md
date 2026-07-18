@@ -12,7 +12,7 @@ Acest ghid descrie configurarea recomandată pentru publicarea aplicației pe Re
 
 ```bash
 npm ci
-npm run build:css
+npm run build
 npm test
 ```
 
@@ -38,7 +38,7 @@ git push origin master
 
 ```text
 Runtime: Node
-Build Command: npm ci && npm run build:css
+Build Command: npm ci --include=dev && npm run build
 Start Command: npm start
 Health Check Path: /api/health
 Auto-Deploy: On Commit
@@ -347,4 +347,4 @@ Verifică în logs:
 - dacă lipsește `SESSION_SECRET`;
 - dacă `SOCKET_AUTH_SECRET` este gol;
 - dacă `PORT` a fost setat manual greșit;
-- dacă build command-ul rulează `npm ci && npm run build:css`.
+- dacă build command-ul rulează `npm ci --include=dev && npm run build`.

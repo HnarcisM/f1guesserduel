@@ -15,7 +15,9 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node server/index.js",
+    "build": "npm run build:css && npm run build:js",
     "build:css": "node scripts/build-css-bundle.js",
+    "build:js": "node scripts/build-js-bundle.js",
     "optimize:svg": "node scripts/optimize-svg-assets.js",
     "test": "node --test test/*.test.js",
     "test:e2e": "node --test --test-timeout=60000 test/e2e/*.test.js",
@@ -23,13 +25,14 @@
     "test:e2e:install": "node scripts/ensure-playwright-browser.js --strict",
     "test:all": "npm test && npm run test:e2e",
     "e2e:install": "npm run test:e2e:install",
-    "release:zip": "npm run build:css && node scripts/create-release-zip.js",
-    "release:zip:with-tests": "npm run build:css && node scripts/create-release-zip.js --with-tests"
+    "release:zip": "npm run build && node scripts/create-release-zip.js",
+    "release:zip:with-tests": "npm run build && node scripts/create-release-zip.js --with-tests"
   },
   "engines": {
     "node": "22.x"
   },
   "devDependencies": {
+    "esbuild": "^0.28.1",
     "playwright": "^1.61.1",
     "svgo": "^4.0.2"
   }

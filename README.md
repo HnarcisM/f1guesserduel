@@ -350,7 +350,7 @@ Protecții incluse:
 
 ---
 
-## Build CSS bundle
+## Build frontend
 
 CSS-ul este păstrat modular în `public/css/`, iar `public/style.css` rămâne fișierul sursă care definește ordinea modulelor. Browserul încarcă varianta generată:
 
@@ -364,7 +364,27 @@ După ce modifici fișierele din `public/css/` sau ordinea importurilor din `pub
 npm run build:css
 ```
 
-Asta regenerează bundle-ul fără reguli runtime `@import`, reducând numărul de request-uri CSS la încărcarea paginii. Scriptul de release rulează automat build-ul CSS înainte să creeze arhiva ZIP.
+Asta regenerează bundle-ul fără reguli runtime `@import`, reducând numărul de request-uri CSS la încărcarea paginii. Scriptul de release rulează automat întregul build frontend înainte să creeze arhiva ZIP.
+
+JavaScript-ul rămâne modular în `public/game.js` și `public/js/`, iar browserul primește varianta unică, minificată:
+
+```text
+public/game.bundle.min.js
+```
+
+După orice modificare JavaScript frontend, rulează:
+
+```bash
+npm run build:js
+```
+
+Pentru regenerarea ambelor bundle-uri frontend folosește comanda recomandată inclusiv pe Render:
+
+```bash
+npm run build
+```
+
+`themeBootstrap.js` rămâne intenționat separat și rulează înainte de CSS, pentru ca tema salvată să fie aplicată fără flash vizual.
 
 ---
 
@@ -372,7 +392,7 @@ Asta regenerează bundle-ul fără reguli runtime `@import`, reducând numărul 
 
 Pentru a genera o arhivă de distribuție fără fișiere de development sau runtime, rulează:
 
-> Comanda regenerează automat `public/style.bundle.css` înainte de arhivare.
+> Comanda regenerează automat `public/style.bundle.css` și `public/game.bundle.min.js` înainte de arhivare.
 
 ```bash
 npm run release:zip
@@ -524,7 +544,9 @@ Responsabilități:
 
 ### Client
 
-Fișier principal: `public/game.js`
+Fișier sursă principal: `public/game.js`
+
+Fișier livrat browserului: `public/game.bundle.min.js`, generat automat și care nu trebuie editat manual.
 
 Responsabilități:
 
@@ -578,6 +600,9 @@ Responsabilități:
   - asset-uri flag/logo;
   - statistici locale.
 - Organizare internă a fișierului `game.js` pe secțiuni clare.
+- Bundle de producție IIFE generat cu esbuild din cele 31 de module frontend.
+- Minificare, tree-shaking și eliminarea request-urilor runtime pentru modulele JavaScript individuale.
+- Bundle fără source map public și cu `"use strict"` păstrat explicit.
 
 ### Încărcare, temă și cache frontend
 
@@ -587,7 +612,7 @@ Responsabilități:
 - Fișierele CSS/JavaScript cu parametrul `?v=` primesc cache public `immutable` pentru un an; fișierele fără versiune trebuie revalidate.
 - HTML-ul rămâne fără cache persistent, astfel încât un deploy nou poate furniza imediat URL-urile versionate actualizate.
 
-Când se modifică `public/style.bundle.css`, `public/game.js` sau bootstrap-ul temei, actualizează valoarea `?v=` corespunzătoare din `public/index.html`. Astfel browserul descarcă versiunea nouă fără a pierde beneficiul cache-ului lung.
+Când se modifică `public/style.bundle.css`, `public/game.bundle.min.js` sau bootstrap-ul temei, actualizează valoarea `?v=` corespunzătoare din `public/index.html`. Astfel browserul descarcă versiunea nouă fără a pierde beneficiul cache-ului lung.
 
 ### Backend și persistență
 
@@ -664,7 +689,7 @@ Posibile îmbunătățiri:
 - mod single-player separat;
 - istoric runde;
 - scor pentru duel;
-- separarea `game.js` în module mai mici;
+- code splitting pentru ecranele încărcate rar, dacă bundle-ul crește semnificativ;
 - teste automate pentru logica serverului.
 
 ---

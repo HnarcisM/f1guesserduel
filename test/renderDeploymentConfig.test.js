@@ -15,7 +15,7 @@ test('Render blueprint documents production web service settings', () => {
     assert.match(source, /type:\s*web/);
     assert.match(source, /runtime:\s*node/);
     assert.match(source, /plan:\s*free/);
-    assert.match(source, /buildCommand:\s*npm ci && npm run build:css/);
+    assert.match(source, /buildCommand:\s*npm ci --include=dev && npm run build/);
     assert.match(source, /startCommand:\s*npm start/);
     assert.match(source, /healthCheckPath:\s*\/api\/health/);
     assert.match(source, /key:\s*PERSISTENCE_MODE\s+value:\s*ephemeral/s);
@@ -78,7 +78,7 @@ test('example environment uses Render-safe production defaults', () => {
 test('deployment guide includes manual Render checks and secret generation', () => {
     const source = readProjectFile('DEPLOYMENT.md');
 
-    assert.match(source, /Build Command: npm ci && npm run build:css/);
+    assert.match(source, /Build Command: npm ci --include=dev && npm run build/);
     assert.match(source, /Start Command: npm start/);
     assert.match(source, /Health Check Path: \/api\/health/);
     assert.match(source, /randomBytes\(32\)\.toString\('hex'\)/);

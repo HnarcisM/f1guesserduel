@@ -3,7 +3,7 @@ services:
     name: f1guesserduel
     runtime: node
     plan: free
-    buildCommand: npm ci && npm run build:css
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
