@@ -223,6 +223,7 @@ Validarea configului este strictă: dacă o variabilă este setată cu o valoare
 - `PERSISTENCE_MODE` poate fi `local`, `ephemeral` sau `persistent`;
 - `DATABASE_PROVIDER` poate fi `sqlite` sau `postgres`;
 - `DATABASE_URL` este obligatoriu când `DATABASE_PROVIDER=postgres`;
+- în production, SQLite este refuzat când `PERSISTENCE_MODE=ephemeral` sau fișierul bazei se află în `/tmp`/`/var/tmp`;
 - `PORT` trebuie să fie între `1` și `65535`;
 - valorile numerice de durată/interval trebuie să fie întregi în limite rezonabile;
 - `COOKIE_SECURE`, `TRUST_PROXY` acceptă doar valori de tip `true/false`, `1/0`, `yes/no`, `on/off`;
@@ -242,7 +243,7 @@ Pentru Render, repo-ul include și:
 - `render.yaml` pentru Blueprint opțional;
 - setări recomandate pentru `NODE_ENV=production`, cookie securizat, proxy, health check și `PUBLIC_ORIGIN` pentru Socket.IO.
 
-Pe Render Free, folosește `PERSISTENCE_MODE=ephemeral` și `DATA_DIR=/tmp/f1guesserduel` pentru demo. În acest mod, `/api/health` afișează `persistence.mode=ephemeral`, `version`, `nodeEnv`, `uptimeSeconds` și check-uri non-sensibile pentru `database`, `drivers` și `rooms`, iar datele locale pot fi pierdute la restart/redeploy/sleep. Pentru persistent disk plătit, setează `PERSISTENCE_MODE=persistent` și mută `DATA_DIR`, `DB_FILE_PATH` și `ROOMS_FILE_PATH` în `/var/data`.
+Pe Render Free, folosește `PERSISTENCE_MODE=ephemeral` și `DATA_DIR=/tmp/f1guesserduel` numai împreună cu Postgres pentru conturi și sesiuni. Aplicația refuză intenționat să pornească în production cu SQLite pe stocare efemeră, pentru a preveni pierderea silențioasă a conturilor. `/api/health` afișează `persistence.mode`, providerul bazei, versiunea, mediul, uptime-ul și check-uri non-sensibile pentru `database`, `drivers` și `rooms`. Pentru persistent disk plătit, setează `PERSISTENCE_MODE=persistent` și mută `DATA_DIR`, `DB_FILE_PATH` și `ROOMS_FILE_PATH` în `/var/data`.
 
 ### Conturi persistente pe Render Free cu Neon Postgres
 

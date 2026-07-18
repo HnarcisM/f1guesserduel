@@ -145,6 +145,25 @@ function resolvePersistenceMode(env, { isProduction, dataDir }) {
     return isEphemeralDataDirectory(dataDir) ? 'ephemeral' : 'persistent';
 }
 
+function assertSafeProductionDatabaseConfiguration({
+    isProduction,
+    databaseProvider,
+    persistenceMode,
+    dbFilePath
+}) {
+    if (!isProduction || databaseProvider !== 'sqlite') return;
+
+    const sqliteUsesEphemeralStorage = persistenceMode === 'ephemeral'
+        || isEphemeralDataDirectory(path.dirname(dbFilePath));
+
+    if (sqliteUsesEphemeralStorage) {
+        throw new Error(
+            'Unsafe production database configuration: SQLite cannot store accounts or sessions on ephemeral storage. '
+            + 'Set DATABASE_PROVIDER=postgres with DATABASE_URL, or use a persistent disk and PERSISTENCE_MODE=persistent.'
+        );
+    }
+}
+
 function normalizeNodeEnv(value) {
     if (value === undefined || value === null || value === '') return 'development';
     if (typeof value !== 'string') throw new Error('NODE_ENV must be a string.');
@@ -252,6 +271,13 @@ function createAppConfig(env = process.env, options = {}) {
         isProduction,
         dataDir
     });
+    const dbFilePath = resolveOptionalPath(env, 'DB_FILE_PATH', path.join(dataDir, 'f1guesser.sqlite'));
+    assertSafeProductionDatabaseConfiguration({
+        isProduction,
+        databaseProvider,
+        persistenceMode,
+        dbFilePath
+    });
     const sessionMaxAgeDays = parseIntegerEnv(
         env,
         'SESSION_MAX_AGE_DAYS',
@@ -297,7 +323,7 @@ function createAppConfig(env = process.env, options = {}) {
         },
         trustProxy: parseBooleanEnv(env, 'TRUST_PROXY', false),
         driversFilePath: resolveOptionalPath(env, 'DRIVERS_FILE_PATH', path.join(projectRoot, 'data', 'drivers.json')),
-        dbFilePath: resolveOptionalPath(env, 'DB_FILE_PATH', path.join(dataDir, 'f1guesser.sqlite')),
+        dbFilePath,
         schemaFilePath: resolveOptionalPath(env, 'DB_SCHEMA_FILE_PATH', path.join(projectRoot, 'server', 'db', 'schema.sql')),
         postgresSchemaFilePath: resolveOptionalPath(env, 'POSTGRES_SCHEMA_FILE_PATH', path.join(projectRoot, 'server', 'db', 'postgresSchema.sql')),
         database: {

@@ -106,6 +106,8 @@ PERSISTENCE_MODE=ephemeral
 
 Important: `DATABASE_URL` trebuie setat în Render înainte de redeploy dacă `DATABASE_PROVIDER=postgres`. Dacă lipsește, serverul se oprește intenționat cu mesaj clar, ca să nu pornească accidental pe SQLite efemer.
 
+Ca protecție suplimentară, serverul refuză orice configurație production care combină SQLite cu `PERSISTENCE_MODE=ephemeral` sau cu un fișier al bazei aflat în `/tmp` ori `/var/tmp`. Folosește Postgres extern sau un disk persistent real.
+
 La pornire, aplicația creează automat tabelele Postgres necesare:
 
 ```text
@@ -196,7 +198,7 @@ Această variantă păstrează aplicația pe Render Free, dar mută conturile ș
 
 Camerele active rămân efemere în `rooms.json`. Este acceptabil pentru Duel, pentru că o cameră activă poate fi recreată după restart/redeploy/sleep.
 
-### Variantă A veche: demo/free 100% local efemer
+### Configurație locală efemeră interzisă în production
 
 Dacă nu setezi Postgres și rămâi pe:
 
@@ -206,7 +208,7 @@ PERSISTENCE_MODE=ephemeral
 DATA_DIR=/tmp/f1guesserduel
 ```
 
-atunci conturile și sesiunile rămân în SQLite local și pot dispărea la restart, redeploy sau sleep pe Render Free.
+serverul refuză să pornească și explică faptul că SQLite nu poate păstra în siguranță conturile și sesiunile pe stocare efemeră. Această protecție previne un deploy aparent funcțional care ar pierde ulterior utilizatorii.
 
 Endpoint-ul `/api/health` include informații non-sensibile utile pentru Render și debugging:
 

@@ -152,7 +152,9 @@ test('app config resolves explicit and inferred persistence modes', () => {
         NODE_ENV: 'production',
         SESSION_SECRET: 'session-secret',
         DATA_DIR: '/tmp/f1guesserduel',
-        PERSISTENCE_MODE: 'ephemeral'
+        PERSISTENCE_MODE: 'ephemeral',
+        DATABASE_PROVIDER: 'postgres',
+        DATABASE_URL: 'postgresql://example.com/f1'
     }, { projectRoot });
     assert.equal(explicitEphemeral.persistence.mode, 'ephemeral');
     assert.equal(explicitEphemeral.persistence.isEphemeral, true);
@@ -160,7 +162,9 @@ test('app config resolves explicit and inferred persistence modes', () => {
     const inferredEphemeral = createAppConfig({
         NODE_ENV: 'production',
         SESSION_SECRET: 'session-secret',
-        DATA_DIR: '/tmp/f1guesserduel'
+        DATA_DIR: '/tmp/f1guesserduel',
+        DATABASE_PROVIDER: 'postgres',
+        DATABASE_URL: 'postgresql://example.com/f1'
     }, { projectRoot });
     assert.equal(inferredEphemeral.persistence.mode, 'ephemeral');
 
@@ -170,6 +174,41 @@ test('app config resolves explicit and inferred persistence modes', () => {
         DATA_DIR: '/var/data'
     }, { projectRoot });
     assert.equal(inferredPersistent.persistence.mode, 'persistent');
+});
+
+test('production config rejects SQLite on ephemeral storage', () => {
+    const baseEnvironment = {
+        NODE_ENV: 'production',
+        SESSION_SECRET: 'session-secret',
+        DATA_DIR: '/tmp/f1guesserduel'
+    };
+
+    assert.throws(
+        () => createAppConfig({
+            ...baseEnvironment,
+            PERSISTENCE_MODE: 'ephemeral'
+        }),
+        /SQLite cannot store accounts or sessions on ephemeral storage/
+    );
+
+    assert.throws(
+        () => createAppConfig({
+            ...baseEnvironment,
+            PERSISTENCE_MODE: 'persistent'
+        }),
+        /SQLite cannot store accounts or sessions on ephemeral storage/
+    );
+
+    const persistentSqlite = createAppConfig({
+        NODE_ENV: 'production',
+        SESSION_SECRET: 'session-secret',
+        DATA_DIR: '/var/data',
+        PERSISTENCE_MODE: 'persistent',
+        DATABASE_PROVIDER: 'sqlite'
+    });
+
+    assert.equal(persistentSqlite.database.provider, 'sqlite');
+    assert.equal(persistentSqlite.persistence.isEphemeral, false);
 });
 
 test('app config rejects invalid boolean and enum values', () => {
