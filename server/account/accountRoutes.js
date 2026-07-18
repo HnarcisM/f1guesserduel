@@ -1,5 +1,6 @@
 const express = require('express');
 const { createMemoryRateLimiter, getRequestIp } = require('../middleware/rateLimit');
+const { sanitizeUser } = require('../auth/authService');
 
 function getAccountRateLimitKey(req) {
     const userId = Number(req.user?.id);
@@ -25,7 +26,7 @@ function createAccountSummaryHandler({ accountStatsService }) {
             }
 
             const dashboard = await accountStatsService.getAccountDashboard(req.user.id);
-            return res.json({ user: req.user, ...dashboard });
+            return res.json({ user: sanitizeUser(req.user), ...dashboard });
         } catch (error) {
             return next(error);
         }

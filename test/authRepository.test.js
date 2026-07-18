@@ -10,6 +10,7 @@ function createFakePostgresDatabase() {
     const queries = [];
     let currentUsername = 'Narcis';
     let currentAvatarKey = 'helmet-red';
+    let currentUsernameChangedAt = null;
     return {
         queries,
         async query(sql, params = []) {
@@ -22,6 +23,7 @@ function createFakePostgresDatabase() {
                         username: params[0],
                         email: params[1],
                         avatarKey: currentAvatarKey,
+                        usernameChangedAt: currentUsernameChangedAt,
                         createdAt: '2026-07-07T00:00:00.000Z'
                     }],
                     rowCount: 1
@@ -36,6 +38,7 @@ function createFakePostgresDatabase() {
                         email: params[0].toLowerCase(),
                         password_hash: 'hash',
                         avatarKey: currentAvatarKey,
+                        usernameChangedAt: currentUsernameChangedAt,
                         createdAt: '2026-07-07T00:00:00.000Z'
                     }],
                     rowCount: 1
@@ -50,6 +53,7 @@ function createFakePostgresDatabase() {
                         email: 'narcis@example.com',
                         password_hash: 'hash',
                         avatarKey: currentAvatarKey,
+                        usernameChangedAt: currentUsernameChangedAt,
                         createdAt: '2026-07-07T00:00:00.000Z'
                     }],
                     rowCount: 1
@@ -58,7 +62,18 @@ function createFakePostgresDatabase() {
 
             if (sql.includes('UPDATE users') && sql.includes('SET username')) {
                 currentUsername = params[1];
-                return { rows: [], rowCount: 1 };
+                currentUsernameChangedAt = '2026-07-18T12:00:00.000Z';
+                return {
+                    rows: [{
+                        id: '7',
+                        username: currentUsername,
+                        email: 'narcis@example.com',
+                        avatarKey: currentAvatarKey,
+                        usernameChangedAt: currentUsernameChangedAt,
+                        createdAt: '2026-07-07T00:00:00.000Z'
+                    }],
+                    rowCount: 1
+                };
             }
 
             if (sql.includes('INSERT INTO user_profiles')) {
@@ -73,6 +88,7 @@ function createFakePostgresDatabase() {
                         username: currentUsername,
                         email: 'narcis@example.com',
                         avatarKey: currentAvatarKey,
+                        usernameChangedAt: currentUsernameChangedAt,
                         createdAt: '2026-07-07T00:00:00.000Z'
                     }],
                     rowCount: 1
@@ -86,6 +102,7 @@ function createFakePostgresDatabase() {
                         username: 'Narcis',
                         email: 'narcis@example.com',
                         avatarKey: currentAvatarKey,
+                        usernameChangedAt: currentUsernameChangedAt,
                         createdAt: '2026-07-07T00:00:00.000Z'
                     }],
                     rowCount: 1
@@ -112,7 +129,7 @@ test('postgres auth repository uses parameterized user inserts and normalizes id
     assert.equal(user.avatarKey, 'helmet-red');
     assert.equal(database.queries[0].params[0], 'Narcis');
     assert.equal(database.queries[0].params[2], 'pbkdf2$hash');
-    assert.match(database.queries[0].sql, /RETURNING id, username, email/);
+    assert.match(database.queries[0].sql, /RETURNING[\s\S]*id,[\s\S]*username,[\s\S]*email/);
 });
 
 test('postgres auth repository finds sessions using database time and token hash parameter', async () => {
@@ -146,14 +163,17 @@ test('postgres account credential updates and session revocation stay parameteri
 
     assert.equal(credentials.password_hash, 'hash');
     assert.equal(user.username, 'Narcis_Updated');
+    assert.equal(user.usernameChangedAt, '2026-07-18T12:00:00.000Z');
     assert.equal(avatarUser.avatarKey, 'helmet-purple');
     assert.deepEqual(database.queries[0].params, [7]);
     assert.deepEqual(database.queries[1].params, [7, 'Narcis_Updated']);
-    assert.deepEqual(database.queries[2].params, [7]);
-    assert.deepEqual(database.queries[3].params, [7, 'helmet-purple']);
-    assert.deepEqual(database.queries[4].params, [7]);
-    assert.deepEqual(database.queries[5].params, [7, 'pbkdf2$new-hash']);
-    assert.deepEqual(database.queries[6].params, [7, 'current-token-hash']);
-    assert.deepEqual(database.queries[7].params, [7]);
-    assert.match(database.queries[6].sql, /token_hash <> \$2/);
+    assert.match(database.queries[1].sql, /INTERVAL '7 days'/);
+    assert.match(database.queries[1].sql, /ON CONFLICT \(user_id\) DO UPDATE/);
+    assert.match(database.queries[1].sql, /RETURNING user_id, changed_at/);
+    assert.deepEqual(database.queries[2].params, [7, 'helmet-purple']);
+    assert.deepEqual(database.queries[3].params, [7]);
+    assert.deepEqual(database.queries[4].params, [7, 'pbkdf2$new-hash']);
+    assert.deepEqual(database.queries[5].params, [7, 'current-token-hash']);
+    assert.deepEqual(database.queries[6].params, [7]);
+    assert.match(database.queries[5].sql, /token_hash <> \$2/);
 });

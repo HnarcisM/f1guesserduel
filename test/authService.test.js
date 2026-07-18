@@ -63,7 +63,10 @@ function createFakeAuthRepository() {
                 throw error;
             }
             const user = users.get(Number(id));
-            if (user) user.username = username;
+            if (user) {
+                user.username = username;
+                user.usernameChangedAt = new Date().toISOString();
+            }
             return user || null;
         },
         async updatePasswordHash(id, passwordHash) {
@@ -183,7 +186,44 @@ test('account username change requires the current password and preserves safe u
     assert.equal(rejected.status, 401);
     assert.equal(updated.ok, true);
     assert.equal(updated.user.username, 'Narcis_New');
+    assert.equal(typeof updated.user.usernameChangeAvailableAt, 'string');
     assert.equal(Object.hasOwn(updated.user, 'password_hash'), false);
+});
+
+test('account username cannot be changed again before the seven-day cooldown expires', async () => {
+    const repository = createFakeAuthRepository();
+    const authService = createAuthService(repository, createFakeSessionService());
+    const registered = await authService.register({
+        username: 'Narcis',
+        email: 'narcis@example.com',
+        password: 'StrongPassword123!'
+    });
+
+    const first = await authService.updateUsername({
+        userId: registered.user.id,
+        username: 'Narcis_One',
+        currentPassword: 'StrongPassword123!'
+    });
+    const blocked = await authService.updateUsername({
+        userId: registered.user.id,
+        username: 'Narcis_Two',
+        currentPassword: 'StrongPassword123!'
+    });
+    repository.users.get(registered.user.id).usernameChangedAt = new Date(
+        Date.now() - (8 * 24 * 60 * 60 * 1000)
+    ).toISOString();
+    const allowedAfterCooldown = await authService.updateUsername({
+        userId: registered.user.id,
+        username: 'Narcis_Two',
+        currentPassword: 'StrongPassword123!'
+    });
+
+    assert.equal(first.ok, true);
+    assert.equal(blocked.ok, false);
+    assert.equal(blocked.status, 429);
+    assert.match(blocked.message, /7 zile/);
+    assert.equal(allowedAfterCooldown.ok, true);
+    assert.equal(repository.users.get(registered.user.id).username, 'Narcis_Two');
 });
 
 test('account password change validates, hashes and replaces the credential', async () => {

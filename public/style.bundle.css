@@ -3231,6 +3231,14 @@ button#sendGuessBtn.rematch-submit-btn {
     font-size: 0.7rem;
 }
 
+.auth-username-cooldown-hint {
+    margin-top: 10px;
+}
+
+.auth-username-cooldown-hint.is-locked {
+    color: #facc15;
+}
+
 .auth-security-card {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;

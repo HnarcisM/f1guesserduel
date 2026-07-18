@@ -84,6 +84,7 @@ export function createAuthView({ onAuthChanged } = {}) {
             accountStatsMessage: document.getElementById('authAccountStatsMessage'),
             usernameSettingsForm: document.getElementById('authUsernameSettingsForm'),
             settingsUsername: document.getElementById('authSettingsUsername'),
+            usernameCooldownHint: document.getElementById('authUsernameCooldownHint'),
             usernameCurrentPassword: document.getElementById('authUsernameCurrentPassword'),
             saveUsernameBtn: document.getElementById('authSaveUsernameBtn'),
             passwordSettingsForm: document.getElementById('authPasswordSettingsForm'),
@@ -229,8 +230,34 @@ export function createAuthView({ onAuthChanged } = {}) {
             if (els.settingsUsername && els.settingsUsername.dataset.dirty !== 'true') {
                 els.settingsUsername.value = currentUser.username || '';
             }
+            renderUsernameCooldown();
             selectAccountTab(selectedAccountTab);
         }
+    }
+
+    function renderUsernameCooldown() {
+        const els = getEls();
+        const availableAt = currentUser?.usernameChangeAvailableAt
+            ? new Date(currentUser.usernameChangeAvailableAt)
+            : null;
+        const isLocked = availableAt && !Number.isNaN(availableAt.getTime())
+            && availableAt.getTime() > Date.now();
+
+        if (els.usernameCooldownHint) {
+            els.usernameCooldownHint.classList.toggle('is-locked', Boolean(isLocked));
+            els.usernameCooldownHint.textContent = isLocked
+                ? `Următoarea schimbare este disponibilă pe ${new Intl.DateTimeFormat('ro-RO', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }).format(availableAt)}.`
+                : 'Schimbarea username-ului este disponibilă acum.';
+        }
+        if (els.settingsUsername) els.settingsUsername.disabled = Boolean(isLocked);
+        if (els.usernameCurrentPassword) els.usernameCurrentPassword.disabled = Boolean(isLocked);
+        if (els.saveUsernameBtn) els.saveUsernameBtn.disabled = !currentUser || Boolean(isLocked);
     }
 
     function normalizeAvatarKey(avatarKey) {
@@ -585,7 +612,7 @@ export function createAuthView({ onAuthChanged } = {}) {
             if (requestedStateVersion !== authStateVersion || !currentUser) return;
             setSettingsMessage(error.message || 'Username-ul nu a putut fi actualizat.', 'error');
         } finally {
-            if (els.saveUsernameBtn) els.saveUsernameBtn.disabled = false;
+            renderUsernameCooldown();
         }
     }
 

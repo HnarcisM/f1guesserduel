@@ -29,9 +29,11 @@ function createSqliteAuthRepository(db) {
             users.email,
             users.password_hash,
             users.created_at AS createdAt,
-            COALESCE(user_profiles.avatar_key, 'helmet-red') AS avatarKey
+            COALESCE(user_profiles.avatar_key, 'helmet-red') AS avatarKey,
+            username_change_limits.changed_at AS usernameChangedAt
         FROM users
         LEFT JOIN user_profiles ON user_profiles.user_id = users.id
+        LEFT JOIN username_change_limits ON username_change_limits.user_id = users.id
         WHERE users.email = ?
     `);
 
@@ -41,9 +43,11 @@ function createSqliteAuthRepository(db) {
             users.username,
             users.email,
             users.created_at AS createdAt,
-            COALESCE(user_profiles.avatar_key, 'helmet-red') AS avatarKey
+            COALESCE(user_profiles.avatar_key, 'helmet-red') AS avatarKey,
+            username_change_limits.changed_at AS usernameChangedAt
         FROM users
         LEFT JOIN user_profiles ON user_profiles.user_id = users.id
+        LEFT JOIN username_change_limits ON username_change_limits.user_id = users.id
         WHERE users.id = ?
     `);
 
@@ -54,14 +58,30 @@ function createSqliteAuthRepository(db) {
             users.email,
             users.password_hash,
             users.created_at AS createdAt,
-            COALESCE(user_profiles.avatar_key, 'helmet-red') AS avatarKey
+            COALESCE(user_profiles.avatar_key, 'helmet-red') AS avatarKey,
+            username_change_limits.changed_at AS usernameChangedAt
         FROM users
         LEFT JOIN user_profiles ON user_profiles.user_id = users.id
+        LEFT JOIN username_change_limits ON username_change_limits.user_id = users.id
         WHERE users.id = ?
     `);
 
     const updateUsernameStmt = db.prepare(`
-        UPDATE users SET username = ? WHERE id = ?
+        UPDATE users
+        SET username = ?
+        WHERE id = ?
+          AND NOT EXISTS (
+              SELECT 1
+              FROM username_change_limits
+              WHERE user_id = ?
+                AND datetime(changed_at) > datetime('now', '-7 days')
+          )
+    `);
+
+    const upsertUsernameChangeLimitStmt = db.prepare(`
+        INSERT INTO username_change_limits (user_id, changed_at)
+        VALUES (?, datetime('now'))
+        ON CONFLICT(user_id) DO UPDATE SET changed_at = datetime('now')
     `);
 
     const updatePasswordHashStmt = db.prepare(`
@@ -91,10 +111,12 @@ function createSqliteAuthRepository(db) {
             users.username,
             users.email,
             users.created_at AS createdAt,
-            COALESCE(user_profiles.avatar_key, 'helmet-red') AS avatarKey
+            COALESCE(user_profiles.avatar_key, 'helmet-red') AS avatarKey,
+            username_change_limits.changed_at AS usernameChangedAt
         FROM sessions
         JOIN users ON users.id = sessions.user_id
         LEFT JOIN user_profiles ON user_profiles.user_id = users.id
+        LEFT JOIN username_change_limits ON username_change_limits.user_id = users.id
         WHERE sessions.token_hash = ?
           AND datetime(sessions.expires_at) > datetime('now')
     `);
@@ -114,6 +136,12 @@ function createSqliteAuthRepository(db) {
     const deleteExpiredStmt = db.prepare(`
         DELETE FROM sessions WHERE datetime(expires_at) <= datetime('now')
     `);
+    const updateUsernameTransaction = db.transaction((userId, username) => {
+        const result = updateUsernameStmt.run(username, userId, userId);
+        if (result.changes !== 1) return null;
+        upsertUsernameChangeLimitStmt.run(userId);
+        return findByIdStmt.get(userId);
+    });
 
     return {
         provider: 'sqlite',
@@ -132,8 +160,7 @@ function createSqliteAuthRepository(db) {
             return normalizeUserRow(findCredentialsByIdStmt.get(userId));
         },
         async updateUsername(userId, username) {
-            updateUsernameStmt.run(username, userId);
-            return normalizeUserRow(findByIdStmt.get(userId));
+            return normalizeUserRow(updateUsernameTransaction(userId, username));
         },
         async updatePasswordHash(userId, passwordHash) {
             return updatePasswordHashStmt.run(passwordHash, userId);
@@ -179,7 +206,13 @@ function createPostgresAuthRepository(database) {
             const row = await queryOne(`
                 INSERT INTO users (username, email, password_hash, last_seen_at)
                 VALUES ($1, $2, $3, now())
-                RETURNING id, username, email, created_at AS "createdAt", 'helmet-red' AS "avatarKey"
+                RETURNING
+                    id,
+                    username,
+                    email,
+                    created_at AS "createdAt",
+                    'helmet-red' AS "avatarKey",
+                    NULL AS "usernameChangedAt"
             `, [username, email, passwordHash]);
             return normalizeUserRow(row);
         },
@@ -191,9 +224,11 @@ function createPostgresAuthRepository(database) {
                     users.email,
                     users.password_hash,
                     users.created_at AS "createdAt",
-                    COALESCE(user_profiles.avatar_key, 'helmet-red') AS "avatarKey"
+                    COALESCE(user_profiles.avatar_key, 'helmet-red') AS "avatarKey",
+                    username_change_limits.changed_at AS "usernameChangedAt"
                 FROM users
                 LEFT JOIN user_profiles ON user_profiles.user_id = users.id
+                LEFT JOIN username_change_limits ON username_change_limits.user_id = users.id
                 WHERE lower(users.email) = lower($1)
             `, [email]);
             return normalizeUserRow(row);
@@ -205,9 +240,11 @@ function createPostgresAuthRepository(database) {
                     users.username,
                     users.email,
                     users.created_at AS "createdAt",
-                    COALESCE(user_profiles.avatar_key, 'helmet-red') AS "avatarKey"
+                    COALESCE(user_profiles.avatar_key, 'helmet-red') AS "avatarKey",
+                    username_change_limits.changed_at AS "usernameChangedAt"
                 FROM users
                 LEFT JOIN user_profiles ON user_profiles.user_id = users.id
+                LEFT JOIN username_change_limits ON username_change_limits.user_id = users.id
                 WHERE users.id = $1
             `, [userId]);
             return normalizeUserRow(row);
@@ -220,30 +257,44 @@ function createPostgresAuthRepository(database) {
                     users.email,
                     users.password_hash,
                     users.created_at AS "createdAt",
-                    COALESCE(user_profiles.avatar_key, 'helmet-red') AS "avatarKey"
+                    COALESCE(user_profiles.avatar_key, 'helmet-red') AS "avatarKey",
+                    username_change_limits.changed_at AS "usernameChangedAt"
                 FROM users
                 LEFT JOIN user_profiles ON user_profiles.user_id = users.id
+                LEFT JOIN username_change_limits ON username_change_limits.user_id = users.id
                 WHERE users.id = $1
             `, [userId]);
             return normalizeUserRow(row);
         },
         async updateUsername(userId, username) {
-            await database.query(`
-                UPDATE users
-                SET username = $2
-                WHERE id = $1
-            `, [userId, username]);
             const row = await queryOne(`
+                WITH claimed_limit AS (
+                    INSERT INTO username_change_limits (user_id, changed_at)
+                    SELECT users.id, now()
+                    FROM users
+                    WHERE users.id = $1
+                    ON CONFLICT (user_id) DO UPDATE SET changed_at = EXCLUDED.changed_at
+                    WHERE username_change_limits.changed_at <= now() - INTERVAL '7 days'
+                    RETURNING user_id, changed_at
+                ),
+                updated_user AS (
+                    UPDATE users
+                    SET username = $2
+                    FROM claimed_limit
+                    WHERE users.id = claimed_limit.user_id
+                    RETURNING users.id, users.username, users.email, users.created_at
+                )
                 SELECT
-                    users.id,
-                    users.username,
-                    users.email,
-                    users.created_at AS "createdAt",
-                    COALESCE(user_profiles.avatar_key, 'helmet-red') AS "avatarKey"
-                FROM users
-                LEFT JOIN user_profiles ON user_profiles.user_id = users.id
-                WHERE users.id = $1
-            `, [userId]);
+                    updated_user.id,
+                    updated_user.username,
+                    updated_user.email,
+                    updated_user.created_at AS "createdAt",
+                    COALESCE(user_profiles.avatar_key, 'helmet-red') AS "avatarKey",
+                    claimed_limit.changed_at AS "usernameChangedAt"
+                FROM updated_user
+                JOIN claimed_limit ON claimed_limit.user_id = updated_user.id
+                LEFT JOIN user_profiles ON user_profiles.user_id = updated_user.id
+            `, [userId, username]);
             return normalizeUserRow(row);
         },
         async updatePasswordHash(userId, passwordHash) {
@@ -267,9 +318,11 @@ function createPostgresAuthRepository(database) {
                     users.username,
                     users.email,
                     users.created_at AS "createdAt",
-                    user_profiles.avatar_key AS "avatarKey"
+                    user_profiles.avatar_key AS "avatarKey",
+                    username_change_limits.changed_at AS "usernameChangedAt"
                 FROM users
                 JOIN user_profiles ON user_profiles.user_id = users.id
+                LEFT JOIN username_change_limits ON username_change_limits.user_id = users.id
                 WHERE users.id = $1
             `, [userId]);
             return normalizeUserRow(row);
@@ -290,10 +343,12 @@ function createPostgresAuthRepository(database) {
                     users.username,
                     users.email,
                     users.created_at AS "createdAt",
-                    COALESCE(user_profiles.avatar_key, 'helmet-red') AS "avatarKey"
+                    COALESCE(user_profiles.avatar_key, 'helmet-red') AS "avatarKey",
+                    username_change_limits.changed_at AS "usernameChangedAt"
                 FROM sessions
                 JOIN users ON users.id = sessions.user_id
                 LEFT JOIN user_profiles ON user_profiles.user_id = users.id
+                LEFT JOIN username_change_limits ON username_change_limits.user_id = users.id
                 WHERE sessions.token_hash = $1
                   AND sessions.expires_at > now()
             `, [tokenHash]);

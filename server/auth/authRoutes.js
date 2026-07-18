@@ -1,5 +1,6 @@
 const express = require('express');
 const { createMemoryRateLimiter } = require('../middleware/rateLimit');
+const { sanitizeUser } = require('./authService');
 
 function createAuthRoutes({
     authService,
@@ -51,7 +52,7 @@ function createAuthRoutes({
 
     async function buildAuthResponse(user, sessionToken = null) {
         return {
-            user: user || null,
+            user: sanitizeUser(user),
             socketAuthToken: await sessionService.createSocketAuthToken(sessionToken)
         };
     }

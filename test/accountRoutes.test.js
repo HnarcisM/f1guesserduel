@@ -99,7 +99,14 @@ test('account summary returns only the authenticated user statistics', async () 
     await handler({ user, query: { userId: 999 } }, response, error => { throw error; });
 
     assert.deepEqual(requestedUserIds, [7]);
-    assert.deepEqual(response.body, { user, stats, recentGames, progress, achievements });
+    assert.equal(response.body.user.id, user.id);
+    assert.equal(response.body.user.username, user.username);
+    assert.equal(response.body.user.avatarKey, 'helmet-red');
+    assert.equal(response.body.user.usernameChangeAvailableAt, null);
+    assert.deepEqual(response.body.stats, stats);
+    assert.deepEqual(response.body.recentGames, recentGames);
+    assert.deepEqual(response.body.progress, progress);
+    assert.deepEqual(response.body.achievements, achievements);
     assert.equal(response.headers['Cache-Control'], 'no-store');
 });
 

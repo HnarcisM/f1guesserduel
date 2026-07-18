@@ -41,12 +41,12 @@ test('production HTML loads the generated bundle after Socket.IO', () => {
     const html = fs.readFileSync(path.join(rootDir, 'public', 'index.html'), 'utf8');
     const bundlePath = path.join(rootDir, 'public', 'game.bundle.min.js');
     const socketPosition = html.indexOf('/socket.io/socket.io.js');
-    const bundlePosition = html.indexOf('/game.bundle.min.js?v=frontend-bundle-10');
+    const bundlePosition = html.indexOf('/game.bundle.min.js?v=frontend-bundle-11');
 
     assert.ok(fs.existsSync(bundlePath));
     assert.ok(socketPosition > html.indexOf('<body'));
     assert.ok(bundlePosition > socketPosition);
-    assert.match(html, /<script defer src="\/game\.bundle\.min\.js\?v=frontend-bundle-10"><\/script>/);
+    assert.match(html, /<script defer src="\/game\.bundle\.min\.js\?v=frontend-bundle-11"><\/script>/);
     assert.doesNotMatch(html, /<script[^>]+src="\/game\.js/);
 
     const bundle = fs.readFileSync(bundlePath, 'utf8');

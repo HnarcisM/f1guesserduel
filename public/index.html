@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>F1 Guesser</title>
     <script src="/js/themeBootstrap.js?v=theme-bootstrap-1"></script>
-<link rel="stylesheet" href="/style.bundle.css?v=frontend-cache-10">
+<link rel="stylesheet" href="/style.bundle.css?v=frontend-cache-11">
 </head>
 <body>
 
@@ -470,8 +470,9 @@
 
             <details class="auth-settings-card auth-settings-disclosure">
                 <summary>
-                    <span><strong>Schimbă username-ul</strong><small>Alege un nume nou pentru profil.</small></span>
+                    <span><strong>Schimbă username-ul</strong><small>Poate fi modificat o dată la 7 zile.</small></span>
                 </summary>
+                <p id="authUsernameCooldownHint" class="auth-settings-hint auth-username-cooldown-hint"></p>
                 <form id="authUsernameSettingsForm" class="auth-settings-form">
                     <label>
                         Username nou
@@ -543,6 +544,6 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script defer src="/game.bundle.min.js?v=frontend-bundle-10"></script>
+<script defer src="/game.bundle.min.js?v=frontend-bundle-11"></script>
 </body>
 </html>

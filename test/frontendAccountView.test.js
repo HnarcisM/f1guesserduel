@@ -81,7 +81,8 @@ function createAccountDocument() {
         'authGuessCount5', 'authGuessCount6', 'authGuessBar1', 'authGuessBar2',
         'authGuessBar3', 'authGuessBar4', 'authGuessBar5', 'authGuessBar6',
         'authAccountStatsMessage', 'authUsernameSettingsForm', 'authSettingsUsername',
-        'authUsernameCurrentPassword', 'authSaveUsernameBtn', 'authPasswordSettingsForm',
+        'authUsernameCooldownHint', 'authUsernameCurrentPassword', 'authSaveUsernameBtn',
+        'authPasswordSettingsForm',
         'authPasswordCurrent', 'authPasswordNew', 'authPasswordConfirm', 'authSavePasswordBtn',
         'authLogoutAllBtn', 'authSettingsMessage'
     ];
@@ -127,6 +128,8 @@ test('authenticated account dashboard is present while the login form remains se
     assert.match(html, /id="authPanelHistory"[^>]*role="tabpanel"[^>]*hidden/);
     assert.match(html, /id="authPanelSettings"[^>]*role="tabpanel"[^>]*hidden/);
     assert.match(html, /id="authUsernameSettingsForm"/);
+    assert.match(html, /id="authUsernameCooldownHint"/);
+    assert.match(html, /o dată la 7 zile/);
     assert.match(html, /id="authPasswordSettingsForm"/);
     assert.match(html, /id="authLogoutAllBtn"/);
     assert.equal((html.match(/<details class="auth-settings-card auth-settings-disclosure/g) || []).length, 3);
@@ -320,7 +323,9 @@ test('account settings update credentials and logout every active session', asyn
                             id: 7,
                             username: 'Narcis_New',
                             email: 'narcis@example.com',
-                            avatarKey: 'helmet-blue'
+                            avatarKey: 'helmet-blue',
+                            usernameChangedAt: '2026-07-18T12:00:00.000Z',
+                            usernameChangeAvailableAt: '2099-07-25T12:00:00.000Z'
                         },
                         socketAuthToken: 'socket-profile'
                     };
@@ -405,6 +410,10 @@ test('account settings update credentials and logout every active session', asyn
     await elements.authUsernameSettingsForm.listeners.get('submit')({ preventDefault() {} });
     assert.equal(view.getCurrentUser().username, 'Narcis_New');
     assert.equal(elements.authAccountUsername.textContent, 'Narcis_New');
+    assert.equal(elements.authSettingsUsername.disabled, true);
+    assert.equal(elements.authUsernameCurrentPassword.disabled, true);
+    assert.equal(elements.authSaveUsernameBtn.disabled, true);
+    assert.match(elements.authUsernameCooldownHint.textContent, /Următoarea schimbare/);
     assert.match(elements.authSettingsMessage.textContent, /actualizat/);
 
     elements.authPasswordCurrent.value = 'StrongPassword123!';

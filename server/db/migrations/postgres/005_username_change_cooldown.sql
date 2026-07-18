@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS username_change_limits (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    changed_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
