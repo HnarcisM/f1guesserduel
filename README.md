@@ -189,6 +189,14 @@ npm run optimize:svg
 
 Scriptul folosește SVGO în mod conservator, păstrează `viewBox`, dimensiunile și ID-urile interne și nu rescrie un fișier dacă rezultatul nu este mai mic. Pentru inventarul complet, inclusiv activele momentan nefolosite, poate fi rulat manual cu `npm run optimize:svg -- --all`.
 
+Pentru a regenera variantele WebP ale logo-urilor raster folosite în producție:
+
+```bash
+npm run optimize:raster
+```
+
+Scriptul păstrează varianta WebP numai dacă are aceleași dimensiuni, este mai mică și abaterea vizuală normalizată RMSE nu depășește `0,5%`, verificată atât pe fundal deschis, cât și pe fundal închis. Fișierele sursă PNG/JPG rămân în proiect pentru regenerare și rollback, iar o rulare repetată nu rescrie fișiere identice.
+
 Detalii suplimentare pentru scenariile E2E sunt în `test/e2e/README.md`.
 
 ---
@@ -624,8 +632,9 @@ Când se modifică `public/style.bundle.css`, `public/game.bundle.min.js` sau bo
 ### Asset-uri
 
 - Flag-urile locale se încarcă direct ca `.svg`.
-- Logo-urile echipelor folosesc extensia corectă când există local.
-- Fallback-uri mai clare pentru flag-uri și logo-uri.
+- 26 dintre cele 28 de logo-uri raster folosite în producție sunt livrate în format WebP near-lossless; dimensiunea lor totală a scăzut de la aproximativ `1,70 MB` la `784 KB` (`53,9%`).
+- `BrawnGP.jpg` și `Spyker.jpg` rămân în formatul original deoarece variantele WebP ar fi fost mai mari.
+- Logo-urile păstrează dimensiunile originale și folosesc fallback-ul local `/logos/F1.svg` dacă încărcarea eșuează.
 
 ---
 

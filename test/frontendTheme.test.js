@@ -36,7 +36,7 @@ test('theme bootstrap applies a valid saved theme before the stylesheet is parse
     const bootstrapPosition = html.indexOf('/js/themeBootstrap.js?v=theme-bootstrap-1');
     const stylesheetPosition = html.indexOf('/style.bundle.css?v=frontend-cache-1');
     const socketPosition = html.indexOf('/socket.io/socket.io.js');
-    const gamePosition = html.indexOf('/game.bundle.min.js?v=frontend-bundle-1');
+    const gamePosition = html.indexOf('/game.bundle.min.js?v=frontend-bundle-2');
 
     assert.ok(bootstrapPosition > 0);
     assert.ok(bootstrapPosition < stylesheetPosition);

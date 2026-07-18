@@ -19,6 +19,14 @@ test('team logo fallback stays local and disables further error handling', async
     assert.equal(/^https?:\/\//.test(image.src), false);
 });
 
+test('team logo mapping prefers optimized WebP and keeps larger originals', async () => {
+    const { getLocalTeamLogoPath } = await import('../public/js/assets.js');
+
+    assert.equal(getLocalTeamLogoPath('Ferrari'), '/logos/Ferrari.webp');
+    assert.equal(getLocalTeamLogoPath('Brawn GP'), '/logos/BrawnGP.jpg');
+    assert.equal(getLocalTeamLogoPath('Unknown Team'), null);
+});
+
 test('flag fallback stays local and disables further error handling', async () => {
     const { handleFlagError } = await import('../public/js/assets.js');
     const image = createImageStub();
