@@ -25,7 +25,11 @@ function createMemoryRateLimiter({
     keyPrefix = 'rate-limit',
     keyGenerator = getRequestIp,
     message = 'Prea multe încercări. Încearcă din nou mai târziu.',
-    clock = nowMs
+    clock = nowMs,
+    store = null,
+    failOpen = true,
+    logger = console,
+    storeErrorLogIntervalMs = 30_000
 } = {}) {
     if (!Number.isFinite(windowMs) || windowMs <= 0) {
         throw new Error('Rate limiter windowMs must be a positive number.');
@@ -36,6 +40,7 @@ function createMemoryRateLimiter({
     }
 
     const buckets = new Map();
+    let lastStoreErrorLogAt = Number.NEGATIVE_INFINITY;
 
     function getBucket(key, currentTime) {
         const existingBucket = buckets.get(key);
@@ -63,23 +68,98 @@ function createMemoryRateLimiter({
         return `${keyPrefix}:${keyGenerator(req)}`;
     }
 
-    function middleware(req, res, next) {
-        const currentTime = clock();
-        const key = getKey(req);
+    function consumeFromMemory(key, currentTime = clock()) {
         const bucket = getBucket(key, currentTime);
-        const remainingMs = Math.max(0, bucket.resetAt - currentTime);
-
-        res.setHeader('X-RateLimit-Limit', String(maxRequests));
-        res.setHeader('X-RateLimit-Remaining', String(Math.max(0, maxRequests - bucket.count - 1)));
-        res.setHeader('X-RateLimit-Reset', String(Math.ceil(bucket.resetAt / 1000)));
 
         if (bucket.count >= maxRequests) {
-            res.setHeader('Retry-After', formatRetryAfter(remainingMs / 1000));
-            return res.status(429).json({ message });
+            return {
+                allowed: false,
+                remaining: 0,
+                retryAfterMs: Math.max(1, bucket.resetAt - currentTime),
+                resetAt: bucket.resetAt
+            };
         }
 
         bucket.count += 1;
+        return {
+            allowed: true,
+            remaining: Math.max(0, maxRequests - bucket.count),
+            retryAfterMs: 0,
+            resetAt: bucket.resetAt
+        };
+    }
+
+    function applyResult(result, res, next) {
+        const resetAt = Number.isFinite(result?.resetAt)
+            ? result.resetAt
+            : clock() + Math.max(1, Number(result?.retryAfterMs) || windowMs);
+
+        res.setHeader('X-RateLimit-Limit', String(maxRequests));
+        res.setHeader('X-RateLimit-Remaining', String(Math.max(0, Number(result?.remaining) || 0)));
+        res.setHeader('X-RateLimit-Reset', String(Math.ceil(resetAt / 1000)));
+
+        if (!result?.allowed) {
+            res.setHeader('Retry-After', formatRetryAfter((result?.retryAfterMs || windowMs) / 1000));
+            return res.status(429).json({ message });
+        }
+
         return next();
+    }
+
+    function logStoreError(error) {
+        const currentTime = clock();
+        if (currentTime - lastStoreErrorLogAt < storeErrorLogIntervalMs) return;
+
+        lastStoreErrorLogAt = currentTime;
+        logger?.error?.('Redis HTTP rate limit check failed.', {
+            error,
+            provider: store?.provider || 'external',
+            keyPrefix,
+            fallback: 'memory'
+        });
+    }
+
+    function handleStoreError(error, key, res, next) {
+        logStoreError(error);
+        if (failOpen) {
+            return applyResult(consumeFromMemory(key), res, next);
+        }
+        return applyResult({
+            allowed: false,
+            remaining: 0,
+            retryAfterMs: windowMs,
+            resetAt: clock() + windowMs
+        }, res, next);
+    }
+
+    function middleware(req, res, next) {
+        const currentTime = clock();
+        const key = getKey(req);
+
+        if (!store?.consume) {
+            return applyResult(consumeFromMemory(key, currentTime), res, next);
+        }
+
+        let result;
+        try {
+            result = store.consume({
+                key,
+                maxEvents: maxRequests,
+                windowMs,
+                currentTime
+            });
+        } catch (error) {
+            return handleStoreError(error, key, res, next);
+        }
+
+        if (!result || typeof result.then !== 'function') {
+            return applyResult(result, res, next);
+        }
+
+        return result.then(
+            resolvedResult => applyResult(resolvedResult, res, next),
+            error => handleStoreError(error, key, res, next)
+        );
     }
 
     middleware.cleanup = cleanup;

@@ -37,7 +37,7 @@ function createRedisRateLimitStore({ redisClient, keyPrefix = 'f1guesserduel' })
 
     return {
         provider: 'redis',
-        async consume({ key, maxEvents, windowMs }) {
+        async consume({ key, maxEvents, windowMs, currentTime = Date.now() }) {
             const redisKey = `${keyPrefix}:rate-limit:${hashRateLimitIdentity(key)}`;
             const result = await redisClient.eval(REDIS_RATE_LIMIT_SCRIPT, {
                 keys: [redisKey],
@@ -54,7 +54,7 @@ function createRedisRateLimitStore({ redisClient, keyPrefix = 'f1guesserduel' })
                 allowed: count <= maxEvents,
                 remaining: Math.max(0, maxEvents - count),
                 retryAfterMs: count <= maxEvents ? 0 : ttlMs,
-                resetAt: Date.now() + ttlMs
+                resetAt: currentTime + ttlMs
             };
         }
     };

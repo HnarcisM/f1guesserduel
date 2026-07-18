@@ -28,12 +28,14 @@ test('Redis rate limit store increments an expiring counter atomically', async (
     const first = await store.consume({
         key: 'user:42:submitGuess',
         maxEvents: 1,
-        windowMs: 5_000
+        windowMs: 5_000,
+        currentTime: 10_000
     });
     const second = await store.consume({
         key: 'user:42:submitGuess',
         maxEvents: 1,
-        windowMs: 5_000
+        windowMs: 5_000,
+        currentTime: 10_000
     });
 
     assert.equal(store.provider, 'redis');
@@ -41,6 +43,7 @@ test('Redis rate limit store increments an expiring counter atomically', async (
     assert.equal(first.remaining, 0);
     assert.equal(second.allowed, false);
     assert.equal(second.retryAfterMs, 5_000);
+    assert.equal(second.resetAt, 15_000);
     assert.equal(calls[0].script, REDIS_RATE_LIMIT_SCRIPT);
     assert.deepEqual(calls[0].options.arguments, ['5000']);
     assert.match(calls[0].options.keys[0], /^f1-test:rate-limit:[a-f0-9]{32}$/);

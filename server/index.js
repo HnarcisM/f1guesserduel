@@ -139,6 +139,12 @@ const sessionService = createSessionService(db, {
     socketAuthSecret: config.auth.socketAuthSecret
 });
 const authService = createAuthService(db, sessionService);
+const redisRateLimitStore = redisClient
+    ? createRedisRateLimitStore({
+        redisClient,
+        keyPrefix: config.redis.keyPrefix
+    })
+    : null;
 const stopExpiredSessionCleanup = sessionService.startExpiredSessionCleanup({
     intervalMs: config.auth.sessionCleanupIntervalMs,
     logger
@@ -170,6 +176,8 @@ app.use('/api', createHealthRoutes({
 app.use('/api/auth', createAuthRoutes({
     authService,
     sessionService,
+    rateLimitStore: redisRateLimitStore,
+    logger,
     cookieOptions: config.auth.cookie
 }));
 app.use(express.static(config.publicDir, {
@@ -181,10 +189,7 @@ app.use(express.static(config.publicDir, {
 const socketRateLimit = redisClient
     ? {
         ...config.socket.rateLimit,
-        store: createRedisRateLimitStore({
-            redisClient,
-            keyPrefix: config.redis.keyPrefix
-        }),
+        store: redisRateLimitStore,
         identityResolver: getDistributedSocketIdentity,
         logger
     }

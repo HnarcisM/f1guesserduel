@@ -128,7 +128,7 @@ REDIS_CONNECT_TIMEOUT_MS=10000
 REDIS_ROOM_TTL_SECONDS=86400
 ```
 
-Nu este nevoie să modifici `ROOMS_FILE_PATH`: când `REDIS_URL` este prezent, serverul selectează automat Redis pentru snapshot-ul camerelor și pentru rate limiting-ul Socket.IO. Dacă variabila lipsește, fallback-ul rămâne `rooms.json` plus contoare locale în memorie.
+Nu este nevoie să modifici `ROOMS_FILE_PATH`: când `REDIS_URL` este prezent, serverul selectează automat Redis pentru snapshot-ul camerelor și pentru rate limiting-ul Socket.IO plus endpoint-urile de login/register. Dacă variabila lipsește, fallback-ul rămâne `rooms.json` plus contoare locale în memorie.
 
 La pornire, o conexiune Redis configurată dar indisponibilă oprește deploy-ul cu o eroare clară. După pornire, o întrerupere Redis apare în `/api/health`; rate limiting-ul revine la contoare locale în memorie, iar mesajele Redis repetitive din log sunt limitate.
 
@@ -144,6 +144,12 @@ SOCKET_RATE_LIMIT_WINDOW_MS=60000
 ```
 
 Fără Redis, limitele sunt aplicate per socket. Cu `REDIS_URL`, contoarele sunt atomice și distribuite per utilizator autentificat sau adresă anonimă. Limitele sunt diferite pe categorii: acțiunile de lobby/start/restart au limite mai stricte, iar guess-urile au o limită mai mare ca să nu afecteze jocul normal. Dacă un client face spam, serverul emite `socketRateLimited` și nu mai execută handlerul pentru event-ul blocat.
+
+### Rate limit autentificare
+
+Endpoint-urile `/api/auth/login` și `/api/auth/register` păstrează limite separate: maximum 5 încercări de login, respectiv 3 încercări de înregistrare, într-o fereastră de 10 minute per adresă IP.
+
+Cu `REDIS_URL`, aceste contoare sunt distribuite și persistă între procese sau restarturi Redis-compatible. Adresa IP nu este inclusă în cheia Redis în clar, ci este transformată într-un hash. Fără Redis sau în timpul unei întreruperi temporare, aplicația folosește automat contoare locale în memorie. Răspunsurile blocate folosesc HTTP `429` și includ `Retry-After` plus headerele `X-RateLimit-*`.
 
 ### Logging production
 
