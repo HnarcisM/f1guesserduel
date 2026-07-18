@@ -181,6 +181,14 @@ npm run test:e2e
 npm run test:all
 ```
 
+Pentru a reoptimiza numai SVG-urile folosite de build-ul de producție:
+
+```bash
+npm run optimize:svg
+```
+
+Scriptul folosește SVGO în mod conservator, păstrează `viewBox`, dimensiunile și ID-urile interne și nu rescrie un fișier dacă rezultatul nu este mai mic. Pentru inventarul complet, inclusiv activele momentan nefolosite, poate fi rulat manual cu `npm run optimize:svg -- --all`.
+
 Detalii suplimentare pentru scenariile E2E sunt în `test/e2e/README.md`.
 
 ---

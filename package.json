@@ -16,6 +16,7 @@
     "start": "node server/index.js",
     "dev": "node server/index.js",
     "build:css": "node scripts/build-css-bundle.js",
+    "optimize:svg": "node scripts/optimize-svg-assets.js",
     "test": "node --test test/*.test.js",
     "test:e2e": "node --test --test-timeout=60000 test/e2e/*.test.js",
     "pretest:e2e": "node scripts/ensure-playwright-browser.js --strict",
@@ -29,6 +30,7 @@
     "node": "22.x"
   },
   "devDependencies": {
-    "playwright": "^1.61.1"
+    "playwright": "^1.61.1",
+    "svgo": "^4.0.2"
   }
 }
