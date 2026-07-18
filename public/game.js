@@ -27,7 +27,6 @@ let socketController;
 let driversList = [];
 let isRoundFinished = false;
 let authView;
-let authReadyOnce = false;
 let dailyChallengeController;
 let autocomplete;
 let endGameController;
@@ -410,11 +409,6 @@ function joinDuelRoomFromBrowser(roomId = null) {
 }
 
 function handleAuthChangeWithoutLeavingRoom(currentUser, socketAuthToken = null) {
-	if (!authReadyOnce) {
-		authReadyOnce = true;
-		return;
-	}
-
 	/*
 	 * Nu reconectăm socket-ul după login/logout.
 	 * Player-ul este legat de socket.id pe server, iar reconectarea în mijlocul
@@ -494,7 +488,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		setDuelRoundState,
 		showDuelLobby,
 		timer,
-		autocomplete
+		autocomplete,
+		refreshAccountSummary: (stats, userId) => authView?.refreshAccountSummary?.(stats, userId)
 	});
 	setupMenuControllers({
 		autocomplete,

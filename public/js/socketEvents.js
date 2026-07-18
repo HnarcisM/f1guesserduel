@@ -16,7 +16,8 @@ export function registerSocketEvents(socket, app) {
 		'hostStatus',
 		'initDailyChallenge',
 		'dailyGuessResult',
-		'dailyChallengeError'
+		'dailyChallengeError',
+		'accountStatsUpdated'
 	].forEach(eventName => socket.off(eventName));
 
 	function renderLiveBoardForSpectator(board, options = {}) {
@@ -169,6 +170,10 @@ export function registerSocketEvents(socket, app) {
 
 	socket.on('roomListUpdate', (payload) => {
 		app.renderDuelRoomList?.(payload);
+	});
+
+	socket.on('accountStatsUpdated', (payload = {}) => {
+		app.refreshAccountSummary?.(payload.stats || null, payload.userId ?? null);
 	});
 
 	socket.on('initDailyChallenge', (data) => {

@@ -1,5 +1,6 @@
 const { MAX_ATTEMPTS } = require('../config/constants');
 const { compareGuess } = require('../game/compareDriver');
+const { recordAccountGameResultSafely } = require('../account/accountStatsService');
 const {
     normalizeDriverId,
     normalizeRoundOptions
@@ -36,8 +37,26 @@ function registerDailyChallengeSocketHandlers({
     singleSessions,
     gameService,
     leaveCurrentRoom,
+    accountStatsService = null,
+    logger = console,
     onSocketEvent = socket.on.bind(socket)
 }) {
+    function recordResult(dailySession, outcome) {
+        const userId = socket.user?.id;
+        recordAccountGameResultSafely({
+            accountStatsService,
+            logger,
+            userId,
+            mode: 'daily',
+            resultKey: dailySession.dailyChallengeId,
+            outcome,
+            attempts: dailySession.attempts,
+            difficulty: dailySession.difficulty
+        }).then(result => {
+            if (result?.stats) socket.emit('accountStatsUpdated', { userId, stats: result.stats });
+        });
+    }
+
     onSocketEvent('startDailyChallenge', (payload) => {
         const dailyOptions = normalizeRoundOptions(payload);
         if (!dailyOptions) {
@@ -104,6 +123,7 @@ function registerDailyChallengeSocketHandlers({
         }
 
         socket.emit('dailyGuessResult', responseData);
+        if (isGameOver) recordResult(dailySession, isCorrectGuess ? 'win' : 'loss');
     });
 }
 

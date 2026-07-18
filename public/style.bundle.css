@@ -2551,6 +2551,106 @@ button#sendGuessBtn.rematch-submit-btn {
     font-weight: 800;
 }
 
+.auth-account-view {
+    display: grid;
+    gap: 16px;
+    margin-top: 18px;
+}
+
+.auth-profile-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    border: 1px solid var(--border-soft);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.auth-account-avatar {
+    display: grid;
+    place-items: center;
+    flex: 0 0 52px;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    color: #fff;
+    background: linear-gradient(135deg, var(--accent-f1), color-mix(in srgb, var(--accent-f1) 55%, #10131a));
+    font-weight: 950;
+    letter-spacing: 0.04em;
+}
+
+.auth-profile-copy {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+.auth-profile-copy strong {
+    color: var(--text-primary);
+    font-size: 1.05rem;
+}
+
+.auth-profile-copy span,
+.auth-profile-copy small {
+    overflow: hidden;
+    color: var(--text-secondary);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.auth-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.auth-stat-card {
+    display: grid;
+    gap: 3px;
+    padding: 11px 6px;
+    border: 1px solid var(--border-soft);
+    border-radius: 13px;
+    background: rgba(255, 255, 255, 0.04);
+    text-align: center;
+}
+
+.auth-stat-card strong {
+    color: var(--accent-f1);
+    font-size: 1.15rem;
+}
+
+.auth-stat-card span {
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.auth-mode-stats {
+    display: grid;
+    gap: 8px;
+}
+
+.auth-mode-stats > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 2px;
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.auth-mode-stats span,
+.auth-account-stats-message {
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+}
+
+.auth-account-stats-message {
+    min-height: 18px;
+    margin: 0;
+    text-align: center;
+}
+
 .auth-form {
     display: grid;
     gap: 14px;
@@ -2629,6 +2729,16 @@ button#sendGuessBtn.rematch-submit-btn {
     .auth-open-btn {
         padding: 7px 10px;
         font-size: 0.78rem;
+    }
+
+    .auth-stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .auth-mode-stats > div {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 3px;
     }
 }
 

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>F1 Guesser</title>
     <script src="/js/themeBootstrap.js?v=theme-bootstrap-1"></script>
-    <link rel="stylesheet" href="/style.bundle.css?v=frontend-cache-1">
+    <link rel="stylesheet" href="/style.bundle.css?v=frontend-cache-2">
 </head>
 <body>
 
@@ -323,7 +323,32 @@
     <p id="authSubtitle" class="auth-subtitle">Intră în cont ca să pregătim profilul și jocurile cu prieteni.</p>
     <p id="authUserBadge" class="auth-user-badge">Joci momentan ca Guest.</p>
 
-    <form class="auth-form">
+    <section id="authAccountView" class="auth-account-view is-hidden" aria-label="Sumar cont">
+        <div class="auth-profile-card">
+            <div id="authAccountAvatar" class="auth-account-avatar" aria-hidden="true">FG</div>
+            <div class="auth-profile-copy">
+                <strong id="authAccountUsername">Utilizator</strong>
+                <span id="authAccountEmail">email@example.com</span>
+                <small id="authAccountMemberSince">Membru F1 Guesser</small>
+            </div>
+        </div>
+
+        <div class="auth-stats-grid" aria-label="Statistici totale">
+            <div class="auth-stat-card"><strong id="authStatPlayed">0</strong><span>Jocuri</span></div>
+            <div class="auth-stat-card"><strong id="authStatWon">0</strong><span>Victorii</span></div>
+            <div class="auth-stat-card"><strong id="authStatWinRate">0%</strong><span>Win rate</span></div>
+            <div class="auth-stat-card"><strong id="authStatBestStreak">0</strong><span>Best streak</span></div>
+        </div>
+
+        <div class="auth-mode-stats" aria-label="Statistici pe mod de joc">
+            <div><strong>Single</strong><span id="authSingleStats">0 jocuri · 0 victorii</span></div>
+            <div><strong>Daily</strong><span id="authDailyStats">0 jocuri · 0 victorii</span></div>
+            <div><strong>Duel</strong><span id="authDuelStats">0 jocuri · 0 victorii · 0 remize</span></div>
+        </div>
+        <p id="authAccountStatsMessage" class="auth-account-stats-message" aria-live="polite"></p>
+    </section>
+
+    <form class="auth-form" id="authForm">
         <label id="authUsernameGroup">
             Username
             <input type="text" id="authUsername" autocomplete="username" minlength="3" maxlength="20" placeholder="ex: Narcis_7">
@@ -347,6 +372,6 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script defer src="/game.bundle.min.js?v=frontend-bundle-2"></script>
+<script defer src="/game.bundle.min.js?v=frontend-bundle-3"></script>
 </body>
 </html>

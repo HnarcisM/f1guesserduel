@@ -1,6 +1,10 @@
 const { MAX_ATTEMPTS } = require('../config/constants');
 const { compareGuess } = require('../game/compareDriver');
 const {
+    createGameResultKey,
+    recordAccountGameResultSafely
+} = require('../account/accountStatsService');
+const {
     normalizeDriverId,
     normalizeRoundOptions,
     normalizeRestartOptions
@@ -15,7 +19,8 @@ function createSingleSession(roundPayload) {
         finished: false,
         timed: roundPayload.timed,
         timeLimitSeconds: roundPayload.timeLimitSeconds,
-        roundStartedAt: roundPayload.roundStartedAt
+        roundStartedAt: roundPayload.roundStartedAt,
+        resultKey: createGameResultKey('single')
     };
 }
 
@@ -37,8 +42,26 @@ function registerSoloGameSocketHandlers({
     singleSessions,
     gameService,
     leaveCurrentRoom,
+    accountStatsService = null,
+    logger = console,
     onSocketEvent = socket.on.bind(socket)
 }) {
+    function recordResult(singleSession, outcome) {
+        const userId = socket.user?.id;
+        recordAccountGameResultSafely({
+            accountStatsService,
+            logger,
+            userId,
+            mode: 'single',
+            resultKey: singleSession.resultKey,
+            outcome,
+            attempts: singleSession.attempts,
+            difficulty: singleSession.difficulty
+        }).then(result => {
+            if (result?.stats) socket.emit('accountStatsUpdated', { userId, stats: result.stats });
+        });
+    }
+
     onSocketEvent('startSingleGame', (payload) => {
         const roundOptions = normalizeRoundOptions(payload);
         if (!roundOptions) {
@@ -68,6 +91,7 @@ function registerSoloGameSocketHandlers({
             singleSession.attempts = MAX_ATTEMPTS;
             singleSession.finished = true;
             socket.emit('gameTimedOut', { target: { name: singleSession.targetDriver.name }, attempts: MAX_ATTEMPTS });
+            recordResult(singleSession, 'loss');
             return;
         }
 
@@ -108,6 +132,7 @@ function registerSoloGameSocketHandlers({
         }
 
         socket.emit('guessResult', responseData);
+        if (isGameOver) recordResult(singleSession, isCorrectGuess ? 'win' : 'loss');
     });
 
     onSocketEvent('restartSingleGame', (payload = {}) => {

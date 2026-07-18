@@ -29,7 +29,8 @@ export function createGameSocketController({
 	resetLiveBoard,
 	resetRoomScoreboard,
 	timer,
-	autocomplete
+	autocomplete,
+	refreshAccountSummary
 }) {
 	let socket = null;
 
@@ -77,7 +78,8 @@ export function createGameSocketController({
 			handleInitDailyChallenge: dailyChallengeController.handleInit,
 			handleDailyChallengeError: dailyChallengeController.handleError,
 			timer,
-			autocomplete
+			autocomplete,
+			refreshAccountSummary
 		};
 	}
 

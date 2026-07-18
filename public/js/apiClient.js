@@ -42,3 +42,9 @@ export const authApi = {
         });
     }
 };
+
+export const accountApi = {
+    summary() {
+        return requestJson('/api/account/summary');
+    }
+};

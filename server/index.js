@@ -16,6 +16,8 @@ const { createRedisClient, closeRedisClient } = require('./redis/redisClient');
 const { createSessionService } = require('./auth/sessionService');
 const { createAuthService } = require('./auth/authService');
 const { createAuthRoutes } = require('./auth/authRoutes');
+const { createAccountStatsService } = require('./account/accountStatsService');
+const { createAccountRoutes } = require('./account/accountRoutes');
 const { createAuthMiddleware } = require('./middleware/authMiddleware');
 const { createErrorMiddleware } = require('./middleware/errorMiddleware');
 const { createServerErrorHandler } = require('./middleware/serverErrorHandler');
@@ -139,6 +141,7 @@ const sessionService = createSessionService(db, {
     socketAuthSecret: config.auth.socketAuthSecret
 });
 const authService = createAuthService(db, sessionService);
+const accountStatsService = createAccountStatsService(db);
 const redisRateLimitStore = redisClient
     ? createRedisRateLimitStore({
         redisClient,
@@ -180,6 +183,7 @@ app.use('/api/auth', createAuthRoutes({
     logger,
     cookieOptions: config.auth.cookie
 }));
+app.use('/api/account', createAccountRoutes({ accountStatsService }));
 app.use(express.static(config.publicDir, {
     etag: true,
     lastModified: true,
@@ -199,6 +203,8 @@ registerSocketHandlers(io, {
     roomStore,
     gameService,
     sessionService,
+    accountStatsService,
+    logger,
     socketRateLimit
 });
 

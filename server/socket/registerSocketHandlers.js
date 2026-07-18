@@ -40,9 +40,34 @@ const { registerSoloGameSocketHandlers } = require('./soloGameSocketHandlers');
 const { registerDailyChallengeSocketHandlers } = require('./dailyChallengeSocketHandlers');
 const { createSocketEventRateLimiter } = require('./socketEventRateLimit');
 const { buildPublicRoomListPayload } = require('./roomListPayloads');
+const { recordAccountGameResultSafely } = require('../account/accountStatsService');
+
+function buildDuelAccountResults(roomId, room, roundResult) {
+    if (!room || !roundResult) return [];
+
+    return Object.values(room.players || {})
+        .filter(player => player.userId !== null && player.userId !== undefined)
+        .map(player => ({
+            userId: player.userId,
+            mode: 'duel',
+            resultKey: `${roomId}:${room.roundStartedAt}`,
+            outcome: roundResult.status === 'draw'
+                ? 'draw'
+                : roundResult.winnerSocketId === player.socketId ? 'win' : 'loss',
+            attempts: typeof player.attempts === 'number' ? player.attempts : 0,
+            difficulty: room.difficulty,
+            socketId: player.socketId
+        }));
+}
 
 function registerSocketHandlers(io, dependencies) {
-    const { roomStore, gameService, sessionService } = dependencies;
+    const {
+        roomStore,
+        gameService,
+        sessionService,
+        accountStatsService = null,
+        logger = console
+    } = dependencies;
     const dailySessions = new Map();
     const singleSessions = new Map();
     const socketEventRateLimiter = createSocketEventRateLimiter(dependencies.socketRateLimit);
@@ -79,6 +104,22 @@ function registerSocketHandlers(io, dependencies) {
     function emitRoundResolved(roomId, room, roundResult) {
         if (!room || !roundResult) return;
         roomStore.markDirty?.();
+
+        for (const accountResult of buildDuelAccountResults(roomId, room, roundResult)) {
+            recordAccountGameResultSafely({
+                accountStatsService,
+                logger,
+                ...accountResult
+            }).then(result => {
+                const playerSocket = io.sockets?.sockets?.get?.(accountResult.socketId);
+                if (result?.stats && playerSocket) {
+                    playerSocket.emit('accountStatsUpdated', {
+                        userId: accountResult.userId,
+                        stats: result.stats
+                    });
+                }
+            });
+        }
 
         for (const memberSocket of getActiveRoomSockets(room)) {
             const member = room.players?.[memberSocket.id] || room.spectators?.[memberSocket.id] || null;
@@ -341,6 +382,19 @@ function registerSocketHandlers(io, dependencies) {
                     target: { name: singleSession.targetDriver.name },
                     attempts: MAX_ATTEMPTS
                 });
+                const userId = socket.user?.id;
+                recordAccountGameResultSafely({
+                    accountStatsService,
+                    logger,
+                    userId,
+                    mode: 'single',
+                    resultKey: singleSession.resultKey,
+                    outcome: 'loss',
+                    attempts: MAX_ATTEMPTS,
+                    difficulty: singleSession.difficulty
+                }).then(result => {
+                    if (result?.stats) socket.emit('accountStatsUpdated', { userId, stats: result.stats });
+                });
                 return;
             }
 
@@ -449,6 +503,8 @@ function registerSocketHandlers(io, dependencies) {
             singleSessions,
             gameService,
             leaveCurrentRoom,
+            accountStatsService,
+            logger,
             onSocketEvent
         });
         registerDailyChallengeSocketHandlers({
@@ -457,6 +513,8 @@ function registerSocketHandlers(io, dependencies) {
             singleSessions,
             gameService,
             leaveCurrentRoom,
+            accountStatsService,
+            logger,
             onSocketEvent
         });
         onSocketEvent('refreshAuthUser', async (payload = {}) => {
@@ -586,5 +644,6 @@ function registerSocketHandlers(io, dependencies) {
 }
 
 module.exports = {
+    buildDuelAccountResults,
     registerSocketHandlers
 };

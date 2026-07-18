@@ -113,9 +113,11 @@ La pornire, aplicația creează automat tabelele Postgres necesare:
 ```text
 users
 sessions
+user_game_results
+user_game_stats
 ```
 
-Conturile și sesiunile se păstrează în Postgres. Fără Redis, camerele active rămân în `rooms.json` pe `/tmp`, deci pot dispărea la restart/redeploy/sleep.
+Conturile, sesiunile și statisticile utilizatorilor autentificați se păstrează în Postgres. Migrarea `002_account_game_stats.sql` este aplicată automat la primul deploy al acestei versiuni și nu necesită variabile noi. Fără Redis, camerele active rămân în `rooms.json` pe `/tmp`, deci pot dispărea la restart/redeploy/sleep.
 
 ### Redis opțional pentru camere și rate limiting
 

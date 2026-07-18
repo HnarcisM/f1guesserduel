@@ -42,7 +42,7 @@ Aplicația rulează cu **Node.js**, **Express** și **Socket.IO**, iar interfaț
 - Maximum 6 încercări per rundă.
 - Popup final pentru câștig sau pierdere.
 - Restart rundă fără schimbarea camerei.
-- Statistici locale salvate în browser.
+- Statistici locale pentru Guest și statistici de cont persistente în PostgreSQL.
 - Conturi și sesiuni persistente în Postgres extern pentru deploy free pe Render + Neon.
 - Teme vizuale multiple.
 - Layout responsive pentru desktop și telefon.
@@ -65,7 +65,7 @@ Aplicația rulează cu **Node.js**, **Express** și **Socket.IO**, iar interfaț
 11. În `Duel`, niciun player nu primește popup de câștig/pierdere până nu termină ambii playeri activi.
 12. Câștigătorul rundei este decis după aceste criterii: mai puține încercări, apoi timp mai bun, apoi remiză dacă ambele sunt egale.
 13. Scoreboard-ul de cameră se actualizează după calcularea rezultatului final și se păstrează la rematch.
-14. La final se afișează popup-ul de rezultat și statisticile locale.
+14. La final se afișează popup-ul de rezultat; pentru utilizatorii autentificați, rezultatul validat de server actualizează și statisticile persistente ale contului.
 
 Răspunsul corect este ținut pe server până la finalul jocului, pentru a evita citirea lui directă din codul client-side.
 
@@ -79,8 +79,8 @@ Răspunsul corect este ținut pe server până la finalul jocului, pentru a evit
 - **HTML5** – structura aplicației.
 - **CSS3** – layout, teme, responsive design și animații.
 - **JavaScript vanilla** – logica din browser.
-- **LocalStorage** – salvarea statisticilor locale.
-- **SQLite / PostgreSQL** – stocare conturi și sesiuni, configurabilă prin `DATABASE_PROVIDER`.
+- **LocalStorage** – salvarea statisticilor Guest locale.
+- **SQLite / PostgreSQL** – stocare conturi, sesiuni și statistici de cont, configurabilă prin `DATABASE_PROVIDER`.
 
 ---
 
@@ -312,7 +312,7 @@ Snapshot-ul Redis permite restaurarea camerelor pentru o singură instanță și
 
 ### Migrații PostgreSQL versionate
 
-La pornire, serverul citește fișierele din `server/db/migrations/postgres` în ordine numerică. Prima migrare este `001_initial_auth_schema.sql`.
+La pornire, serverul citește fișierele din `server/db/migrations/postgres` în ordine numerică. `001_initial_auth_schema.sql` creează autentificarea, iar `002_account_game_stats.sql` adaugă statisticile persistente.
 
 - migrările aplicate sunt înregistrate în tabela `schema_migrations` cu versiune, nume, checksum și timestamp;
 - întregul lot rulează într-o tranzacție și este anulat prin rollback dacă o comandă eșuează;
@@ -321,6 +321,16 @@ La pornire, serverul citește fișierele din `server/db/migrations/postgres` în
 - pentru o schimbare nouă se adaugă un fișier precum `002_add_profile_fields.sql`, fără editarea migrărilor vechi.
 
 La primul deploy peste baza existentă, migrarea `001` folosește operații `IF NOT EXISTS`, apoi înregistrează versiunea fără să șteargă utilizatori sau sesiuni. Nu este necesară nicio variabilă Render suplimentară.
+
+### Panou de cont și statistici persistente
+
+- După login, formularul de autentificare este înlocuit de panoul „Contul meu”, cu username, email, data creării contului și statistici Single, Daily și Duel.
+- Rezultatele sunt înregistrate numai din fluxurile validate de server; browserul nu are endpoint pentru a declara direct o victorie.
+- `user_game_results` păstrează chei unice de rezultat pentru a preveni dublarea, inclusiv la reluarea aceleiași provocări Daily.
+- `user_game_stats` păstrează contoare agregate pentru încărcarea rapidă a panoului.
+- Actualizarea registrului și a contoarelor este tranzacțională în PostgreSQL. Dacă actualizarea statisticilor eșuează temporar, jocul continuă, iar eroarea este logată fără identificatorul utilizatorului.
+- `GET /api/account/summary` folosește exclusiv utilizatorul sesiunii curente și răspunde cu `Cache-Control: no-store`.
+- Statisticile Guest din `localStorage` rămân separate și nu sunt importate automat într-un cont.
 
 Local poți rămâne pe SQLite, fără `DATABASE_URL`:
 
@@ -628,6 +638,7 @@ Când se modifică `public/style.bundle.css`, `public/game.bundle.min.js` sau bo
 - Scrierile sunt serializate și modificările apărute în timpul unei salvări sunt combinate într-o salvare ulterioară cu starea cea mai nouă.
 - Fișierul este înlocuit atomic printr-un fișier temporar, iar shutdown-ul controlat așteaptă terminarea salvării.
 - Erorile de scriere sunt păstrate pentru health check și sunt eliminate după prima salvare reușită.
+- Statisticile conturilor sunt separate pe `single`, `daily` și `duel`, cu victorii, remize, streak și distribuția încercărilor.
 
 ### Asset-uri
 
