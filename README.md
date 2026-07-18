@@ -545,6 +545,16 @@ Responsabilități:
   - statistici locale.
 - Organizare internă a fișierului `game.js` pe secțiuni clare.
 
+### Încărcare, temă și cache frontend
+
+- Tema salvată este citită prin `public/js/themeBootstrap.js` înainte de încărcarea CSS-ului, eliminând schimbarea vizibilă de temă după afișarea meniului.
+- Valorile necunoscute din `localStorage` sunt ignorate și folosesc tema `default`.
+- Răspunsurile text mai mari de 1 KB folosesc automat Brotli sau gzip, în funcție de capabilitățile browserului.
+- Fișierele CSS/JavaScript cu parametrul `?v=` primesc cache public `immutable` pentru un an; fișierele fără versiune trebuie revalidate.
+- HTML-ul rămâne fără cache persistent, astfel încât un deploy nou poate furniza imediat URL-urile versionate actualizate.
+
+Când se modifică `public/style.bundle.css`, `public/game.js` sau bootstrap-ul temei, actualizează valoarea `?v=` corespunzătoare din `public/index.html`. Astfel browserul descarcă versiunea nouă fără a pierde beneficiul cache-ului lung.
+
 ### Backend și persistență
 
 - Salvarea camerelor în `rooms.json` folosește operații asincrone și nu blochează bucla principală a jocului.

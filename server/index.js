@@ -20,6 +20,8 @@ const { createServerErrorHandler } = require('./middleware/serverErrorHandler');
 const { createHealthRoutes, createHealthChecks } = require('./routes/healthRoutes');
 const { createSecurityHeadersMiddleware } = require('./middleware/securityHeaders');
 const { createRequestLoggingMiddleware } = require('./middleware/requestLogging');
+const { createResponseCompressionMiddleware } = require('./middleware/responseCompression');
+const { setStaticCacheHeaders } = require('./middleware/staticCacheHeaders');
 const { createLogger } = require('./logger');
 const { registerProcessErrorHandlers } = require('./runtime/processErrorHandlers');
 const { createAppConfig } = require('./config/appConfig');
@@ -109,24 +111,6 @@ const stopExpiredSessionCleanup = sessionService.startExpiredSessionCleanup({
     logger
 });
 
-function setStaticCacheHeaders(res, filePath) {
-    const extension = path.extname(filePath).toLowerCase();
-
-    if (extension === '.html' || extension === '.txt') {
-        res.setHeader('Cache-Control', 'no-cache');
-        return;
-    }
-
-    if (['.js', '.css'].includes(extension)) {
-        res.setHeader('Cache-Control', 'no-cache');
-        return;
-    }
-
-    if (['.svg', '.png', '.jpg', '.jpeg', '.webp', '.gif', '.ico', '.woff', '.woff2'].includes(extension)) {
-        res.setHeader('Cache-Control', 'public, max-age=604800, immutable');
-    }
-}
-
 app.use(createSecurityHeadersMiddleware({
     isProduction: config.isProduction
 }));
@@ -134,6 +118,7 @@ app.use(createRequestLoggingMiddleware({
     logger,
     enabled: config.logging.requestLoggingEnabled
 }));
+app.use(createResponseCompressionMiddleware());
 app.use(express.json({ limit: '32kb' }));
 app.use(cookieParser());
 app.use(createAuthMiddleware(sessionService));
