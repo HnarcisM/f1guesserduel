@@ -28,7 +28,11 @@ test('app config provides safe development defaults', () => {
             maxConnections: 5,
             connectionTimeoutMs: 15_000,
             idleTimeoutMs: 30_000,
-            queryTimeoutMs: 20_000
+            queryTimeoutMs: 20_000,
+            initializationRetryAttempts: 3,
+            initializationRetryBaseDelayMs: 1000,
+            keepAliveInitialDelayMs: 10_000,
+            maxLifetimeSeconds: 300
         }
     });
     assert.equal(config.dbFilePath, path.join(projectRoot, 'data', 'f1guesser.sqlite'));
@@ -67,6 +71,10 @@ test('app config reads production values from environment', () => {
         POSTGRES_CONNECTION_TIMEOUT_MS: '25000',
         POSTGRES_IDLE_TIMEOUT_MS: '45000',
         POSTGRES_QUERY_TIMEOUT_MS: '30000',
+        POSTGRES_INIT_RETRY_ATTEMPTS: '4',
+        POSTGRES_INIT_RETRY_BASE_DELAY_MS: '1500',
+        POSTGRES_KEEP_ALIVE_INITIAL_DELAY_MS: '12000',
+        POSTGRES_MAX_LIFETIME_SECONDS: '600',
         SESSION_SECRET: 'session-secret',
         SOCKET_AUTH_SECRET: 'socket-secret',
         COOKIE_SECURE: 'false',
@@ -99,7 +107,11 @@ test('app config reads production values from environment', () => {
             maxConnections: 8,
             connectionTimeoutMs: 25_000,
             idleTimeoutMs: 45_000,
-            queryTimeoutMs: 30_000
+            queryTimeoutMs: 30_000,
+            initializationRetryAttempts: 4,
+            initializationRetryBaseDelayMs: 1500,
+            keepAliveInitialDelayMs: 12_000,
+            maxLifetimeSeconds: 600
         }
     });
     assert.equal(path.normalize(config.dbFilePath), path.normalize('/var/lib/f1guesser/f1guesser.sqlite'));
@@ -174,6 +186,22 @@ test('app config rejects invalid numeric environment values', () => {
     assert.throws(
         () => createAppConfig({ POSTGRES_QUERY_TIMEOUT_MS: '0' }),
         /POSTGRES_QUERY_TIMEOUT_MS must be an integer/
+    );
+    assert.throws(
+        () => createAppConfig({ POSTGRES_INIT_RETRY_ATTEMPTS: '11' }),
+        /POSTGRES_INIT_RETRY_ATTEMPTS must be an integer/
+    );
+    assert.throws(
+        () => createAppConfig({ POSTGRES_INIT_RETRY_BASE_DELAY_MS: '50' }),
+        /POSTGRES_INIT_RETRY_BASE_DELAY_MS must be an integer/
+    );
+    assert.throws(
+        () => createAppConfig({ POSTGRES_KEEP_ALIVE_INITIAL_DELAY_MS: '-1' }),
+        /POSTGRES_KEEP_ALIVE_INITIAL_DELAY_MS must be an integer/
+    );
+    assert.throws(
+        () => createAppConfig({ POSTGRES_MAX_LIFETIME_SECONDS: 'forever' }),
+        /POSTGRES_MAX_LIFETIME_SECONDS must be an integer/
     );
 });
 

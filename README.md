@@ -202,6 +202,10 @@ Aplicația poate fi configurată prin variabile de mediu. Pentru rulare locală 
 | `POSTGRES_CONNECTION_TIMEOUT_MS` | `15000` | Timpul maxim de așteptare pentru deschiderea unei conexiuni PostgreSQL. |
 | `POSTGRES_IDLE_TIMEOUT_MS` | `30000` | Închide conexiunile nefolosite după acest interval. |
 | `POSTGRES_QUERY_TIMEOUT_MS` | `20000` | Limita client/server pentru o interogare PostgreSQL. |
+| `POSTGRES_INIT_RETRY_ATTEMPTS` | `3` | Numărul total de încercări la pornire pentru erori PostgreSQL tranzitorii. |
+| `POSTGRES_INIT_RETRY_BASE_DELAY_MS` | `1000` | Întârzierea inițială pentru retry; următoarele încercări folosesc backoff exponențial. |
+| `POSTGRES_KEEP_ALIVE_INITIAL_DELAY_MS` | `10000` | Activează TCP keepalive după această perioadă pentru conexiunile PostgreSQL. |
+| `POSTGRES_MAX_LIFETIME_SECONDS` | `300` | Reciclează controlat conexiunile vechi din pool; `0` dezactivează limita. |
 | `DB_FILE_PATH` | `<DATA_DIR>/f1guesser.sqlite` | Path SQLite local, folosit doar când `DATABASE_PROVIDER=sqlite`. |
 | `SESSION_SECRET` | dev fallback local | Secret pentru sesiuni; obligatoriu în production. |
 | `SOCKET_AUTH_SECRET` | `SESSION_SECRET` sau dev fallback | Secret pentru token-ul scurt folosit de socket auth refresh. |
@@ -228,7 +232,7 @@ Validarea configului este strictă: dacă o variabilă este setată cu o valoare
 - `DATABASE_PROVIDER` poate fi `sqlite` sau `postgres`;
 - `DATABASE_URL` este obligatoriu când `DATABASE_PROVIDER=postgres`;
 - în production, SQLite este refuzat când `PERSISTENCE_MODE=ephemeral` sau fișierul bazei se află în `/tmp`/`/var/tmp`;
-- pool-ul PostgreSQL acceptă maximum `1-50` conexiuni, iar timeout-urile configurabile sunt validate strict;
+- pool-ul PostgreSQL acceptă maximum `1-50` conexiuni, `1-10` încercări de inițializare, iar timeout-urile configurabile sunt validate strict;
 - `PORT` trebuie să fie între `1` și `65535`;
 - valorile numerice de durată/interval trebuie să fie întregi în limite rezonabile;
 - `COOKIE_SECURE`, `TRUST_PROXY` acceptă doar valori de tip `true/false`, `1/0`, `yes/no`, `on/off`;

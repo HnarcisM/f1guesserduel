@@ -11,6 +11,10 @@ const DEFAULT_POSTGRES_POOL_MAX = 5;
 const DEFAULT_POSTGRES_CONNECTION_TIMEOUT_MS = 15 * 1000;
 const DEFAULT_POSTGRES_IDLE_TIMEOUT_MS = 30 * 1000;
 const DEFAULT_POSTGRES_QUERY_TIMEOUT_MS = 20 * 1000;
+const DEFAULT_POSTGRES_INIT_RETRY_ATTEMPTS = 3;
+const DEFAULT_POSTGRES_INIT_RETRY_BASE_DELAY_MS = 1000;
+const DEFAULT_POSTGRES_KEEP_ALIVE_INITIAL_DELAY_MS = 10 * 1000;
+const DEFAULT_POSTGRES_MAX_LIFETIME_SECONDS = 5 * 60;
 const DEV_SESSION_SECRET = 'f1-guesser-duel-dev-session-secret';
 const DEV_SOCKET_AUTH_SECRET = 'f1-guesser-duel-dev-socket-auth-secret';
 const ALLOWED_NODE_ENV_VALUES = new Set(['development', 'test', 'production']);
@@ -358,6 +362,30 @@ function createAppConfig(env = process.env, options = {}) {
                     'POSTGRES_QUERY_TIMEOUT_MS',
                     DEFAULT_POSTGRES_QUERY_TIMEOUT_MS,
                     { min: 1_000, max: 300_000 }
+                ),
+                initializationRetryAttempts: parseIntegerEnv(
+                    env,
+                    'POSTGRES_INIT_RETRY_ATTEMPTS',
+                    DEFAULT_POSTGRES_INIT_RETRY_ATTEMPTS,
+                    { min: 1, max: 10 }
+                ),
+                initializationRetryBaseDelayMs: parseIntegerEnv(
+                    env,
+                    'POSTGRES_INIT_RETRY_BASE_DELAY_MS',
+                    DEFAULT_POSTGRES_INIT_RETRY_BASE_DELAY_MS,
+                    { min: 100, max: 30_000 }
+                ),
+                keepAliveInitialDelayMs: parseIntegerEnv(
+                    env,
+                    'POSTGRES_KEEP_ALIVE_INITIAL_DELAY_MS',
+                    DEFAULT_POSTGRES_KEEP_ALIVE_INITIAL_DELAY_MS,
+                    { min: 0, max: 120_000 }
+                ),
+                maxLifetimeSeconds: parseIntegerEnv(
+                    env,
+                    'POSTGRES_MAX_LIFETIME_SECONDS',
+                    DEFAULT_POSTGRES_MAX_LIFETIME_SECONDS,
+                    { min: 0, max: 86_400 }
                 )
             }
         },
@@ -434,5 +462,9 @@ module.exports = {
     DEFAULT_POSTGRES_POOL_MAX,
     DEFAULT_POSTGRES_CONNECTION_TIMEOUT_MS,
     DEFAULT_POSTGRES_IDLE_TIMEOUT_MS,
-    DEFAULT_POSTGRES_QUERY_TIMEOUT_MS
+    DEFAULT_POSTGRES_QUERY_TIMEOUT_MS,
+    DEFAULT_POSTGRES_INIT_RETRY_ATTEMPTS,
+    DEFAULT_POSTGRES_INIT_RETRY_BASE_DELAY_MS,
+    DEFAULT_POSTGRES_KEEP_ALIVE_INITIAL_DELAY_MS,
+    DEFAULT_POSTGRES_MAX_LIFETIME_SECONDS
 };
