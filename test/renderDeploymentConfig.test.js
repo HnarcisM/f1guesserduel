@@ -39,6 +39,21 @@ test('Render blueprint keeps production secrets out of Git', () => {
     assert.doesNotMatch(source, /change-me-to-another-long-random-secret/);
 });
 
+test('dependency lockfile uses only the public npm registry', () => {
+    const source = readProjectFile('package-lock.json');
+    const lockfile = JSON.parse(source);
+    const resolvedUrls = Object.values(lockfile.packages || {})
+        .map(packageMetadata => packageMetadata?.resolved)
+        .filter(Boolean);
+
+    assert.ok(resolvedUrls.length > 0);
+    assert.doesNotMatch(source, /packages\.applied-caas-gateway1\.internal\.api\.openai\.org/);
+
+    for (const resolvedUrl of resolvedUrls) {
+        assert.match(resolvedUrl, /^https:\/\/registry\.npmjs\.org\//);
+    }
+});
+
 test('example environment uses Render-safe production defaults', () => {
     const source = readProjectFile('.env.example');
 
