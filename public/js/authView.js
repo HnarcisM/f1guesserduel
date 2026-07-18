@@ -5,6 +5,8 @@ export function createAuthView({ onAuthChanged } = {}) {
     let socketAuthToken = null;
     let mode = 'login';
     let authStateVersion = 0;
+    let selectedStatsMode = 'single';
+    let currentAccountStats = {};
 
     function getEls() {
         return {
@@ -36,6 +38,12 @@ export function createAuthView({ onAuthChanged } = {}) {
             singleStats: document.getElementById('authSingleStats'),
             dailyStats: document.getElementById('authDailyStats'),
             duelStats: document.getElementById('authDuelStats'),
+            statsModeSingle: document.getElementById('authStatsModeSingle'),
+            statsModeDaily: document.getElementById('authStatsModeDaily'),
+            statsModeDuel: document.getElementById('authStatsModeDuel'),
+            modeOutcomeDetail: document.getElementById('authModeOutcomeDetail'),
+            modeStreakDetail: document.getElementById('authModeStreakDetail'),
+            gameHistory: document.getElementById('authGameHistory'),
             accountStatsMessage: document.getElementById('authAccountStatsMessage')
         };
     }
@@ -124,6 +132,7 @@ export function createAuthView({ onAuthChanged } = {}) {
     }
 
     function renderAccountStats(stats = {}) {
+        currentAccountStats = stats;
         const els = getEls();
         const totals = stats.totals || {};
         if (els.statPlayed) els.statPlayed.textContent = String(Number(totals.played) || 0);
@@ -133,14 +142,111 @@ export function createAuthView({ onAuthChanged } = {}) {
         renderModeStats(els.singleStats, stats.modes?.single);
         renderModeStats(els.dailyStats, stats.modes?.daily);
         renderModeStats(els.duelStats, stats.modes?.duel, { includeDraws: true });
+        renderDetailedModeStats();
         if (els.accountStatsMessage) els.accountStatsMessage.textContent = '';
     }
 
-    async function refreshAccountSummary(providedStats = null, expectedUserId = null) {
+    function renderDetailedModeStats() {
+        const els = getEls();
+        const stats = currentAccountStats.modes?.[selectedStatsMode] || {};
+        const buttonMap = {
+            single: els.statsModeSingle,
+            daily: els.statsModeDaily,
+            duel: els.statsModeDuel
+        };
+
+        for (const [modeName, button] of Object.entries(buttonMap)) {
+            if (!button) continue;
+            const isSelected = modeName === selectedStatsMode;
+            button.classList.toggle('is-active', isSelected);
+            button.setAttribute('aria-pressed', String(isSelected));
+        }
+
+        const won = Number(stats.won) || 0;
+        const lost = Number(stats.lost) || 0;
+        const drawn = Number(stats.drawn) || 0;
+        if (els.modeOutcomeDetail) {
+            els.modeOutcomeDetail.textContent = selectedStatsMode === 'duel'
+                ? `${won} victorii · ${lost} înfrângeri · ${drawn} remize`
+                : `${won} victorii · ${lost} înfrângeri`;
+        }
+        if (els.modeStreakDetail) {
+            els.modeStreakDetail.textContent = `Streak: ${Number(stats.currentStreak) || 0} · Record: ${Number(stats.bestStreak) || 0}`;
+        }
+
+        const distribution = stats.distribution || {};
+        const maximum = Math.max(1, ...Object.values(distribution).map(value => Number(value) || 0));
+        for (let attempt = 1; attempt <= 6; attempt += 1) {
+            const count = Number(distribution[attempt]) || 0;
+            const countElement = document.getElementById(`authGuessCount${attempt}`);
+            const barElement = document.getElementById(`authGuessBar${attempt}`);
+            if (countElement) countElement.textContent = String(count);
+            if (barElement) barElement.style.width = `${count > 0 ? Math.max(8, Math.round((count / maximum) * 100)) : 0}%`;
+        }
+    }
+
+    function selectStatsMode(nextMode) {
+        if (!['single', 'daily', 'duel'].includes(nextMode)) return;
+        selectedStatsMode = nextMode;
+        renderDetailedModeStats();
+    }
+
+    function formatHistoryDate(completedAt) {
+        const date = new Date(completedAt);
+        if (!completedAt || Number.isNaN(date.getTime())) return 'Dată necunoscută';
+        return new Intl.DateTimeFormat('ro-RO', {
+            day: '2-digit',
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit'
+        }).format(date);
+    }
+
+    function renderRecentGames(games = []) {
+        const { gameHistory } = getEls();
+        if (!gameHistory) return;
+        gameHistory.replaceChildren();
+
+        const recentGames = Array.isArray(games) ? games.slice(0, 10) : [];
+        if (recentGames.length === 0) {
+            const empty = document.createElement('p');
+            empty.className = 'auth-history-empty';
+            empty.textContent = 'Joacă prima rundă pentru a începe istoricul.';
+            gameHistory.appendChild(empty);
+            return;
+        }
+
+        const modeLabels = { single: 'Single', daily: 'Daily', duel: 'Duel' };
+        const outcomeLabels = { win: '🏆 Victorie', loss: '◼ Înfrângere', draw: '🤝 Remiză' };
+        const difficultyLabels = { easy: 'Ușor', medium: 'Mediu', hard: 'Greu' };
+
+        for (const game of recentGames) {
+            const item = document.createElement('article');
+            const title = document.createElement('strong');
+            const details = document.createElement('span');
+            const time = document.createElement('time');
+            const attempts = Number(game.attempts) || 0;
+            item.className = 'auth-history-item';
+            title.textContent = `${outcomeLabels[game.outcome] || 'Rezultat'} · ${modeLabels[game.mode] || 'Joc'}`;
+            details.textContent = `${difficultyLabels[game.difficulty] || 'Standard'} · ${attempts} ${attempts === 1 ? 'încercare' : 'încercări'}`;
+            time.textContent = formatHistoryDate(game.completedAt);
+            if (game.completedAt) time.dateTime = String(game.completedAt);
+            item.append(title, details, time);
+            gameHistory.appendChild(item);
+        }
+    }
+
+    function renderAccountDashboard(summary = {}) {
+        const stats = summary.stats || (summary.totals ? summary : {});
+        renderAccountStats(stats);
+        renderRecentGames(summary.recentGames || []);
+    }
+
+    async function refreshAccountSummary(providedSummary = null, expectedUserId = null) {
         if (!currentUser) return;
         if (expectedUserId !== null && String(currentUser.id) !== String(expectedUserId)) return;
-        if (providedStats) {
-            renderAccountStats(providedStats);
+        if (providedSummary) {
+            renderAccountDashboard(providedSummary);
             return;
         }
 
@@ -155,7 +261,7 @@ export function createAuthView({ onAuthChanged } = {}) {
                 || String(currentUser.id) !== String(requestedUserId)) return;
             if (data.user) currentUser = data.user;
             renderUser();
-            renderAccountStats(data.stats);
+            renderAccountDashboard(data);
         } catch (error) {
             if (requestedStateVersion !== authStateVersion
                 || !currentUser
@@ -189,14 +295,14 @@ export function createAuthView({ onAuthChanged } = {}) {
             const previousUserId = currentUser?.id;
             currentUser = data.user || null;
             socketAuthToken = data.socketAuthToken || null;
-            if (String(previousUserId ?? '') !== String(currentUser?.id ?? '')) renderAccountStats();
+            if (String(previousUserId ?? '') !== String(currentUser?.id ?? '')) renderAccountDashboard();
             renderUser();
             emitAuthChanged();
         } catch (error) {
             if (requestedStateVersion !== authStateVersion) return;
             currentUser = null;
             socketAuthToken = null;
-            renderAccountStats();
+            renderAccountDashboard();
             renderUser();
             emitAuthChanged();
         }
@@ -219,7 +325,7 @@ export function createAuthView({ onAuthChanged } = {}) {
 
             currentUser = data.user || null;
             socketAuthToken = data.socketAuthToken || null;
-            renderAccountStats();
+            renderAccountDashboard();
             renderUser();
             emitAuthChanged();
             setMessage(currentUser ? `Bun venit, ${currentUser.username}!` : 'Autentificare reușită.', 'success');
@@ -244,7 +350,7 @@ export function createAuthView({ onAuthChanged } = {}) {
 
         currentUser = null;
         socketAuthToken = null;
-        renderAccountStats();
+        renderAccountDashboard();
         renderUser();
         emitAuthChanged();
         setMessage('Ai ieșit din cont.', 'success');
@@ -258,6 +364,9 @@ export function createAuthView({ onAuthChanged } = {}) {
         if (els.backdrop) els.backdrop.addEventListener('click', closePanel);
         if (els.switchBtn) els.switchBtn.addEventListener('click', () => setMode(mode === 'register' ? 'login' : 'register'));
         if (els.logoutBtn) els.logoutBtn.addEventListener('click', logout);
+        if (els.statsModeSingle) els.statsModeSingle.addEventListener('click', () => selectStatsMode('single'));
+        if (els.statsModeDaily) els.statsModeDaily.addEventListener('click', () => selectStatsMode('daily'));
+        if (els.statsModeDuel) els.statsModeDuel.addEventListener('click', () => selectStatsMode('duel'));
         if (els.panel) {
             const form = els.panel.querySelector('form');
             if (form) form.addEventListener('submit', submitAuthForm);

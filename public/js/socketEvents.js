@@ -173,7 +173,10 @@ export function registerSocketEvents(socket, app) {
 	});
 
 	socket.on('accountStatsUpdated', (payload = {}) => {
-		app.refreshAccountSummary?.(payload.stats || null, payload.userId ?? null);
+		app.refreshAccountSummary?.({
+			stats: payload.stats || null,
+			recentGames: payload.recentGames || []
+		}, payload.userId ?? null);
 	});
 
 	socket.on('initDailyChallenge', (data) => {

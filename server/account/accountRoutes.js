@@ -8,10 +8,8 @@ function createAccountSummaryHandler({ accountStatsService }) {
                 return res.status(401).json({ message: 'Trebuie să fii autentificat pentru a vedea contul.' });
             }
 
-            return res.json({
-                user: req.user,
-                stats: await accountStatsService.getAccountStats(req.user.id)
-            });
+            const dashboard = await accountStatsService.getAccountDashboard(req.user.id);
+            return res.json({ user: req.user, ...dashboard });
         } catch (error) {
             return next(error);
         }

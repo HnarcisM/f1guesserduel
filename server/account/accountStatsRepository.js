@@ -19,6 +19,14 @@ const SELECT_STATS_SQL = `
     ORDER BY mode
 `;
 
+const SELECT_RECENT_RESULTS_SQL = `
+    SELECT mode, outcome, attempts, difficulty, completed_at AS "completedAt"
+    FROM user_game_results
+    WHERE user_id = $1
+    ORDER BY completed_at DESC, id DESC
+    LIMIT $2
+`;
+
 const POSTGRES_UPSERT_STATS_SQL = `
     INSERT INTO user_game_stats (
         user_id, mode, games_played, games_won, games_drawn,
@@ -65,6 +73,11 @@ function createPostgresAccountStatsRepository(database) {
         return result.rows || [];
     }
 
+    async function getRecentResults(userId, limit = 10, queryable = database) {
+        const result = await queryable.query(SELECT_RECENT_RESULTS_SQL, [userId, limit]);
+        return result.rows || [];
+    }
+
     async function recordGameResult(result) {
         const client = await database.pool.connect();
         const increments = buildResultIncrements(result.outcome, result.attempts);
@@ -100,10 +113,13 @@ function createPostgresAccountStatsRepository(database) {
                 ]);
             }
 
-            const rows = await getStatsRows(result.userId, client);
+            const [rows, recentResults] = await Promise.all([
+                getStatsRows(result.userId, client),
+                getRecentResults(result.userId, 10, client)
+            ]);
             await client.query('COMMIT');
             transactionStarted = false;
-            return { recorded, rows };
+            return { recorded, rows, recentResults };
         } catch (error) {
             if (transactionStarted) await client.query('ROLLBACK');
             throw error;
@@ -115,12 +131,20 @@ function createPostgresAccountStatsRepository(database) {
     return {
         provider: 'postgres',
         getStatsRows,
+        getRecentResults,
         recordGameResult
     };
 }
 
 function createSqliteAccountStatsRepository(database) {
     const selectStats = database.prepare(SELECT_STATS_SQL.replace('$1', '?'));
+    const selectRecentResults = database.prepare(`
+        SELECT mode, outcome, attempts, difficulty, completed_at AS completedAt
+        FROM user_game_results
+        WHERE user_id = ?
+        ORDER BY completed_at DESC, id DESC
+        LIMIT ?
+    `);
     const insertResult = database.prepare(`
         INSERT OR IGNORE INTO user_game_results (
             user_id, mode, result_key, outcome, attempts, difficulty
@@ -177,14 +201,23 @@ function createSqliteAccountStatsRepository(database) {
         return selectStats.all(userId);
     }
 
+    async function getRecentResults(userId, limit = 10) {
+        return selectRecentResults.all(userId, limit);
+    }
+
     async function recordGameResult(result) {
         const recorded = recordTransaction(result);
-        return { recorded, rows: await getStatsRows(result.userId) };
+        return {
+            recorded,
+            rows: await getStatsRows(result.userId),
+            recentResults: await getRecentResults(result.userId)
+        };
     }
 
     return {
         provider: 'sqlite',
         getStatsRows,
+        getRecentResults,
         recordGameResult
     };
 }
@@ -204,6 +237,7 @@ function createAccountStatsRepository(databaseOrRepository) {
 
 module.exports = {
     MODE_COLUMNS,
+    SELECT_RECENT_RESULTS_SQL,
     buildResultIncrements,
     createAccountStatsRepository,
     createPostgresAccountStatsRepository,

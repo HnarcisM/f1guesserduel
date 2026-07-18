@@ -4,6 +4,8 @@ const { createAccountStatsRepository } = require('./accountStatsRepository');
 
 const ACCOUNT_GAME_MODES = Object.freeze(['single', 'daily', 'duel']);
 const ACCOUNT_GAME_OUTCOMES = Object.freeze(['win', 'loss', 'draw']);
+const DEFAULT_ACCOUNT_HISTORY_LIMIT = 10;
+const MAX_ACCOUNT_HISTORY_LIMIT = 20;
 
 function createEmptyModeStats(mode) {
     return {
@@ -71,6 +73,28 @@ function normalizeUserId(userId) {
     return Number.isSafeInteger(value) && value > 0 ? value : null;
 }
 
+function normalizeHistoryLimit(limit) {
+    const value = Number(limit);
+    if (!Number.isSafeInteger(value) || value <= 0) return DEFAULT_ACCOUNT_HISTORY_LIMIT;
+    return Math.min(value, MAX_ACCOUNT_HISTORY_LIMIT);
+}
+
+function buildRecentGames(rows = [], limit = DEFAULT_ACCOUNT_HISTORY_LIMIT) {
+    const normalizedLimit = normalizeHistoryLimit(limit);
+    return rows
+        .filter(row => row
+            && ACCOUNT_GAME_MODES.includes(row.mode)
+            && ACCOUNT_GAME_OUTCOMES.includes(row.outcome))
+        .slice(0, normalizedLimit)
+        .map(row => ({
+            mode: row.mode,
+            outcome: row.outcome,
+            attempts: Math.min(MAX_ATTEMPTS, asNonNegativeInteger(row.attempts)),
+            difficulty: typeof row.difficulty === 'string' ? row.difficulty : null,
+            completedAt: row.completedAt || row.completed_at || null
+        }));
+}
+
 function normalizeResultInput(input = {}) {
     const userId = normalizeUserId(input.userId);
     const mode = ACCOUNT_GAME_MODES.includes(input.mode) ? input.mode : null;
@@ -104,17 +128,35 @@ function createAccountStatsService(databaseOrRepository) {
         return buildAccountStats(await repository.getStatsRows(normalizedUserId));
     }
 
+    async function getAccountDashboard(userId, { historyLimit = DEFAULT_ACCOUNT_HISTORY_LIMIT } = {}) {
+        const normalizedUserId = normalizeUserId(userId);
+        if (!normalizedUserId) throw new Error('Invalid account user id.');
+        const normalizedLimit = normalizeHistoryLimit(historyLimit);
+        const [rows, recentRows] = await Promise.all([
+            repository.getStatsRows(normalizedUserId),
+            typeof repository.getRecentResults === 'function'
+                ? repository.getRecentResults(normalizedUserId, normalizedLimit)
+                : []
+        ]);
+        return {
+            stats: buildAccountStats(rows),
+            recentGames: buildRecentGames(recentRows, normalizedLimit)
+        };
+    }
+
     async function recordGameResult(input) {
         const result = normalizeResultInput(input);
         const repositoryResult = await repository.recordGameResult(result);
         return {
             recorded: Boolean(repositoryResult.recorded),
-            stats: buildAccountStats(repositoryResult.rows)
+            stats: buildAccountStats(repositoryResult.rows),
+            recentGames: buildRecentGames(repositoryResult.recentResults)
         };
     }
 
     return {
         getAccountStats,
+        getAccountDashboard,
         recordGameResult
     };
 }
@@ -137,10 +179,14 @@ async function recordAccountGameResultSafely({ accountStatsService, logger = con
 module.exports = {
     ACCOUNT_GAME_MODES,
     ACCOUNT_GAME_OUTCOMES,
+    DEFAULT_ACCOUNT_HISTORY_LIMIT,
+    MAX_ACCOUNT_HISTORY_LIMIT,
     buildAccountStats,
+    buildRecentGames,
     createAccountStatsService,
     createEmptyModeStats,
     createGameResultKey,
     normalizeResultInput,
+    normalizeHistoryLimit,
     recordAccountGameResultSafely
 };

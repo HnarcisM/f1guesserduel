@@ -14,10 +14,16 @@ function createDeferred() {
 function createElement() {
     const classes = new Set();
     const listeners = new Map();
+    const attributes = new Map();
+    const children = [];
     return {
         value: '',
         textContent: '',
+        className: '',
+        dateTime: '',
         dataset: {},
+        style: {},
+        children,
         classList: {
             add: (...names) => names.forEach(name => classes.add(name)),
             remove: (...names) => names.forEach(name => classes.delete(name)),
@@ -29,6 +35,22 @@ function createElement() {
         },
         addEventListener(eventName, handler) {
             listeners.set(eventName, handler);
+        },
+        setAttribute(name, value) {
+            attributes.set(name, String(value));
+        },
+        getAttribute(name) {
+            return attributes.get(name) || null;
+        },
+        replaceChildren(...nextChildren) {
+            children.splice(0, children.length, ...nextChildren);
+        },
+        appendChild(child) {
+            children.push(child);
+            return child;
+        },
+        append(...nextChildren) {
+            children.push(...nextChildren);
         },
         listeners
     };
@@ -42,6 +64,11 @@ function createAccountDocument() {
         'authAccountView', 'authAccountAvatar', 'authAccountUsername', 'authAccountEmail',
         'authAccountMemberSince', 'authStatPlayed', 'authStatWon', 'authStatWinRate',
         'authStatBestStreak', 'authSingleStats', 'authDailyStats', 'authDuelStats',
+        'authStatsModeSingle', 'authStatsModeDaily', 'authStatsModeDuel',
+        'authModeOutcomeDetail', 'authModeStreakDetail', 'authGameHistory',
+        'authGuessCount1', 'authGuessCount2', 'authGuessCount3', 'authGuessCount4',
+        'authGuessCount5', 'authGuessCount6', 'authGuessBar1', 'authGuessBar2',
+        'authGuessBar3', 'authGuessBar4', 'authGuessBar5', 'authGuessBar6',
         'authAccountStatsMessage'
     ];
     const elements = Object.fromEntries(ids.map(id => [id, createElement()]));
@@ -50,7 +77,10 @@ function createAccountDocument() {
     elements.authPassword.value = 'StrongPassword123!';
     return {
         elements,
-        document: { getElementById: id => elements[id] || null }
+        document: {
+            getElementById: id => elements[id] || null,
+            createElement: () => createElement()
+        }
     };
 }
 
@@ -64,6 +94,9 @@ test('authenticated account dashboard is present while the login form remains se
     assert.match(html, /id="authSingleStats"/);
     assert.match(html, /id="authDailyStats"/);
     assert.match(html, /id="authDuelStats"/);
+    assert.match(html, /id="authStatsDetailsTitle"/);
+    assert.match(html, /id="authGuessBar6"/);
+    assert.match(html, /id="authGameHistory"/);
     assert.match(css, /\.auth-stats-grid/);
 });
 
@@ -86,7 +119,7 @@ test('server account stats updates are forwarded to the account dashboard', asyn
     const stats = { totals: { played: 4 }, modes: {} };
     handlers.get('accountStatsUpdated')({ stats });
 
-    assert.deepEqual(received, [stats]);
+    assert.deepEqual(received, [{ stats, recentGames: [] }]);
 });
 
 test('a delayed initial auth refresh cannot overwrite a newer login or another account stats event', async t => {
@@ -127,8 +160,30 @@ test('a delayed initial auth refresh cannot overwrite a newer login or another a
     await new Promise(resolve => setImmediate(resolve));
 
     assert.equal(view.getCurrentUser().id, 7);
-    await view.refreshAccountSummary({ totals: { played: 99 }, modes: {} }, 8);
+    await view.refreshAccountSummary({ stats: { totals: { played: 99 }, modes: {} } }, 8);
     assert.equal(elements.authStatPlayed.textContent, '0');
-    await view.refreshAccountSummary({ totals: { played: 5 }, modes: {} }, 7);
+    await view.refreshAccountSummary({
+        stats: {
+            totals: { played: 5, won: 3, winRate: 60, bestStreak: 2 },
+            modes: {
+                single: { won: 1, lost: 1, drawn: 0, currentStreak: 0, bestStreak: 1, distribution: { 2: 1 } },
+                daily: { won: 1, lost: 0, drawn: 0, currentStreak: 1, bestStreak: 1, distribution: { 1: 1 } },
+                duel: { won: 1, lost: 1, drawn: 1, currentStreak: 0, bestStreak: 2, distribution: { 3: 1 } }
+            }
+        },
+        recentGames: [{
+            mode: 'duel',
+            outcome: 'win',
+            attempts: 3,
+            difficulty: 'hard',
+            completedAt: '2026-07-18T12:00:00.000Z'
+        }]
+    }, 7);
     assert.equal(elements.authStatPlayed.textContent, '5');
+    assert.equal(elements.authGameHistory.children.length, 1);
+    assert.match(elements.authGameHistory.children[0].children[0].textContent, /Victorie · Duel/);
+
+    elements.authStatsModeDuel.listeners.get('click')();
+    assert.match(elements.authModeOutcomeDetail.textContent, /1 remize/);
+    assert.equal(elements.authGuessCount3.textContent, '1');
 });

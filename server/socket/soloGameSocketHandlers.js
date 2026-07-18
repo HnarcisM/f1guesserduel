@@ -58,7 +58,13 @@ function registerSoloGameSocketHandlers({
             attempts: singleSession.attempts,
             difficulty: singleSession.difficulty
         }).then(result => {
-            if (result?.stats) socket.emit('accountStatsUpdated', { userId, stats: result.stats });
+            if (result?.stats) {
+                socket.emit('accountStatsUpdated', {
+                    userId,
+                    stats: result.stats,
+                    recentGames: result.recentGames || []
+                });
+            }
         });
     }
 

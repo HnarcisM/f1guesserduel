@@ -41,6 +41,9 @@
     transform: translate(-50%, -50%) scale(0.96);
     z-index: 1200;
     width: min(420px, calc(100vw - 28px));
+    max-height: min(90vh, 820px);
+    overflow-x: hidden;
+    overflow-y: auto;
     background: linear-gradient(180deg, color-mix(in srgb, var(--surface-card) 96%, black), var(--surface-card));
     border: 1px solid var(--border-soft);
     border-radius: 22px;
@@ -180,6 +183,138 @@
     font-size: 0.82rem;
 }
 
+.auth-stats-details,
+.auth-history-section {
+    display: grid;
+    gap: 11px;
+    padding: 14px;
+    border: 1px solid var(--border-soft);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.auth-section-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.auth-section-heading h3 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 0.92rem;
+}
+
+.auth-section-heading > span {
+    color: var(--text-muted);
+    font-size: 0.72rem;
+}
+
+.auth-mode-selector {
+    display: flex;
+    gap: 4px;
+}
+
+.auth-mode-selector button {
+    border: 1px solid var(--border-soft);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-secondary);
+    padding: 5px 8px;
+    font-size: 0.7rem;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.auth-mode-selector button.is-active {
+    border-color: var(--accent-f1);
+    background: color-mix(in srgb, var(--accent-f1) 16%, transparent);
+    color: var(--text-primary);
+}
+
+.auth-detail-summary {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    color: var(--text-secondary);
+    font-size: 0.75rem;
+}
+
+.auth-attempt-distribution {
+    display: grid;
+    gap: 6px;
+}
+
+.auth-attempt-distribution > div {
+    display: grid;
+    grid-template-columns: 14px minmax(0, 1fr) 22px;
+    align-items: center;
+    gap: 7px;
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+}
+
+.auth-attempt-distribution i {
+    display: block;
+    height: 7px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.auth-attempt-distribution b {
+    display: block;
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--accent-f1), color-mix(in srgb, var(--accent-f1) 58%, white));
+    transition: width 0.2s ease;
+}
+
+.auth-attempt-distribution strong {
+    text-align: right;
+}
+
+.auth-game-history {
+    display: grid;
+    gap: 7px;
+}
+
+.auth-history-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 3px 10px;
+    padding: 9px 10px;
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.045);
+}
+
+.auth-history-item strong {
+    color: var(--text-primary);
+    font-size: 0.8rem;
+}
+
+.auth-history-item time,
+.auth-history-item span {
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+}
+
+.auth-history-item time {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+    white-space: nowrap;
+}
+
+.auth-history-empty {
+    margin: 2px 0;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    text-align: center;
+}
+
 .auth-account-stats-message {
     min-height: 18px;
     margin: 0;
@@ -275,6 +410,12 @@
         flex-direction: column;
         gap: 3px;
     }
+
+    .auth-section-heading,
+    .auth-detail-summary {
+        align-items: flex-start;
+        flex-direction: column;
+    }
 }
 
 /* --- TEMA CARBON: auth buttons should match the grey carbon controls --- */
@@ -296,4 +437,3 @@
 [data-app-theme="carbon"] .auth-open-btn:active {
     background: linear-gradient(180deg, #3c4044 0%, #303337 100%);
 }
-

@@ -20,6 +20,17 @@ class FakePostgresClient {
             this.resultKeys.add(key);
             return { rowCount: 1, rows: [{ id: 1 }] };
         }
+        if (normalizedSql.startsWith('SELECT mode, outcome')) {
+            return {
+                rows: [{
+                    mode: 'single',
+                    outcome: 'win',
+                    attempts: 2,
+                    difficulty: 'easy',
+                    completedAt: '2026-07-18T12:00:00.000Z'
+                }]
+            };
+        }
         if (normalizedSql.startsWith('SELECT mode')) {
             return {
                 rows: [{
@@ -65,12 +76,16 @@ test('Postgres account stats use a transaction, parameters and idempotent result
     const duplicate = await repository.recordGameResult(input);
     const resultInsert = client.queries.find(query => query.sql.startsWith('INSERT INTO user_game_results'));
     const statsUpserts = client.queries.filter(query => query.sql.startsWith('INSERT INTO user_game_stats'));
+    const historyQueries = client.queries.filter(query => query.sql.startsWith('SELECT mode, outcome'));
 
     assert.equal(first.recorded, true);
     assert.equal(duplicate.recorded, false);
     assert.equal(resultInsert.params[2], input.resultKey);
     assert.equal(resultInsert.sql.includes(input.resultKey), false);
     assert.equal(statsUpserts.length, 1);
+    assert.equal(first.recentResults.length, 1);
+    assert.equal(historyQueries.length, 2);
+    assert.deepEqual(historyQueries[0].params, [7, 10]);
     assert.match(statsUpserts[0].sql, /ON CONFLICT \(user_id, mode\) DO UPDATE/);
     assert.equal(client.queries.filter(query => query.sql === 'BEGIN').length, 2);
     assert.equal(client.queries.filter(query => query.sql === 'COMMIT').length, 2);

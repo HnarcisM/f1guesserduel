@@ -115,7 +115,8 @@ function registerSocketHandlers(io, dependencies) {
                 if (result?.stats && playerSocket) {
                     playerSocket.emit('accountStatsUpdated', {
                         userId: accountResult.userId,
-                        stats: result.stats
+                        stats: result.stats,
+                        recentGames: result.recentGames || []
                     });
                 }
             });
@@ -393,7 +394,13 @@ function registerSocketHandlers(io, dependencies) {
                     attempts: MAX_ATTEMPTS,
                     difficulty: singleSession.difficulty
                 }).then(result => {
-                    if (result?.stats) socket.emit('accountStatsUpdated', { userId, stats: result.stats });
+                    if (result?.stats) {
+                        socket.emit('accountStatsUpdated', {
+                            userId,
+                            stats: result.stats,
+                            recentGames: result.recentGames || []
+                        });
+                    }
                 });
                 return;
             }

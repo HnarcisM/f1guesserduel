@@ -53,7 +53,13 @@ function registerDailyChallengeSocketHandlers({
             attempts: dailySession.attempts,
             difficulty: dailySession.difficulty
         }).then(result => {
-            if (result?.stats) socket.emit('accountStatsUpdated', { userId, stats: result.stats });
+            if (result?.stats) {
+                socket.emit('accountStatsUpdated', {
+                    userId,
+                    stats: result.stats,
+                    recentGames: result.recentGames || []
+                });
+            }
         });
     }
 

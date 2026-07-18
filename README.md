@@ -325,11 +325,14 @@ La primul deploy peste baza existentă, migrarea `001` folosește operații `IF 
 ### Panou de cont și statistici persistente
 
 - După login, formularul de autentificare este înlocuit de panoul „Contul meu”, cu username, email, data creării contului și statistici Single, Daily și Duel.
+- Selectorul Single/Daily/Duel afișează victorii, înfrângeri, remize, streak-ul curent, recordul și distribuția victoriilor pe cele 6 încercări.
+- Panoul afișează ultimele 10 jocuri cu modul, rezultatul, dificultatea, numărul de încercări și data locală a browserului.
 - Rezultatele sunt înregistrate numai din fluxurile validate de server; browserul nu are endpoint pentru a declara direct o victorie.
 - `user_game_results` păstrează chei unice de rezultat pentru a preveni dublarea, inclusiv la reluarea aceleiași provocări Daily.
 - `user_game_stats` păstrează contoare agregate pentru încărcarea rapidă a panoului.
 - Actualizarea registrului și a contoarelor este tranzacțională în PostgreSQL. Dacă actualizarea statisticilor eșuează temporar, jocul continuă, iar eroarea este logată fără identificatorul utilizatorului.
 - `GET /api/account/summary` folosește exclusiv utilizatorul sesiunii curente și răspunde cu `Cache-Control: no-store`.
+- Interogarea istoricului este limitată și folosește indexul existent pe utilizator și data finalizării; răspunsul nu expune `userId`, cheia internă a rezultatului sau informații despre pilotul țintă.
 - Statisticile Guest din `localStorage` rămân separate și nu sunt importate automat într-un cont.
 
 Local poți rămâne pe SQLite, fără `DATABASE_URL`:

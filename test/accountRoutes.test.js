@@ -39,11 +39,12 @@ test('account summary requires authentication and disables caching', async () =>
 test('account summary returns only the authenticated user statistics', async () => {
     const requestedUserIds = [];
     const stats = { totals: { played: 3 }, modes: {} };
+    const recentGames = [{ mode: 'single', outcome: 'win', attempts: 2 }];
     const handler = createAccountSummaryHandler({
         accountStatsService: {
-            async getAccountStats(userId) {
+            async getAccountDashboard(userId) {
                 requestedUserIds.push(userId);
-                return stats;
+                return { stats, recentGames };
             }
         }
     });
@@ -53,6 +54,6 @@ test('account summary returns only the authenticated user statistics', async () 
     await handler({ user, query: { userId: 999 } }, response, error => { throw error; });
 
     assert.deepEqual(requestedUserIds, [7]);
-    assert.deepEqual(response.body, { user, stats });
+    assert.deepEqual(response.body, { user, stats, recentGames });
     assert.equal(response.headers['Cache-Control'], 'no-store');
 });

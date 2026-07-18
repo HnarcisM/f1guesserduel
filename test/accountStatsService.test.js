@@ -11,6 +11,7 @@ const {
 function createMemoryStatsRepository() {
     const rows = new Map();
     const resultKeys = new Set();
+    const recentResults = [];
 
     function getRow(userId, mode) {
         const key = `${userId}:${mode}`;
@@ -39,14 +40,31 @@ function createMemoryStatsRepository() {
             .map(([, row]) => ({ ...row }));
     }
 
+    async function getRecentResults(userId, limit = 10) {
+        return recentResults
+            .filter(result => result.userId === userId)
+            .slice(-limit)
+            .reverse()
+            .map(result => ({ ...result }));
+    }
+
     return {
         getStatsRows,
+        getRecentResults,
         async recordGameResult(result) {
             const uniqueKey = `${result.userId}:${result.mode}:${result.resultKey}`;
             if (resultKeys.has(uniqueKey)) {
-                return { recorded: false, rows: await getStatsRows(result.userId) };
+                return {
+                    recorded: false,
+                    rows: await getStatsRows(result.userId),
+                    recentResults: await getRecentResults(result.userId)
+                };
             }
             resultKeys.add(uniqueKey);
+            recentResults.push({
+                ...result,
+                completedAt: `2026-07-${String(recentResults.length + 18).padStart(2, '0')}T12:00:00.000Z`
+            });
 
             const row = getRow(result.userId, result.mode);
             row.games_played += 1;
@@ -59,7 +77,11 @@ function createMemoryStatsRepository() {
                 row.current_streak = 0;
                 if (result.outcome === 'draw') row.games_drawn += 1;
             }
-            return { recorded: true, rows: await getStatsRows(result.userId) };
+            return {
+                recorded: true,
+                rows: await getStatsRows(result.userId),
+                recentResults: await getRecentResults(result.userId)
+            };
         }
     };
 }
@@ -92,6 +114,7 @@ test('account stats aggregate modes and ignore duplicate server result keys', as
         difficulty: 'easy'
     });
     const stats = await service.getAccountStats(7);
+    const dashboard = await service.getAccountDashboard(7);
 
     assert.equal(first.recorded, true);
     assert.equal(duplicate.recorded, false);
@@ -107,6 +130,16 @@ test('account stats aggregate modes and ignore duplicate server result keys', as
     assert.equal(stats.modes.single.played, 1);
     assert.equal(stats.modes.daily.played, 1);
     assert.equal(stats.modes.duel.played, 0);
+    assert.equal(dashboard.recentGames.length, 2);
+    assert.deepEqual(dashboard.recentGames[0], {
+        mode: 'daily',
+        outcome: 'loss',
+        attempts: 6,
+        difficulty: 'easy',
+        completedAt: '2026-07-19T12:00:00.000Z'
+    });
+    assert.equal(Object.hasOwn(dashboard.recentGames[0], 'resultKey'), false);
+    assert.equal(Object.hasOwn(dashboard.recentGames[0], 'userId'), false);
 });
 
 test('account stats validation rejects client-like invalid result data', () => {
