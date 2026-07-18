@@ -1,5 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
+
+const projectRoot = path.join(__dirname, '..');
 
 function createClassList(initialClasses = []) {
     const classes = new Set(initialClasses);
@@ -75,6 +79,51 @@ function setupNavigationDocument() {
 
     return { menu, menuButton, title, homeItem, easyItem, wasReloaded: () => reloaded };
 }
+
+test('left navigation groups are collapsed native disclosures by default', () => {
+    const html = fs.readFileSync(path.join(projectRoot, 'public', 'index.html'), 'utf8');
+    const css = fs.readFileSync(path.join(projectRoot, 'public', 'css', '02-header-menu.css'), 'utf8');
+
+    assert.equal((html.match(/<details class="menu-section">/g) || []).length, 4);
+    assert.equal((html.match(/<summary class="menu-section-title">/g) || []).length, 4);
+    assert.doesNotMatch(html, /<details class="menu-section"[^>]*\sopen(?:\s|>)/);
+    assert.match(css, /\.menu-section\[open\] > \.menu-section-content/);
+    assert.match(css, /prefers-reduced-motion/);
+});
+
+test('global clicks keep an open menu visible for disclosure controls and close it outside', async t => {
+    const originalDocument = globalThis.document;
+    const documentListeners = new Map();
+    const insideTarget = { id: '', parent: 'menu' };
+    const outsideTarget = { id: 'outside' };
+    const menu = createElement();
+    menu.contains = target => target?.parent === 'menu';
+    globalThis.document = {
+        addEventListener(eventName, handler) {
+            documentListeners.set(eventName, handler);
+        },
+        getElementById() {
+            return null;
+        }
+    };
+    t.after(() => {
+        if (originalDocument === undefined) delete globalThis.document;
+        else globalThis.document = originalDocument;
+    });
+
+    const { setupGlobalDocumentEvents } = await import('../public/js/globalDocumentEventsController.js');
+    setupGlobalDocumentEvents(menu, {
+        autocomplete: { clearSuggestions() {} },
+        hideEndGamePopup() {},
+        requestRematch() {}
+    });
+
+    documentListeners.get('click')({ target: insideTarget });
+    assert.equal(menu.classList.contains('hidden'), false);
+
+    documentListeners.get('click')({ target: outsideTarget });
+    assert.equal(menu.classList.contains('hidden'), true);
+});
 
 test('navigation title does not reload after confirmed Duel exit', async () => {
     const { setupMenu } = await import('../public/js/navigationMenuController.js');

@@ -37,8 +37,7 @@
     }
 
     .menu-section-title {
-        padding: var(--space-sm) var(--space-lg) var(--space-xs);
-        margin-top: var(--space-sm);
+        padding: var(--space-sm) var(--space-md);
         font-size: 9px;
     }
 

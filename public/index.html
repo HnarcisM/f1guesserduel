@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>F1 Guesser</title>
     <script src="/js/themeBootstrap.js?v=theme-bootstrap-1"></script>
-    <link rel="stylesheet" href="/style.bundle.css?v=frontend-cache-6">
+    <link rel="stylesheet" href="/style.bundle.css?v=frontend-cache-7">
 </head>
 <body>
 
@@ -20,27 +20,43 @@
 <header class="site-header">
     <div id="menu-hamburger" class="hamburger">☰</div>
    <div id="dropdown-menu" class="dropdown hidden">
-        <div class="menu-section-title">🎮 DIFICULTATE</div>
-        <div data-level="home" class="menu-item">🏠 Home</div>
-        <div data-level="easy" class="menu-item">🟢 Easy</div>
-        <div data-level="medium" class="menu-item">🟡 Medium</div>
-        <div data-level="hard" class="menu-item">🔴 Hard</div>
+        <details class="menu-section">
+            <summary class="menu-section-title">🎮 DIFICULTATE</summary>
+            <div class="menu-section-content">
+                <div data-level="home" class="menu-item">🏠 Home</div>
+                <div data-level="easy" class="menu-item">🟢 Easy</div>
+                <div data-level="medium" class="menu-item">🟡 Medium</div>
+                <div data-level="hard" class="menu-item">🔴 Hard</div>
+            </div>
+        </details>
 
-        <div class="menu-section-title">🌅 DAILY CHALLENGE</div>
-        <div data-daily-level="easy" class="menu-item daily-item">🟢 Daily Easy</div>
-        <div data-daily-level="medium" class="menu-item daily-item">🟡 Daily Medium</div>
-        <div data-daily-level="hard" class="menu-item daily-item">🔴 Daily Hard</div>
+        <details class="menu-section">
+            <summary class="menu-section-title">🌅 DAILY CHALLENGE</summary>
+            <div class="menu-section-content">
+                <div data-daily-level="easy" class="menu-item daily-item">🟢 Daily Easy</div>
+                <div data-daily-level="medium" class="menu-item daily-item">🟡 Daily Medium</div>
+                <div data-daily-level="hard" class="menu-item daily-item">🔴 Daily Hard</div>
+            </div>
+        </details>
 
-        <div class="menu-section-title">⏱️ TIMER</div>
-        <div data-timer="off" class="menu-item timer-item">∞ Fără timp</div>
-        <div data-timer="60" class="menu-item timer-item">⏱️ 60 secunde</div>
-        <div data-timer="90" class="menu-item timer-item">⏱️ 90 secunde</div>
-        <div data-timer="120" class="menu-item timer-item">⏱️ 120 secunde</div>
+        <details class="menu-section">
+            <summary class="menu-section-title">⏱️ TIMER</summary>
+            <div class="menu-section-content">
+                <div data-timer="off" class="menu-item timer-item">∞ Fără timp</div>
+                <div data-timer="60" class="menu-item timer-item">⏱️ 60 secunde</div>
+                <div data-timer="90" class="menu-item timer-item">⏱️ 90 secunde</div>
+                <div data-timer="120" class="menu-item timer-item">⏱️ 120 secunde</div>
+            </div>
+        </details>
 
-        <div class="menu-section-title">🎨 TEMĂ VIZUALĂ</div>
-        <div data-theme="default" class="menu-item theme-item">🌌 F1 Classic (Dark)</div>
-        <div data-theme="neon" class="menu-item theme-item">✨ Night Race (Neon)</div>
-        <div data-theme="carbon" class="menu-item theme-item">🏁 Carbon & Checkers</div>
+        <details class="menu-section">
+            <summary class="menu-section-title">🎨 TEMĂ VIZUALĂ</summary>
+            <div class="menu-section-content">
+                <div data-theme="default" class="menu-item theme-item">🌌 F1 Classic (Dark)</div>
+                <div data-theme="neon" class="menu-item theme-item">✨ Night Race (Neon)</div>
+                <div data-theme="carbon" class="menu-item theme-item">🏁 Carbon & Checkers</div>
+            </div>
+        </details>
     </div>
     <h1>🏎️ F1 GUESSER</h1>
     <!-- Butonul nou de partajare unificat în header -->
@@ -466,6 +482,6 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script defer src="/game.bundle.min.js?v=frontend-bundle-6"></script>
+<script defer src="/game.bundle.min.js?v=frontend-bundle-7"></script>
 </body>
 </html>

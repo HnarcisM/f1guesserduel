@@ -20,7 +20,12 @@ export function setupGlobalDocumentEvents(menu, { autocomplete, hideEndGamePopup
 		}
 
 		const shareBtn = document.getElementById('shareRoomBtn');
-		if (menu && !menu.classList.contains('hidden') && e.target.id !== 'menu-hamburger' && !(shareBtn && shareBtn.contains(e.target))) {
+		const clickedInsideMenu = Boolean(menu?.contains?.(e.target));
+		if (menu
+			&& !menu.classList.contains('hidden')
+			&& !clickedInsideMenu
+			&& e.target.id !== 'menu-hamburger'
+			&& !(shareBtn && shareBtn.contains(e.target))) {
 			menu.classList.add('hidden');
 		}
 	});

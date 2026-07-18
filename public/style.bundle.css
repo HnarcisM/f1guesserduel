@@ -407,21 +407,79 @@ body::before {
 .menu-section-title {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: var(--space-sm);
     font-size: 10px;
     font-weight: 900;
     color: var(--text-muted);
-    padding: var(--space-md) var(--space-xl) var(--space-sm);
+    padding: var(--space-md) var(--space-lg);
     text-align: left;
     letter-spacing: 1.2px;
     text-transform: uppercase;
-    border-top: 1px solid var(--border-muted);
-    margin: var(--space-md) calc(-1 * var(--space-md)) 0;
+    cursor: pointer;
+    list-style: none;
+    user-select: none;
 }
-.menu-section-title:first-child {
-    border-top: none;
-    margin-top: 0;
-    padding-top: var(--space-xs);
+
+.menu-section-title::-webkit-details-marker {
+    display: none;
+}
+
+.menu-section-title::after {
+    content: "⌄";
+    flex: 0 0 auto;
+    color: var(--accent-f1);
+    font-size: 16px;
+    line-height: 1;
+    transition: transform var(--transition-fast);
+}
+
+.menu-section[open] > .menu-section-title::after {
+    transform: rotate(180deg);
+}
+
+.menu-section-title:hover {
+    color: var(--text-primary);
+}
+
+.menu-section-title:focus-visible {
+    border-radius: var(--radius-md);
+    outline: 2px solid var(--accent-f1);
+    outline-offset: -1px;
+}
+
+.menu-section + .menu-section {
+    margin-top: var(--space-xs);
+    border-top: 1px solid var(--border-muted);
+}
+
+.menu-section-content {
+    padding: 0 0 var(--space-sm);
+}
+
+.menu-section[open] > .menu-section-content {
+    animation: menu-section-enter 0.16s ease-out;
+}
+
+@keyframes menu-section-enter {
+    from {
+        opacity: 0;
+        transform: translateY(-3px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .menu-section[open] > .menu-section-content {
+        animation: none;
+    }
+
+    .menu-section-title::after {
+        transition: none;
+    }
 }
 
 /* --- BADGE STATUS ONLINE --- */
@@ -1682,8 +1740,7 @@ body.mode-daily #duelStatus {
     }
 
     .menu-section-title {
-        padding: var(--space-sm) var(--space-lg) var(--space-xs);
-        margin-top: var(--space-sm);
+        padding: var(--space-sm) var(--space-md);
         font-size: 9px;
     }
 
