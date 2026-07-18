@@ -54,3 +54,10 @@ CREATE TABLE IF NOT EXISTS user_game_stats (
     CHECK (games_won + games_drawn <= games_played),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS user_progress (
+    user_id INTEGER PRIMARY KEY,
+    total_xp INTEGER NOT NULL DEFAULT 0 CHECK (total_xp >= 0),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>F1 Guesser</title>
     <script src="/js/themeBootstrap.js?v=theme-bootstrap-1"></script>
-    <link rel="stylesheet" href="/style.bundle.css?v=frontend-cache-7">
+    <link rel="stylesheet" href="/style.bundle.css?v=frontend-cache-8">
 </head>
 <body>
 
@@ -347,6 +347,7 @@
                 <span id="authAccountEmail">email@example.com</span>
                 <small id="authAccountMemberSince">Membru F1 Guesser</small>
             </div>
+            <span id="authAccountLevel" class="auth-level-badge">Nivel 1</span>
         </div>
 
         <div class="auth-profile-tabs" role="tablist" aria-label="Secțiunile profilului">
@@ -357,6 +358,20 @@
         </div>
 
         <section id="authPanelOverview" class="auth-tab-panel" role="tabpanel" aria-labelledby="authTabOverview">
+            <div class="auth-progress-card" aria-label="Progres nivel cont">
+                <div class="auth-progress-heading">
+                    <strong>Progres nivel</strong>
+                    <span id="authTotalXp">0 XP total</span>
+                </div>
+                <div id="authXpProgress" class="auth-xp-progress" role="progressbar" aria-label="Progres până la nivelul următor" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                    <span id="authXpProgressBar"></span>
+                </div>
+                <div class="auth-progress-detail">
+                    <span id="authLevelProgressText">0 / 100 XP</span>
+                    <strong id="authXpToNextLevel">100 XP până la nivelul 2</strong>
+                </div>
+            </div>
+
             <div class="auth-stats-grid" aria-label="Statistici totale">
                 <div class="auth-stat-card"><strong id="authStatPlayed">0</strong><span>Jocuri</span></div>
                 <div class="auth-stat-card"><strong id="authStatWon">0</strong><span>Victorii</span></div>
@@ -482,6 +497,6 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script defer src="/game.bundle.min.js?v=frontend-bundle-7"></script>
+<script defer src="/game.bundle.min.js?v=frontend-bundle-8"></script>
 </body>
 </html>

@@ -175,7 +175,9 @@ export function registerSocketEvents(socket, app) {
 	socket.on('accountStatsUpdated', (payload = {}) => {
 		app.refreshAccountSummary?.({
 			stats: payload.stats || null,
-			recentGames: payload.recentGames || []
+			recentGames: payload.recentGames || [],
+			progress: payload.progress || null,
+			xpAwarded: Number(payload.xpAwarded) || 0
 		}, payload.userId ?? null);
 	});
 

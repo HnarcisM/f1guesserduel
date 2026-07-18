@@ -32,6 +32,12 @@ export function createAuthView({ onAuthChanged } = {}) {
             accountUsername: document.getElementById('authAccountUsername'),
             accountEmail: document.getElementById('authAccountEmail'),
             accountMemberSince: document.getElementById('authAccountMemberSince'),
+            accountLevel: document.getElementById('authAccountLevel'),
+            totalXp: document.getElementById('authTotalXp'),
+            xpProgress: document.getElementById('authXpProgress'),
+            xpProgressBar: document.getElementById('authXpProgressBar'),
+            levelProgressText: document.getElementById('authLevelProgressText'),
+            xpToNextLevel: document.getElementById('authXpToNextLevel'),
             tabOverview: document.getElementById('authTabOverview'),
             tabStats: document.getElementById('authTabStats'),
             tabHistory: document.getElementById('authTabHistory'),
@@ -224,6 +230,29 @@ export function createAuthView({ onAuthChanged } = {}) {
             : `${played} jocuri · ${won} victorii`;
     }
 
+    function renderAccountProgress(progress = {}) {
+        const els = getEls();
+        const asNonNegativeInteger = value => {
+            const number = Number(value);
+            return Number.isSafeInteger(number) && number >= 0 ? number : 0;
+        };
+        const level = Math.max(1, asNonNegativeInteger(progress.level));
+        const totalXp = asNonNegativeInteger(progress.totalXp);
+        const xpIntoLevel = asNonNegativeInteger(progress.xpIntoLevel);
+        const xpForLevel = Math.max(1, asNonNegativeInteger(progress.xpForLevel) || 100);
+        const xpToNextLevel = asNonNegativeInteger(progress.xpToNextLevel) || Math.max(0, xpForLevel - xpIntoLevel);
+        const progressPercent = Math.min(100, asNonNegativeInteger(progress.progressPercent));
+
+        if (els.accountLevel) els.accountLevel.textContent = `Nivel ${level}`;
+        if (els.totalXp) els.totalXp.textContent = `${totalXp} XP total`;
+        if (els.levelProgressText) els.levelProgressText.textContent = `${xpIntoLevel} / ${xpForLevel} XP`;
+        if (els.xpToNextLevel) {
+            els.xpToNextLevel.textContent = `${xpToNextLevel} XP până la nivelul ${level + 1}`;
+        }
+        if (els.xpProgressBar) els.xpProgressBar.style.width = `${progressPercent}%`;
+        if (els.xpProgress) els.xpProgress.setAttribute('aria-valuenow', String(progressPercent));
+    }
+
     function renderAccountStats(stats = {}) {
         currentAccountStats = stats;
         const els = getEls();
@@ -333,6 +362,7 @@ export function createAuthView({ onAuthChanged } = {}) {
         const stats = summary.stats || (summary.totals ? summary : {});
         renderAccountStats(stats);
         renderRecentGames(summary.recentGames || []);
+        renderAccountProgress(summary.progress || {});
     }
 
     async function refreshAccountSummary(providedSummary = null, expectedUserId = null) {

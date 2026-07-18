@@ -6,6 +6,13 @@ const ACCOUNT_GAME_MODES = Object.freeze(['single', 'daily', 'duel']);
 const ACCOUNT_GAME_OUTCOMES = Object.freeze(['win', 'loss', 'draw']);
 const DEFAULT_ACCOUNT_HISTORY_LIMIT = 10;
 const MAX_ACCOUNT_HISTORY_LIMIT = 20;
+const XP_LEVEL_SCALE = 100;
+const XP_REWARDS = Object.freeze({
+    participation: 10,
+    outcomes: Object.freeze({ win: 40, draw: 20, loss: 0 }),
+    difficulties: Object.freeze({ easy: 0, medium: 5, hard: 10 }),
+    modes: Object.freeze({ single: 0, daily: 10, duel: 5 })
+});
 
 function createEmptyModeStats(mode) {
     return {
@@ -24,6 +31,35 @@ function createEmptyModeStats(mode) {
 function asNonNegativeInteger(value) {
     const number = Number(value);
     return Number.isSafeInteger(number) && number >= 0 ? number : 0;
+}
+
+function calculateXpReward(result = {}) {
+    return XP_REWARDS.participation
+        + (XP_REWARDS.outcomes[result.outcome] || 0)
+        + (XP_REWARDS.difficulties[result.difficulty] || 0)
+        + (XP_REWARDS.modes[result.mode] || 0);
+}
+
+function buildAccountProgress(row = null) {
+    const totalXp = asNonNegativeInteger(row?.total_xp ?? row?.totalXp);
+    const level = Math.floor(Math.sqrt(totalXp / XP_LEVEL_SCALE)) + 1;
+    const levelStartXp = XP_LEVEL_SCALE * ((level - 1) ** 2);
+    const nextLevelXp = XP_LEVEL_SCALE * (level ** 2);
+    const xpIntoLevel = Math.max(0, totalXp - levelStartXp);
+    const xpForLevel = Math.max(1, nextLevelXp - levelStartXp);
+    const xpToNextLevel = Math.max(0, nextLevelXp - totalXp);
+    const progressPercent = Math.min(100, Math.floor((xpIntoLevel / xpForLevel) * 100));
+
+    return {
+        level,
+        totalXp,
+        levelStartXp,
+        nextLevelXp,
+        xpIntoLevel,
+        xpForLevel,
+        xpToNextLevel,
+        progressPercent
+    };
 }
 
 function normalizeModeStats(row) {
@@ -132,25 +168,33 @@ function createAccountStatsService(databaseOrRepository) {
         const normalizedUserId = normalizeUserId(userId);
         if (!normalizedUserId) throw new Error('Invalid account user id.');
         const normalizedLimit = normalizeHistoryLimit(historyLimit);
-        const [rows, recentRows] = await Promise.all([
+        const [rows, recentRows, progressRow] = await Promise.all([
             repository.getStatsRows(normalizedUserId),
             typeof repository.getRecentResults === 'function'
                 ? repository.getRecentResults(normalizedUserId, normalizedLimit)
-                : []
+                : [],
+            typeof repository.getProgressRow === 'function'
+                ? repository.getProgressRow(normalizedUserId)
+                : null
         ]);
         return {
             stats: buildAccountStats(rows),
-            recentGames: buildRecentGames(recentRows, normalizedLimit)
+            recentGames: buildRecentGames(recentRows, normalizedLimit),
+            progress: buildAccountProgress(progressRow)
         };
     }
 
     async function recordGameResult(input) {
         const result = normalizeResultInput(input);
-        const repositoryResult = await repository.recordGameResult(result);
+        const xpEarned = calculateXpReward(result);
+        const repositoryResult = await repository.recordGameResult({ ...result, xpEarned });
+        const recorded = Boolean(repositoryResult.recorded);
         return {
-            recorded: Boolean(repositoryResult.recorded),
+            recorded,
             stats: buildAccountStats(repositoryResult.rows),
-            recentGames: buildRecentGames(repositoryResult.recentResults)
+            recentGames: buildRecentGames(repositoryResult.recentResults),
+            progress: buildAccountProgress(repositoryResult.progressRow),
+            xpAwarded: recorded ? xpEarned : 0
         };
     }
 
@@ -181,8 +225,12 @@ module.exports = {
     ACCOUNT_GAME_OUTCOMES,
     DEFAULT_ACCOUNT_HISTORY_LIMIT,
     MAX_ACCOUNT_HISTORY_LIMIT,
+    XP_LEVEL_SCALE,
+    XP_REWARDS,
+    buildAccountProgress,
     buildAccountStats,
     buildRecentGames,
+    calculateXpReward,
     createAccountStatsService,
     createEmptyModeStats,
     createGameResultKey,

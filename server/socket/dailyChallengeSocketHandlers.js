@@ -57,7 +57,9 @@ function registerDailyChallengeSocketHandlers({
                 socket.emit('accountStatsUpdated', {
                     userId,
                     stats: result.stats,
-                    recentGames: result.recentGames || []
+                    recentGames: result.recentGames || [],
+                    progress: result.progress || null,
+                    xpAwarded: Number(result.xpAwarded) || 0
                 });
             }
         });

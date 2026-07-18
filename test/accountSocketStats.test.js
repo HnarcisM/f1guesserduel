@@ -57,7 +57,12 @@ test('Single records an authenticated result only after the server validates the
         accountStatsService: {
             async recordGameResult(result) {
                 recorded.push(result);
-                return { recorded: true, stats: { totals: { played: 1 }, modes: {} } };
+                return {
+                    recorded: true,
+                    stats: { totals: { played: 1 }, modes: {} },
+                    progress: { level: 1, totalXp: 50, progressPercent: 50 },
+                    xpAwarded: 50
+                };
             }
         }
     });
@@ -74,7 +79,9 @@ test('Single records an authenticated result only after the server validates the
     assert.equal(recorded[0].mode, 'single');
     assert.equal(recorded[0].outcome, 'win');
     assert.equal(recorded[0].attempts, 1);
-    assert.equal(socket.emitted.some(event => event.eventName === 'accountStatsUpdated'), true);
+    const accountUpdate = socket.emitted.find(event => event.eventName === 'accountStatsUpdated');
+    assert.equal(accountUpdate.payload.progress.totalXp, 50);
+    assert.equal(accountUpdate.payload.xpAwarded, 50);
 });
 
 test('Duel account results map authenticated winners, losses and draws without guests', () => {
@@ -136,7 +143,12 @@ test('Daily uses the server challenge id as the idempotent account result key', 
         accountStatsService: {
             async recordGameResult(result) {
                 recorded.push(result);
-                return { recorded: true, stats: { totals: { played: 1 }, modes: {} } };
+                return {
+                    recorded: true,
+                    stats: { totals: { played: 1 }, modes: {} },
+                    progress: { level: 1, totalXp: 65, progressPercent: 65 },
+                    xpAwarded: 65
+                };
             }
         }
     });
@@ -149,4 +161,7 @@ test('Daily uses the server challenge id as the idempotent account result key', 
     assert.equal(recorded[0].mode, 'daily');
     assert.equal(recorded[0].resultKey, 'daily:2026-07-18:medium');
     assert.equal(recorded[0].outcome, 'win');
+    const accountUpdate = socket.emitted.find(event => event.eventName === 'accountStatsUpdated');
+    assert.equal(accountUpdate.payload.progress.totalXp, 65);
+    assert.equal(accountUpdate.payload.xpAwarded, 65);
 });

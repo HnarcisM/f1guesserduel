@@ -34,9 +34,9 @@ function runThemeBootstrap(savedTheme) {
 test('theme bootstrap applies a valid saved theme before the stylesheet is parsed', () => {
     const html = fs.readFileSync(path.join(projectRoot, 'public', 'index.html'), 'utf8');
     const bootstrapPosition = html.indexOf('/js/themeBootstrap.js?v=theme-bootstrap-1');
-    const stylesheetPosition = html.indexOf('/style.bundle.css?v=frontend-cache-7');
+    const stylesheetPosition = html.indexOf('/style.bundle.css?v=frontend-cache-8');
     const socketPosition = html.indexOf('/socket.io/socket.io.js');
-    const gamePosition = html.indexOf('/game.bundle.min.js?v=frontend-bundle-7');
+    const gamePosition = html.indexOf('/game.bundle.min.js?v=frontend-bundle-8');
 
     assert.ok(bootstrapPosition > 0);
     assert.ok(bootstrapPosition < stylesheetPosition);

@@ -49,6 +49,9 @@ class FakePostgresClient {
                 }]
             };
         }
+        if (normalizedSql.startsWith('SELECT total_xp')) {
+            return { rows: [{ total_xp: 50 }] };
+        }
         return { rowCount: 0, rows: [] };
     }
 
@@ -69,13 +72,15 @@ test('Postgres account stats use a transaction, parameters and idempotent result
         resultKey: "round-1'); DROP TABLE users; --",
         outcome: 'win',
         attempts: 2,
-        difficulty: 'easy'
+        difficulty: 'easy',
+        xpEarned: 50
     };
 
     const first = await repository.recordGameResult(input);
     const duplicate = await repository.recordGameResult(input);
     const resultInsert = client.queries.find(query => query.sql.startsWith('INSERT INTO user_game_results'));
     const statsUpserts = client.queries.filter(query => query.sql.startsWith('INSERT INTO user_game_stats'));
+    const progressUpserts = client.queries.filter(query => query.sql.startsWith('INSERT INTO user_progress'));
     const historyQueries = client.queries.filter(query => query.sql.startsWith('SELECT mode, outcome'));
 
     assert.equal(first.recorded, true);
@@ -83,6 +88,9 @@ test('Postgres account stats use a transaction, parameters and idempotent result
     assert.equal(resultInsert.params[2], input.resultKey);
     assert.equal(resultInsert.sql.includes(input.resultKey), false);
     assert.equal(statsUpserts.length, 1);
+    assert.equal(progressUpserts.length, 1);
+    assert.deepEqual(progressUpserts[0].params, [7, 50]);
+    assert.equal(first.progressRow.total_xp, 50);
     assert.equal(first.recentResults.length, 1);
     assert.equal(historyQueries.length, 2);
     assert.deepEqual(historyQueries[0].params, [7, 10]);

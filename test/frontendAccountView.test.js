@@ -62,7 +62,9 @@ function createAccountDocument() {
         'authUsernameGroup', 'authUsername', 'authEmail', 'authPassword', 'authSubmitBtn',
         'authSwitchBtn', 'authMessage', 'authUserBadge', 'authLogoutBtn', 'authForm',
         'authAccountView', 'authAccountAvatar', 'authAccountUsername', 'authAccountEmail',
-        'authAccountMemberSince', 'authTabOverview', 'authTabStats', 'authTabHistory',
+        'authAccountMemberSince', 'authAccountLevel', 'authTotalXp', 'authXpProgress',
+        'authXpProgressBar', 'authLevelProgressText', 'authXpToNextLevel',
+        'authTabOverview', 'authTabStats', 'authTabHistory',
         'authTabSettings', 'authPanelOverview', 'authPanelStats', 'authPanelHistory',
         'authPanelSettings',
         'authStatPlayed', 'authStatWon', 'authStatWinRate',
@@ -97,6 +99,9 @@ test('authenticated account dashboard is present while the login form remains se
     assert.match(html, /id="authAccountView"[^>]*is-hidden/);
     assert.match(html, /id="authForm"/);
     assert.match(html, /id="authStatPlayed"/);
+    assert.match(html, /id="authAccountLevel"/);
+    assert.match(html, /id="authXpProgress"[^>]*role="progressbar"/);
+    assert.match(html, /id="authXpProgressBar"/);
     assert.match(html, /id="authSingleStats"/);
     assert.match(html, /id="authDailyStats"/);
     assert.match(html, /id="authDuelStats"/);
@@ -116,6 +121,8 @@ test('authenticated account dashboard is present while the login form remains se
     assert.equal((html.match(/<details class="auth-settings-card auth-settings-disclosure">/g) || []).length, 2);
     assert.doesNotMatch(html, /<details class="auth-settings-card auth-settings-disclosure"[^>]*\sopen(?:\s|>)/);
     assert.match(css, /\.auth-stats-grid/);
+    assert.match(css, /\.auth-progress-card/);
+    assert.match(css, /\.auth-xp-progress/);
     assert.match(css, /\.auth-profile-tabs/);
     assert.match(css, /\.auth-settings-disclosure\[open\]/);
 });
@@ -139,7 +146,7 @@ test('server account stats updates are forwarded to the account dashboard', asyn
     const stats = { totals: { played: 4 }, modes: {} };
     handlers.get('accountStatsUpdated')({ stats });
 
-    assert.deepEqual(received, [{ stats, recentGames: [] }]);
+    assert.deepEqual(received, [{ stats, recentGames: [], progress: null, xpAwarded: 0 }]);
 });
 
 test('a delayed initial auth refresh cannot overwrite a newer login or another account stats event', async t => {
@@ -197,9 +204,23 @@ test('a delayed initial auth refresh cannot overwrite a newer login or another a
             attempts: 3,
             difficulty: 'hard',
             completedAt: '2026-07-18T12:00:00.000Z'
-        }]
+        }],
+        progress: {
+            level: 2,
+            totalXp: 250,
+            xpIntoLevel: 150,
+            xpForLevel: 300,
+            xpToNextLevel: 150,
+            progressPercent: 50
+        }
     }, 7);
     assert.equal(elements.authStatPlayed.textContent, '5');
+    assert.equal(elements.authAccountLevel.textContent, 'Nivel 2');
+    assert.equal(elements.authTotalXp.textContent, '250 XP total');
+    assert.equal(elements.authXpProgressBar.style.width, '50%');
+    assert.equal(elements.authXpProgress.getAttribute('aria-valuenow'), '50');
+    assert.equal(elements.authLevelProgressText.textContent, '150 / 300 XP');
+    assert.equal(elements.authXpToNextLevel.textContent, '150 XP până la nivelul 3');
     assert.equal(elements.authGameHistory.children.length, 1);
     assert.match(elements.authGameHistory.children[0].children[0].textContent, /Victorie · Duel/);
 

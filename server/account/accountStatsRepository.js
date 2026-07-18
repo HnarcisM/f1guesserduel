@@ -27,6 +27,12 @@ const SELECT_RECENT_RESULTS_SQL = `
     LIMIT $2
 `;
 
+const SELECT_PROGRESS_SQL = `
+    SELECT total_xp
+    FROM user_progress
+    WHERE user_id = $1
+`;
+
 const POSTGRES_UPSERT_STATS_SQL = `
     INSERT INTO user_game_stats (
         user_id, mode, games_played, games_won, games_drawn,
@@ -58,6 +64,14 @@ const POSTGRES_UPSERT_STATS_SQL = `
         updated_at = now()
 `;
 
+const POSTGRES_UPSERT_PROGRESS_SQL = `
+    INSERT INTO user_progress (user_id, total_xp, updated_at)
+    VALUES ($1, $2, now())
+    ON CONFLICT (user_id) DO UPDATE SET
+        total_xp = user_progress.total_xp + EXCLUDED.total_xp,
+        updated_at = now()
+`;
+
 function buildResultIncrements(outcome, attempts) {
     const isWin = outcome === 'win';
     return {
@@ -65,6 +79,11 @@ function buildResultIncrements(outcome, attempts) {
         drawn: outcome === 'draw' ? 1 : 0,
         guesses: Array.from({ length: 6 }, (_, index) => isWin && attempts === index + 1 ? 1 : 0)
     };
+}
+
+function normalizeXpEarned(value) {
+    const xp = Number(value);
+    return Number.isSafeInteger(xp) && xp >= 0 ? xp : 0;
 }
 
 function createPostgresAccountStatsRepository(database) {
@@ -76,6 +95,11 @@ function createPostgresAccountStatsRepository(database) {
     async function getRecentResults(userId, limit = 10, queryable = database) {
         const result = await queryable.query(SELECT_RECENT_RESULTS_SQL, [userId, limit]);
         return result.rows || [];
+    }
+
+    async function getProgressRow(userId, queryable = database) {
+        const result = await queryable.query(SELECT_PROGRESS_SQL, [userId]);
+        return result.rows?.[0] || null;
     }
 
     async function recordGameResult(result) {
@@ -111,15 +135,20 @@ function createPostgresAccountStatsRepository(database) {
                     increments.drawn,
                     ...increments.guesses
                 ]);
+                await client.query(POSTGRES_UPSERT_PROGRESS_SQL, [
+                    result.userId,
+                    normalizeXpEarned(result.xpEarned)
+                ]);
             }
 
-            const [rows, recentResults] = await Promise.all([
+            const [rows, recentResults, progressRow] = await Promise.all([
                 getStatsRows(result.userId, client),
-                getRecentResults(result.userId, 10, client)
+                getRecentResults(result.userId, 10, client),
+                getProgressRow(result.userId, client)
             ]);
             await client.query('COMMIT');
             transactionStarted = false;
-            return { recorded, rows, recentResults };
+            return { recorded, rows, recentResults, progressRow };
         } catch (error) {
             if (transactionStarted) await client.query('ROLLBACK');
             throw error;
@@ -132,6 +161,7 @@ function createPostgresAccountStatsRepository(database) {
         provider: 'postgres',
         getStatsRows,
         getRecentResults,
+        getProgressRow,
         recordGameResult
     };
 }
@@ -145,6 +175,7 @@ function createSqliteAccountStatsRepository(database) {
         ORDER BY completed_at DESC, id DESC
         LIMIT ?
     `);
+    const selectProgress = database.prepare(SELECT_PROGRESS_SQL.replace('$1', '?'));
     const insertResult = database.prepare(`
         INSERT OR IGNORE INTO user_game_results (
             user_id, mode, result_key, outcome, attempts, difficulty
@@ -177,6 +208,13 @@ function createSqliteAccountStatsRepository(database) {
             guess_6 = guess_6 + excluded.guess_6,
             updated_at = datetime('now')
     `);
+    const upsertProgress = database.prepare(`
+        INSERT INTO user_progress (user_id, total_xp, updated_at)
+        VALUES (@userId, @xpEarned, datetime('now'))
+        ON CONFLICT(user_id) DO UPDATE SET
+            total_xp = total_xp + excluded.total_xp,
+            updated_at = datetime('now')
+    `);
     const recordTransaction = database.transaction(result => {
         const insert = insertResult.run(result);
         if (insert.changes !== 1) return false;
@@ -194,6 +232,10 @@ function createSqliteAccountStatsRepository(database) {
             guess5: increments.guesses[4],
             guess6: increments.guesses[5]
         });
+        upsertProgress.run({
+            userId: result.userId,
+            xpEarned: normalizeXpEarned(result.xpEarned)
+        });
         return true;
     });
 
@@ -205,12 +247,17 @@ function createSqliteAccountStatsRepository(database) {
         return selectRecentResults.all(userId, limit);
     }
 
+    async function getProgressRow(userId) {
+        return selectProgress.get(userId) || null;
+    }
+
     async function recordGameResult(result) {
         const recorded = recordTransaction(result);
         return {
             recorded,
             rows: await getStatsRows(result.userId),
-            recentResults: await getRecentResults(result.userId)
+            recentResults: await getRecentResults(result.userId),
+            progressRow: await getProgressRow(result.userId)
         };
     }
 
@@ -218,6 +265,7 @@ function createSqliteAccountStatsRepository(database) {
         provider: 'sqlite',
         getStatsRows,
         getRecentResults,
+        getProgressRow,
         recordGameResult
     };
 }
@@ -238,7 +286,9 @@ function createAccountStatsRepository(databaseOrRepository) {
 module.exports = {
     MODE_COLUMNS,
     SELECT_RECENT_RESULTS_SQL,
+    SELECT_PROGRESS_SQL,
     buildResultIncrements,
+    normalizeXpEarned,
     createAccountStatsRepository,
     createPostgresAccountStatsRepository,
     createSqliteAccountStatsRepository

@@ -2,7 +2,9 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 
 const {
+    buildAccountProgress,
     buildAccountStats,
+    calculateXpReward,
     createAccountStatsService,
     normalizeResultInput,
     recordAccountGameResultSafely
@@ -12,6 +14,7 @@ function createMemoryStatsRepository() {
     const rows = new Map();
     const resultKeys = new Set();
     const recentResults = [];
+    const progressByUser = new Map();
 
     function getRow(userId, mode) {
         const key = `${userId}:${mode}`;
@@ -48,19 +51,26 @@ function createMemoryStatsRepository() {
             .map(result => ({ ...result }));
     }
 
+    async function getProgressRow(userId) {
+        return { total_xp: progressByUser.get(userId) || 0 };
+    }
+
     return {
         getStatsRows,
         getRecentResults,
+        getProgressRow,
         async recordGameResult(result) {
             const uniqueKey = `${result.userId}:${result.mode}:${result.resultKey}`;
             if (resultKeys.has(uniqueKey)) {
                 return {
                     recorded: false,
                     rows: await getStatsRows(result.userId),
-                    recentResults: await getRecentResults(result.userId)
+                    recentResults: await getRecentResults(result.userId),
+                    progressRow: await getProgressRow(result.userId)
                 };
             }
             resultKeys.add(uniqueKey);
+            progressByUser.set(result.userId, (progressByUser.get(result.userId) || 0) + result.xpEarned);
             recentResults.push({
                 ...result,
                 completedAt: `2026-07-${String(recentResults.length + 18).padStart(2, '0')}T12:00:00.000Z`
@@ -80,7 +90,8 @@ function createMemoryStatsRepository() {
             return {
                 recorded: true,
                 rows: await getStatsRows(result.userId),
-                recentResults: await getRecentResults(result.userId)
+                recentResults: await getRecentResults(result.userId),
+                progressRow: await getProgressRow(result.userId)
             };
         }
     };
@@ -117,7 +128,9 @@ test('account stats aggregate modes and ignore duplicate server result keys', as
     const dashboard = await service.getAccountDashboard(7);
 
     assert.equal(first.recorded, true);
+    assert.equal(first.xpAwarded, 50);
     assert.equal(duplicate.recorded, false);
+    assert.equal(duplicate.xpAwarded, 0);
     assert.deepEqual(stats.totals, {
         played: 2,
         won: 1,
@@ -131,6 +144,9 @@ test('account stats aggregate modes and ignore duplicate server result keys', as
     assert.equal(stats.modes.daily.played, 1);
     assert.equal(stats.modes.duel.played, 0);
     assert.equal(dashboard.recentGames.length, 2);
+    assert.equal(dashboard.progress.totalXp, 70);
+    assert.equal(dashboard.progress.level, 1);
+    assert.equal(dashboard.progress.progressPercent, 70);
     assert.deepEqual(dashboard.recentGames[0], {
         mode: 'daily',
         outcome: 'loss',
@@ -140,6 +156,24 @@ test('account stats aggregate modes and ignore duplicate server result keys', as
     });
     assert.equal(Object.hasOwn(dashboard.recentGames[0], 'resultKey'), false);
     assert.equal(Object.hasOwn(dashboard.recentGames[0], 'userId'), false);
+});
+
+test('XP rewards and nonlinear level progress are deterministic', () => {
+    assert.equal(calculateXpReward({ mode: 'single', outcome: 'win', difficulty: 'easy' }), 50);
+    assert.equal(calculateXpReward({ mode: 'daily', outcome: 'win', difficulty: 'hard' }), 70);
+    assert.equal(calculateXpReward({ mode: 'duel', outcome: 'draw', difficulty: 'medium' }), 40);
+    assert.equal(calculateXpReward({ mode: 'single', outcome: 'loss', difficulty: 'easy' }), 10);
+
+    assert.deepEqual(buildAccountProgress({ total_xp: 250 }), {
+        level: 2,
+        totalXp: 250,
+        levelStartXp: 100,
+        nextLevelXp: 400,
+        xpIntoLevel: 150,
+        xpForLevel: 300,
+        xpToNextLevel: 150,
+        progressPercent: 50
+    });
 });
 
 test('account stats validation rejects client-like invalid result data', () => {
