@@ -259,8 +259,8 @@ Aplicația poate fi configurată prin variabile de mediu. Pentru rulare locală 
 | `COOKIE_SECURE` | `true` în production, altfel `false` | Trimite cookie-ul doar prin HTTPS. |
 | `COOKIE_SAMESITE` | `lax` | Poate fi `lax`, `strict` sau `none`. |
 | `TRUST_PROXY` | `false` | Setează `true` când rulezi în spatele unui proxy/load balancer. |
-| `PUBLIC_ORIGIN` | none | Origin-ul public acceptat pentru Socket.IO în production, de exemplu `https://numele-serviciului.onrender.com`. |
-| `SOCKET_ALLOWED_ORIGINS` | localhost automat în development | Origini suplimentare acceptate pentru Socket.IO, separate prin virgulă. |
+| `PUBLIC_ORIGIN` | none | Origin-ul public autorizat pentru Socket.IO și cererile HTTP sensibile protejate CSRF, de exemplu `https://numele-serviciului.onrender.com`. |
+| `SOCKET_ALLOWED_ORIGINS` | localhost automat în development | Origini suplimentare autorizate pentru Socket.IO și protecția CSRF, separate prin virgulă. |
 | `SOCKET_RATE_LIMIT_ENABLED` | `true` | Activează protecția anti-spam pentru event-urile Socket.IO sensibile. |
 | `SOCKET_RATE_LIMIT_WINDOW_MS` | `60000` | Fereastra de timp pentru limitele Socket.IO, în milisecunde. |
 | `LOG_LEVEL` | `debug` local, `info` production | Nivelul minim de log: `silent`, `error`, `warn`, `info`, `debug`. |
@@ -278,6 +278,7 @@ Validarea configului este strictă: dacă o variabilă este setată cu o valoare
 - valorile numerice de durată/interval trebuie să fie întregi în limite rezonabile;
 - `COOKIE_SECURE`, `TRUST_PROXY` acceptă doar valori de tip `true/false`, `1/0`, `yes/no`, `on/off`;
 - `COOKIE_SAMESITE` trebuie să fie `lax`, `strict` sau `none`;
+- cererile care modifică profilul, parola, avatarul sau sesiunile sunt acceptate numai de la originile configurate prin `PUBLIC_ORIGIN` / `SOCKET_ALLOWED_ORIGINS`;
 - `COOKIE_SAMESITE=none` cere obligatoriu `COOKIE_SECURE=true`;
 - `SESSION_COOKIE_NAME` nu poate conține spații, semicolon sau separatori invalizi;
 - path-urile configurate explicit nu pot fi stringuri goale;

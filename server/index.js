@@ -26,6 +26,7 @@ const { createHealthRoutes, createHealthChecks } = require('./routes/healthRoute
 const { createSecurityHeadersMiddleware } = require('./middleware/securityHeaders');
 const { createRequestLoggingMiddleware } = require('./middleware/requestLogging');
 const { createResponseCompressionMiddleware } = require('./middleware/responseCompression');
+const { createCsrfProtectionMiddleware } = require('./middleware/csrfProtection');
 const { setStaticCacheHeaders } = require('./middleware/staticCacheHeaders');
 const {
     createRedisRateLimitStore,
@@ -161,6 +162,9 @@ const roomCleanupService = createRoomCleanupService({
     logger
 });
 const stopInactiveRoomCleanup = roomCleanupService.start();
+const csrfProtection = createCsrfProtectionMiddleware({
+    allowedOrigins: config.socket.allowedOrigins
+});
 
 app.use(createSecurityHeadersMiddleware({
     isProduction: config.isProduction
@@ -173,6 +177,8 @@ app.use(createResponseCompressionMiddleware());
 app.use(express.json({ limit: '32kb' }));
 app.use(cookieParser());
 app.use(createAuthMiddleware(sessionService));
+app.use('/api/auth/logout', csrfProtection);
+app.use('/api/account', csrfProtection);
 app.use('/api', createHealthRoutes({
     appVersion: packageJson.version,
     nodeEnv: config.nodeEnv,

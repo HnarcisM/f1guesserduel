@@ -164,7 +164,7 @@ REQUEST_LOGGING_ENABLED=true
 
 Asta produce loguri JSON pentru request-uri și erori, fără să includă body-uri, query string-uri, parole, token-uri, cookie-uri sau secrete. Fiecare request primește și headerul `X-Request-Id`, util când cauți aceeași eroare în Render Logs.
 
-### Socket.IO allowed origins
+### Origini permise pentru Socket.IO și protecția CSRF
 
 Pentru deploy online setează `PUBLIC_ORIGIN` la adresa publică exactă a aplicației, fără slash sau path la final:
 
@@ -174,7 +174,7 @@ LOG_LEVEL=info
 REQUEST_LOGGING_ENABLED=true
 ```
 
-Această valoare este folosită de Socket.IO pentru a accepta conexiuni doar din site-ul tău. Dacă ai și un preview/staging, poți adăuga origini extra:
+Această valoare este folosită de Socket.IO și de rutele HTTP sensibile de cont. Cererile care modifică profilul, parola, avatarul sau sesiunile sunt respinse dacă `Origin`/`Referer` nu corespunde exact unei origini autorizate. Dacă ai și un preview/staging, poți adăuga origini extra:
 
 ```env
 SOCKET_ALLOWED_ORIGINS=https://preview.example.com,https://staging.example.com
