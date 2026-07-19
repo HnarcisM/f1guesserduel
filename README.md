@@ -175,6 +175,14 @@ npm run test:e2e
 
 `npm run test:e2e` verifică automat Chromium înainte de rulare, prin scriptul `pretest:e2e`. Dacă browserul lipsește, încearcă să îl instaleze și oprește testele cu mesaj clar dacă instalarea eșuează.
 
+Pentru a rula doar matricea responsive și vizuală:
+
+```bash
+npm run test:e2e:responsive
+```
+
+Suita verifică pagina de start și starea de joc pe telefon, Galaxy Fold 5 (cover și ecran interior în ambele orientări) și desktop. Detectează automat overflow-ul lateral, elementele ieșite din viewport și suprapunerile importante. Capturile PNG și raportul geometric sunt scrise în `test-results/responsive-visual/`.
+
 ### Toate testele
 
 ```bash
@@ -187,7 +195,9 @@ Workflow-ul `.github/workflows/ci.yml` rulează automat la fiecare `push` și
 `pull_request`, folosind Node.js 22. Verificarea instalează versiunile exacte din
 `package-lock.json`, rulează testele, generează bundle-urile de producție și
 eșuează dacă `public/index.html`, `public/style.bundle.css` sau
-`public/game.bundle.min.js` nu sunt actualizate în commit.
+`public/game.bundle.min.js` nu sunt actualizate în commit. După această verificare,
+un job separat instalează Chromium, rulează suita responsive/vizuală și păstrează
+capturile plus raportul JSON ca artefact GitHub Actions timp de 14 zile.
 
 Pentru a reoptimiza numai SVG-urile folosite de build-ul de producție:
 

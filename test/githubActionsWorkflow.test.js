@@ -41,3 +41,15 @@ test('GitHub Actions CI tests, builds and rejects stale generated frontend files
     assert.ok(buildPosition > testPosition);
     assert.ok(generatedCheckPosition > buildPosition);
 });
+
+test('GitHub Actions CI runs responsive browser tests and retains visual artifacts', () => {
+    const source = readWorkflow();
+
+    assert.match(source, /^\s{2}responsive-visual:$/m);
+    assert.match(source, /needs:\s*verify/);
+    assert.match(source, /npx playwright install --with-deps chromium/);
+    assert.match(source, /run:\s*npm run test:e2e:responsive/);
+    assert.match(source, /uses:\s*actions\/upload-artifact@v7/);
+    assert.match(source, /if:\s*always\(\)/);
+    assert.match(source, /path:\s*test-results\/responsive-visual\//);
+});

@@ -6,7 +6,9 @@ Aceste teste pornesc serverul local pe un port liber și deschid 3 taburi reale 
 2. Player 2
 3. Spectator
 
-Testele verifică faptul că spectatorul vede live board-ul, iar playerii nu îl văd. Mai există teste pentru restaurarea unei camere după restart server, auth register/login/logout cu refresh pe socket, rematch după final de rundă, Single Play fără cameră, Daily Challenge izolat de Single/Duel, layout mobil/Fold fără overlap între titlu și login și cazul în care playerul non-host ghicește corect iar spectatorul vede rezultatul live.
+Testele verifică faptul că spectatorul vede live board-ul, iar playerii nu îl văd. Mai există teste pentru restaurarea unei camere după restart server, auth register/login/logout cu refresh pe socket, rematch după final de rundă, Single Play fără cameră, Daily Challenge izolat de Single/Duel și cazul în care playerul non-host ghicește corect iar spectatorul vede rezultatul live.
+
+Suita separată `responsiveVisual.e2e.test.js` verifică automat layout-ul paginii de start și al jocului pe telefon, ecranul exterior Galaxy Fold 5, ecranul interior Fold în portrait/landscape și desktop. Pentru fiecare stare verifică overflow-ul orizontal, limitele elementelor importante și suprapunerile, apoi salvează capturi PNG și un raport JSON în `test-results/responsive-visual/`.
 
 ## Rulare rapidă pe Windows
 
@@ -40,6 +42,14 @@ Teste E2E:
 ```bash
 npm run test:e2e
 ```
+
+Numai testele responsive și vizuale:
+
+```bash
+npm run test:e2e:responsive
+```
+
+Capturile generate local nu intră în Git. În GitHub Actions sunt încărcate ca artefact `responsive-visual-<run_attempt>` și sunt păstrate 14 zile, inclusiv când testul eșuează.
 
 `npm run test:e2e` rulează automat `pretest:e2e`, care verifică Chromium înainte de pornirea browserului. Dacă Chromium lipsește, scriptul încearcă instalarea și oprește testele cu mesaj explicit dacă instalarea nu reușește.
 

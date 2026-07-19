@@ -38,3 +38,37 @@ jobs:
 
       - name: Verify generated frontend files are committed
         run: git diff --exit-code -- public/index.html public/style.bundle.css public/game.bundle.min.js
+
+  responsive-visual:
+    name: Responsive and visual browser tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: verify
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22.x'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium with system dependencies
+        run: npx playwright install --with-deps chromium
+
+      - name: Run responsive and visual tests
+        run: npm run test:e2e:responsive
+
+      - name: Upload screenshots and layout report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: responsive-visual-${{ github.run_attempt }}
+          path: test-results/responsive-visual/
+          if-no-files-found: warn
+          retention-days: 14

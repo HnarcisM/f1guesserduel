@@ -15,3 +15,6 @@ node_modules/
 
 # Release artifacts
 /dist/
+
+# Browser test screenshots and layout reports
+/test-results/
