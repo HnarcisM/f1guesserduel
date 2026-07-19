@@ -104,3 +104,10 @@ test('frontend loads the generated CSS bundle instead of the import-based styles
     assert.doesNotMatch(bundleCss, /Source: public\/css\//);
     assert.doesNotMatch(bundleCss, /@import\s+/);
 });
+
+test('esbuild remains available to production-only deployment builds', () => {
+    const packageJson = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8'));
+
+    assert.match(packageJson.dependencies?.esbuild || '', /^\^0\.28\./);
+    assert.equal(packageJson.devDependencies?.esbuild, undefined);
+});

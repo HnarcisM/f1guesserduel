@@ -6,6 +6,7 @@
     "better-sqlite3": "^11.10.0",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
+    "esbuild": "^0.28.1",
     "express": "^4.19.2",
     "helmet": "^8.2.0",
     "pg": "^8.22.0",
@@ -36,7 +37,6 @@
     "node": "22.x"
   },
   "devDependencies": {
-    "esbuild": "^0.28.1",
     "playwright": "^1.61.1",
     "sharp": "^0.35.3",
     "svgo": "^4.0.2"
