@@ -250,10 +250,10 @@ Aplicația poate fi configurată prin variabile de mediu. Pentru rulare locală 
 | `SESSION_CLEANUP_INTERVAL_MS` | `900000` | Intervalul la care serverul curăță automat sesiunile expirate. |
 | `ROOMS_FILE_PATH` | `<DATA_DIR>/rooms.json` | Fișierul JSON în care serverul salvează camerele active pentru restart. |
 | `ROOM_SAVE_DEBOUNCE_MS` | `250` | Întârzierea de debounce pentru salvarea asincronă a camerelor după modificări. |
-| `REDIS_URL` | none | URL `redis://`/`rediss://`. Când există, activează snapshot-ul camerelor și rate limiting distribuit pentru Socket.IO, login și register. |
+| `REDIS_URL` | none | URL `redis://`/`rediss://`. Când există, activează persistența camerelor în chei Redis separate și rate limiting distribuit pentru Socket.IO, login și register. |
 | `REDIS_KEY_PREFIX` | `f1guesserduel` | Prefix izolat pentru cheile Redis ale aplicației. |
 | `REDIS_CONNECT_TIMEOUT_MS` | `10000` | Timp maxim pentru conectarea inițială la Redis. |
-| `REDIS_ROOM_TTL_SECONDS` | `86400` | TTL-ul snapshot-ului camerelor, reînnoit la fiecare salvare. |
+| `REDIS_ROOM_TTL_SECONDS` | `86400` | TTL-ul fiecărei camere Redis, reînnoit numai când camera respectivă este salvată. |
 | `COOKIE_SECURE` | `true` în production, altfel `false` | Trimite cookie-ul doar prin HTTPS. |
 | `COOKIE_SAMESITE` | `lax` | Poate fi `lax`, `strict` sau `none`. |
 | `TRUST_PROXY` | `false` | Setează `true` când rulezi în spatele unui proxy/load balancer. |
@@ -305,7 +305,7 @@ POSTGRES_SSL=true
 PERSISTENCE_MODE=ephemeral
 ```
 
-În această variantă, `users` și `sessions` sunt salvate în Postgres. Fără `REDIS_URL`, camerele active rămân în `rooms.json` efemer; cu Redis activ, snapshot-ul lor compact este păstrat în Redis și poate fi restaurat după restart/redeploy/sleep.
+În această variantă, `users` și `sessions` sunt salvate în Postgres. Fără `REDIS_URL`, camerele active rămân în `rooms.json` efemer; cu Redis activ, fiecare cameră este păstrată compact într-o cheie proprie și poate fi restaurată după restart/redeploy/sleep.
 
 ### Redis opțional pentru camere și rate limiting
 
@@ -320,13 +320,13 @@ REDIS_ROOM_TTL_SECONDS=86400
 
 O singură configurare `REDIS_URL` activează două mecanisme:
 
-- camerele sunt păstrate asincron într-un snapshot compact Redis, cu debounce și TTL; jucătorii și identificatorii socket nu sunt salvați;
+- camerele sunt păstrate asincron în chei Redis separate, cu debounce și TTL individual; o modificare rescrie numai camera afectată, iar jucătorii și identificatorii socket nu sunt salvați;
 - limitele Socket.IO sunt numărate atomic în Redis, pe utilizator autentificat sau adresă anonimă;
 - încercările HTTP de login și înregistrare sunt numărate atomic per adresă IP, în chei Redis separate și anonimizate. Limitele nu se resetează la fiecare proces nou și funcționează între mai multe procese.
 
 Dacă `REDIS_URL` lipsește, aplicația păstrează automat comportamentul anterior: fișierul `rooms.json` și rate limiting în memoria procesului. O eroare de conectare inițială la Redis oprește pornirea, evitând un fallback silențios care ar putea pierde starea. Dacă Redis devine temporar indisponibil după pornire, rate limiting-ul revine la contoare locale în memorie, logurile de eroare sunt limitate, iar `/api/health` devine `degraded`.
 
-Snapshot-ul Redis permite restaurarea camerelor pentru o singură instanță și pregătește aplicația pentru scalare. Sincronizarea live a event-urilor și camerelor între mai multe instanțe necesită separat un adapter Socket.IO Redis; această versiune nu declară încă suport complet multi-instance pentru dueluri live.
+Cheile Redis separate permit restaurarea camerelor pentru o singură instanță și evită rescrierea întregului set la fiecare modificare. La prima pornire după upgrade, vechea cheie `<prefix>:rooms:snapshot` este migrată automat și eliminată numai după ce noile chei au fost salvate. Sincronizarea live a event-urilor și camerelor între mai multe instanțe necesită separat un adapter Socket.IO Redis; această versiune nu declară încă suport complet multi-instance pentru dueluri live.
 
 ### Migrații PostgreSQL versionate
 

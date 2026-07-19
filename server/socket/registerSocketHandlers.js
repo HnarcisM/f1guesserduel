@@ -103,7 +103,7 @@ function registerSocketHandlers(io, dependencies) {
 
     function emitRoundResolved(roomId, room, roundResult) {
         if (!room || !roundResult) return;
-        roomStore.markDirty?.();
+        roomStore.markDirty?.(roomId);
 
         for (const accountResult of buildDuelAccountResults(roomId, room, roundResult)) {
             recordAccountGameResultSafely({
@@ -176,7 +176,7 @@ function registerSocketHandlers(io, dependencies) {
                 cleanupInactiveMembers(roomId, room);
             }
             const joinResult = addPlayerToRoom(room, socket.id, socket.user || null, memberOptions);
-            roomStore.markDirty?.();
+            roomStore.markDirty?.(roomId);
 
             if (!joinResult || !joinResult.joined) {
                 socket.emit('roomFull', { maxPlayers: MAX_PLAYERS_PER_ROOM });
@@ -241,7 +241,7 @@ function registerSocketHandlers(io, dependencies) {
             }
 
             updateDuelLobbySettings(room, roundOptions);
-            roomStore.markDirty?.();
+            roomStore.markDirty?.(currentRoom);
             emitRoomStateUpdate(currentRoom, 'lobby-settings-updated');
             emitRoomListUpdate();
         });
@@ -470,7 +470,7 @@ function registerSocketHandlers(io, dependencies) {
                 return;
             }
 
-            roomStore.markDirty?.();
+            roomStore.markDirty?.(currentRoom);
             emitRoomRoleStatuses(room);
             emitRoomStateUpdate(currentRoom, 'player-selected');
             emitRoomListUpdate();
@@ -571,7 +571,7 @@ function registerSocketHandlers(io, dependencies) {
 
             if (hasRoomMember(room, socket.id) && room.roundState === 'playing' && !isSpectator(room, socket.id)) {
                 const result = abortDuelRound(room, 'player-aborted');
-                roomStore.markDirty?.();
+                roomStore.markDirty?.(roomId);
                 io.to(roomId).emit('duelAborted', {
                     message: `${getPlayer(room, socket.id)?.username || 'Un jucător'} a oprit runda. Revenim în lobby.`,
                     roundResult: result,
@@ -620,7 +620,7 @@ function registerSocketHandlers(io, dependencies) {
             }
 
             const result = abortDuelRound(room, 'player-aborted');
-            roomStore.markDirty?.();
+            roomStore.markDirty?.(currentRoom);
             io.to(currentRoom).emit('duelAborted', {
                 message: `${getPlayer(room, socket.id)?.username || 'Un jucător'} a oprit runda. Revenim în lobby.`,
                 roundResult: result,
@@ -641,7 +641,7 @@ function registerSocketHandlers(io, dependencies) {
             if (!disconnectedMember) return;
 
             hasMarkedCurrentRoomDisconnected = true;
-            roomStore.markDirty?.();
+            roomStore.markDirty?.(currentRoom);
             emitRoomStateUpdate(currentRoom, 'disconnect');
             emitRoomListUpdate();
         }
