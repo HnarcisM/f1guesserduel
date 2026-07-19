@@ -26,6 +26,7 @@ test('responsive E2E suite captures home and game states and checks horizontal o
         path.join(__dirname, 'e2e', 'responsiveVisual.e2e.test.js'),
         'utf8'
     );
+    const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
 
     assert.match(source, /page\.screenshot\(/);
     assert.match(source, /'home'/);
@@ -33,4 +34,7 @@ test('responsive E2E suite captures home and game states and checks horizontal o
     assert.match(source, /document\.documentElement\.scrollWidth/);
     assert.match(source, /document\.body\.scrollWidth/);
     assert.match(source, /assertNoVisibleOverlap/);
+    assert.match(html, /id=["']menu-hamburger["']/);
+    assert.match(source, /#menu-hamburger/);
+    assert.doesNotMatch(source, /#menuToggle/);
 });

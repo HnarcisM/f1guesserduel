@@ -16,7 +16,7 @@ const OUTPUT_DIR = path.join(__dirname, '..', '..', 'test-results', 'responsive-
 const HOME_SELECTORS = Object.freeze([
     '.site-header',
     '.site-header h1',
-    '#menuToggle',
+    '#menu-hamburger',
     '#authOpenBtn',
     '.menu-container',
     '.game-mode-selection',
@@ -165,7 +165,7 @@ test('responsive and visual smoke coverage for home and game layouts', { concurr
                 const page = await openAppPage(context, app.baseUrl);
                 await page.locator('#difficulty-overlay').waitFor({ state: 'visible', timeout: 7000 });
                 const home = await captureState(page, viewport, 'home', HOME_SELECTORS);
-                await assertNoVisibleOverlap(page, '.site-header h1', '#menuToggle', `${viewport.label}/home`);
+                await assertNoVisibleOverlap(page, '.site-header h1', '#menu-hamburger', `${viewport.label}/home`);
                 await assertNoVisibleOverlap(page, '.site-header h1', '#authOpenBtn', `${viewport.label}/home`);
 
                 await page.locator('.btn-diff.easy').click();
