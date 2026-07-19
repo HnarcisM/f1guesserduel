@@ -105,7 +105,8 @@ function serializeRoom(room) {
         scoreboard: cloneScoreboard(room.scoreboard),
         isDailyChallenge: Boolean(room.isDailyChallenge),
         dailyDate: room.dailyDate || null,
-        dailyChallengeId: room.dailyChallengeId || null
+        dailyChallengeId: room.dailyChallengeId || null,
+        inactiveSince: Number.isFinite(room.inactiveSince) ? room.inactiveSince : null
     };
 }
 

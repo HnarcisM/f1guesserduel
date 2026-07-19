@@ -5,6 +5,7 @@ const {
     isValidDifficulty
 } = require('../config/constants');
 const {
+    DISCONNECTED_MEMBER_GRACE_MS,
     getPlayerIds,
     getSpectatorIds,
     getPlayerCount,
@@ -99,7 +100,8 @@ function createRoom(roomId, hostSocketId, authUser = null, options = {}) {
         scoreboard: {},
         isDailyChallenge: false,
         dailyDate: null,
-        dailyChallengeId: null
+        dailyChallengeId: null,
+        inactiveSince: null
     };
 
     room.players[hostSocketId] = createPlayer(room, hostSocketId, authUser, options);
@@ -318,23 +320,24 @@ function removePlayerFromRoom(room, socketId) {
 function shouldRemoveDisconnectedMember(member, now = Date.now()) {
     if (!member) return true;
     if (!member.participantKey) return true;
-    if (!member.disconnectedAt) return false;
-    const graceMs = 2 * 60 * 1000;
-    return now - member.disconnectedAt > graceMs;
+    if (!Number.isFinite(member.disconnectedAt)) return false;
+    return now - member.disconnectedAt > DISCONNECTED_MEMBER_GRACE_MS;
 }
 
-function removeInactiveRoomMembers(room, isSocketActive) {
+function removeInactiveRoomMembers(room, isSocketActive, now = Date.now()) {
     if (!room || typeof isSocketActive !== 'function') return false;
     ensureRoomCollections(room);
 
     let changed = false;
     let removedActivePlayer = false;
-    const now = Date.now();
 
     for (const socketId of getPlayerIds(room)) {
         if (!isSocketActive(socketId)) {
             const player = room.players[socketId];
+            const wasAlreadyDisconnected = player.connected === false
+                && Number.isFinite(player.disconnectedAt);
             markRoomMemberDisconnected(player, now);
+            if (!wasAlreadyDisconnected) changed = true;
 
             if (shouldRemoveDisconnectedMember(player, now)) {
                 delete room.players[socketId];
@@ -344,8 +347,6 @@ function removeInactiveRoomMembers(room, isSocketActive) {
                 if (room.hostId === socketId) {
                     room.hostId = null;
                 }
-            } else {
-                changed = true;
             }
         }
     }
@@ -353,12 +354,13 @@ function removeInactiveRoomMembers(room, isSocketActive) {
     for (const socketId of getSpectatorIds(room)) {
         if (!isSocketActive(socketId)) {
             const spectator = room.spectators[socketId];
+            const wasAlreadyDisconnected = spectator.connected === false
+                && Number.isFinite(spectator.disconnectedAt);
             markRoomMemberDisconnected(spectator, now);
+            if (!wasAlreadyDisconnected) changed = true;
 
             if (shouldRemoveDisconnectedMember(spectator, now)) {
                 delete room.spectators[socketId];
-                changed = true;
-            } else {
                 changed = true;
             }
         }

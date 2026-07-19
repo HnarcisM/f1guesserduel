@@ -38,13 +38,13 @@ function createPersistentRoomStore(options = {}) {
 
     function set(roomId, room) {
         rooms.set(roomId, room);
-        markDirty();
+        markDirty(roomId);
         return room;
     }
 
     function remove(roomId) {
         const removed = rooms.delete(roomId);
-        if (removed) markDirty();
+        if (removed) markDirty(roomId, { touchActivity: false });
         return removed;
     }
 
@@ -119,8 +119,16 @@ function createPersistentRoomStore(options = {}) {
         }
     }
 
-    function markDirty() {
+    function markDirty(roomId = null, { touchActivity = true } = {}) {
         if (!persistenceFilePath) return;
+        if (touchActivity) {
+            const targetRoom = typeof roomId === 'string' ? rooms.get(roomId) : null;
+            if (targetRoom) {
+                targetRoom.inactiveSince = null;
+            } else if (!roomId) {
+                for (const room of rooms.values()) room.inactiveSince = null;
+            }
+        }
         dirtyRevision += 1;
 
         if (saveDebounceMs === 0) {

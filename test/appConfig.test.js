@@ -43,6 +43,8 @@ test('app config provides safe development defaults', () => {
         roomTtlSeconds: 86_400
     });
     assert.equal(config.dbFilePath, path.join(projectRoot, 'data', 'f1guesser.sqlite'));
+    assert.equal(config.rooms.cleanupIntervalMs, 60_000);
+    assert.equal(config.rooms.inactiveTtlMs, 30 * 60 * 1000);
     assert.equal(
         config.postgresMigrationsDirPath,
         path.join(projectRoot, 'server', 'db', 'migrations', 'postgres')
@@ -101,6 +103,8 @@ test('app config reads production values from environment', () => {
         SESSION_CLEANUP_INTERVAL_MS: '120000',
         ROOMS_FILE_PATH: '/var/lib/f1guesser/rooms.json',
         ROOM_SAVE_DEBOUNCE_MS: '500',
+        ROOM_CLEANUP_INTERVAL_MS: '45000',
+        ROOM_INACTIVE_TTL_MS: '2400000',
         TRUST_PROXY: 'true',
         PUBLIC_ORIGIN: 'https://f1guesserduel.onrender.com/',
         SOCKET_ALLOWED_ORIGINS: 'https://preview.example.com, http://localhost:5173',
@@ -150,6 +154,8 @@ test('app config reads production values from environment', () => {
     assert.equal(config.auth.sessionCleanupIntervalMs, 120000);
     assert.equal(path.normalize(config.rooms.persistenceFilePath), path.normalize('/var/lib/f1guesser/rooms.json'));
     assert.equal(config.rooms.saveDebounceMs, 500);
+    assert.equal(config.rooms.cleanupIntervalMs, 45_000);
+    assert.equal(config.rooms.inactiveTtlMs, 2_400_000);
     assert.deepEqual(config.socket.allowedOrigins, [
         'https://preview.example.com',
         'http://localhost:5173',
@@ -234,6 +240,14 @@ test('app config rejects invalid numeric environment values', () => {
     assert.throws(
         () => createAppConfig({ REDIS_ROOM_TTL_SECONDS: '30' }),
         /REDIS_ROOM_TTL_SECONDS must be an integer/
+    );
+    assert.throws(
+        () => createAppConfig({ ROOM_CLEANUP_INTERVAL_MS: '-1' }),
+        /ROOM_CLEANUP_INTERVAL_MS must be an integer/
+    );
+    assert.throws(
+        () => createAppConfig({ ROOM_INACTIVE_TTL_MS: '60000' }),
+        /ROOM_INACTIVE_TTL_MS must be an integer/
     );
 });
 

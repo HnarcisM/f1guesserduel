@@ -114,7 +114,7 @@ function updateRoomMemberAuth(member, authUser = null, room = null) {
 function markRoomMemberDisconnected(member, now = Date.now()) {
     if (!member) return null;
     member.connected = false;
-    if (!member.disconnectedAt) member.disconnectedAt = now;
+    if (!Number.isFinite(member.disconnectedAt)) member.disconnectedAt = now;
     return member;
 }
 

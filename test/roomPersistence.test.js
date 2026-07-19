@@ -58,12 +58,16 @@ test('persistent room store saves compact rooms and restores round state from dr
 
     store.set(room.roomId, room);
     await store.saveNow();
+    room.inactiveSince = 67890;
+    store.markDirty(room.roomId, { touchActivity: false });
+    await store.saveNow();
 
     const persistedPayload = JSON.parse(fs.readFileSync(filePath, 'utf8'));
     assert.equal(persistedPayload.version, 2);
     assert.equal(persistedPayload.rooms[0].targetDriverId, 'hamilton');
     assert.equal(Object.hasOwn(persistedPayload.rooms[0], 'targetDriver'), false);
     assert.equal(Object.hasOwn(persistedPayload.rooms[0], 'driversList'), false);
+    assert.equal(persistedPayload.rooms[0].inactiveSince, 67890);
 
     const restoredRooms = readPersistedRooms(filePath, { driversRepository });
     assert.equal(restoredRooms.length, 1);
@@ -73,6 +77,7 @@ test('persistent room store saves compact rooms and restores round state from dr
     assert.equal(restoredRooms[0].targetDriver.nat, 'GBR');
     assert.equal(restoredRooms[0].driversList.length, 2);
     assert.equal(restoredRooms[0].roundState, 'playing');
+    assert.equal(restoredRooms[0].inactiveSince, 67890);
     assert.equal(Object.keys(restoredRooms[0].players).length, 0);
     assert.equal(Object.keys(restoredRooms[0].spectators).length, 0);
     assert.equal(restoredRooms[0].hostId, null);

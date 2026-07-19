@@ -292,13 +292,15 @@ async function createRedisRoomStore({
         saveTimer.unref?.();
     }
 
-    function markDirty(roomId = null) {
+    function markDirty(roomId = null, { touchActivity = true } = {}) {
         const normalizedRoomId = typeof roomId === 'object' ? roomId?.roomId : roomId;
         if (normalizedRoomId && rooms.has(normalizedRoomId)) {
+            if (touchActivity) rooms.get(normalizedRoomId).inactiveSince = null;
             pendingDeletes.delete(normalizedRoomId);
             pendingUpserts.add(normalizedRoomId);
         } else if (!normalizedRoomId) {
             for (const existingRoomId of rooms.keys()) {
+                if (touchActivity) rooms.get(existingRoomId).inactiveSince = null;
                 pendingDeletes.delete(existingRoomId);
                 pendingUpserts.add(existingRoomId);
             }

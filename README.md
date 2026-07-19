@@ -250,6 +250,8 @@ Aplicația poate fi configurată prin variabile de mediu. Pentru rulare locală 
 | `SESSION_CLEANUP_INTERVAL_MS` | `900000` | Intervalul la care serverul curăță automat sesiunile expirate. |
 | `ROOMS_FILE_PATH` | `<DATA_DIR>/rooms.json` | Fișierul JSON în care serverul salvează camerele active pentru restart. |
 | `ROOM_SAVE_DEBOUNCE_MS` | `250` | Întârzierea de debounce pentru salvarea asincronă a camerelor după modificări. |
+| `ROOM_CLEANUP_INTERVAL_MS` | `60000` | Intervalul verificării camerelor inactive; `0` dezactivează jobul periodic. |
+| `ROOM_INACTIVE_TTL_MS` | `1800000` | Șterge o cameră după 30 de minute fără niciun socket activ. |
 | `REDIS_URL` | none | URL `redis://`/`rediss://`. Când există, activează persistența camerelor în chei Redis separate și rate limiting distribuit pentru Socket.IO, login și register. |
 | `REDIS_KEY_PREFIX` | `f1guesserduel` | Prefix izolat pentru cheile Redis ale aplicației. |
 | `REDIS_CONNECT_TIMEOUT_MS` | `10000` | Timp maxim pentru conectarea inițială la Redis. |
@@ -327,6 +329,8 @@ O singură configurare `REDIS_URL` activează două mecanisme:
 Dacă `REDIS_URL` lipsește, aplicația păstrează automat comportamentul anterior: fișierul `rooms.json` și rate limiting în memoria procesului. O eroare de conectare inițială la Redis oprește pornirea, evitând un fallback silențios care ar putea pierde starea. Dacă Redis devine temporar indisponibil după pornire, rate limiting-ul revine la contoare locale în memorie, logurile de eroare sunt limitate, iar `/api/health` devine `degraded`.
 
 Cheile Redis separate permit restaurarea camerelor pentru o singură instanță și evită rescrierea întregului set la fiecare modificare. La prima pornire după upgrade, vechea cheie `<prefix>:rooms:snapshot` este migrată automat și eliminată numai după ce noile chei au fost salvate. Sincronizarea live a event-urilor și camerelor între mai multe instanțe necesită separat un adapter Socket.IO Redis; această versiune nu declară încă suport complet multi-instance pentru dueluri live.
+
+Un job periodic verifică o dată pe minut camerele din memorie. Când o cameră nu mai are niciun socket activ, începe un interval de inactivitate; camera este eliminată după 30 de minute. Reconectarea anulează intervalul, iar membrii deconectați beneficiază în continuare de fereastra de reconectare existentă. Ștergerea folosește providerul activ, deci elimină și cheia Redis individuală sau actualizează `rooms.json`.
 
 ### Migrații PostgreSQL versionate
 

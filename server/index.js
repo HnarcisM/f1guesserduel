@@ -9,6 +9,7 @@ const { createDriversRepository } = require('./data/driversRepository');
 const { createGameService } = require('./game/gameService');
 const { createPersistentRoomStore } = require('./rooms/roomStore.persistent');
 const { createRedisRoomStore } = require('./rooms/roomStore.redis');
+const { createRoomCleanupService } = require('./rooms/roomCleanupService');
 const { registerSocketHandlers } = require('./socket/registerSocketHandlers');
 const { createSocketServerOptions } = require('./socket/socketServerOptions');
 const { createDatabase } = require('./db/database');
@@ -152,6 +153,14 @@ const stopExpiredSessionCleanup = sessionService.startExpiredSessionCleanup({
     intervalMs: config.auth.sessionCleanupIntervalMs,
     logger
 });
+const roomCleanupService = createRoomCleanupService({
+    roomStore,
+    isSocketActive: socketId => io.sockets.sockets.has(socketId),
+    cleanupIntervalMs: config.rooms.cleanupIntervalMs,
+    inactiveTtlMs: config.rooms.inactiveTtlMs,
+    logger
+});
+const stopInactiveRoomCleanup = roomCleanupService.start();
 
 app.use(createSecurityHeadersMiddleware({
     isProduction: config.isProduction
@@ -246,11 +255,13 @@ async function shutdownRoomStore() {
 }
 
 function prepareApplicationShutdown() {
+    stopInactiveRoomCleanup?.();
     io.disconnectSockets?.(true);
 }
 
 async function cleanupApplicationResources() {
     stopExpiredSessionCleanup?.();
+    stopInactiveRoomCleanup?.();
     await shutdownRoomStore();
     const connectionResults = await Promise.allSettled([
         db.closeConnection?.(),
@@ -286,11 +297,13 @@ server.listen(config.port, () => {
         databaseProvider: config.database.provider,
         redisEnabled: config.redis.enabled,
         roomPersistenceProvider: roomStore.provider || 'file',
+        roomCleanupIntervalMs: config.rooms.cleanupIntervalMs,
+        roomInactiveTtlMs: config.rooms.inactiveTtlMs,
         rateLimitProvider: redisClient ? 'redis' : 'memory'
     });
 });
 
-return { app, server, io, db, redisClient, roomStore };
+return { app, server, io, db, redisClient, roomStore, roomCleanupService };
 }
 
 

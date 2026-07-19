@@ -6,6 +6,8 @@ const DEFAULT_SESSION_MAX_AGE_DAYS = 7;
 const DEFAULT_SOCKET_AUTH_TOKEN_MAX_AGE_MS = 2 * 60 * 1000;
 const DEFAULT_SESSION_CLEANUP_INTERVAL_MS = 15 * 60 * 1000;
 const DEFAULT_ROOM_SAVE_DEBOUNCE_MS = 250;
+const DEFAULT_ROOM_CLEANUP_INTERVAL_MS = 60 * 1000;
+const DEFAULT_ROOM_INACTIVE_TTL_MS = 30 * 60 * 1000;
 const DEFAULT_SOCKET_RATE_LIMIT_WINDOW_MS = 60 * 1000;
 const DEFAULT_POSTGRES_POOL_MAX = 5;
 const DEFAULT_POSTGRES_CONNECTION_TIMEOUT_MS = 15 * 1000;
@@ -454,6 +456,18 @@ function createAppConfig(env = process.env, options = {}) {
                 'ROOM_SAVE_DEBOUNCE_MS',
                 DEFAULT_ROOM_SAVE_DEBOUNCE_MS,
                 { min: 0, max: 60_000 }
+            ),
+            cleanupIntervalMs: parseIntegerEnv(
+                env,
+                'ROOM_CLEANUP_INTERVAL_MS',
+                DEFAULT_ROOM_CLEANUP_INTERVAL_MS,
+                { min: 0, max: 24 * 60 * 60 * 1000 }
+            ),
+            inactiveTtlMs: parseIntegerEnv(
+                env,
+                'ROOM_INACTIVE_TTL_MS',
+                DEFAULT_ROOM_INACTIVE_TTL_MS,
+                { min: 2 * 60 * 1000, max: 30 * 24 * 60 * 60 * 1000 }
             )
         },
         logging: {
@@ -517,6 +531,8 @@ module.exports = {
     DEFAULT_SOCKET_AUTH_TOKEN_MAX_AGE_MS,
     DEFAULT_SESSION_CLEANUP_INTERVAL_MS,
     DEFAULT_ROOM_SAVE_DEBOUNCE_MS,
+    DEFAULT_ROOM_CLEANUP_INTERVAL_MS,
+    DEFAULT_ROOM_INACTIVE_TTL_MS,
     DEFAULT_SOCKET_RATE_LIMIT_WINDOW_MS,
     DEFAULT_POSTGRES_POOL_MAX,
     DEFAULT_POSTGRES_CONNECTION_TIMEOUT_MS,
