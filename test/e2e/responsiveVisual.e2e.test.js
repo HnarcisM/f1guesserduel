@@ -74,11 +74,35 @@ async function collectLayout(page, selectors) {
                 || element.rectangle.right > window.innerWidth + tolerance)
             .map(element => element.selector);
 
+        const describeElement = element => {
+            const id = element.id ? `#${element.id}` : '';
+            const className = typeof element.className === 'string'
+                ? element.className.trim().split(/\s+/).filter(Boolean).slice(0, 2).map(name => `.${name}`).join('')
+                : '';
+            return `${element.tagName.toLowerCase()}${id}${className}`;
+        };
+        const overflowCandidates = Array.from(document.body.querySelectorAll('*'))
+            .map(element => {
+                const rectangle = element.getBoundingClientRect();
+                return {
+                    element: describeElement(element),
+                    left: Math.round(rectangle.left),
+                    right: Math.round(rectangle.right),
+                    clientWidth: element.clientWidth,
+                    scrollWidth: element.scrollWidth
+                };
+            })
+            .filter(item => item.left < -tolerance
+                || item.right > window.innerWidth + tolerance
+                || item.scrollWidth > item.clientWidth + tolerance)
+            .slice(0, 12);
+
         return {
             viewport: { width: window.innerWidth, height: window.innerHeight },
             documentWidth: document.documentElement.scrollWidth,
             bodyWidth: document.body.scrollWidth,
             outsideViewport,
+            overflowCandidates,
             elements
         };
     }, selectors);
@@ -92,7 +116,7 @@ function assertLayoutFits(layout, viewportLabel, stateLabel) {
     );
     assert.ok(
         layout.bodyWidth <= layout.viewport.width + 2,
-        `${prefix}: body overflow ${layout.bodyWidth}px > ${layout.viewport.width}px`
+        `${prefix}: body overflow ${layout.bodyWidth}px > ${layout.viewport.width}px; candidates=${JSON.stringify(layout.overflowCandidates)}`
     );
     assert.deepEqual(
         layout.outsideViewport,

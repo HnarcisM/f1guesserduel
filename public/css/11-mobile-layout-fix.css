@@ -225,6 +225,49 @@
     }
 }
 
+/* --- FOLDABLE / TABLET LANDSCAPE GAME GRID --- */
+/*
+   Între 769px și 920px nu se aplică grila de tabletă din 06-responsive.css.
+   Grila desktop are o lățime minimă de aproximativ 837px; împreună cu padding-ul
+   paginii depășea viewport-ul interior Fold de 842px. Compactăm coloanele în
+   acest interval, păstrând scroll-ul doar în interiorul grilei ca fallback.
+*/
+@media (min-width: 769px) and (max-width: 920px) {
+    .container {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    #gameZone {
+        width: min(720px, 100%);
+    }
+
+    .grid {
+        width: 100%;
+        grid-template-columns: minmax(34px, 0.34fr) minmax(118px, 1.25fr) minmax(95px, 1fr) minmax(110px, 1.1fr) repeat(3, minmax(78px, 0.85fr));
+        justify-content: center;
+        gap: var(--space-sm);
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .cell {
+        min-width: 0;
+        min-height: 42px;
+        padding: var(--space-lg) var(--space-sm);
+        font-size: 11px;
+        line-height: 1.18;
+        overflow-wrap: anywhere;
+    }
+
+    .cell.header {
+        min-height: 30px;
+        padding: var(--space-sm) var(--space-xs);
+        font-size: 9px;
+        letter-spacing: 0.35px;
+    }
+}
+
 /* --- FOLD INNER HEADER OVERLAP FIX --- */
 /*
    Pe display-ul interior de Fold, viewport-ul poate fi lat dar scund în landscape,

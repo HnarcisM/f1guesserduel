@@ -38,3 +38,29 @@ test('responsive E2E suite captures home and game states and checks horizontal o
     assert.match(source, /#menu-hamburger/);
     assert.doesNotMatch(source, /#menuToggle/);
 });
+
+test('Fold landscape uses a compact game grid below 921px', () => {
+    const source = fs.readFileSync(
+        path.join(__dirname, '..', 'public', 'css', '11-mobile-layout-fix.css'),
+        'utf8'
+    );
+    const landscapeRule = source.match(
+        /@media \(min-width: 769px\) and \(max-width: 920px\) \{[\s\S]*?\/\* --- FOLD INNER HEADER OVERLAP FIX --- \*\//
+    );
+
+    assert.ok(landscapeRule, 'Lipsește breakpoint-ul pentru Fold landscape');
+    assert.match(landscapeRule[0], /\.grid\s*\{/);
+    assert.match(landscapeRule[0], /repeat\(3, minmax\(78px, 0\.85fr\)\)/);
+    assert.match(landscapeRule[0], /overflow-x:\s*auto/);
+    assert.match(landscapeRule[0], /\.cell\s*\{[\s\S]*?min-width:\s*0/);
+
+    const foldLandscape = VIEWPORTS.find(viewport => viewport.label === 'fold5-inner-landscape');
+    const bodyHorizontalPadding = 2 * 20;
+    const minimumColumnsWidth = 34 + 118 + 95 + 110 + (3 * 78);
+    const sixGridGaps = 6 * 5;
+    const minimumGridWidth = minimumColumnsWidth + sixGridGaps;
+    assert.ok(
+        minimumGridWidth <= foldLandscape.width - bodyHorizontalPadding,
+        `Grila minimă de ${minimumGridWidth}px nu încape în cei ${foldLandscape.width - bodyHorizontalPadding}px disponibili`
+    );
+});
