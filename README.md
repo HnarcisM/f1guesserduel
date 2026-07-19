@@ -181,6 +181,14 @@ npm run test:e2e
 npm run test:all
 ```
 
+### Verificare automată în GitHub Actions
+
+Workflow-ul `.github/workflows/ci.yml` rulează automat la fiecare `push` și
+`pull_request`, folosind Node.js 22. Verificarea instalează versiunile exacte din
+`package-lock.json`, rulează testele, generează bundle-urile de producție și
+eșuează dacă `public/style.bundle.css` sau `public/game.bundle.min.js` nu sunt
+actualizate în commit.
+
 Pentru a reoptimiza numai SVG-urile folosite de build-ul de producție:
 
 ```bash
