@@ -407,7 +407,7 @@ După ce modifici fișierele din `public/css/` sau ordinea importurilor din `pub
 npm run build:css
 ```
 
-Asta regenerează bundle-ul fără reguli runtime `@import`, reducând numărul de request-uri CSS la încărcarea paginii. Scriptul de release rulează automat întregul build frontend înainte să creeze arhiva ZIP.
+Asta regenerează bundle-ul fără reguli runtime `@import` și îl minifică automat cu `esbuild`, reducând atât numărul de request-uri CSS, cât și dimensiunea transferată la încărcarea paginii. Build-ul raportează dimensiunea surselor combinate și reducerea obținută, iar testele păstrează un buget de maximum 100 KB pentru bundle-ul minificat. Scriptul de release rulează automat întregul build frontend înainte să creeze arhiva ZIP.
 
 JavaScript-ul rămâne modular în `public/game.js` și `public/js/`, iar browserul primește varianta unică, minificată:
 
