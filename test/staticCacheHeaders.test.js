@@ -19,8 +19,8 @@ function createResponse(originalUrl) {
 }
 
 test('versioned JavaScript and CSS receive immutable long-term caching', () => {
-    const scriptResponse = createResponse('/game.bundle.min.js?v=frontend-bundle-4');
-    const styleResponse = createResponse('/style.bundle.css?v=frontend-cache-3');
+    const scriptResponse = createResponse('/game.bundle.min.js?v=4c89bcaa6d84679f');
+    const styleResponse = createResponse('/style.bundle.css?v=cf0218c6886c165d');
 
     setStaticCacheHeaders(scriptResponse, '/public/game.bundle.min.js');
     setStaticCacheHeaders(styleResponse, '/public/style.bundle.css');

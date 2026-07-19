@@ -29,12 +29,12 @@ test('GitHub Actions CI uses Node 22 and the locked npm dependencies', () => {
     assert.match(source, /run:\s*npm ci/);
 });
 
-test('GitHub Actions CI tests, builds and rejects stale generated bundles', () => {
+test('GitHub Actions CI tests, builds and rejects stale generated frontend files', () => {
     const source = readWorkflow();
     const testPosition = source.indexOf('run: npm test');
     const buildPosition = source.indexOf('run: npm run build');
     const generatedCheckPosition = source.indexOf(
-        'git diff --exit-code -- public/style.bundle.css public/game.bundle.min.js'
+        'git diff --exit-code -- public/index.html public/style.bundle.css public/game.bundle.min.js'
     );
 
     assert.ok(testPosition >= 0);

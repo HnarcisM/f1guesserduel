@@ -186,8 +186,8 @@ npm run test:all
 Workflow-ul `.github/workflows/ci.yml` rulează automat la fiecare `push` și
 `pull_request`, folosind Node.js 22. Verificarea instalează versiunile exacte din
 `package-lock.json`, rulează testele, generează bundle-urile de producție și
-eșuează dacă `public/style.bundle.css` sau `public/game.bundle.min.js` nu sunt
-actualizate în commit.
+eșuează dacă `public/index.html`, `public/style.bundle.css` sau
+`public/game.bundle.min.js` nu sunt actualizate în commit.
 
 Pentru a reoptimiza numai SVG-urile folosite de build-ul de producție:
 
@@ -640,8 +640,9 @@ Responsabilități:
 - Răspunsurile text mai mari de 1 KB folosesc automat Brotli sau gzip, în funcție de capabilitățile browserului.
 - Fișierele CSS/JavaScript cu parametrul `?v=` primesc cache public `immutable` pentru un an; fișierele fără versiune trebuie revalidate.
 - HTML-ul rămâne fără cache persistent, astfel încât un deploy nou poate furniza imediat URL-urile versionate actualizate.
+- `npm run build` calculează automat versiuni SHA-256 scurte din conținutul bootstrap-ului temei și al bundle-urilor CSS/JavaScript, apoi actualizează `public/index.html`.
 
-Când se modifică `public/style.bundle.css`, `public/game.bundle.min.js` sau bootstrap-ul temei, actualizează valoarea `?v=` corespunzătoare din `public/index.html`. Astfel browserul descarcă versiunea nouă fără a pierde beneficiul cache-ului lung.
+Valorile `?v=` nu trebuie modificate manual. Hash-urile normalizează terminatoarele de linie, astfel încât același conținut primește aceeași versiune pe Windows și Linux. GitHub Actions verifică dacă bundle-urile și referințele versionate au fost regenerate înainte de commit.
 
 ### Backend și persistență
 

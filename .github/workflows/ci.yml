@@ -36,5 +36,5 @@ jobs:
       - name: Build production bundles
         run: npm run build
 
-      - name: Verify generated bundles are committed
-        run: git diff --exit-code -- public/style.bundle.css public/game.bundle.min.js
+      - name: Verify generated frontend files are committed
+        run: git diff --exit-code -- public/index.html public/style.bundle.css public/game.bundle.min.js

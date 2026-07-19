@@ -15,9 +15,10 @@
   "scripts": {
     "start": "node server/index.js",
     "dev": "node server/index.js",
-    "build": "npm run build:css && npm run build:js",
+    "build": "npm run build:css && npm run build:js && npm run build:version",
     "build:css": "node scripts/build-css-bundle.js",
     "build:js": "node scripts/build-js-bundle.js",
+    "build:version": "node scripts/version-frontend-assets.js",
     "optimize:raster": "node scripts/optimize-raster-assets.js",
     "optimize:svg": "node scripts/optimize-svg-assets.js",
     "test": "node --test test/*.test.js",
