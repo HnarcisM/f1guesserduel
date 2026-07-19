@@ -1,4 +1,5 @@
 import { updateStats, renderStats } from './stats.js';
+import { createDialogFocusManager } from './dialogFocusManager.js';
 
 function setText(id, value) {
 	const element = document.getElementById(id);
@@ -38,6 +39,19 @@ export function createEndGameController({
 	setRoundFinished
 }) {
 	let isRematchMode = false;
+	let dialogFocusManager = null;
+
+	function getDialogFocusManager() {
+		if (dialogFocusManager) return dialogFocusManager;
+		const popup = document.getElementById('endGameDisplay');
+		if (!popup) return null;
+		dialogFocusManager = createDialogFocusManager({
+			dialog: popup,
+			onEscape: () => hideEndGamePopup(true),
+			getInitialFocus: () => document.getElementById('closeEndGamePopup')
+		});
+		return dialogFocusManager;
+	}
 
 	function setSubmitButtonMode(mode) {
 		const sendBtn = document.getElementById('sendGuessBtn');
@@ -113,6 +127,12 @@ export function createEndGameController({
 				status.textContent = `Daily Challenge completat. Următorul Daily este disponibil în ${dailyChallengeState.getCountdownText()}.`;
 			}
 		}
+		const fallbackFocus = isRematchMode
+			? document.getElementById('sendGuessBtn')
+			: document.getElementById('menu-hamburger');
+		getDialogFocusManager()?.deactivate({
+			fallbackFocus
+		});
 	}
 
 	function showEndGamePopup({ isCorrect, attempts, target, isTimedOut = false, isDailyChallenge = false, customTitle = null, customMessage = null, statsResult = null, force = false }) {
@@ -189,6 +209,9 @@ export function createEndGameController({
 		renderStats();
 		if (backdrop) backdrop.classList.add('show');
 		popup.classList.add('show');
+		getDialogFocusManager()?.activate({
+			focusTarget: document.getElementById('closeEndGamePopup')
+		});
 	}
 
 	return {

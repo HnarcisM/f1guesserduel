@@ -1022,3 +1022,13 @@
 [data-app-theme="carbon"] .auth-open-btn:active {
     background: linear-gradient(180deg, #3c4044 0%, #303337 100%);
 }
+
+/* Păstrat la final pentru a nu fi anulat de resetările outline ale inputurilor. */
+.auth-open-btn:focus-visible,
+.auth-close:focus-visible,
+.auth-panel button:focus-visible,
+.auth-panel input:focus-visible,
+.auth-panel summary:focus-visible {
+    outline: 2px solid var(--accent-f1);
+    outline-offset: 2px;
+}

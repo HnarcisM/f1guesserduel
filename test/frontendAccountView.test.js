@@ -36,6 +36,12 @@ function createElement() {
         addEventListener(eventName, handler) {
             listeners.set(eventName, handler);
         },
+        focus() {
+            globalThis.document.activeElement = this;
+        },
+        querySelectorAll() {
+            return [];
+        },
         setAttribute(name, value) {
             attributes.set(name, String(value));
         },
@@ -132,6 +138,7 @@ test('authenticated account dashboard is present while the login form remains se
     assert.match(html, /o dată la 7 zile/);
     assert.match(html, /id="authPasswordSettingsForm"/);
     assert.match(html, /id="authLogoutAllBtn"/);
+    assert.match(html, /id="authPanel"[^>]*aria-describedby="authSubtitle"[^>]*aria-hidden="true"[^>]*tabindex="-1"/);
     assert.equal((html.match(/<details class="auth-settings-card auth-settings-disclosure/g) || []).length, 3);
     assert.doesNotMatch(html, /<details class="auth-settings-card auth-settings-disclosure"[^>]*\sopen(?:\s|>)/);
     assert.match(css, /\.auth-stats-grid/);
@@ -142,6 +149,41 @@ test('authenticated account dashboard is present while the login form remains se
     assert.match(css, /\.auth-profile-tabs/);
     assert.match(css, /\.auth-achievement-card/);
     assert.match(css, /\.auth-settings-disclosure\[open\]/);
+});
+
+test('auth dialog moves focus inside, closes with Escape and restores the opener', async t => {
+    const originalDocument = globalThis.document;
+    const originalFetch = globalThis.fetch;
+    const { document, elements } = createAccountDocument();
+    globalThis.document = document;
+    globalThis.fetch = async () => ({ ok: true, async json() { return { user: null }; } });
+    t.after(() => {
+        if (originalDocument === undefined) delete globalThis.document;
+        else globalThis.document = originalDocument;
+        if (originalFetch === undefined) delete globalThis.fetch;
+        else globalThis.fetch = originalFetch;
+    });
+
+    const { createAuthView } = await import('../public/js/authView.js');
+    const view = createAuthView();
+    view.setup();
+    elements.authOpenBtn.focus();
+    elements.authOpenBtn.listeners.get('click')();
+
+    assert.equal(elements.authPanel.classList.contains('show'), true);
+    assert.equal(elements.authPanel.getAttribute('aria-hidden'), 'false');
+    assert.equal(elements.authOpenBtn.getAttribute('aria-expanded'), 'true');
+    assert.equal(document.activeElement, elements.authEmail);
+
+    elements.authPanel.listeners.get('keydown')({
+        key: 'Escape',
+        preventDefault() {},
+        stopPropagation() {}
+    });
+    assert.equal(elements.authPanel.classList.contains('show'), false);
+    assert.equal(elements.authPanel.getAttribute('aria-hidden'), 'true');
+    assert.equal(elements.authOpenBtn.getAttribute('aria-expanded'), 'false');
+    assert.equal(document.activeElement, elements.authOpenBtn);
 });
 
 test('server account stats updates are forwarded to the account dashboard', async () => {

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>F1 Guesser</title>
     <script src="/js/themeBootstrap.js?v=6afc6a3773845bb4"></script>
-<link rel="stylesheet" href="/style.bundle.css?v=e8e38241823fd1cd">
+<link rel="stylesheet" href="/style.bundle.css?v=57d71b27e4511f62">
 </head>
 <body>
 
@@ -18,54 +18,54 @@
 
 <!-- Header fix: acces rapid la meniu, cameră și număr jucători online. -->
 <header class="site-header">
-    <div id="menu-hamburger" class="hamburger">☰</div>
-   <div id="dropdown-menu" class="dropdown hidden">
+    <button type="button" id="menu-hamburger" class="hamburger" aria-label="Deschide meniul" aria-controls="dropdown-menu" aria-expanded="false" aria-haspopup="true">☰</button>
+   <nav id="dropdown-menu" class="dropdown hidden" aria-label="Meniu principal" aria-hidden="true" inert>
         <details class="menu-section">
             <summary class="menu-section-title">🎮 DIFICULTATE</summary>
             <div class="menu-section-content">
-                <div data-level="home" class="menu-item">🏠 Home</div>
-                <div data-level="easy" class="menu-item">🟢 Easy</div>
-                <div data-level="medium" class="menu-item">🟡 Medium</div>
-                <div data-level="hard" class="menu-item">🔴 Hard</div>
+                <button type="button" data-level="home" class="menu-item">🏠 Home</button>
+                <button type="button" data-level="easy" class="menu-item">🟢 Easy</button>
+                <button type="button" data-level="medium" class="menu-item">🟡 Medium</button>
+                <button type="button" data-level="hard" class="menu-item">🔴 Hard</button>
             </div>
         </details>
 
         <details class="menu-section">
             <summary class="menu-section-title">🌅 DAILY CHALLENGE</summary>
             <div class="menu-section-content">
-                <div data-daily-level="easy" class="menu-item daily-item">🟢 Daily Easy</div>
-                <div data-daily-level="medium" class="menu-item daily-item">🟡 Daily Medium</div>
-                <div data-daily-level="hard" class="menu-item daily-item">🔴 Daily Hard</div>
+                <button type="button" data-daily-level="easy" class="menu-item daily-item">🟢 Daily Easy</button>
+                <button type="button" data-daily-level="medium" class="menu-item daily-item">🟡 Daily Medium</button>
+                <button type="button" data-daily-level="hard" class="menu-item daily-item">🔴 Daily Hard</button>
             </div>
         </details>
 
         <details class="menu-section">
             <summary class="menu-section-title">⏱️ TIMER</summary>
             <div class="menu-section-content">
-                <div data-timer="off" class="menu-item timer-item">∞ Fără timp</div>
-                <div data-timer="60" class="menu-item timer-item">⏱️ 60 secunde</div>
-                <div data-timer="90" class="menu-item timer-item">⏱️ 90 secunde</div>
-                <div data-timer="120" class="menu-item timer-item">⏱️ 120 secunde</div>
+                <button type="button" data-timer="off" class="menu-item timer-item">∞ Fără timp</button>
+                <button type="button" data-timer="60" class="menu-item timer-item">⏱️ 60 secunde</button>
+                <button type="button" data-timer="90" class="menu-item timer-item">⏱️ 90 secunde</button>
+                <button type="button" data-timer="120" class="menu-item timer-item">⏱️ 120 secunde</button>
             </div>
         </details>
 
         <details class="menu-section">
             <summary class="menu-section-title">🎨 TEMĂ VIZUALĂ</summary>
             <div class="menu-section-content">
-                <div data-theme="default" class="menu-item theme-item">🌌 F1 Classic (Dark)</div>
-                <div data-theme="neon" class="menu-item theme-item">✨ Night Race (Neon)</div>
-                <div data-theme="carbon" class="menu-item theme-item">🏁 Carbon & Checkers</div>
+                <button type="button" data-theme="default" class="menu-item theme-item">🌌 F1 Classic (Dark)</button>
+                <button type="button" data-theme="neon" class="menu-item theme-item">✨ Night Race (Neon)</button>
+                <button type="button" data-theme="carbon" class="menu-item theme-item">🏁 Carbon &amp; Checkers</button>
             </div>
         </details>
-    </div>
-    <h1>🏎️ F1 GUESSER</h1>
+    </nav>
+    <h1><button type="button" id="siteHomeControl" class="site-home-control" aria-label="F1 Guesser – revino la pagina principală">🏎️ F1 GUESSER</button></h1>
     <!-- Butonul nou de partajare unificat în header -->
 	<div class="header-actions">
         <button type="button" id="authOpenBtn" class="auth-open-btn">👤 Login</button>
-		<div id="shareRoomBtn" class="share-btn" title="Copiază link-ul camerei">
+        <button type="button" id="shareRoomBtn" class="share-btn" title="Copiază link-ul camerei" aria-label="Copiază link-ul camerei">
 			<span id="roomBtnText">🏁 Room: --</span>
 			<span class="share-tooltip" id="shareTooltip">Copiat!</span>
-		</div>
+		</button>
 		<div class="player-badge" id="duelStatus">Online: 0</div>
 	</div>
 </header>
@@ -76,7 +76,7 @@
         <h2>F1 Guesser</h2>
         <p class="subtitle">Alege modul de joc, apoi selectează dificultatea.</p>
 
-        <div class="game-mode-selection" aria-label="Selectare mod de joc">
+        <div class="game-mode-selection" role="group" aria-label="Selectare mod de joc">
             <button type="button" class="game-mode-card active" data-game-mode-choice="single" aria-pressed="true">
                 <span class="mode-icon">🎯</span>
                 <strong>Single Play</strong>
@@ -127,7 +127,7 @@
 
 
         <div id="difficultySection" class="difficulty-section">
-        <div class="timer-mode-card" aria-label="Selectare mod cu sau fără timp">
+        <div class="timer-mode-card" role="group" aria-label="Selectare mod cu sau fără timp">
             <span class="timer-mode-label">Mod timp</span>
             <div class="timer-mode-options">
                 <button type="button" class="timer-mode-option active" data-timer-mode="off">∞ Fără timp</button>
@@ -137,15 +137,15 @@
             </div>
         </div>
         <div class="difficulty-grid">
-            <button class="btn-diff easy" data-level="easy">
+            <button type="button" class="btn-diff easy" data-level="easy">
                 <span class="diff-title">Easy</span>
                 <span class="diff-desc">Piloți după 2010<br>(Generația Nouă)</span>
             </button>
-            <button class="btn-diff medium" data-level="medium">
+            <button type="button" class="btn-diff medium" data-level="medium">
                 <span class="diff-title">Medium</span>
-                <span class="diff-desc">Anii 2000 - 2010<br>(Epoca V10 & V8)</span>
+                <span class="diff-desc">Anii 2000 - 2010<br>(Epoca V10 &amp; V8)</span>
             </button>
-            <button class="btn-diff hard" data-level="hard">
+            <button type="button" class="btn-diff hard" data-level="hard">
                 <span class="diff-title">Hard</span>
                 <span class="diff-desc">Anii 1950 - 2000<br>(Panteonul Istoric)</span>
             </button>
@@ -173,9 +173,9 @@
             </div>
         </div>
 
-        <div id="duelLobbyMembers" class="duel-lobby-members" aria-label="Jucători în lobby"></div>
+        <div id="duelLobbyMembers" class="duel-lobby-members" role="group" aria-label="Jucători în lobby"></div>
 
-        <div class="duel-lobby-settings" aria-label="Setări lobby duel">
+        <div class="duel-lobby-settings" role="group" aria-label="Setări lobby duel">
             <div class="duel-lobby-settings-header">
                 <div>
                     <p class="duel-lobby-eyebrow">Setări rundă</p>
@@ -233,7 +233,7 @@
             <input type="text" id="driverInput" placeholder="Scrie prenume sau nume (ex: Ham...)" autocomplete="off">
             <ul class="suggestions-list" id="suggestions"></ul>
         </div>
-        <button id="sendGuessBtn">Trimite</button>
+        <button type="button" id="sendGuessBtn">Trimite</button>
     </div>
 
     <section id="opponentProgressPanel" class="opponent-progress-panel is-hidden" aria-live="polite" aria-hidden="true">
@@ -261,7 +261,7 @@
 	<div class="end-game-backdrop" id="endGameBackdrop" aria-hidden="true"></div>
 
 	<!-- Popup final: rezultat joc + statistici locale + restart. -->
-	<div class="end-game-popup" id="endGameDisplay" role="dialog" aria-modal="true" aria-labelledby="endGameTitle">
+	<div class="end-game-popup" id="endGameDisplay" role="dialog" aria-modal="true" aria-labelledby="endGameTitle" aria-describedby="endGameMessage" aria-hidden="true" tabindex="-1" inert>
         <button type="button" class="end-game-close" id="closeEndGamePopup" aria-label="Închide popup-ul">×</button>
         <h2 id="endGameTitle">🏆 Felicitări!</h2>
         <p id="endGameMessage">Ai ghicit pilotul.</p>
@@ -288,7 +288,7 @@
                 </div>
         </div>
 
-        <button class="restart-inline-btn" id="restartGameBtn">🔄 Joacă din nou</button>
+        <button type="button" class="restart-inline-btn" id="restartGameBtn">🔄 Joacă din nou</button>
     </div>
 
     <!-- Gridul este construit dinamic în game.js pentru fiecare rundă. -->
@@ -333,7 +333,7 @@
 
 <!-- Auth modal: login/register pentru pregătirea profilului și a duelurilor cu prieteni. -->
 <div class="auth-backdrop" id="authBackdrop" aria-hidden="true"></div>
-<div class="auth-panel" id="authPanel" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+<div class="auth-panel" id="authPanel" role="dialog" aria-modal="true" aria-labelledby="authTitle" aria-describedby="authSubtitle" aria-hidden="true" tabindex="-1" inert>
     <button type="button" class="auth-close" id="authCloseBtn" aria-label="Închide autentificarea">×</button>
     <h2 id="authTitle">Autentificare</h2>
     <p id="authSubtitle" class="auth-subtitle">Intră în cont ca să pregătim profilul și jocurile cu prieteni.</p>
@@ -361,7 +361,7 @@
         </div>
 
         <section id="authPanelOverview" class="auth-tab-panel" role="tabpanel" aria-labelledby="authTabOverview">
-            <div class="auth-progress-card" aria-label="Progres nivel cont">
+            <div class="auth-progress-card" role="group" aria-label="Progres nivel cont">
                 <div class="auth-progress-heading">
                     <strong>Progres nivel</strong>
                     <span id="authTotalXp">0 XP total</span>
@@ -375,14 +375,14 @@
                 </div>
             </div>
 
-            <div class="auth-stats-grid" aria-label="Statistici totale">
+            <div class="auth-stats-grid" role="group" aria-label="Statistici totale">
                 <div class="auth-stat-card"><strong id="authStatPlayed">0</strong><span>Jocuri</span></div>
                 <div class="auth-stat-card"><strong id="authStatWon">0</strong><span>Victorii</span></div>
                 <div class="auth-stat-card"><strong id="authStatWinRate">0%</strong><span>Win rate</span></div>
                 <div class="auth-stat-card"><strong id="authStatBestStreak">0</strong><span>Best streak</span></div>
             </div>
 
-            <div class="auth-mode-stats" aria-label="Statistici pe mod de joc">
+            <div class="auth-mode-stats" role="group" aria-label="Statistici pe mod de joc">
                 <div><strong>Single</strong><span id="authSingleStats">0 jocuri · 0 victorii</span></div>
                 <div><strong>Daily</strong><span id="authDailyStats">0 jocuri · 0 victorii</span></div>
                 <div><strong>Duel</strong><span id="authDuelStats">0 jocuri · 0 victorii · 0 remize</span></div>
@@ -390,7 +390,7 @@
         </section>
 
         <section id="authPanelAchievements" class="auth-tab-panel" role="tabpanel" aria-labelledby="authTabAchievements" hidden>
-            <div class="auth-achievements-section" aria-labelledby="authAchievementsTitle">
+            <div class="auth-achievements-section" role="region" aria-labelledby="authAchievementsTitle">
                 <div class="auth-section-heading">
                     <h3 id="authAchievementsTitle">Achievements</h3>
                     <span id="authAchievementSummary">0 / 8 deblocate</span>
@@ -400,10 +400,10 @@
         </section>
 
         <section id="authPanelStats" class="auth-tab-panel" role="tabpanel" aria-labelledby="authTabStats" hidden>
-            <div class="auth-stats-details" aria-labelledby="authStatsDetailsTitle">
+            <div class="auth-stats-details" role="region" aria-labelledby="authStatsDetailsTitle">
                 <div class="auth-section-heading">
                     <h3 id="authStatsDetailsTitle">Statistici detaliate</h3>
-                    <div class="auth-mode-selector" aria-label="Alege modul pentru statistici">
+                    <div class="auth-mode-selector" role="group" aria-label="Alege modul pentru statistici">
                         <button type="button" id="authStatsModeSingle" class="is-active" aria-pressed="true">Single</button>
                         <button type="button" id="authStatsModeDaily" aria-pressed="false">Daily</button>
                         <button type="button" id="authStatsModeDuel" aria-pressed="false">Duel</button>
@@ -413,7 +413,7 @@
                     <span id="authModeOutcomeDetail">0 victorii · 0 înfrângeri</span>
                     <span id="authModeStreakDetail">Streak: 0 · Record: 0</span>
                 </div>
-                <div class="auth-attempt-distribution" aria-label="Distribuția victoriilor pe încercări">
+                <div class="auth-attempt-distribution" role="group" aria-label="Distribuția victoriilor pe încercări">
                     <div><span>1</span><i><b id="authGuessBar1"></b></i><strong id="authGuessCount1">0</strong></div>
                     <div><span>2</span><i><b id="authGuessBar2"></b></i><strong id="authGuessCount2">0</strong></div>
                     <div><span>3</span><i><b id="authGuessBar3"></b></i><strong id="authGuessCount3">0</strong></div>
@@ -425,7 +425,7 @@
         </section>
 
         <section id="authPanelHistory" class="auth-tab-panel" role="tabpanel" aria-labelledby="authTabHistory" hidden>
-            <div class="auth-history-section" aria-labelledby="authHistoryTitle">
+            <div class="auth-history-section" role="region" aria-labelledby="authHistoryTitle">
                 <div class="auth-section-heading">
                     <h3 id="authHistoryTitle">Ultimele jocuri</h3>
                     <span>Maximum 10</span>
@@ -544,6 +544,6 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script defer src="/game.bundle.min.js?v=fa5790ae8f7861c9"></script>
+<script defer src="/game.bundle.min.js?v=4b31a00efbf5c9e0"></script>
 </body>
 </html>

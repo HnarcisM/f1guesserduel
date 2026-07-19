@@ -1,4 +1,5 @@
 import { accountApi, authApi } from './apiClient.js';
+import { createDialogFocusManager } from './dialogFocusManager.js';
 
 const DEFAULT_AVATAR_KEY = 'helmet-red';
 const AVATAR_PRESETS = Object.freeze([
@@ -21,6 +22,7 @@ export function createAuthView({ onAuthChanged } = {}) {
     let selectedStatsMode = 'single';
     let selectedAvatarKey = DEFAULT_AVATAR_KEY;
     let currentAccountStats = {};
+    let dialogFocusManager = null;
 
     function getEls() {
         return {
@@ -520,18 +522,36 @@ export function createAuthView({ onAuthChanged } = {}) {
     }
 
     function openPanel() {
-        const { panel, backdrop } = getEls();
+        const els = getEls();
+        const { panel, backdrop } = els;
         if (panel) panel.classList.add('show');
         if (backdrop) backdrop.classList.add('show');
         renderUser();
         if (currentUser) refreshAccountSummary();
         else setMode(mode);
+        els.openBtn?.setAttribute?.('aria-expanded', 'true');
+        if (dialogFocusManager) {
+            dialogFocusManager.activate({
+                focusTarget: currentUser ? els.closeBtn : (els.email || els.closeBtn)
+            });
+        } else {
+            if (panel) panel.inert = false;
+            panel?.setAttribute?.('aria-hidden', 'false');
+        }
     }
 
     function closePanel() {
-        const { panel, backdrop } = getEls();
+        const els = getEls();
+        const { panel, backdrop } = els;
         if (panel) panel.classList.remove('show');
         if (backdrop) backdrop.classList.remove('show');
+        els.openBtn?.setAttribute?.('aria-expanded', 'false');
+        if (dialogFocusManager) {
+            dialogFocusManager.deactivate({ fallbackFocus: els.openBtn });
+        } else {
+            if (panel) panel.inert = true;
+            panel?.setAttribute?.('aria-hidden', 'true');
+        }
     }
 
     async function refreshCurrentUser() {
@@ -731,6 +751,18 @@ export function createAuthView({ onAuthChanged } = {}) {
 
     function setup() {
         const els = getEls();
+        if (els.openBtn) {
+            els.openBtn.setAttribute?.('aria-haspopup', 'dialog');
+            els.openBtn.setAttribute?.('aria-controls', 'authPanel');
+            els.openBtn.setAttribute?.('aria-expanded', 'false');
+        }
+        if (!dialogFocusManager && els.panel) {
+            dialogFocusManager = createDialogFocusManager({
+                dialog: els.panel,
+                onEscape: closePanel,
+                getInitialFocus: () => currentUser ? els.closeBtn : (els.email || els.closeBtn)
+            });
+        }
         if (els.openBtn) els.openBtn.addEventListener('click', openPanel);
         if (els.closeBtn) els.closeBtn.addEventListener('click', closePanel);
         if (els.backdrop) els.backdrop.addEventListener('click', closePanel);

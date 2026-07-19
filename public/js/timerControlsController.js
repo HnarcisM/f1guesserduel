@@ -1,4 +1,5 @@
 import { showErrorToast } from './toastController.js';
+import { closeNavigationMenu } from './navigationMenuController.js';
 
 export function setupTimerControls(menu, { timer, showHostOnlyTimerMessage, getIsDuelMode }) {
 	document.querySelectorAll('[data-timer-mode]').forEach(button => {
@@ -17,7 +18,7 @@ export function setupTimerControls(menu, { timer, showHostOnlyTimerMessage, getI
 			e.stopPropagation();
 			if (getIsDuelMode?.()) {
 				showErrorToast('În Duel, timerul se schimbă doar din lobby.');
-				if (menu) menu.classList.add('hidden');
+				closeNavigationMenu(menu, { restoreFocus: true });
 				return;
 			}
 			if (!timer.isHost()) {
@@ -26,7 +27,7 @@ export function setupTimerControls(menu, { timer, showHostOnlyTimerMessage, getI
 			}
 			const value = this.dataset.timer;
 			timer.setTimedMode(value !== 'off', value);
-			if (menu) menu.classList.add('hidden');
+			closeNavigationMenu(menu, { restoreFocus: true });
 		});
 	});
 	timer.syncTimerModeControls();

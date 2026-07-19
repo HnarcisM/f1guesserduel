@@ -27,6 +27,7 @@ function createElement({ dataset = {}, classes = [], attrs = {} } = {}) {
         classList: createClassList(classes),
         attributes: { ...attrs },
         disabled: false,
+        focus() { global.document.activeElement = this; },
         addEventListener(eventName, handler) { listeners.set(eventName, handler); },
         click() {
             const handler = listeners.get('click');
@@ -41,7 +42,8 @@ function createElement({ dataset = {}, classes = [], attrs = {} } = {}) {
             if (name === 'data-level') return this.dataset.level;
             return this.attributes[name] ?? null;
         },
-        setAttribute(name, value) { this.attributes[name] = String(value); }
+        setAttribute(name, value) { this.attributes[name] = String(value); },
+        listeners
     };
 }
 
@@ -51,6 +53,7 @@ function setupNavigationDocument() {
     const title = createElement();
     const homeItem = createElement({ dataset: { level: 'home' } });
     const easyItem = createElement({ dataset: { level: 'easy' } });
+    menu.querySelector = () => homeItem;
 
     global.document = {
         getElementById(id) {
@@ -59,7 +62,7 @@ function setupNavigationDocument() {
             return null;
         },
         querySelector(selector) {
-            if (selector === '.site-header h1') return title;
+            if (selector === '#siteHomeControl') return title;
             return null;
         },
         querySelectorAll(selector) {
@@ -89,6 +92,38 @@ test('left navigation groups are collapsed native disclosures by default', () =>
     assert.doesNotMatch(html, /<details class="menu-section"[^>]*\sopen(?:\s|>)/);
     assert.match(css, /\.menu-section\[open\] > \.menu-section-content/);
     assert.match(css, /prefers-reduced-motion/);
+    assert.match(html, /<button[^>]+id="menu-hamburger"[^>]+aria-controls="dropdown-menu"[^>]+aria-expanded="false"/);
+    assert.match(html, /<nav[^>]+id="dropdown-menu"[^>]+aria-hidden="true"/);
+    assert.equal((html.match(/<button[^>]+class="menu-item(?: [^"]*)?"/g) || []).length, 14);
+    assert.doesNotMatch(html, /<div[^>]+class="menu-item/);
+    assert.match(html, /<button[^>]+id="shareRoomBtn"/);
+    assert.match(html, /<h1><button[^>]+id="siteHomeControl"/);
+});
+
+test('menu button synchronizes ARIA state and Escape restores focus', async () => {
+    const { setupMenu } = await import('../public/js/navigationMenuController.js');
+    const dom = setupNavigationDocument();
+
+    setupMenu({
+        startRoundFromSelection() {},
+        startDailyChallenge() {},
+        confirmDuelExit: () => false
+    });
+
+    assert.equal(dom.menu.getAttribute('aria-hidden'), 'true');
+    assert.equal(dom.menu.inert, true);
+    assert.equal(dom.menuButton.getAttribute('aria-expanded'), 'false');
+    dom.menuButton.click();
+    assert.equal(dom.menu.classList.contains('hidden'), false);
+    assert.equal(dom.menu.getAttribute('aria-hidden'), 'false');
+    assert.equal(dom.menu.inert, false);
+    assert.equal(dom.menuButton.getAttribute('aria-expanded'), 'true');
+
+    const escapeHandler = dom.menu.listeners.get('keydown');
+    escapeHandler({ key: 'Escape', preventDefault() {}, stopPropagation() {} });
+    assert.equal(dom.menu.classList.contains('hidden'), true);
+    assert.equal(dom.menuButton.getAttribute('aria-expanded'), 'false');
+    assert.equal(global.document.activeElement, dom.menuButton);
 });
 
 test('global clicks keep an open menu visible for disclosure controls and close it outside', async t => {

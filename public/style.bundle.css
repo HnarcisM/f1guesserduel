@@ -265,6 +265,24 @@ body::before {
     transform: translateX(-50%);
 }
 
+.site-home-control {
+    appearance: none;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-shadow: inherit;
+    cursor: pointer;
+}
+
+.site-home-control:focus-visible {
+    outline: 3px solid var(--accent-f1);
+    outline-offset: 5px;
+    border-radius: var(--radius-sm);
+}
+
 .hamburger {
     width: var(--header-control-size);
     height: var(--header-control-size);
@@ -276,6 +294,9 @@ body::before {
     justify-content: center;
     font-size: 22px;
     color: var(--text-on-accent);
+    padding: 0;
+    font-family: inherit;
+    cursor: pointer;
     z-index: 3000;
     transition: transform var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
 }
@@ -311,6 +332,9 @@ body::before {
     align-items: center;
     justify-content: center;
     gap: 6px;
+    color: var(--text-primary);
+    font-family: inherit;
+    cursor: pointer;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 .share-btn:hover {
@@ -384,6 +408,11 @@ body::before {
     font-size: 13px;
     border-radius: var(--radius-lg);
     border: 1px solid transparent;
+    width: 100%;
+    background: transparent;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
 }
 .menu-item + .menu-item { margin-top: var(--space-xs); }
 .menu-item:hover {
@@ -419,6 +448,13 @@ body::before {
     cursor: pointer;
     list-style: none;
     user-select: none;
+}
+
+.hamburger:focus-visible,
+.share-btn:focus-visible,
+.menu-item:focus-visible {
+    outline: 2px solid var(--accent-f1);
+    outline-offset: 2px;
 }
 
 .menu-section-title::-webkit-details-marker {
@@ -1009,6 +1045,12 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
 .end-game-popup p { color: var(--text-secondary); font-size: 15px; margin-bottom: var(--space-7xl); line-height: 1.5; }
 .end-game-popup .restart-inline-btn { padding: var(--space-2xl) var(--space-8xl); background: var(--accent-f1); color: var(--text-on-accent); border: none; font-size: 16px; border-radius: var(--radius-lg); width: 100%; box-sizing: border-box;}
 .end-game-popup .restart-inline-btn:hover { background: var(--accent-f1-hover); }
+
+.end-game-close:focus-visible,
+.end-game-popup .restart-inline-btn:focus-visible {
+    outline: 2px solid var(--accent-f1);
+    outline-offset: 3px;
+}
 
 
 /* Overlay-ul final păstrează personalitatea fiecărei teme fără să afecteze popup-ul. */
@@ -3543,6 +3585,16 @@ button#sendGuessBtn.rematch-submit-btn {
 [data-app-theme="carbon"] .auth-submit-btn:active,
 [data-app-theme="carbon"] .auth-open-btn:active {
     background: linear-gradient(180deg, #3c4044 0%, #303337 100%);
+}
+
+/* Păstrat la final pentru a nu fi anulat de resetările outline ale inputurilor. */
+.auth-open-btn:focus-visible,
+.auth-close:focus-visible,
+.auth-panel button:focus-visible,
+.auth-panel input:focus-visible,
+.auth-panel summary:focus-visible {
+    outline: 2px solid var(--accent-f1);
+    outline-offset: 2px;
 }
 
 /* Source: public/css/09-live-duel.css */

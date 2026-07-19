@@ -1,4 +1,5 @@
 import { safeGetItem, safeSetItem } from './safeStorage.js';
+import { closeNavigationMenu } from './navigationMenuController.js';
 
 const THEME_STORAGE_KEY = 'f1-guesser-theme';
 const ALLOWED_THEMES = new Set(['default', 'neon', 'carbon']);
@@ -28,7 +29,7 @@ export function setupThemeMenu(menu) {
 			e.stopPropagation();
 			const selectedTheme = applyTheme(this.getAttribute('data-theme'));
 			safeSetItem(THEME_STORAGE_KEY, selectedTheme);
-			if (menu) menu.classList.add('hidden');
+			closeNavigationMenu(menu, { restoreFocus: true });
 		});
 	});
 }

@@ -167,6 +167,12 @@
 .end-game-popup .restart-inline-btn { padding: var(--space-2xl) var(--space-8xl); background: var(--accent-f1); color: var(--text-on-accent); border: none; font-size: 16px; border-radius: var(--radius-lg); width: 100%; box-sizing: border-box;}
 .end-game-popup .restart-inline-btn:hover { background: var(--accent-f1-hover); }
 
+.end-game-close:focus-visible,
+.end-game-popup .restart-inline-btn:focus-visible {
+    outline: 2px solid var(--accent-f1);
+    outline-offset: 3px;
+}
+
 
 /* Overlay-ul final păstrează personalitatea fiecărei teme fără să afecteze popup-ul. */
 [data-app-theme="neon"] .end-game-backdrop {

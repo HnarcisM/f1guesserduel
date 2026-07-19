@@ -1,19 +1,6 @@
-export function setupGlobalDocumentEvents(menu, { autocomplete, hideEndGamePopup, requestRematch }) {
-	document.addEventListener('keydown', function(e) {
-		const popup = document.getElementById('endGameDisplay');
-		const isPopupOpen = popup && popup.classList.contains('show');
+import { closeNavigationMenu } from './navigationMenuController.js';
 
-		if (isPopupOpen && e.key === 'Escape') {
-			e.preventDefault();
-			hideEndGamePopup(true);
-		}
-
-		if (isPopupOpen && e.key === 'Enter') {
-			e.preventDefault();
-			requestRematch();
-		}
-	});
-
+export function setupGlobalDocumentEvents(menu, { autocomplete }) {
 	document.addEventListener('click', function(e) {
 		if (e.target.id !== 'driverInput') {
 			autocomplete.clearSuggestions();
@@ -26,7 +13,7 @@ export function setupGlobalDocumentEvents(menu, { autocomplete, hideEndGamePopup
 			&& !clickedInsideMenu
 			&& e.target.id !== 'menu-hamburger'
 			&& !(shareBtn && shareBtn.contains(e.target))) {
-			menu.classList.add('hidden');
+			closeNavigationMenu(menu);
 		}
 	});
 }
