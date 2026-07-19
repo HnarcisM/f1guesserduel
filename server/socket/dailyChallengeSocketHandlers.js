@@ -1,6 +1,7 @@
 const { MAX_ATTEMPTS } = require('../config/constants');
 const { compareGuess } = require('../game/compareDriver');
 const { recordAccountGameResultSafely } = require('../account/accountStatsService');
+const { getDailyChallengeId, getDailyDateKey } = require('../game/dailyChallenge');
 const {
     normalizeDriverId,
     normalizeRoundOptions
@@ -70,6 +71,16 @@ function registerDailyChallengeSocketHandlers({
         const dailyOptions = normalizeRoundOptions(payload);
         if (!dailyOptions) {
             socket.emit('dailyChallengeError', 'Dificultatea Daily Challenge nu este validă.');
+            return;
+        }
+
+        const requestedChallengeId = getDailyChallengeId(
+            dailyOptions.difficulty,
+            getDailyDateKey(dailyOptions.dailyDate || new Date())
+        );
+        const existingSession = dailySessions.get(socket.id);
+        if (existingSession?.finished && existingSession.dailyChallengeId === requestedChallengeId) {
+            socket.emit('dailyChallengeError', 'Daily Challenge a fost deja finalizat pentru această zi și dificultate.');
             return;
         }
 

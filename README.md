@@ -644,9 +644,10 @@ Responsabilități:
   - asset-uri flag/logo;
   - statistici locale.
 - Organizare internă a fișierului `game.js` pe secțiuni clare.
-- Bundle de producție IIFE generat cu esbuild din cele 31 de module frontend.
+- Bundle de producție IIFE generat cu esbuild din cele 35 de module frontend.
 - Minificare, tree-shaking și eliminarea request-urilor runtime pentru modulele JavaScript individuale.
 - Bundle fără source map public și cu `"use strict"` păstrat explicit.
+- Interfața de cont este separată în orchestrare auth, dashboard/statistici, setări și maparea elementelor DOM.
 
 ### Încărcare, temă și cache frontend
 
@@ -661,6 +662,7 @@ Valorile `?v=` nu trebuie modificate manual. Hash-urile normalizează terminatoa
 
 ### Backend și persistență
 
+- Evenimentele Socket.IO Duel sunt separate pe lobby, rundă și lifecycle, iar `registerSocketHandlers.js` a rămas orchestratorul conexiunii.
 - Salvarea camerelor în `rooms.json` folosește operații asincrone și nu blochează bucla principală a jocului.
 - Scrierile sunt serializate și modificările apărute în timpul unei salvări sunt combinate într-o salvare ulterioară cu starea cea mai nouă.
 - Fișierul este înlocuit atomic printr-un fișier temporar, iar shutdown-ul controlat așteaptă terminarea salvării.

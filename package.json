@@ -22,7 +22,7 @@
     "build:version": "node scripts/version-frontend-assets.js",
     "optimize:raster": "node scripts/optimize-raster-assets.js",
     "optimize:svg": "node scripts/optimize-svg-assets.js",
-    "test": "node --test test/*.test.js",
+    "test": "node --test test/*.test.js test/regression/*.test.js",
     "test:e2e": "node --test --test-timeout=60000 test/e2e/*.test.js",
     "pretest:e2e": "node scripts/ensure-playwright-browser.js --strict",
     "test:e2e:responsive": "node --test --test-timeout=60000 test/e2e/responsiveVisual.e2e.test.js",

@@ -250,10 +250,12 @@ test('socket room mutations identify the affected room for scoped Redis writes',
     const root = path.join(__dirname, '..');
     const socketSources = [
         fs.readFileSync(path.join(root, 'server', 'socket', 'roomStateEmitter.js'), 'utf8'),
-        fs.readFileSync(path.join(root, 'server', 'socket', 'registerSocketHandlers.js'), 'utf8')
+        fs.readFileSync(path.join(root, 'server', 'socket', 'duelLobbySocketHandlers.js'), 'utf8'),
+        fs.readFileSync(path.join(root, 'server', 'socket', 'duelLifecycleSocketHandlers.js'), 'utf8'),
+        fs.readFileSync(path.join(root, 'server', 'socket', 'duelRoundSocketHandlers.js'), 'utf8')
     ].join('\n');
 
     assert.doesNotMatch(socketSources, /roomStore\.markDirty\?\.\(\s*\)/);
     assert.match(socketSources, /roomStore\.markDirty\?\.\(roomId\)/);
-    assert.match(socketSources, /roomStore\.markDirty\?\.\(currentRoom\)/);
+    assert.doesNotMatch(socketSources, /roomStore\.markDirty\?\.\(state\.currentRoom\)/);
 });
