@@ -196,7 +196,7 @@ app.use(createMetricsRoutes({
 app.use(express.json({ limit: '32kb' }));
 app.use(cookieParser());
 app.use(createAuthMiddleware(sessionService));
-app.use('/api/auth/logout', csrfProtection);
+app.use('/api/auth', csrfProtection);
 app.use('/api/account', csrfProtection);
 app.use('/api', createHealthRoutes({
     appVersion: packageJson.version,
