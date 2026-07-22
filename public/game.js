@@ -257,7 +257,9 @@ function sendGuess() {
 	if (!inputEl) return;
 	const inputVal = inputEl.value.trim();
 	const selectedDriverId = autocomplete.getSelectedDriverId();
-	const finalDriver = driversList.find(d => d.id === selectedDriverId || d.name.toLowerCase() === inputVal.toLowerCase());
+	const finalDriver = selectedDriverId
+		? driversList.find(d => d.id === selectedDriverId)
+		: driversList.find(d => d.name.toLowerCase() === inputVal.toLowerCase());
 	if (!finalDriver) {
 		showErrorToast('Te rog selectează un pilot valid din lista de predicții!');
 		return;
@@ -316,27 +318,30 @@ function startRoundFromSelection(level, options = {}) {
 	}
 }
 
-function enterSingleMode(message = 'Single Play: selectează dificultatea pentru jocul solo.') {
+function resetSharedGameUiState() {
 	activeRoomId = null;
 	lastDuelRoomState = null;
 	clearRoomFromUrl();
 	resetRoomUi();
 	roleState.setSpectatorMode(false);
-	timer.setHostStatus(true);
 	timer.hideRoundTimer();
 	setDuelRoundState('waiting');
 	setRoundFinished(false);
-	dailyChallengeController?.setStartPending?.(false);
-	dailyChallengeController?.setMode?.(false);
 	resetLiveBoard();
 	resetOpponentProgress();
 	resetDuelLobby();
-	resetDuelRoomBrowser();
 	resetRoomScoreboard();
+	setGuessControlsVisible(false);
 	endGameController?.hideEndGamePopup?.(false);
+}
+
+function enterSingleMode(message = 'Single Play: selectează dificultatea pentru jocul solo.') {
+	resetSharedGameUiState();
+	timer.setHostStatus(true);
+	resetDailyModeForDuel();
+	resetDuelRoomBrowser();
 	autocomplete?.clearSuggestions?.();
 	autocomplete?.clearSelectedDriverId?.();
-	setGuessControlsVisible(false);
 	socketController?.emit('leaveRoom');
 	gameModeController.enterSingle();
 	gameModeSelectionController?.updateModeSelection?.('single');
@@ -375,20 +380,7 @@ function requestDuelRoomList() {
 
 function showDuelRoomBrowser() {
 	resetDailyModeForDuel();
-	activeRoomId = null;
-	lastDuelRoomState = null;
-	clearRoomFromUrl();
-	resetRoomUi();
-	roleState.setSpectatorMode(false);
-	timer.hideRoundTimer();
-	setDuelRoundState('waiting');
-	setRoundFinished(false);
-	resetLiveBoard();
-	resetOpponentProgress();
-	resetDuelLobby();
-	resetRoomScoreboard();
-	setGuessControlsVisible(false);
-	endGameController?.hideEndGamePopup?.(false);
+	resetSharedGameUiState();
 	gameModeController.enterDuel({ browsingRooms: true });
 	setDuelRoomBrowserVisible(true);
 }

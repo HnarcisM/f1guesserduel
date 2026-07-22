@@ -72,6 +72,10 @@ function buildPlayerResult(player, winnerSocketId = null, isDraw = false) {
     else if (!player.finished) outcome = 'pending';
 
     return {
+        // socketId este intern, folosit doar pentru identificarea jucătorului în
+        // buildPersonalRoundResult(). NU trebuie expus către client — buildPublicRoundResult()
+        // îl exclude explicit printr-un whitelist de câmpuri publice.
+        socketId: player.socketId,
         username: player.username,
         role: player.role,
         isHost: Boolean(player.isHost),
@@ -87,6 +91,19 @@ function buildRoundPlayers(room, winnerSocketId = null, isDraw = false) {
     return getActivePlayers(room).map(player => buildPlayerResult(player, winnerSocketId, isDraw));
 }
 
+function buildPublicPlayerResult(player) {
+    return {
+        username: player.username,
+        role: player.role,
+        isHost: player.isHost,
+        attempts: player.attempts,
+        finished: player.finished,
+        timedOut: player.timedOut,
+        isCorrect: player.isCorrect,
+        outcome: player.outcome
+    };
+}
+
 function buildPublicRoundResult(roundResult) {
     if (!roundResult) return null;
 
@@ -100,7 +117,7 @@ function buildPublicRoundResult(roundResult) {
         scoreApplied: Boolean(roundResult.scoreApplied),
         target: roundResult.target || null,
         players: Array.isArray(roundResult.players)
-            ? roundResult.players.map(player => ({ ...player }))
+            ? roundResult.players.map(buildPublicPlayerResult)
             : []
     };
 }
@@ -145,7 +162,7 @@ function buildPersonalRoundResult(roundResult, member = null) {
 
     const publicResult = buildPublicRoundResult(roundResult);
     const playerResult = member && Array.isArray(roundResult.players)
-        ? roundResult.players.find(player => player.username === member.username)
+        ? roundResult.players.find(player => player.socketId === member.socketId)
         : null;
 
     if (!member || member.role === 'spectator') {
