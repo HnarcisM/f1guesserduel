@@ -29,17 +29,26 @@ test('GitHub Actions CI uses Node 22 and the locked npm dependencies', () => {
     assert.match(source, /run:\s*npm ci/);
 });
 
-test('GitHub Actions CI tests, builds and rejects stale generated frontend files', () => {
+test('GitHub Actions CI enforces coverage, builds and rejects stale generated frontend files', () => {
     const source = readWorkflow();
-    const testPosition = source.indexOf('run: npm test');
+    const coveragePosition = source.indexOf('run: npm run test:coverage');
     const buildPosition = source.indexOf('run: npm run build');
     const generatedCheckPosition = source.indexOf(
         'git diff --exit-code -- public/index.html public/style.bundle.css public/game.bundle.min.js'
     );
 
-    assert.ok(testPosition >= 0);
-    assert.ok(buildPosition > testPosition);
+    assert.ok(coveragePosition >= 0);
+    assert.ok(buildPosition > coveragePosition);
     assert.ok(generatedCheckPosition > buildPosition);
+});
+
+test('GitHub Actions CI retains the machine-readable coverage summary', () => {
+    const source = readWorkflow();
+
+    assert.match(source, /name:\s*coverage-\$\{\{ github\.run_attempt \}\}/);
+    assert.match(source, /test-results\/coverage\/coverage-summary\.json/);
+    assert.match(source, /if-no-files-found:\s*error/);
+    assert.match(source, /retention-days:\s*14/);
 });
 
 test('GitHub Actions CI runs responsive and accessibility browser tests and retains reports', () => {

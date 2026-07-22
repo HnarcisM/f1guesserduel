@@ -1,0 +1,20 @@
+{
+  "all": true,
+  "include": [
+    "server/**/*.js",
+    "public/js/**/*.js",
+    "scripts/*.js"
+  ],
+  "reporter": [
+    "text-summary",
+    "json-summary"
+  ],
+  "reports-dir": "test-results/coverage",
+  "temp-directory": "test-results/coverage/tmp",
+  "clean": true,
+  "check-coverage": true,
+  "statements": 65,
+  "branches": 70,
+  "functions": 75,
+  "lines": 65
+}

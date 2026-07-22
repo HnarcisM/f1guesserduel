@@ -23,6 +23,7 @@
     "optimize:raster": "node scripts/optimize-raster-assets.js",
     "optimize:svg": "node scripts/optimize-svg-assets.js",
     "test": "node --test test/*.test.js test/regression/*.test.js",
+    "test:coverage": "c8 node --test test/*.test.js test/regression/*.test.js",
     "test:e2e": "node --test --test-timeout=60000 test/e2e/*.test.js",
     "pretest:e2e": "node scripts/ensure-playwright-browser.js --strict",
     "test:e2e:responsive": "node --test --test-timeout=60000 test/e2e/responsiveVisual.e2e.test.js",
@@ -40,6 +41,7 @@
   },
   "devDependencies": {
     "axe-core": "^4.12.1",
+    "c8": "^12.0.0",
     "playwright": "^1.61.1",
     "sharp": "^0.35.3",
     "svgo": "^4.0.2"

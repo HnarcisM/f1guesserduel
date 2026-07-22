@@ -153,6 +153,17 @@ http://localhost:3000
 npm test
 ```
 
+### Coverage cu praguri minime
+
+```bash
+npm run test:coverage
+```
+
+Raportul include toate fișierele JavaScript din `server/`, `public/js/` și
+`scripts/`, inclusiv fișierele neexecutate de teste. CI-ul impune minimum 65%
+pentru statements și linii, 70% pentru ramuri și 75% pentru funcții. Sumarul
+JSON este generat în `test-results/coverage/coverage-summary.json`.
+
 ### Setup Playwright pentru E2E
 
 După `npm install`, instalează browserul Chromium folosit de Playwright:
@@ -193,11 +204,12 @@ npm run test:all
 
 Workflow-ul `.github/workflows/ci.yml` rulează automat la fiecare `push` și
 `pull_request`, folosind Node.js 22. Verificarea instalează versiunile exacte din
-`package-lock.json`, rulează testele, generează bundle-urile de producție și
-eșuează dacă `public/index.html`, `public/style.bundle.css` sau
-`public/game.bundle.min.js` nu sunt actualizate în commit. După această verificare,
-un job separat instalează Chromium, rulează suita responsive/vizuală și păstrează
-capturile plus raportul JSON ca artefact GitHub Actions timp de 14 zile.
+`package-lock.json`, rulează testele cu pragurile minime de coverage, păstrează
+sumarul coverage ca artefact, generează bundle-urile de producție și eșuează dacă
+`public/index.html`, `public/style.bundle.css` sau `public/game.bundle.min.js` nu
+sunt actualizate în commit. După această verificare, un job separat instalează
+Chromium, rulează suitele responsive/vizuală și de accesibilitate și păstrează
+rapoartele ca artefacte GitHub Actions timp de 14 zile.
 
 Pentru a reoptimiza numai SVG-urile folosite de build-ul de producție:
 
