@@ -10,8 +10,16 @@ const {
     startAppServer
 } = require('./e2eTestHarness');
 const { VIEWPORTS } = require('./responsiveVisualConfig');
+const {
+    DEFAULT_CHANNEL_THRESHOLD,
+    DEFAULT_MAX_DIFF_RATIO,
+    comparePngBuffers,
+    writeDiffPng
+} = require('./visualRegression');
 
 const OUTPUT_DIR = path.join(__dirname, '..', '..', 'test-results', 'responsive-visual');
+const BASELINE_DIR = path.join(__dirname, 'baselines', 'responsive-visual');
+const UPDATE_BASELINES = process.env.UPDATE_VISUAL_BASELINES === '1';
 
 const HOME_SELECTORS = Object.freeze([
     '.site-header',
@@ -37,6 +45,64 @@ const GAME_SELECTORS = Object.freeze([
 
 function ensureOutputDirectory() {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+    for (const fileName of fs.readdirSync(OUTPUT_DIR)) {
+        if (fileName.endsWith('.diff.png')) {
+            fs.rmSync(path.join(OUTPUT_DIR, fileName));
+        }
+    }
+    if (UPDATE_BASELINES) fs.mkdirSync(BASELINE_DIR, { recursive: true });
+}
+
+async function compareWithBaseline(fileName, screenshot) {
+    const baselinePath = path.join(BASELINE_DIR, fileName);
+    const diffFileName = fileName.replace(/\.png$/i, '.diff.png');
+    const diffPath = path.join(OUTPUT_DIR, diffFileName);
+
+    if (UPDATE_BASELINES) {
+        fs.writeFileSync(baselinePath, screenshot);
+        return {
+            status: 'updated',
+            baseline: path.relative(process.cwd(), baselinePath).replace(/\\/g, '/'),
+            diffRatio: 0,
+            differentPixels: 0
+        };
+    }
+
+    assert.ok(
+        fs.existsSync(baselinePath),
+        `${fileName}: lipsește baseline-ul. Rulează cu UPDATE_VISUAL_BASELINES=1 pentru a-l genera.`
+    );
+
+    const baseline = fs.readFileSync(baselinePath);
+    const comparison = await comparePngBuffers(baseline, screenshot, {
+        channelThreshold: DEFAULT_CHANNEL_THRESHOLD
+    });
+
+    assert.deepEqual(
+        comparison.currentSize,
+        comparison.baselineSize,
+        `${fileName}: dimensiunea capturii diferă de baseline`
+    );
+
+    if (comparison.diffRatio > DEFAULT_MAX_DIFF_RATIO) {
+        await writeDiffPng(comparison, diffPath);
+    }
+
+    assert.ok(
+        comparison.diffRatio <= DEFAULT_MAX_DIFF_RATIO,
+        `${fileName}: diferență vizuală ${(comparison.diffRatio * 100).toFixed(3)}% `
+            + `> ${(DEFAULT_MAX_DIFF_RATIO * 100).toFixed(3)}%; diff: ${diffPath}`
+    );
+
+    return {
+        status: 'matched',
+        baseline: path.relative(process.cwd(), baselinePath).replace(/\\/g, '/'),
+        channelThreshold: DEFAULT_CHANNEL_THRESHOLD,
+        maxDiffRatio: DEFAULT_MAX_DIFF_RATIO,
+        diffRatio: comparison.diffRatio,
+        differentPixels: comparison.differentPixels,
+        totalPixels: comparison.totalPixels
+    };
 }
 
 async function collectLayout(page, selectors) {
@@ -162,13 +228,14 @@ async function captureState(page, viewport, stateLabel, selectors) {
         animations: 'disabled'
     });
     assert.ok(screenshot.length > 10_000, `${fileName}: captura PNG pare incompletă`);
+    const visualRegression = await compareWithBaseline(fileName, screenshot);
 
     const layout = await collectLayout(page, selectors);
     assertLayoutFits(layout, viewport.label, stateLabel);
-    return { screenshot: fileName, layout };
+    return { screenshot: fileName, visualRegression, layout };
 }
 
-test('responsive and visual smoke coverage for home and game layouts', { concurrency: false }, async () => {
+test('responsive layouts match committed visual baselines', { concurrency: false }, async () => {
     ensureOutputDirectory();
     logE2E(`Verific responsive + capturi vizuale pentru ${VIEWPORTS.length} viewport-uri...`);
     const { chromium } = requirePlaywright();

@@ -205,7 +205,13 @@ Pentru a rula doar matricea responsive și vizuală:
 npm run test:e2e:responsive
 ```
 
-Suita verifică pagina de start și starea de joc pe telefon, Galaxy Fold 5 (cover și ecran interior în ambele orientări) și desktop. Detectează automat overflow-ul lateral, elementele ieșite din viewport și suprapunerile importante. Capturile PNG și raportul geometric sunt scrise în `test-results/responsive-visual/`.
+Suita verifică pagina de start și starea de joc pe telefon, Galaxy Fold 5 (cover și ecran interior în ambele orientări) și desktop. Detectează automat overflow-ul lateral, elementele ieșite din viewport și suprapunerile importante, apoi compară pixel cu pixel capturile cu baseline-urile versionate din `test/e2e/baselines/responsive-visual/`. Capturile curente, raportul geometric și imaginile diff pentru regresii sunt scrise în `test-results/responsive-visual/`.
+
+Baseline-urile se regenerează numai după aprobarea unei schimbări vizuale intenționate:
+
+```bash
+UPDATE_VISUAL_BASELINES=1 npm run test:e2e:responsive
+```
 
 Pentru profilul autentificat și reconectarea Duel după refresh:
 

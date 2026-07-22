@@ -34,6 +34,9 @@ test('responsive E2E suite captures home and game states and checks horizontal o
     assert.match(source, /document\.documentElement\.scrollWidth/);
     assert.match(source, /document\.body\.scrollWidth/);
     assert.match(source, /assertNoVisibleOverlap/);
+    assert.match(source, /compareWithBaseline/);
+    assert.match(source, /UPDATE_VISUAL_BASELINES/);
+    assert.match(source, /\.diff\.png/);
     assert.match(html, /id=["']menu-hamburger["']/);
     assert.match(source, /#menu-hamburger/);
     assert.doesNotMatch(source, /#menuToggle/);

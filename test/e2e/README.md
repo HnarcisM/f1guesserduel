@@ -8,7 +8,7 @@ Aceste teste pornesc serverul local pe un port liber și deschid 3 taburi reale 
 
 Testele verifică faptul că spectatorul vede live board-ul, iar playerii nu îl văd. Mai există teste pentru restaurarea unei camere după restart server, auth register/login/logout cu refresh pe socket, rematch după final de rundă, Single Play fără cameră, Daily Challenge izolat de Single/Duel și cazul în care playerul non-host ghicește corect iar spectatorul vede rezultatul live.
 
-Suita separată `responsiveVisual.e2e.test.js` verifică automat layout-ul paginii de start și al jocului pe telefon, ecranul exterior Galaxy Fold 5, ecranul interior Fold în portrait/landscape și desktop. Pentru fiecare stare verifică overflow-ul orizontal, limitele elementelor importante și suprapunerile, apoi salvează capturi PNG și un raport JSON în `test-results/responsive-visual/`.
+Suita separată `responsiveVisual.e2e.test.js` verifică automat layout-ul paginii de start și al jocului pe telefon, ecranul exterior Galaxy Fold 5, ecranul interior Fold în portrait/landscape și desktop. Pentru fiecare stare verifică overflow-ul orizontal, limitele elementelor importante și suprapunerile, apoi compară captura pixel cu pixel cu baseline-ul versionat din `test/e2e/baselines/responsive-visual/`. Capturile curente, raportul JSON și eventualele imagini `*.diff.png` sunt salvate în `test-results/responsive-visual/`.
 
 Suita `accessibility.e2e.test.js` rulează axe-core în Chromium pentru 18 ecrane și stări: pagina principală, meniul de navigare, selecția și jocul Daily, browserul, lobby-ul, jocul și rezultatul Duel, perspectiva spectatorului, o rundă Single, login, înregistrare și toate taburile profilului autentificat, inclusiv setările extinse. Fiecare stare este verificată în temele Default, Neon și Carbon. Testul eșuează la orice încălcare axe și salvează raportul complet în `test-results/accessibility/axe-report.json`.
 
@@ -49,6 +49,18 @@ Numai testele responsive și vizuale:
 
 ```bash
 npm run test:e2e:responsive
+```
+
+Baseline-urile se actualizează numai după verificarea intenționată a schimbării vizuale:
+
+```bash
+UPDATE_VISUAL_BASELINES=1 npm run test:e2e:responsive
+```
+
+În PowerShell:
+
+```powershell
+$env:UPDATE_VISUAL_BASELINES="1"; npm run test:e2e:responsive
 ```
 
 Numai auditul automat de accesibilitate:
