@@ -164,6 +164,19 @@ Raportul include toate fișierele JavaScript din `server/`, `public/js/` și
 pentru statements și linii, 70% pentru ramuri și 75% pentru funcții. Sumarul
 JSON este generat în `test-results/coverage/coverage-summary.json`.
 
+### Teste de integrare Redis și PostgreSQL
+
+```bash
+TEST_REDIS_URL=redis://127.0.0.1:6379 \
+TEST_DATABASE_URL=postgresql://user:password@127.0.0.1:5432/f1guesser_test \
+npm run test:integration:services
+```
+
+Comanda folosește servicii reale și validează migrațiile PostgreSQL, repository-urile
+de autentificare și statistici, persistența camerelor Redis, TTL-ul cheilor și rate
+limiting-ul distribuit. Folosește numai instanțe dedicate testării, deoarece sunt
+aplicate migrările bazei de date. Testele unitare obișnuite nu necesită aceste servicii.
+
 ### Setup Playwright pentru E2E
 
 După `npm install`, instalează browserul Chromium folosit de Playwright:
@@ -207,9 +220,10 @@ Workflow-ul `.github/workflows/ci.yml` rulează automat la fiecare `push` și
 `package-lock.json`, rulează testele cu pragurile minime de coverage, păstrează
 sumarul coverage ca artefact, generează bundle-urile de producție și eșuează dacă
 `public/index.html`, `public/style.bundle.css` sau `public/game.bundle.min.js` nu
-sunt actualizate în commit. După această verificare, un job separat instalează
-Chromium, rulează suitele responsive/vizuală și de accesibilitate și păstrează
-rapoartele ca artefacte GitHub Actions timp de 14 zile.
+sunt actualizate în commit. În paralel, un job izolat pornește containere Redis și
+PostgreSQL cu health checks și rulează testele reale de integrare. După aceste
+verificări, jobul browser instalează Chromium, rulează suitele responsive/vizuală
+și de accesibilitate și păstrează rapoartele ca artefacte timp de 14 zile.
 
 Pentru a reoptimiza numai SVG-urile folosite de build-ul de producție:
 

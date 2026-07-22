@@ -51,11 +51,24 @@ test('GitHub Actions CI retains the machine-readable coverage summary', () => {
     assert.match(source, /retention-days:\s*14/);
 });
 
+test('GitHub Actions CI provisions healthy Redis and PostgreSQL services', () => {
+    const source = readWorkflow();
+
+    assert.match(source, /^\s{2}integration-services:$/m);
+    assert.match(source, /image:\s*redis:7\.4-alpine/);
+    assert.match(source, /health-cmd "redis-cli ping"/);
+    assert.match(source, /image:\s*postgres:17-alpine/);
+    assert.match(source, /health-cmd "pg_isready -U f1guesser_ci -d f1guesser_ci"/);
+    assert.match(source, /TEST_REDIS_URL:\s*redis:\/\/127\.0\.0\.1:6379/);
+    assert.match(source, /TEST_DATABASE_URL:\s*postgresql:\/\/f1guesser_ci:[^@]+@127\.0\.0\.1:5432\/f1guesser_ci/);
+    assert.match(source, /run:\s*npm run test:integration:services/);
+});
+
 test('GitHub Actions CI runs responsive and accessibility browser tests and retains reports', () => {
     const source = readWorkflow();
 
     assert.match(source, /^\s{2}responsive-visual:$/m);
-    assert.match(source, /needs:\s*verify/);
+    assert.match(source, /needs:\s*\[verify, integration-services\]/);
     assert.match(source, /npx playwright install --with-deps chromium/);
     assert.match(source, /run:\s*npm run test:e2e:responsive/);
     assert.match(source, /run:\s*npm run test:e2e:accessibility/);

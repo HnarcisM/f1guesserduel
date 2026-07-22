@@ -24,6 +24,7 @@
     "optimize:svg": "node scripts/optimize-svg-assets.js",
     "test": "node --test test/*.test.js test/regression/*.test.js",
     "test:coverage": "c8 node --test test/*.test.js test/regression/*.test.js",
+    "test:integration:services": "node --test --test-timeout=30000 test/integration/*.integration.test.js",
     "test:e2e": "node --test --test-timeout=60000 test/e2e/*.test.js",
     "pretest:e2e": "node scripts/ensure-playwright-browser.js --strict",
     "test:e2e:responsive": "node --test --test-timeout=60000 test/e2e/responsiveVisual.e2e.test.js",
