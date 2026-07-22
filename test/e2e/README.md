@@ -10,6 +10,8 @@ Testele verifică faptul că spectatorul vede live board-ul, iar playerii nu îl
 
 Suita separată `responsiveVisual.e2e.test.js` verifică automat layout-ul paginii de start și al jocului pe telefon, ecranul exterior Galaxy Fold 5, ecranul interior Fold în portrait/landscape și desktop. Pentru fiecare stare verifică overflow-ul orizontal, limitele elementelor importante și suprapunerile, apoi salvează capturi PNG și un raport JSON în `test-results/responsive-visual/`.
 
+Suita `accessibility.e2e.test.js` rulează axe-core în Chromium pentru ecranul principal, dialogul de autentificare, panourile Daily și Duel și o rundă Single, în temele Default, Neon și Carbon. Testul eșuează la orice încălcare axe și salvează raportul complet în `test-results/accessibility/axe-report.json`.
+
 ## Rulare rapidă pe Windows
 
 Rulează fișierul:
@@ -49,7 +51,13 @@ Numai testele responsive și vizuale:
 npm run test:e2e:responsive
 ```
 
-Capturile generate local nu intră în Git. În GitHub Actions sunt încărcate ca artefact `responsive-visual-<run_attempt>` și sunt păstrate 14 zile, inclusiv când testul eșuează.
+Numai auditul automat de accesibilitate:
+
+```bash
+npm run test:e2e:accessibility
+```
+
+Rapoartele și capturile generate local nu intră în Git. În GitHub Actions sunt încărcate ca artefact `browser-quality-<run_attempt>` și sunt păstrate 14 zile, inclusiv când un test eșuează.
 
 `npm run test:e2e` rulează automat `pretest:e2e`, care verifică Chromium înainte de pornirea browserului. Dacă Chromium lipsește, scriptul încearcă instalarea și oprește testele cu mesaj explicit dacă instalarea nu reușește.
 

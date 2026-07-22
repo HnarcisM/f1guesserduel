@@ -19,7 +19,7 @@
 
 /* Input-uri reactive la teme */
 input { background: var(--surface-card); color: var(--text-primary); border-color: var(--border-color); }
-button#sendGuessBtn, .restart-inline-btn { background-color: var(--accent-f1); color: var(--text-on-accent); }
+button#sendGuessBtn, .restart-inline-btn { background-color: var(--accent-action); color: var(--text-on-accent); }
 /* Celula de bază; clasele green/yellow/orange/purple/red descriu rezultatul. */
 .cell { background-color: var(--surface-card); border-color: var(--border-color); color: var(--text-primary); }
 
@@ -60,7 +60,7 @@ input:focus { border-color: var(--accent-f1); box-shadow: 0 0 15px color-mix(in 
 
 button#sendGuessBtn { 
     padding: var(--space-2xl) var(--space-6xl); 
-    background: var(--accent-f1); 
+    background: var(--accent-action);
     color: var(--text-on-accent); 
     border: none; 
     font-size: 16px; 
@@ -70,7 +70,7 @@ button#sendGuessBtn {
     justify-content: center;
     vertical-align: top; 
 }
-button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
+button#sendGuessBtn:hover { background: var(--accent-action-hover); }
 
 
 #gameZone.game-zone-hidden,
@@ -337,4 +337,3 @@ button#sendGuessBtn:hover { background: var(--accent-f1-hover); }
 .cell-arrow { display: flex; align-items: center; justify-content: center; gap: var(--space-sm); }
 .arrow-indicator { font-size: 13px; font-weight: 900; animation: bounce 1.5s infinite ease-in-out; }
 @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
-

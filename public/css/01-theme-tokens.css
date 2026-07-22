@@ -46,6 +46,8 @@
     /* Accente */
     --accent-f1: #ff1801;
     --accent-f1-hover: #e01200;
+    --accent-action: #d91500;
+    --accent-action-hover: #bd1200;
     --success: #10b981;
     --success-dark: #059669;
     --danger: #ef4444;
@@ -115,6 +117,8 @@
     --surface-main: #1a0f2b;
     --border-color: #ff007f;
     --accent-f1: #00f0ff; /* Cyan electric în loc de roșu */
+    --accent-action: #00747d;
+    --accent-action-hover: #00616a;
 }
 
 /* 2. TEMA CARBON & CHECKERS (Fibră de Carbon + Steag Carouri discret) */
@@ -187,4 +191,3 @@ body::before {
     z-index: -1;
     pointer-events: none;
 }
-

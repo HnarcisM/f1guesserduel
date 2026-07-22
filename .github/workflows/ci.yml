@@ -40,7 +40,7 @@ jobs:
         run: git diff --exit-code -- public/index.html public/style.bundle.css public/game.bundle.min.js
 
   responsive-visual:
-    name: Responsive and visual browser tests
+    name: Responsive, visual and accessibility browser tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: verify
@@ -64,11 +64,16 @@ jobs:
       - name: Run responsive and visual tests
         run: npm run test:e2e:responsive
 
-      - name: Upload screenshots and layout report
+      - name: Run automated accessibility audit
+        run: npm run test:e2e:accessibility
+
+      - name: Upload browser quality reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: responsive-visual-${{ github.run_attempt }}
-          path: test-results/responsive-visual/
+          name: browser-quality-${{ github.run_attempt }}
+          path: |
+            test-results/responsive-visual/
+            test-results/accessibility/
           if-no-files-found: warn
           retention-days: 14
