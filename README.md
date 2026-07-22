@@ -216,6 +216,17 @@ npm run test:e2e:flows
 Aceste scenarii verifică persistența avatarului și username-ului, sesiunea după
 reload, păstrarea rolului și restaurarea încercărilor deja trimise într-un Duel.
 
+Pentru auditul automat de accesibilitate pe ecranele și stările aplicației:
+
+```bash
+npm run test:e2e:accessibility
+```
+
+Auditul axe verifică în toate cele trei teme pagina principală, meniul, fluxurile
+Single, Daily și Duel, perspectiva spectatorului, dialogul de rezultat, login-ul,
+înregistrarea și toate secțiunile profilului autentificat. Raportul JSON complet
+este salvat în `test-results/accessibility/axe-report.json`.
+
 ### Toate testele
 
 ```bash

@@ -177,7 +177,10 @@ test('responsive and visual smoke coverage for home and game layouts', { concurr
     let browser;
 
     try {
-        browser = await chromium.launch({ headless: process.env.E2E_HEADED !== '1' });
+        browser = await chromium.launch({
+            headless: process.env.E2E_HEADED !== '1',
+            executablePath: process.env.E2E_CHROMIUM_EXECUTABLE_PATH || undefined
+        });
         for (const viewport of VIEWPORTS) {
             const context = await browser.newContext({
                 viewport: { width: viewport.width, height: viewport.height },

@@ -203,7 +203,10 @@ test('2 players can play while a third browser tab watches live as spectator', {
     logE2E('Verific Playwright și pornesc browserul Chromium...');
     const { chromium } = requirePlaywright();
     const app = await startAppServer();
-    const browser = await chromium.launch({ headless: process.env.E2E_HEADED !== '1' });
+    const browser = await chromium.launch({
+        headless: process.env.E2E_HEADED !== '1',
+        executablePath: process.env.E2E_CHROMIUM_EXECUTABLE_PATH || undefined
+    });
     logE2E('Browserul Chromium a pornit.');
 
     try {
@@ -260,7 +263,10 @@ test('non-host correct guess is marked correct and spectator sees the live resul
     logE2E('Verific E2E: Player 2 non-host ghicește corect și spectatorul vede rezultatul live...');
     const { chromium } = requirePlaywright();
     const app = await startAppServer();
-    const browser = await chromium.launch({ headless: process.env.E2E_HEADED !== '1' });
+    const browser = await chromium.launch({
+        headless: process.env.E2E_HEADED !== '1',
+        executablePath: process.env.E2E_CHROMIUM_EXECUTABLE_PATH || undefined
+    });
 
     try {
         const context = await browser.newContext({ viewport: { width: 1366, height: 900 } });
@@ -346,7 +352,10 @@ test('room round is restored after server restart', { concurrency: false }, asyn
     logE2E('Verific Playwright pentru testul de persistență camere...');
     const { chromium } = requirePlaywright();
     const dataDir = path.join(os.tmpdir(), `f1guesser-e2e-persist-${process.pid}-${Date.now()}`);
-    const browser = await chromium.launch({ headless: process.env.E2E_HEADED !== '1' });
+    const browser = await chromium.launch({
+        headless: process.env.E2E_HEADED !== '1',
+        executablePath: process.env.E2E_CHROMIUM_EXECUTABLE_PATH || undefined
+    });
     const roomId = `p${Date.now().toString(36)}`;
     let app = null;
 
@@ -384,7 +393,10 @@ test('auth register login logout refreshes room member name while staying in the
     logE2E('Verific fluxul E2E de auth + socket refresh în cameră...');
     const { chromium } = requirePlaywright();
     const app = await startAppServer();
-    const browser = await chromium.launch({ headless: process.env.E2E_HEADED !== '1' });
+    const browser = await chromium.launch({
+        headless: process.env.E2E_HEADED !== '1',
+        executablePath: process.env.E2E_CHROMIUM_EXECUTABLE_PATH || undefined
+    });
 
     try {
         const context = await browser.newContext({ viewport: { width: 1366, height: 900 } });
@@ -428,7 +440,10 @@ test('host can start a rematch after a round ends', { concurrency: false }, asyn
     logE2E('Verific fluxul E2E de rematch...');
     const { chromium } = requirePlaywright();
     const app = await startAppServer();
-    const browser = await chromium.launch({ headless: process.env.E2E_HEADED !== '1' });
+    const browser = await chromium.launch({
+        headless: process.env.E2E_HEADED !== '1',
+        executablePath: process.env.E2E_CHROMIUM_EXECUTABLE_PATH || undefined
+    });
 
     try {
         const context = await browser.newContext({ viewport: { width: 1366, height: 900 } });
@@ -462,7 +477,10 @@ test('single play starts without room state and rematch stays in single mode', {
     logE2E('Verific flow-ul E2E pentru Single Play fără cameră...');
     const { chromium } = requirePlaywright();
     const app = await startAppServer();
-    const browser = await chromium.launch({ headless: process.env.E2E_HEADED !== '1' });
+    const browser = await chromium.launch({
+        headless: process.env.E2E_HEADED !== '1',
+        executablePath: process.env.E2E_CHROMIUM_EXECUTABLE_PATH || undefined
+    });
 
     try {
         const context = await browser.newContext({ viewport: { width: 1366, height: 900 } });
@@ -502,7 +520,10 @@ test('daily challenge panel is isolated from single and duel modes', { concurren
     logE2E('Verific flow-ul E2E pentru Daily Challenge separat de Single/Duel...');
     const { chromium } = requirePlaywright();
     const app = await startAppServer();
-    const browser = await chromium.launch({ headless: process.env.E2E_HEADED !== '1' });
+    const browser = await chromium.launch({
+        headless: process.env.E2E_HEADED !== '1',
+        executablePath: process.env.E2E_CHROMIUM_EXECUTABLE_PATH || undefined
+    });
 
     try {
         const context = await browser.newContext({ viewport: { width: 1366, height: 900 } });

@@ -10,7 +10,7 @@ Testele verifică faptul că spectatorul vede live board-ul, iar playerii nu îl
 
 Suita separată `responsiveVisual.e2e.test.js` verifică automat layout-ul paginii de start și al jocului pe telefon, ecranul exterior Galaxy Fold 5, ecranul interior Fold în portrait/landscape și desktop. Pentru fiecare stare verifică overflow-ul orizontal, limitele elementelor importante și suprapunerile, apoi salvează capturi PNG și un raport JSON în `test-results/responsive-visual/`.
 
-Suita `accessibility.e2e.test.js` rulează axe-core în Chromium pentru ecranul principal, dialogul de autentificare, panourile Daily și Duel și o rundă Single, în temele Default, Neon și Carbon. Testul eșuează la orice încălcare axe și salvează raportul complet în `test-results/accessibility/axe-report.json`.
+Suita `accessibility.e2e.test.js` rulează axe-core în Chromium pentru 18 ecrane și stări: pagina principală, meniul de navigare, selecția și jocul Daily, browserul, lobby-ul, jocul și rezultatul Duel, perspectiva spectatorului, o rundă Single, login, înregistrare și toate taburile profilului autentificat, inclusiv setările extinse. Fiecare stare este verificată în temele Default, Neon și Carbon. Testul eșuează la orice încălcare axe și salvează raportul complet în `test-results/accessibility/axe-report.json`.
 
 ## Rulare rapidă pe Windows
 
