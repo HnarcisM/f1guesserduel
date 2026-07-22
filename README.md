@@ -749,7 +749,7 @@ Valorile `?v=` nu trebuie modificate manual. Hash-urile normalizează terminatoa
 - Controalele interactive sunt native, dialogurile au focus trap, iar meniurile și popup-urile au atribute ARIA.
 - Cererile HTTP sensibile aplică protecție CSRF/origin, iar originile Socket.IO sunt validate strict.
 - Rate limiting-ul funcționează local sau distribuit prin Redis pentru HTTP și Socket.IO.
-- Helmet configurează CSP, protecție anti-clickjacking, `Referrer-Policy` și HSTS în production.
+- Helmet configurează CSP fără `unsafe-inline`, blochează atributele inline de script/stil și activează protecție anti-clickjacking, `Referrer-Policy` și HSTS în production.
 - Health checks, logging structurat, redactarea datelor sensibile și graceful shutdown sunt active.
 
 ### Asset-uri
@@ -827,25 +827,20 @@ Aplicația este stabilă pentru deployment pe o singură instanță Node.js și 
 - build-uri CSS/JavaScript minificate și versionate;
 - coverage cu praguri, servicii reale în CI și scenarii E2E;
 - audit automat de accesibilitate și regresie vizuală cu baseline-uri;
+- CSP strict fără `unsafe-inline`, cu procente dinamice limitate la clase CSS predefinite;
 - health checks, logging structurat și graceful shutdown.
 
-Lista consolidată de optimizări este finalizată cu excepția celor trei puncte
+Lista consolidată de optimizări este finalizată cu excepția celor două puncte
 tehnice de mai jos.
 
 ### Optimizări tehnice rămase
 
-1. **CSP fără `unsafe-inline` pentru stiluri**
-
-   Migrarea barelor de progres, timerului și distribuțiilor care folosesc momentan
-   `element.style` sau variabile CSS inline. `script-src` nu permite cod inline;
-   excepția rămasă este limitată la `style-src`.
-
-2. **Metrici operaționale agregate**
+1. **Metrici operaționale agregate**
 
    Contoare și durate pentru camere, reconnect, Redis, PostgreSQL și rate limiting,
    expuse într-un format potrivit pentru platforma de monitorizare aleasă.
 
-3. **Scalare Socket.IO multi-instance**
+2. **Scalare Socket.IO multi-instance**
 
    Redis adapter pentru distribuirea evenimentelor, ownership/concurență pentru
    camere și teste cu minimum două instanțe. Această etapă devine necesară doar

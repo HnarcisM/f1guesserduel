@@ -438,6 +438,7 @@ body:not(.mode-duel) .opponent-progress-panel {
 
 .opponent-progress-meter-fill {
     display: block;
+    width: var(--progress-percent, 0%);
     height: 100%;
     border-radius: inherit;
     background: linear-gradient(90deg, var(--accent-f1), var(--warning));

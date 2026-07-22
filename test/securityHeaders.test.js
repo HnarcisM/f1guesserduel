@@ -55,10 +55,11 @@ test('security CSP keeps scripts local and allows Socket.IO websocket connection
     assert.deepEqual(directives.frameAncestors, ["'none'"]);
 });
 
-test('security CSP keeps inline styles enabled for dynamic progress and timer UI only', () => {
+test('security CSP allows stylesheets only from the same origin', () => {
     const directives = createContentSecurityPolicyDirectives({ isProduction: false });
 
-    assert.deepEqual(directives.styleSrc, ["'self'", "'unsafe-inline'"]);
+    assert.deepEqual(directives.styleSrc, ["'self'"]);
+    assert.deepEqual(directives.styleSrcAttr, ["'none'"]);
     assert.equal(directives.upgradeInsecureRequests, null);
 });
 
@@ -72,7 +73,9 @@ test('security middleware sets production headers without exposing powered-by', 
     assert.match(csp, /connect-src 'self' ws: wss:/);
     assert.match(csp, /script-src 'self'/);
     assert.match(csp, /script-src-attr 'none'/);
-    assert.match(csp, /style-src 'self' 'unsafe-inline'/);
+    assert.match(csp, /style-src 'self'(?:;|$)/);
+    assert.match(csp, /style-src-attr 'none'/);
+    assert.doesNotMatch(csp, /unsafe-inline/);
     assert.match(csp, /img-src 'self' data:/);
     assert.match(csp, /object-src 'none'/);
     assert.match(csp, /frame-ancestors 'none'/);

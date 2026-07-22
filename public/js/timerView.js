@@ -1,4 +1,5 @@
 import { DEFAULT_TIME_LIMIT_SECONDS, normalizeTimeLimitSeconds } from './constants.js';
+import { setProgressPercent } from './progressStyle.js';
 import { safeGetItem, safeSetItem } from './safeStorage.js';
 
 /** Controller pentru UI-ul timerului și preferința locală a hostului. */
@@ -129,7 +130,7 @@ export function createTimerView({ getSocket, isRoundFinished, onHostOnlyMessage 
 		if (timerEl) {
 			timerEl.classList.add("is-hidden");
 			timerEl.classList.remove("timer-warning", "timer-danger");
-			timerEl.style.setProperty("--timer-progress", "0%");
+			setProgressPercent(timerEl, 0);
 		}
 
 		const timerValue = document.getElementById("roundTimerValue");
@@ -145,7 +146,7 @@ export function createTimerView({ getSocket, isRoundFinished, onHostOnlyMessage 
 		const timerValue = document.getElementById("roundTimerValue");
 
 		if (timerValue) timerValue.textContent = `${safeSecondsLeft}s`;
-		timerEl.style.setProperty("--timer-progress", `${safeProgress * 100}%`);
+		setProgressPercent(timerEl, safeProgress * 100);
 		timerEl.classList.toggle("timer-warning", safeSecondsLeft <= 15 && safeSecondsLeft > 5);
 		timerEl.classList.toggle("timer-danger", safeSecondsLeft <= 5);
 	}

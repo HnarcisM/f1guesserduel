@@ -1,4 +1,5 @@
 import { accountApi } from './apiClient.js';
+import { setProgressPercent } from './progressStyle.js';
 
 function asNonNegativeInteger(value) {
     const number = Number(value);
@@ -33,7 +34,7 @@ export function createAccountDashboardView({ state, getEls, onUserUpdated } = {}
         if (els.totalXp) els.totalXp.textContent = `${totalXp} XP total`;
         if (els.levelProgressText) els.levelProgressText.textContent = `${xpIntoLevel} / ${xpForLevel} XP`;
         if (els.xpToNextLevel) els.xpToNextLevel.textContent = `${xpToNextLevel} XP până la nivelul ${level + 1}`;
-        if (els.xpProgressBar) els.xpProgressBar.style.width = `${progressPercent}%`;
+        setProgressPercent(els.xpProgressBar, progressPercent);
         if (els.xpProgress) els.xpProgress.setAttribute('aria-valuenow', String(progressPercent));
     }
 
@@ -73,7 +74,10 @@ export function createAccountDashboardView({ state, getEls, onUserUpdated } = {}
             const barElement = document.getElementById(`authGuessBar${attempt}`);
             if (countElement) countElement.textContent = String(count);
             if (barElement) {
-                barElement.style.width = `${count > 0 ? Math.max(8, Math.round((count / maximum) * 100)) : 0}%`;
+                setProgressPercent(
+                    barElement,
+                    count > 0 ? Math.max(8, Math.round((count / maximum) * 100)) : 0
+                );
             }
         }
     }
@@ -174,7 +178,7 @@ export function createAccountDashboardView({ state, getEls, onUserUpdated } = {}
             title.textContent = achievement.title || 'Achievement';
             description.textContent = achievement.description || '';
             progress.className = 'auth-achievement-progress';
-            bar.style.width = `${progressPercent}%`;
+            setProgressPercent(bar, progressPercent);
             count.textContent = unlocked ? 'Deblocat' : `${Math.min(current, target)} / ${target}`;
             track.appendChild(bar);
             copy.append(title, description);

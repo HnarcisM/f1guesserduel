@@ -2,7 +2,7 @@ const helmet = require('helmet');
 
 const BASE_CONNECT_SRC = ["'self'", 'ws:', 'wss:'];
 const BASE_IMG_SRC = ["'self'", 'data:'];
-const BASE_STYLE_SRC = ["'self'", "'unsafe-inline'"];
+const BASE_STYLE_SRC = ["'self'"];
 const BASE_SCRIPT_SRC = ["'self'"];
 
 function createContentSecurityPolicyDirectives({ isProduction = false } = {}) {
@@ -18,6 +18,7 @@ function createContentSecurityPolicyDirectives({ isProduction = false } = {}) {
         scriptSrc: BASE_SCRIPT_SRC,
         scriptSrcAttr: ["'none'"],
         styleSrc: BASE_STYLE_SRC,
+        styleSrcAttr: ["'none'"],
         upgradeInsecureRequests: isProduction ? [] : null
     };
 

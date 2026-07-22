@@ -329,7 +329,7 @@
 
 .auth-xp-progress > span {
     display: block;
-    width: 0;
+    width: var(--progress-percent, 0%);
     height: 100%;
     border-radius: inherit;
     background: linear-gradient(90deg, var(--accent-f1), color-mix(in srgb, var(--accent-f1) 48%, white));
@@ -519,7 +519,7 @@
 
 .auth-achievement-progress b {
     display: block;
-    width: 0;
+    width: var(--progress-percent, 0%);
     height: 100%;
     border-radius: inherit;
     background: linear-gradient(90deg, var(--accent-f1), #facc15);
@@ -833,7 +833,7 @@
 
 .auth-attempt-distribution b {
     display: block;
-    width: 0;
+    width: var(--progress-percent, 0%);
     height: 100%;
     border-radius: inherit;
     background: linear-gradient(90deg, var(--accent-f1), color-mix(in srgb, var(--accent-f1) 58%, white));

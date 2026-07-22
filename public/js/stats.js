@@ -1,5 +1,6 @@
 /** Local browser statistics rendering. */
 import { createTextElement, setTextContentById } from './domUtils.js';
+import { setProgressPercent } from './progressStyle.js';
 import { safeGetItem, safeRemoveItem, safeSetItem } from './safeStorage.js';
 
 /**
@@ -76,7 +77,7 @@ export function createDistributionRow(attemptNumber, count, barWidth) {
 	barContainer.className = 'dist-bar-container';
 
 	const bar = createTextElement('div', 'dist-bar', count);
-	bar.style.width = `${barWidth}%`;
+	setProgressPercent(bar, barWidth);
 
 	barContainer.appendChild(bar);
 	row.append(label, barContainer);
@@ -113,5 +114,4 @@ export function renderStats() {
 	renderStatsSummary(stats);
 	renderGuessDistribution(stats.distribution);
 }
-
 

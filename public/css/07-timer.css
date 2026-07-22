@@ -73,7 +73,6 @@
 /* Timer vizibil doar pentru rundele pe timp.
    Este afișat ca un mini race-track: START -> mașinuță -> FINISH + secunde rămase. */
 .round-timer {
-    --timer-progress: 0%;
     width: var(--guess-controls-width);
     box-sizing: border-box;
     margin: var(--space-md) auto var(--space-4xl);
@@ -134,7 +133,7 @@
     content: "";
     position: absolute;
     inset: 0 auto 0 0;
-    width: var(--timer-progress);
+    width: var(--progress-percent, 0%);
     border-radius: inherit;
     background: linear-gradient(90deg,
         color-mix(in srgb, var(--accent-f1) 78%, #ffffff 8%),
@@ -145,7 +144,7 @@
 
 .timer-car {
     position: absolute;
-    left: var(--timer-progress);
+    left: var(--progress-percent, 0%);
     top: 50%;
     z-index: 1;
     transform: translate(-50%, -58%) scaleX(-1);
@@ -305,4 +304,3 @@ button#sendGuessBtn.rematch-submit-btn {
         transition: none;
     }
 }
-

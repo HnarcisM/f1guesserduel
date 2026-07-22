@@ -301,7 +301,8 @@ test('a delayed initial auth refresh cannot overwrite a newer login or another a
     assert.equal(elements.authStatPlayed.textContent, '5');
     assert.equal(elements.authAccountLevel.textContent, 'Nivel 2');
     assert.equal(elements.authTotalXp.textContent, '250 XP total');
-    assert.equal(elements.authXpProgressBar.style.width, '50%');
+    assert.equal(elements.authXpProgressBar.dataset.progressPercent, '50');
+    assert.equal(elements.authXpProgressBar.classList.contains('progress-percent-50'), true);
     assert.equal(elements.authXpProgress.getAttribute('aria-valuenow'), '50');
     assert.equal(elements.authLevelProgressText.textContent, '150 / 300 XP');
     assert.equal(elements.authXpToNextLevel.textContent, '150 XP până la nivelul 3');

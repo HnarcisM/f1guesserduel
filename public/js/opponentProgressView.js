@@ -1,3 +1,5 @@
+import { setProgressPercent } from './progressStyle.js';
+
 const MAX_ATTEMPTS = 6;
 let countdownInterval = null;
 let lastTimedState = null;
@@ -80,7 +82,7 @@ function createOpponentCard(opponent, roomState) {
 
     const fill = document.createElement('span');
     fill.className = 'opponent-progress-meter-fill';
-    fill.style.width = `${(attempts / MAX_ATTEMPTS) * 100}%`;
+    setProgressPercent(fill, (attempts / MAX_ATTEMPTS) * 100);
     progress.appendChild(fill);
 
     const meta = document.createElement('div');

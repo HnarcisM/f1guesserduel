@@ -104,14 +104,19 @@ async function startAppServer(options = {}) {
 }
 
 async function stabilizePage(page) {
-    await page.addStyleTag({
-        content: [
+    const stylesheetUrl = new URL('/__e2e-stabilize.css', page.url()).href;
+    await page.route(stylesheetUrl, route => route.fulfill({
+        contentType: 'text/css; charset=utf-8',
+        body: [
             '*, *::before, *::after {',
             '  transition-duration: 0s !important;',
             '  animation-duration: 0s !important;',
             '  caret-color: transparent !important;',
             '}'
         ].join('\n')
+    }));
+    await page.addStyleTag({
+        url: stylesheetUrl
     });
     await page.evaluate(() => document.fonts && document.fonts.ready);
 }

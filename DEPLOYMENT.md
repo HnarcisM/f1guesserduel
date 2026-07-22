@@ -283,7 +283,8 @@ Aplicația activează automat security headers prin `helmet` în `server/middlew
 Configurația include:
 
 ```text
-- Content-Security-Policy cu `script-src 'self'`;
+- Content-Security-Policy cu `script-src 'self'` și `style-src 'self'`;
+- atributele inline de script și stil sunt blocate explicit prin `script-src-attr 'none'` și `style-src-attr 'none'`;
 - `connect-src 'self' ws: wss:` pentru Socket.IO;
 - allowlist de origin pentru Socket.IO prin `PUBLIC_ORIGIN` / `SOCKET_ALLOWED_ORIGINS`;
 - rate limit Socket.IO pentru event-uri sensibile, prin `SOCKET_RATE_LIMIT_ENABLED` / `SOCKET_RATE_LIMIT_WINDOW_MS`;
@@ -295,7 +296,8 @@ Configurația include:
 - HSTS doar când `NODE_ENV=production`.
 ```
 
-`style-src 'unsafe-inline'` este păstrat intenționat pentru că UI-ul actual setează dinamic dimensiuni/variabile CSS pentru timer și barele de progres.
+Timerul și barele de progres folosesc o listă finită de clase procentuale din
+`public/css/13-progress-values.css`; frontend-ul nu necesită `unsafe-inline`.
 
 ---
 

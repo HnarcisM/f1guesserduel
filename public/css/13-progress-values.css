@@ -1,0 +1,411 @@
+/**
+ * Procente permise pentru elementele vizuale actualizate din JavaScript.
+ * Lista finită înlocuiește stilurile inline și păstrează style-src strict.
+ */
+.has-progress-percent {
+    --progress-percent: 0%;
+}
+
+.progress-percent-0 {
+    --progress-percent: 0%;
+}
+
+.progress-percent-1 {
+    --progress-percent: 1%;
+}
+
+.progress-percent-2 {
+    --progress-percent: 2%;
+}
+
+.progress-percent-3 {
+    --progress-percent: 3%;
+}
+
+.progress-percent-4 {
+    --progress-percent: 4%;
+}
+
+.progress-percent-5 {
+    --progress-percent: 5%;
+}
+
+.progress-percent-6 {
+    --progress-percent: 6%;
+}
+
+.progress-percent-7 {
+    --progress-percent: 7%;
+}
+
+.progress-percent-8 {
+    --progress-percent: 8%;
+}
+
+.progress-percent-9 {
+    --progress-percent: 9%;
+}
+
+.progress-percent-10 {
+    --progress-percent: 10%;
+}
+
+.progress-percent-11 {
+    --progress-percent: 11%;
+}
+
+.progress-percent-12 {
+    --progress-percent: 12%;
+}
+
+.progress-percent-13 {
+    --progress-percent: 13%;
+}
+
+.progress-percent-14 {
+    --progress-percent: 14%;
+}
+
+.progress-percent-15 {
+    --progress-percent: 15%;
+}
+
+.progress-percent-16 {
+    --progress-percent: 16%;
+}
+
+.progress-percent-17 {
+    --progress-percent: 17%;
+}
+
+.progress-percent-18 {
+    --progress-percent: 18%;
+}
+
+.progress-percent-19 {
+    --progress-percent: 19%;
+}
+
+.progress-percent-20 {
+    --progress-percent: 20%;
+}
+
+.progress-percent-21 {
+    --progress-percent: 21%;
+}
+
+.progress-percent-22 {
+    --progress-percent: 22%;
+}
+
+.progress-percent-23 {
+    --progress-percent: 23%;
+}
+
+.progress-percent-24 {
+    --progress-percent: 24%;
+}
+
+.progress-percent-25 {
+    --progress-percent: 25%;
+}
+
+.progress-percent-26 {
+    --progress-percent: 26%;
+}
+
+.progress-percent-27 {
+    --progress-percent: 27%;
+}
+
+.progress-percent-28 {
+    --progress-percent: 28%;
+}
+
+.progress-percent-29 {
+    --progress-percent: 29%;
+}
+
+.progress-percent-30 {
+    --progress-percent: 30%;
+}
+
+.progress-percent-31 {
+    --progress-percent: 31%;
+}
+
+.progress-percent-32 {
+    --progress-percent: 32%;
+}
+
+.progress-percent-33 {
+    --progress-percent: 33%;
+}
+
+.progress-percent-34 {
+    --progress-percent: 34%;
+}
+
+.progress-percent-35 {
+    --progress-percent: 35%;
+}
+
+.progress-percent-36 {
+    --progress-percent: 36%;
+}
+
+.progress-percent-37 {
+    --progress-percent: 37%;
+}
+
+.progress-percent-38 {
+    --progress-percent: 38%;
+}
+
+.progress-percent-39 {
+    --progress-percent: 39%;
+}
+
+.progress-percent-40 {
+    --progress-percent: 40%;
+}
+
+.progress-percent-41 {
+    --progress-percent: 41%;
+}
+
+.progress-percent-42 {
+    --progress-percent: 42%;
+}
+
+.progress-percent-43 {
+    --progress-percent: 43%;
+}
+
+.progress-percent-44 {
+    --progress-percent: 44%;
+}
+
+.progress-percent-45 {
+    --progress-percent: 45%;
+}
+
+.progress-percent-46 {
+    --progress-percent: 46%;
+}
+
+.progress-percent-47 {
+    --progress-percent: 47%;
+}
+
+.progress-percent-48 {
+    --progress-percent: 48%;
+}
+
+.progress-percent-49 {
+    --progress-percent: 49%;
+}
+
+.progress-percent-50 {
+    --progress-percent: 50%;
+}
+
+.progress-percent-51 {
+    --progress-percent: 51%;
+}
+
+.progress-percent-52 {
+    --progress-percent: 52%;
+}
+
+.progress-percent-53 {
+    --progress-percent: 53%;
+}
+
+.progress-percent-54 {
+    --progress-percent: 54%;
+}
+
+.progress-percent-55 {
+    --progress-percent: 55%;
+}
+
+.progress-percent-56 {
+    --progress-percent: 56%;
+}
+
+.progress-percent-57 {
+    --progress-percent: 57%;
+}
+
+.progress-percent-58 {
+    --progress-percent: 58%;
+}
+
+.progress-percent-59 {
+    --progress-percent: 59%;
+}
+
+.progress-percent-60 {
+    --progress-percent: 60%;
+}
+
+.progress-percent-61 {
+    --progress-percent: 61%;
+}
+
+.progress-percent-62 {
+    --progress-percent: 62%;
+}
+
+.progress-percent-63 {
+    --progress-percent: 63%;
+}
+
+.progress-percent-64 {
+    --progress-percent: 64%;
+}
+
+.progress-percent-65 {
+    --progress-percent: 65%;
+}
+
+.progress-percent-66 {
+    --progress-percent: 66%;
+}
+
+.progress-percent-67 {
+    --progress-percent: 67%;
+}
+
+.progress-percent-68 {
+    --progress-percent: 68%;
+}
+
+.progress-percent-69 {
+    --progress-percent: 69%;
+}
+
+.progress-percent-70 {
+    --progress-percent: 70%;
+}
+
+.progress-percent-71 {
+    --progress-percent: 71%;
+}
+
+.progress-percent-72 {
+    --progress-percent: 72%;
+}
+
+.progress-percent-73 {
+    --progress-percent: 73%;
+}
+
+.progress-percent-74 {
+    --progress-percent: 74%;
+}
+
+.progress-percent-75 {
+    --progress-percent: 75%;
+}
+
+.progress-percent-76 {
+    --progress-percent: 76%;
+}
+
+.progress-percent-77 {
+    --progress-percent: 77%;
+}
+
+.progress-percent-78 {
+    --progress-percent: 78%;
+}
+
+.progress-percent-79 {
+    --progress-percent: 79%;
+}
+
+.progress-percent-80 {
+    --progress-percent: 80%;
+}
+
+.progress-percent-81 {
+    --progress-percent: 81%;
+}
+
+.progress-percent-82 {
+    --progress-percent: 82%;
+}
+
+.progress-percent-83 {
+    --progress-percent: 83%;
+}
+
+.progress-percent-84 {
+    --progress-percent: 84%;
+}
+
+.progress-percent-85 {
+    --progress-percent: 85%;
+}
+
+.progress-percent-86 {
+    --progress-percent: 86%;
+}
+
+.progress-percent-87 {
+    --progress-percent: 87%;
+}
+
+.progress-percent-88 {
+    --progress-percent: 88%;
+}
+
+.progress-percent-89 {
+    --progress-percent: 89%;
+}
+
+.progress-percent-90 {
+    --progress-percent: 90%;
+}
+
+.progress-percent-91 {
+    --progress-percent: 91%;
+}
+
+.progress-percent-92 {
+    --progress-percent: 92%;
+}
+
+.progress-percent-93 {
+    --progress-percent: 93%;
+}
+
+.progress-percent-94 {
+    --progress-percent: 94%;
+}
+
+.progress-percent-95 {
+    --progress-percent: 95%;
+}
+
+.progress-percent-96 {
+    --progress-percent: 96%;
+}
+
+.progress-percent-97 {
+    --progress-percent: 97%;
+}
+
+.progress-percent-98 {
+    --progress-percent: 98%;
+}
+
+.progress-percent-99 {
+    --progress-percent: 99%;
+}
+
+.progress-percent-100 {
+    --progress-percent: 100%;
+}
