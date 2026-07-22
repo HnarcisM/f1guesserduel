@@ -34,7 +34,10 @@ const SELECT_PROGRESS_SQL = `
 `;
 
 const SELECT_DAILY_ATTEMPTS_SQL = `
-    SELECT challenge_id AS "challengeId", difficulty, daily_date AS "dailyDate"
+    SELECT
+        challenge_id AS "challengeId",
+        difficulty,
+        to_char(daily_date, 'YYYY-MM-DD') AS "dailyDate"
     FROM user_daily_attempts
     WHERE user_id = $1 AND daily_date = $2
     ORDER BY difficulty

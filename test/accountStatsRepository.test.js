@@ -27,7 +27,7 @@ class FakePostgresClient {
             this.dailyAttemptKeys.add(key);
             return { rowCount: 1, rows: [{ challenge_id: params[1] }] };
         }
-        if (normalizedSql.startsWith('SELECT challenge_id')) {
+        if (normalizedSql.startsWith('SELECT') && normalizedSql.includes('FROM user_daily_attempts')) {
             return {
                 rows: [{
                     challengeId: 'f1-daily-v1:2026-07-23:easy',
@@ -138,6 +138,9 @@ test('Postgres Daily claims use parameterized ON CONFLICT protection', async () 
     }]);
 
     const claimQuery = client.queries.find(query => query.sql.startsWith('INSERT INTO user_daily_attempts'));
+    const selectQuery = client.queries.find(query => query.sql.includes('FROM user_daily_attempts'));
     assert.match(claimQuery.sql, /ON CONFLICT \(user_id, challenge_id\) DO NOTHING/);
     assert.deepEqual(claimQuery.params, [7, attempt.challengeId, '2026-07-23', 'easy']);
+    assert.match(selectQuery.sql, /to_char\(daily_date, 'YYYY-MM-DD'\) AS "dailyDate"/);
+    assert.deepEqual(selectQuery.params, [7, '2026-07-23']);
 });
