@@ -1,3 +1,5 @@
+import { getIsoCode, handleFlagError } from './assets.js';
+
 /** Autocomplete controller pentru inputul de piloți. */
 export function createAutocomplete({ getDriversList, onSubmitGuess }) {
 	let selectedDriverId = null;
@@ -52,8 +54,26 @@ export function createAutocomplete({ getDriversList, onSubmitGuess }) {
 
 	function createSuggestionItem(driver) {
 		const li = document.createElement("li");
-		li.textContent = driver.name;
 		li.dataset.id = driver.id;
+		li.dataset.name = driver.name;
+
+		const isoCode = getIsoCode(driver.nat);
+		const flag = document.createElement("img");
+		flag.className = "suggestion-driver-flag";
+		flag.src = `/flags/${isoCode}.svg`;
+		flag.alt = "";
+		flag.loading = "lazy";
+		flag.decoding = "async";
+		flag.width = 26;
+		flag.height = 18;
+		flag.setAttribute("aria-hidden", "true");
+		flag.onerror = () => handleFlagError(flag);
+
+		const name = document.createElement("span");
+		name.className = "suggestion-driver-name";
+		name.textContent = driver.name;
+
+		li.append(flag, name);
 		li.addEventListener("click", () => selectDriverSuggestion(driver));
 		return li;
 	}
@@ -69,7 +89,7 @@ export function createAutocomplete({ getDriversList, onSubmitGuess }) {
 	function selectSuggestionItem(item) {
 		if (!item) return;
 		const inputEl = document.getElementById("driverInput");
-		if (inputEl) inputEl.value = item.textContent;
+		if (inputEl) inputEl.value = item.dataset.name || item.textContent.trim();
 		selectedDriverId = item.dataset.id;
 		clearSuggestions();
 		onSubmitGuess();

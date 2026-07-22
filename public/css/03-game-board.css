@@ -90,8 +90,33 @@ button#sendGuessBtn:hover { background: var(--accent-action-hover); }
     display: none;
 }
 
-.suggestions-list li { padding: var(--space-2xl) var(--space-5xl); border-bottom: 1px solid var(--border-muted); color: var(--text-primary); transition: all 0.15s; }
+.suggestions-list li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xl);
+    padding: var(--space-2xl) var(--space-5xl);
+    border-bottom: 1px solid var(--border-muted);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+}
 .suggestions-list li:hover, .suggestions-list li.active { background: var(--accent-f1); color: var(--text-on-accent); }
+.suggestion-driver-flag {
+    width: 26px;
+    height: 18px;
+    flex: 0 0 26px;
+    object-fit: cover;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-sm);
+    background: var(--surface-card);
+    box-shadow: var(--shadow-sm);
+}
+.suggestion-driver-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 
 /* --- GRILA DE JOC TABULARĂ --- */
 /* Gridul jocului: 6 coloane fixe pentru a păstra structura de tabel F1 Guesser. */
