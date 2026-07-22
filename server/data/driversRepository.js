@@ -2,6 +2,13 @@ const fs = require('fs');
 const path = require('path');
 const { isValidDifficulty } = require('../config/constants');
 
+function deepFreezeDriver(driver) {
+    if (Array.isArray(driver.team)) {
+        Object.freeze(driver.team);
+    }
+    return Object.freeze(driver);
+}
+
 function loadDriversFromFile(filePath) {
     const data = fs.readFileSync(filePath, 'utf8');
     const cleanData = data.replace(/\/\*[\s\S]*?\*\//g, '');
@@ -11,7 +18,8 @@ function loadDriversFromFile(filePath) {
         throw new Error('drivers.json nu conține o listă validă de piloți.');
     }
 
-    return drivers;
+    drivers.forEach(deepFreezeDriver);
+    return Object.freeze(drivers);
 }
 
 function createDriversRepository(options = {}) {

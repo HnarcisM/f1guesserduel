@@ -1,5 +1,8 @@
 function getCurrentTeam(driver) {
-    return Array.isArray(driver.team) ? driver.team[0] : driver.team;
+    if (Array.isArray(driver.team)) {
+        return driver.team.length > 0 ? driver.team[0] : null;
+    }
+    return driver.team ?? null;
 }
 
 function compareGuess(guessDriver, target) {
