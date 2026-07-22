@@ -71,6 +71,7 @@ test('GitHub Actions CI runs responsive and accessibility browser tests and reta
     assert.match(source, /needs:\s*\[verify, integration-services\]/);
     assert.match(source, /npx playwright install --with-deps chromium/);
     assert.match(source, /run:\s*npm run test:e2e:responsive/);
+    assert.match(source, /run:\s*npm run test:e2e:flows/);
     assert.match(source, /run:\s*npm run test:e2e:accessibility/);
     assert.match(source, /uses:\s*actions\/upload-artifact@v7/);
     assert.match(source, /if:\s*always\(\)/);

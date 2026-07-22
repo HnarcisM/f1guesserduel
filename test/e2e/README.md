@@ -57,6 +57,18 @@ Numai auditul automat de accesibilitate:
 npm run test:e2e:accessibility
 ```
 
+Numai fluxurile pentru profil și reconectare:
+
+```bash
+npm run test:e2e:flows
+```
+
+Scenariul de profil creează un cont în baza SQLite izolată a serverului de test,
+actualizează avatarul și username-ul, apoi verifică persistența lor după reload.
+Scenariul de reconectare pornește un Duel cu doi jucători și confirmă că refresh-ul
+păstrează identificatorul tabului, rolul de host, numărul participanților și
+încercările deja trimise.
+
 Rapoartele și capturile generate local nu intră în Git. În GitHub Actions sunt încărcate ca artefact `browser-quality-<run_attempt>` și sunt păstrate 14 zile, inclusiv când un test eșuează.
 
 `npm run test:e2e` rulează automat `pretest:e2e`, care verifică Chromium înainte de pornirea browserului. Dacă Chromium lipsește, scriptul încearcă instalarea și oprește testele cu mesaj explicit dacă instalarea nu reușește.

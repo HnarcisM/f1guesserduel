@@ -122,6 +122,9 @@ jobs:
       - name: Run responsive and visual tests
         run: npm run test:e2e:responsive
 
+      - name: Run profile and reconnection flows
+        run: npm run test:e2e:flows
+
       - name: Run automated accessibility audit
         run: npm run test:e2e:accessibility
 

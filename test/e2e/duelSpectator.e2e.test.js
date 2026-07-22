@@ -67,7 +67,7 @@ async function ensureAuthMode(page, expectedMode) {
 }
 
 async function submitAuthForm(page) {
-    await page.locator('#authPanel.show form').evaluate(form => form.requestSubmit());
+    await page.locator('#authForm').evaluate(form => form.requestSubmit());
 }
 
 async function registerViaUi(page, { username, email, password }) {

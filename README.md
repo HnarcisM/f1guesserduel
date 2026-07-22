@@ -207,6 +207,15 @@ npm run test:e2e:responsive
 
 Suita verifică pagina de start și starea de joc pe telefon, Galaxy Fold 5 (cover și ecran interior în ambele orientări) și desktop. Detectează automat overflow-ul lateral, elementele ieșite din viewport și suprapunerile importante. Capturile PNG și raportul geometric sunt scrise în `test-results/responsive-visual/`.
 
+Pentru profilul autentificat și reconectarea Duel după refresh:
+
+```bash
+npm run test:e2e:flows
+```
+
+Aceste scenarii verifică persistența avatarului și username-ului, sesiunea după
+reload, păstrarea rolului și restaurarea încercărilor deja trimise într-un Duel.
+
 ### Toate testele
 
 ```bash
@@ -222,8 +231,9 @@ sumarul coverage ca artefact, generează bundle-urile de producție și eșueaz�
 `public/index.html`, `public/style.bundle.css` sau `public/game.bundle.min.js` nu
 sunt actualizate în commit. În paralel, un job izolat pornește containere Redis și
 PostgreSQL cu health checks și rulează testele reale de integrare. După aceste
-verificări, jobul browser instalează Chromium, rulează suitele responsive/vizuală
-și de accesibilitate și păstrează rapoartele ca artefacte timp de 14 zile.
+verificări, jobul browser instalează Chromium, rulează suitele responsive/vizuală,
+profil/reconectare și de accesibilitate și păstrează rapoartele ca artefacte timp
+de 14 zile.
 
 Pentru a reoptimiza numai SVG-urile folosite de build-ul de producție:
 
