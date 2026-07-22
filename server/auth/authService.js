@@ -1,4 +1,8 @@
-const { hashPassword, verifyPassword } = require('./passwordService');
+const {
+    DUMMY_PASSWORD_HASH,
+    hashPassword,
+    verifyPassword
+} = require('./passwordService');
 const { createAuthRepository } = require('./authRepository');
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
@@ -125,7 +129,9 @@ function createAuthService(databaseOrRepository, sessionService) {
         }
 
         const userRow = await repository.findUserByEmail(cleanEmail);
-        if (!userRow || !(await verifyPassword(password, userRow.password_hash))) {
+        const passwordHash = userRow ? userRow.password_hash : DUMMY_PASSWORD_HASH;
+        const passwordMatches = await verifyPassword(password, passwordHash);
+        if (!userRow || !passwordMatches) {
             return { ok: false, status: 401, message: 'Email sau parolă greșită.' };
         }
 

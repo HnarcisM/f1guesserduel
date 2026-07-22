@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const asyncHooks = require('node:async_hooks');
 
 const { createAuthService } = require('../server/auth/authService');
 const { verifyPassword } = require('../server/auth/passwordService');
@@ -96,6 +97,24 @@ function createFakeSessionService() {
     };
 }
 
+async function countPbkdf2Requests(action) {
+    let requestCount = 0;
+    const hook = asyncHooks.createHook({
+        init(asyncId, type) {
+            if (type === 'PBKDF2REQUEST') requestCount += 1;
+        }
+    });
+
+    hook.enable();
+    try {
+        await action();
+    } finally {
+        hook.disable();
+    }
+
+    return requestCount;
+}
+
 test('auth service registers users with async password hashing', async () => {
     const repository = createFakeAuthRepository();
     const authService = createAuthService(repository, createFakeSessionService());
@@ -141,6 +160,24 @@ test('auth service login awaits async password verification', async () => {
     assert.equal(loginResult.ok, true);
     assert.equal(loginResult.user.username, 'Narcis');
     assert.equal(loginResult.session.token, 'session-2');
+});
+
+test('auth service performs PBKDF2 verification for an unknown email', async () => {
+    const repository = createFakeAuthRepository();
+    const authService = createAuthService(repository, createFakeSessionService());
+    let loginResult;
+
+    const pbkdf2Requests = await countPbkdf2Requests(async () => {
+        loginResult = await authService.login({
+            email: 'missing@example.com',
+            password: 'WrongPassword123!'
+        });
+    });
+
+    assert.equal(loginResult.ok, false);
+    assert.equal(loginResult.status, 401);
+    assert.equal(loginResult.message, 'Email sau parolă greșită.');
+    assert.equal(pbkdf2Requests, 1);
 });
 
 test('auth service returns conflict when repository reports unique constraint', async () => {
