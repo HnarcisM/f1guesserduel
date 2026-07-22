@@ -49,7 +49,7 @@ test('real PostgreSQL applies every migration and remains idempotent', async () 
     `);
     assert.deepEqual(
         migrationRows.rows.map(row => Number(row.version)),
-        [1, 2, 3, 4, 5]
+        [1, 2, 3, 4, 5, 6]
     );
 
     const secondRun = await runPostgresMigrations({
@@ -58,7 +58,7 @@ test('real PostgreSQL applies every migration and remains idempotent', async () 
         fallbackSchemaFilePath: schemaFilePath,
         logger: silentLogger
     });
-    assert.deepEqual(secondRun, { appliedCount: 0, currentVersion: 5 });
+    assert.deepEqual(secondRun, { appliedCount: 0, currentVersion: 6 });
 });
 
 test('real PostgreSQL enforces auth constraints, sessions and account result idempotency', async () => {
@@ -98,6 +98,20 @@ test('real PostgreSQL enforces auth constraints, sessions and account result ide
     assert.equal(updatedUser.avatarKey, 'helmet-blue');
 
     const statsRepository = createAccountStatsRepository(database);
+    const dailyAttempt = {
+        userId: user.id,
+        challengeId: `f1-daily-v1:2026-07-23:easy:${suffix}`,
+        dailyDate: '2026-07-23',
+        difficulty: 'easy'
+    };
+    assert.equal(await statsRepository.claimDailyAttempt(dailyAttempt), true);
+    assert.equal(await statsRepository.claimDailyAttempt(dailyAttempt), false);
+    assert.deepEqual(await statsRepository.getDailyAttempts(user.id, dailyAttempt.dailyDate), [{
+        challengeId: dailyAttempt.challengeId,
+        difficulty: 'easy',
+        dailyDate: dailyAttempt.dailyDate
+    }]);
+
     const gameResult = {
         userId: user.id,
         mode: 'single',

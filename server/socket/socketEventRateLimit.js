@@ -16,6 +16,7 @@ const DEFAULT_SOCKET_EVENT_LIMITS = Object.freeze({
     startSingleGame: { maxEvents: 20 },
     submitSingleGuess: { maxEvents: 90 },
     restartSingleGame: { maxEvents: 20 },
+    requestDailyChallengeStatus: { maxEvents: 30 },
     startDailyChallenge: { maxEvents: 20 },
     submitDailyGuess: { maxEvents: 90 }
 });

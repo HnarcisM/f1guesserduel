@@ -92,7 +92,7 @@ function registerDuelLifecycleSocketHandlers(context) {
         emitRoomListUpdate();
     }
 
-    onSocketEvent('refreshAuthUser', async (payload = {}) => {
+    onSocketEvent('refreshAuthUser', async (payload = {}, acknowledge) => {
         const roomId = state.currentRoom;
         const room = roomId ? roomStore.get(roomId) : null;
         const socketAuthToken = payload && typeof payload === 'object'
@@ -104,15 +104,22 @@ function registerDuelLifecycleSocketHandlers(context) {
 
         socket.user = authUser;
         if (socketAuthToken && !authUser) socket.emit('authRefreshFailed');
-        if (!room) return;
+        if (!room) {
+            if (typeof acknowledge === 'function') acknowledge({ authenticated: Boolean(authUser) });
+            return;
+        }
 
         const member = refreshRoomMemberAuth(room, socket.id, authUser);
-        if (!member) return;
+        if (!member) {
+            if (typeof acknowledge === 'function') acknowledge({ authenticated: Boolean(authUser) });
+            return;
+        }
 
         emitHostStatus(socket, room);
         emitRoomStateUpdate(roomId, 'auth-updated');
         emitRoomRoleStatuses(room);
         emitRoomListUpdate();
+        if (typeof acknowledge === 'function') acknowledge({ authenticated: Boolean(authUser) });
     });
 
     socket.on('leaveRoom', leaveCurrentRoom);

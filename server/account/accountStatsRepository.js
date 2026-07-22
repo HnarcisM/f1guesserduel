@@ -33,6 +33,20 @@ const SELECT_PROGRESS_SQL = `
     WHERE user_id = $1
 `;
 
+const SELECT_DAILY_ATTEMPTS_SQL = `
+    SELECT challenge_id AS "challengeId", difficulty, daily_date AS "dailyDate"
+    FROM user_daily_attempts
+    WHERE user_id = $1 AND daily_date = $2
+    ORDER BY difficulty
+`;
+
+const POSTGRES_CLAIM_DAILY_ATTEMPT_SQL = `
+    INSERT INTO user_daily_attempts (user_id, challenge_id, daily_date, difficulty)
+    VALUES ($1, $2, $3, $4)
+    ON CONFLICT (user_id, challenge_id) DO NOTHING
+    RETURNING challenge_id
+`;
+
 const POSTGRES_UPSERT_STATS_SQL = `
     INSERT INTO user_game_stats (
         user_id, mode, games_played, games_won, games_drawn,
@@ -102,6 +116,21 @@ function createPostgresAccountStatsRepository(database) {
         return result.rows?.[0] || null;
     }
 
+    async function getDailyAttempts(userId, dailyDate, queryable = database) {
+        const result = await queryable.query(SELECT_DAILY_ATTEMPTS_SQL, [userId, dailyDate]);
+        return result.rows || [];
+    }
+
+    async function claimDailyAttempt({ userId, challengeId, dailyDate, difficulty }) {
+        const result = await database.query(POSTGRES_CLAIM_DAILY_ATTEMPT_SQL, [
+            userId,
+            challengeId,
+            dailyDate,
+            difficulty
+        ]);
+        return result.rowCount === 1;
+    }
+
     async function recordGameResult(result) {
         const client = await database.pool.connect();
         const increments = buildResultIncrements(result.outcome, result.attempts);
@@ -162,6 +191,8 @@ function createPostgresAccountStatsRepository(database) {
         getStatsRows,
         getRecentResults,
         getProgressRow,
+        getDailyAttempts,
+        claimDailyAttempt,
         recordGameResult
     };
 }
@@ -176,6 +207,17 @@ function createSqliteAccountStatsRepository(database) {
         LIMIT ?
     `);
     const selectProgress = database.prepare(SELECT_PROGRESS_SQL.replace('$1', '?'));
+    const selectDailyAttempts = database.prepare(`
+        SELECT challenge_id AS challengeId, difficulty, daily_date AS dailyDate
+        FROM user_daily_attempts
+        WHERE user_id = ? AND daily_date = ?
+        ORDER BY difficulty
+    `);
+    const claimDailyAttemptStatement = database.prepare(`
+        INSERT OR IGNORE INTO user_daily_attempts (
+            user_id, challenge_id, daily_date, difficulty
+        ) VALUES (@userId, @challengeId, @dailyDate, @difficulty)
+    `);
     const insertResult = database.prepare(`
         INSERT OR IGNORE INTO user_game_results (
             user_id, mode, result_key, outcome, attempts, difficulty
@@ -251,6 +293,14 @@ function createSqliteAccountStatsRepository(database) {
         return selectProgress.get(userId) || null;
     }
 
+    async function getDailyAttempts(userId, dailyDate) {
+        return selectDailyAttempts.all(userId, dailyDate);
+    }
+
+    async function claimDailyAttempt(attempt) {
+        return claimDailyAttemptStatement.run(attempt).changes === 1;
+    }
+
     async function recordGameResult(result) {
         const recorded = recordTransaction(result);
         return {
@@ -266,6 +316,8 @@ function createSqliteAccountStatsRepository(database) {
         getStatsRows,
         getRecentResults,
         getProgressRow,
+        getDailyAttempts,
+        claimDailyAttempt,
         recordGameResult
     };
 }
@@ -287,6 +339,8 @@ module.exports = {
     MODE_COLUMNS,
     SELECT_RECENT_RESULTS_SQL,
     SELECT_PROGRESS_SQL,
+    SELECT_DAILY_ATTEMPTS_SQL,
+    POSTGRES_CLAIM_DAILY_ATTEMPT_SQL,
     buildResultIncrements,
     normalizeXpEarned,
     createAccountStatsRepository,

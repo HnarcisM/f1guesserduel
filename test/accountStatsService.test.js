@@ -16,6 +16,7 @@ function createMemoryStatsRepository() {
     const resultKeys = new Set();
     const recentResults = [];
     const progressByUser = new Map();
+    const dailyAttempts = new Map();
 
     function getRow(userId, mode) {
         const key = `${userId}:${mode}`;
@@ -56,10 +57,25 @@ function createMemoryStatsRepository() {
         return { total_xp: progressByUser.get(userId) || 0 };
     }
 
+    async function getDailyAttempts(userId, dailyDate) {
+        return [...dailyAttempts.values()].filter(attempt => (
+            attempt.userId === userId && attempt.dailyDate === dailyDate
+        ));
+    }
+
+    async function claimDailyAttempt(attempt) {
+        const key = `${attempt.userId}:${attempt.challengeId}`;
+        if (dailyAttempts.has(key)) return false;
+        dailyAttempts.set(key, { ...attempt });
+        return true;
+    }
+
     return {
         getStatsRows,
         getRecentResults,
         getProgressRow,
+        getDailyAttempts,
+        claimDailyAttempt,
         async recordGameResult(result) {
             const uniqueKey = `${result.userId}:${result.mode}:${result.resultKey}`;
             if (resultKeys.has(uniqueKey)) {
@@ -162,6 +178,33 @@ test('account stats aggregate modes and ignore duplicate server result keys', as
     });
     assert.equal(Object.hasOwn(dashboard.recentGames[0], 'resultKey'), false);
     assert.equal(Object.hasOwn(dashboard.recentGames[0], 'userId'), false);
+});
+
+test('Daily attempts are claimed atomically and exposed per account and UTC date', async () => {
+    const service = createAccountStatsService(createMemoryStatsRepository());
+    const easyAttempt = {
+        userId: 7,
+        challengeId: 'f1-daily-v1:2026-07-23:easy',
+        dailyDate: '2026-07-23',
+        difficulty: 'easy'
+    };
+
+    assert.equal(await service.claimDailyChallenge(easyAttempt), true);
+    assert.equal(await service.claimDailyChallenge(easyAttempt), false);
+    assert.equal(await service.claimDailyChallenge({
+        ...easyAttempt,
+        challengeId: 'f1-daily-v1:2026-07-23:hard',
+        difficulty: 'hard'
+    }), true);
+
+    assert.deepEqual(await service.getDailyChallengeStatus(7, '2026-07-23'), {
+        dailyDate: '2026-07-23',
+        claimedDifficulties: ['easy', 'hard']
+    });
+    assert.deepEqual(await service.getDailyChallengeStatus(8, '2026-07-23'), {
+        dailyDate: '2026-07-23',
+        claimedDifficulties: []
+    });
 });
 
 test('XP rewards and nonlinear level progress are deterministic', () => {

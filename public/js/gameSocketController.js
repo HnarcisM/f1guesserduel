@@ -77,6 +77,7 @@ export function createGameSocketController({
 			resetRoomScoreboard,
 			handleInitDailyChallenge: dailyChallengeController.handleInit,
 			handleDailyChallengeError: dailyChallengeController.handleError,
+			handleDailyChallengeStatus: dailyChallengeController.handleStatus,
 			timer,
 			autocomplete,
 			refreshAccountSummary
@@ -96,6 +97,7 @@ export function createGameSocketController({
 
 			socket = io();
 			registerSocketEvents(socket, buildEventHandlers());
+			dailyChallengeController.requestStatus?.();
 			return socket;
 		} catch (err) {
 			console.error('Eroare conexiune server:', err);
@@ -103,10 +105,14 @@ export function createGameSocketController({
 		}
 	}
 
-	function refreshAuthUser(socketAuthToken = null) {
+	function refreshAuthUser(socketAuthToken = null, onRefreshed = null) {
 		if (socket && socket.connected) {
-			socket.emit('refreshAuthUser', { socketAuthToken: socketAuthToken || null });
+			socket.emit('refreshAuthUser', { socketAuthToken: socketAuthToken || null }, () => {
+				onRefreshed?.();
+			});
+			return;
 		}
+		onRefreshed?.();
 	}
 
 	function emit(eventName, ...args) {

@@ -51,6 +51,19 @@ CREATE TABLE IF NOT EXISTS user_game_results (
 CREATE INDEX IF NOT EXISTS idx_user_game_results_user_completed
     ON user_game_results(user_id, completed_at DESC);
 
+CREATE TABLE IF NOT EXISTS user_daily_attempts (
+    user_id INTEGER NOT NULL,
+    challenge_id TEXT NOT NULL,
+    daily_date TEXT NOT NULL,
+    difficulty TEXT NOT NULL CHECK (difficulty IN ('easy', 'medium', 'hard')),
+    started_at TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (user_id, challenge_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_daily_attempts_user_date
+    ON user_daily_attempts(user_id, daily_date);
+
 CREATE TABLE IF NOT EXISTS user_game_stats (
     user_id INTEGER NOT NULL,
     mode TEXT NOT NULL CHECK (mode IN ('single', 'daily', 'duel')),

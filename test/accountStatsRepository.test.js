@@ -7,6 +7,7 @@ class FakePostgresClient {
     constructor() {
         this.queries = [];
         this.resultKeys = new Set();
+        this.dailyAttemptKeys = new Set();
         this.releaseCalls = 0;
     }
 
@@ -19,6 +20,21 @@ class FakePostgresClient {
             if (this.resultKeys.has(key)) return { rowCount: 0, rows: [] };
             this.resultKeys.add(key);
             return { rowCount: 1, rows: [{ id: 1 }] };
+        }
+        if (normalizedSql.startsWith('INSERT INTO user_daily_attempts')) {
+            const key = `${params[0]}:${params[1]}`;
+            if (this.dailyAttemptKeys.has(key)) return { rowCount: 0, rows: [] };
+            this.dailyAttemptKeys.add(key);
+            return { rowCount: 1, rows: [{ challenge_id: params[1] }] };
+        }
+        if (normalizedSql.startsWith('SELECT challenge_id')) {
+            return {
+                rows: [{
+                    challengeId: 'f1-daily-v1:2026-07-23:easy',
+                    difficulty: 'easy',
+                    dailyDate: '2026-07-23'
+                }]
+            };
         }
         if (normalizedSql.startsWith('SELECT mode, outcome')) {
             return {
@@ -98,4 +114,30 @@ test('Postgres account stats use a transaction, parameters and idempotent result
     assert.equal(client.queries.filter(query => query.sql === 'BEGIN').length, 2);
     assert.equal(client.queries.filter(query => query.sql === 'COMMIT').length, 2);
     assert.equal(client.releaseCalls, 2);
+});
+
+test('Postgres Daily claims use parameterized ON CONFLICT protection', async () => {
+    const client = new FakePostgresClient();
+    const repository = createPostgresAccountStatsRepository({
+        pool: { async connect() { return client; } },
+        query: (...args) => client.query(...args)
+    });
+    const attempt = {
+        userId: 7,
+        challengeId: 'f1-daily-v1:2026-07-23:easy',
+        dailyDate: '2026-07-23',
+        difficulty: 'easy'
+    };
+
+    assert.equal(await repository.claimDailyAttempt(attempt), true);
+    assert.equal(await repository.claimDailyAttempt(attempt), false);
+    assert.deepEqual(await repository.getDailyAttempts(7, '2026-07-23'), [{
+        challengeId: attempt.challengeId,
+        difficulty: 'easy',
+        dailyDate: '2026-07-23'
+    }]);
+
+    const claimQuery = client.queries.find(query => query.sql.startsWith('INSERT INTO user_daily_attempts'));
+    assert.match(claimQuery.sql, /ON CONFLICT \(user_id, challenge_id\) DO NOTHING/);
+    assert.deepEqual(claimQuery.params, [7, attempt.challengeId, '2026-07-23', 'easy']);
 });

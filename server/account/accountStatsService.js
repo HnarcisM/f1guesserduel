@@ -4,6 +4,8 @@ const { createAccountStatsRepository } = require('./accountStatsRepository');
 
 const ACCOUNT_GAME_MODES = Object.freeze(['single', 'daily', 'duel']);
 const ACCOUNT_GAME_OUTCOMES = Object.freeze(['win', 'loss', 'draw']);
+const DAILY_DIFFICULTIES = Object.freeze(['easy', 'medium', 'hard']);
+const DAILY_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const DEFAULT_ACCOUNT_HISTORY_LIMIT = 10;
 const MAX_ACCOUNT_HISTORY_LIMIT = 20;
 const XP_LEVEL_SCALE = 100;
@@ -222,6 +224,19 @@ function createGameResultKey(prefix = 'game') {
     return `${prefix}:${crypto.randomUUID()}`;
 }
 
+function normalizeDailyAttemptInput(input = {}) {
+    const userId = normalizeUserId(input.userId);
+    const challengeId = typeof input.challengeId === 'string' ? input.challengeId.trim() : '';
+    const dailyDate = typeof input.dailyDate === 'string' ? input.dailyDate.trim() : '';
+    const difficulty = DAILY_DIFFICULTIES.includes(input.difficulty) ? input.difficulty : null;
+
+    if (!userId || !challengeId || challengeId.length > 200 || !DAILY_DATE_PATTERN.test(dailyDate) || !difficulty) {
+        throw new Error('Invalid Daily Challenge attempt.');
+    }
+
+    return { userId, challengeId, dailyDate, difficulty };
+}
+
 function createAccountStatsService(databaseOrRepository) {
     const repository = createAccountStatsRepository(databaseOrRepository);
 
@@ -271,9 +286,38 @@ function createAccountStatsService(databaseOrRepository) {
         };
     }
 
+    async function claimDailyChallenge(input) {
+        if (typeof repository.claimDailyAttempt !== 'function') {
+            throw new Error('Daily Challenge persistence is unavailable.');
+        }
+        return repository.claimDailyAttempt(normalizeDailyAttemptInput(input));
+    }
+
+    async function getDailyChallengeStatus(userId, dailyDate) {
+        const normalizedUserId = normalizeUserId(userId);
+        if (!normalizedUserId || typeof dailyDate !== 'string' || !DAILY_DATE_PATTERN.test(dailyDate)) {
+            throw new Error('Invalid Daily Challenge status request.');
+        }
+        if (typeof repository.getDailyAttempts !== 'function') {
+            throw new Error('Daily Challenge persistence is unavailable.');
+        }
+
+        const attempts = await repository.getDailyAttempts(normalizedUserId, dailyDate);
+        return {
+            dailyDate,
+            claimedDifficulties: [...new Set(
+                attempts
+                    .map(attempt => attempt?.difficulty)
+                    .filter(difficulty => DAILY_DIFFICULTIES.includes(difficulty))
+            )]
+        };
+    }
+
     return {
         getAccountStats,
         getAccountDashboard,
+        getDailyChallengeStatus,
+        claimDailyChallenge,
         recordGameResult
     };
 }
@@ -296,6 +340,7 @@ async function recordAccountGameResultSafely({ accountStatsService, logger = con
 module.exports = {
     ACCOUNT_GAME_MODES,
     ACCOUNT_GAME_OUTCOMES,
+    DAILY_DIFFICULTIES,
     DEFAULT_ACCOUNT_HISTORY_LIMIT,
     MAX_ACCOUNT_HISTORY_LIMIT,
     XP_LEVEL_SCALE,
@@ -310,6 +355,7 @@ module.exports = {
     createEmptyModeStats,
     createGameResultKey,
     normalizeResultInput,
+    normalizeDailyAttemptInput,
     normalizeHistoryLimit,
     recordAccountGameResultSafely
 };

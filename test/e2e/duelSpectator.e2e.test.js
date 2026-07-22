@@ -538,7 +538,18 @@ test('daily challenge panel is isolated from single and duel modes', { concurren
         await assertElementHidden(page.locator('#shareRoomBtn'));
         await assertElementHidden(page.locator('#duelStatus'));
 
-        await page.locator('#dailyChallengePanel [data-daily-level="easy"]').click();
+        await page.locator('#dailyChallengePanel [data-daily-level="easy"]:disabled')
+            .waitFor({ state: 'visible', timeout: 7000 });
+        await expectText(page.locator('#dailyResetInfo'), /Autentifică-te/i);
+        const dailySuffix = Date.now().toString(36).slice(-8);
+        await registerViaUi(page, {
+            username: `Daily_${dailySuffix}`,
+            email: `daily-${dailySuffix}@example.test`,
+            password: 'TestPass123!'
+        });
+
+        await page.locator('#dailyChallengePanel [data-daily-level="easy"]:not(:disabled)')
+            .click();
         await page.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
         await page.locator('body.mode-daily').waitFor({ timeout: 7000 });
         await expectText(page.locator('#diff-display-label'), /Daily Challenge · Mod: easy/i);
@@ -552,6 +563,8 @@ test('daily challenge panel is isolated from single and duel modes', { concurren
         const secondPage = await openAppPage(context, app.baseUrl);
         await secondPage.locator('[data-game-mode-choice="daily"]').click();
         await secondPage.locator('body.mode-daily').waitFor({ timeout: 7000 });
+        await secondPage.locator('#dailyChallengePanel [data-daily-level="easy"]:disabled')
+            .waitFor({ state: 'visible', timeout: 7000 });
         await secondPage.locator('[data-game-mode-choice="single"]').click();
         await secondPage.locator('body.mode-single').waitFor({ timeout: 7000 });
         await assertElementHidden(secondPage.locator('#dailyChallengePanel'));

@@ -409,7 +409,9 @@ function handleAuthChangeWithoutLeavingRoom(currentUser, socketAuthToken = null)
 	 */
 	dailyChallengeController.updateControls();
 
-	socketController?.refreshAuthUser(socketAuthToken);
+	socketController?.refreshAuthUser(socketAuthToken, () => {
+		dailyChallengeController.requestStatus?.();
+	});
 }
 
 function setupAuth() {
@@ -518,6 +520,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		startDuelMode: (roomId = null) => enterDuelMode(roomId),
 		onDuelBrowserRequested: showDuelRoomBrowser,
 		startDailyChallenge: startDailyFromSelection,
+		isDailyAvailable: () => Boolean(authView?.getCurrentUser?.()),
 		onSingleSelected: enterSingleMode,
 		confirmDuelExit,
 		abortDuelRound

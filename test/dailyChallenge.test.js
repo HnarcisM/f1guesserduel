@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { pickDailyDriver, getDailyDateKey } = require('../server/game/dailyChallenge');
+const { pickDailyDriver, getDailyDateKey, getNextDailyResetAt } = require('../server/game/dailyChallenge');
 const { createGameService } = require('../server/game/gameService');
 
 const drivers = [
@@ -12,6 +12,13 @@ const drivers = [
 
 test('getDailyDateKey accepts explicit browser local date key', () => {
     assert.equal(getDailyDateKey('2026-07-01'), '2026-07-01');
+});
+
+test('Daily reset is calculated at the next UTC midnight', () => {
+    assert.equal(
+        getNextDailyResetAt(new Date('2026-07-23T22:15:00.000Z')),
+        '2026-07-24T00:00:00.000Z'
+    );
 });
 
 test('pickDailyDriver returns same driver for same date and difficulty', () => {

@@ -6,6 +6,7 @@ export function createGameModeSelectionController({
 	gameModeController,
 	startDuelMode,
 	startDailyChallenge,
+	isDailyAvailable,
 	onDuelBrowserRequested,
 	onSingleSelected,
 	confirmDuelExit,
@@ -96,7 +97,11 @@ export function createGameModeSelectionController({
 		}
 
 		const status = document.getElementById('status');
-		if (status) status.textContent = 'Daily Challenge: alege dificultatea Daily.';
+		if (status) {
+			status.textContent = isDailyAvailable?.() === false
+				? 'Daily Challenge necesită autentificare. Intră în cont pentru a continua.'
+				: 'Daily Challenge: alege dificultatea Daily.';
+		}
 	}
 
 	function setup() {

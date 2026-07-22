@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const { registerSocketHandlers } = require('../server/socket/registerSocketHandlers');
+const { getDailyDateKey } = require('../server/game/dailyChallenge');
 
 function createFakeIo(socket) {
     return {
@@ -96,6 +97,7 @@ function createDependencies() {
     const singleTarget = buildDriver('single-target', 'Single Target');
     const dailyTarget = buildDriver('daily-target', 'Daily Target');
     const roomStore = createRoomStore();
+    const claimedAttempts = new Map();
 
     return {
         roomStore,
@@ -117,7 +119,8 @@ function createDependencies() {
                 restartSingleRound() {
                     return null;
                 },
-                startDailyChallenge(difficulty, dailyDate) {
+                startDailyChallenge(difficulty, date) {
+                    const dailyDate = getDailyDateKey(date);
                     return {
                         drivers: [dailyTarget],
                         difficulty,
@@ -135,6 +138,26 @@ function createDependencies() {
                 },
                 restartRound() {
                     return null;
+                }
+            },
+            dailyChallengeNow: () => new Date('2026-07-03T12:00:00.000Z'),
+            accountStatsService: {
+                async claimDailyChallenge(attempt) {
+                    const key = `${attempt.userId}:${attempt.challengeId}`;
+                    if (claimedAttempts.has(key)) return false;
+                    claimedAttempts.set(key, { ...attempt });
+                    return true;
+                },
+                async getDailyChallengeStatus(userId, dailyDate) {
+                    return {
+                        dailyDate,
+                        claimedDifficulties: [...claimedAttempts.values()]
+                            .filter(attempt => attempt.userId === userId && attempt.dailyDate === dailyDate)
+                            .map(attempt => attempt.difficulty)
+                    };
+                },
+                async recordGameResult() {
+                    return { recorded: true };
                 }
             }
         },
@@ -155,13 +178,13 @@ function setupConnectedSocket() {
     return { socket, ...context };
 }
 
-test('starting Daily Challenge clears the stale Single session for the same socket', () => {
+test('starting Daily Challenge clears the stale Single session for the same socket', async () => {
     const { socket, singleTarget } = setupConnectedSocket();
 
     socket.trigger('startSingleGame', { level: 'easy' });
     assert.equal(socket.emitted('initGame').length, 1);
 
-    socket.trigger('startDailyChallenge', { level: 'easy', dailyDate: '2026-07-03' });
+    await socket.trigger('startDailyChallenge', { level: 'easy', dailyDate: '2099-01-01' });
     assert.equal(socket.emitted('initDailyChallenge').length, 1);
 
     socket.clearEmitted();
@@ -174,11 +197,11 @@ test('starting Daily Challenge clears the stale Single session for the same sock
     );
 });
 
-test('joining a Duel room clears stale Single and Daily sessions for the same socket', () => {
+test('joining a Duel room clears stale Single and Daily sessions for the same socket', async () => {
     const { socket, singleTarget, dailyTarget } = setupConnectedSocket();
 
     socket.trigger('startSingleGame', { level: 'easy' });
-    socket.trigger('startDailyChallenge', { level: 'easy', dailyDate: '2026-07-03' });
+    await socket.trigger('startDailyChallenge', { level: 'easy' });
     socket.trigger('joinRoom', { roomId: 'abc123', clientId: 'browser-one' });
 
     assert.equal(socket.hasJoined('abc123'), true);

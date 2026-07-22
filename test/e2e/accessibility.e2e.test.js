@@ -140,9 +140,21 @@ test('axe finds no accessibility violations across application screens and state
         await page.locator('#dailyChallengePanel:not(.is-hidden)').waitFor({ state: 'visible', timeout: 7000 });
         reports.push(...await auditPageThemes(page, 'daily-selection'));
 
-        await page.locator('#dailyChallengePanel [data-daily-level="easy"]').click();
+        await page.locator('#dailyChallengePanel [data-daily-level="easy"]:disabled')
+            .waitFor({ state: 'visible', timeout: 7000 });
+        await page.locator('#authOpenBtn').click();
+        await page.locator('#authSwitchBtn').click();
+        await registerAccount(page);
+
+        await page.locator('#dailyChallengePanel [data-daily-level="easy"]:not(:disabled)')
+            .click();
         await page.locator('#gameZone:not(.game-zone-hidden)').waitFor({ state: 'visible', timeout: 7000 });
         reports.push(...await auditPageThemes(page, 'daily-game'));
+
+        await page.locator('#authOpenBtn').click();
+        await page.locator('#authLogoutBtn:not(.is-hidden)').click();
+        await page.locator('#authOpenBtn').filter({ hasText: 'Login' }).waitFor({ state: 'visible', timeout: 7000 });
+        await page.locator('#authCloseBtn').click();
 
         await page.close();
         page = await openAppPage(context, app.baseUrl);

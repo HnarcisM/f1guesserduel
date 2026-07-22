@@ -16,6 +16,7 @@ export function registerSocketEvents(socket, app) {
 		'hostStatus',
 		'initDailyChallenge',
 		'dailyGuessResult',
+		'dailyChallengeStatus',
 		'dailyChallengeError',
 		'accountStatsUpdated'
 	].forEach(eventName => socket.off(eventName));
@@ -184,6 +185,10 @@ export function registerSocketEvents(socket, app) {
 
 	socket.on('initDailyChallenge', (data) => {
 		app.handleInitDailyChallenge?.(data);
+	});
+
+	socket.on('dailyChallengeStatus', (data) => {
+		app.handleDailyChallengeStatus?.(data);
 	});
 
 	socket.on('initGame', (data) => {

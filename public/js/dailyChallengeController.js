@@ -98,10 +98,7 @@ export function createDailyChallengeController({
 
 		const socket = getSocket?.();
 		if (socket) {
-			socket.emit('startDailyChallenge', {
-				level,
-				dailyDate: state.getTodayDateKey()
-			});
+			socket.emit('startDailyChallenge', { level });
 			return;
 		}
 
@@ -111,6 +108,12 @@ export function createDailyChallengeController({
 	}
 
 	function handleInit(data = {}) {
+		state.markStarted({
+			level: data.difficulty,
+			challengeId: data.dailyChallengeId,
+			dailyDate: data.dailyDate,
+			resetAt: data.nextResetAt
+		});
 		hideDifficultyOverlay();
 		setStartPending(false);
 		setMode(true, {
@@ -148,12 +151,22 @@ export function createDailyChallengeController({
 		if (message) showErrorToast(message);
 	}
 
+	function handleStatus(payload = {}) {
+		state.applyServerStatus(payload);
+	}
+
+	function requestStatus() {
+		getSocket?.()?.emit('requestDailyChallengeStatus');
+	}
+
 	return {
 		state,
 		start,
 		complete,
 		handleInit,
 		handleError,
+		handleStatus,
+		requestStatus,
 		setMode,
 		setStartPending,
 		isMode: () => isDailyMode,

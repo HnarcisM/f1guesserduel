@@ -143,6 +143,12 @@ test('Daily uses the server challenge id as the idempotent account result key', 
             }
         },
         accountStatsService: {
+            async claimDailyChallenge() {
+                return true;
+            },
+            async getDailyChallengeStatus(_userId, dailyDate) {
+                return { dailyDate, claimedDifficulties: ['medium'] };
+            },
             async recordGameResult(result) {
                 recorded.push(result);
                 return {
@@ -153,10 +159,11 @@ test('Daily uses the server challenge id as the idempotent account result key', 
                     xpAwarded: 65
                 };
             }
-        }
+        },
+        now: () => new Date('2026-07-18T12:00:00.000Z')
     });
 
-    socket.trigger('startDailyChallenge', { level: 'medium', dailyDate: '2026-07-18' });
+    await socket.trigger('startDailyChallenge', { level: 'medium', dailyDate: '2099-01-01' });
     socket.trigger('submitDailyGuess', target.id);
     await new Promise(resolve => setImmediate(resolve));
 

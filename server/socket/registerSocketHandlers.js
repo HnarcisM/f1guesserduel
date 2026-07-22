@@ -17,6 +17,7 @@ function registerSocketHandlers(io, dependencies) {
         gameService,
         sessionService,
         accountStatsService = null,
+        dailyChallengeNow,
         logger = console,
         metrics = null
     } = dependencies;
@@ -69,6 +70,7 @@ function registerSocketHandlers(io, dependencies) {
             gameService,
             sessionService,
             accountStatsService,
+            now: dailyChallengeNow,
             logger,
             metrics,
             dailySessions,
@@ -99,6 +101,7 @@ function registerSocketHandlers(io, dependencies) {
             gameService,
             leaveCurrentRoom,
             accountStatsService,
+            now: dailyChallengeNow,
             logger,
             onSocketEvent
         });

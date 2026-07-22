@@ -48,7 +48,7 @@ Aplicația rulează cu **Node.js**, **Express** și **Socket.IO**, iar interfaț
 - Teme vizuale multiple.
 - Layout responsive pentru desktop și telefon.
 - Asset-uri locale pentru steaguri și logo-uri de echipe.
-- Daily Challenge separat per cont, dificultate și zi locală a browserului.
+- Daily Challenge disponibil numai după autentificare, cu o încercare atomică per cont, dificultate și zi UTC calculată de server.
 
 ---
 
@@ -57,7 +57,7 @@ Aplicația rulează cu **Node.js**, **Express** și **Socket.IO**, iar interfaț
 1. Utilizatorul alege modul de joc: `Single Play`, `Duel` sau `Daily Challenge`.
 2. În `Single Play`, jocul pornește fără cameră și fără adversar.
 3. În `Duel`, aplicația creează sau folosește un room din URL, apoi sincronizează playerii/spectatorii prin Socket.IO.
-4. În `Daily Challenge`, aplicația pornește provocarea zilei, separată de duel.
+4. În `Daily Challenge`, utilizatorul autentificat pornește provocarea zilei, separată de duel; încercarea este rezervată atomic în baza de date.
 5. În `Duel`, hostul configurează dificultatea și timerul doar din lobby; Single/Daily folosesc overlay-ul lor dedicat.
 6. Serverul selectează pilotul țintă din `data/drivers.json`.
 7. Utilizatorul introduce un pilot și trimite ghicirea.
@@ -423,6 +423,7 @@ La primul deploy peste baza existentă, migrarea `001` folosește operații `IF 
 - Panoul afișează ultimele 10 jocuri cu modul, rezultatul, dificultatea, numărul de încercări și data locală a browserului.
 - Rezultatele sunt înregistrate numai din fluxurile validate de server; browserul nu are endpoint pentru a declara direct o victorie.
 - `user_game_results` păstrează chei unice de rezultat pentru a preveni dublarea, inclusiv la reluarea aceleiași provocări Daily.
+- `user_daily_attempts` rezervă provocarea la pornire și împiedică reluarea ei din alt tab, alt socket sau după ștergerea datelor locale.
 - `user_game_stats` păstrează contoare agregate pentru încărcarea rapidă a panoului.
 - Actualizarea registrului și a contoarelor este tranzacțională în PostgreSQL. Dacă actualizarea statisticilor eșuează temporar, jocul continuă, iar eroarea este logată fără identificatorul utilizatorului.
 - `GET /api/account/summary` folosește exclusiv utilizatorul sesiunii curente și răspunde cu `Cache-Control: no-store`.
@@ -437,7 +438,7 @@ DATABASE_PROVIDER=sqlite
 
 ### Protecție Socket.IO anti-spam
 
-Serverul limitează event-urile Socket.IO sensibile per socket, ca să reducă spam-ul din consolă sau scripturi automate. Sunt protejate acțiuni precum `joinRoom`, `setDifficulty`, `submitGuess`, `startSingleGame`, `submitSingleGuess`, `startDailyChallenge`, `submitDailyGuess`, `restartGame`, `refreshAuthUser` și `abortDuelRound`.
+Serverul limitează event-urile Socket.IO sensibile per socket, ca să reducă spam-ul din consolă sau scripturi automate. Sunt protejate acțiuni precum `joinRoom`, `setDifficulty`, `submitGuess`, `startSingleGame`, `submitSingleGuess`, `requestDailyChallengeStatus`, `startDailyChallenge`, `submitDailyGuess`, `restartGame`, `refreshAuthUser` și `abortDuelRound`.
 
 Dacă limita este depășită, serverul emite `socketRateLimited` și un `errorMessage` generic, fără să execute handlerul original. `leaveRoom`, `disconnecting` și `disconnect` nu sunt limitate, ca jucătorul să poată părăsi camera sau să se deconecteze normal.
 

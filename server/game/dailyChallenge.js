@@ -28,6 +28,16 @@ function getDailyChallengeId(difficulty, dateKey = getDailyDateKey()) {
     return `${DAILY_CHALLENGE_VERSION}:${dateKey}:${difficulty}`;
 }
 
+function getNextDailyResetAt(date = new Date()) {
+    const source = date instanceof Date ? date : new Date(date);
+    const validDate = Number.isNaN(source.getTime()) ? new Date() : source;
+    return new Date(Date.UTC(
+        validDate.getUTCFullYear(),
+        validDate.getUTCMonth(),
+        validDate.getUTCDate() + 1
+    )).toISOString();
+}
+
 function pickDailyDriver(drivers, difficulty, date = new Date()) {
     if (!Array.isArray(drivers) || drivers.length === 0) return null;
 
@@ -46,5 +56,6 @@ module.exports = {
     DAILY_CHALLENGE_VERSION,
     getDailyDateKey,
     getDailyChallengeId,
+    getNextDailyResetAt,
     pickDailyDriver
 };
