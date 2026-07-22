@@ -164,6 +164,29 @@ REQUEST_LOGGING_ENABLED=true
 
 Asta produce loguri JSON pentru request-uri și erori, fără să includă body-uri, query string-uri, parole, token-uri, cookie-uri sau secrete. Fiecare request primește și headerul `X-Request-Id`, util când cauți aceeași eroare în Render Logs.
 
+### Metrici operaționale opționale
+
+Nu este necesară o platformă de monitorizare pentru deploy-ul curent, iar metricile
+rămân dezactivate implicit. Dacă vrei să inspectezi manual endpoint-ul sau să conectezi
+ulterior un serviciu Prometheus/OpenMetrics, adaugă în Render:
+
+```env
+METRICS_ENABLED=true
+METRICS_TOKEN=<token-random-separat-de-minimum-32-caractere>
+METRICS_INCLUDE_PROCESS=true
+```
+
+Generează token-ul separat de secretele de sesiune și nu îl pune în repository:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+Scraper-ul trebuie să apeleze `GET /metrics` cu headerul
+`Authorization: Bearer <metrics-token>`. Ruta răspunde cu `404` când este dezactivată,
+cu `401` pentru un token absent sau invalid și cu `Cache-Control: no-store`. Metricile
+nu conțin ID-uri de cameră, utilizator, socket sau adrese IP.
+
 ### Origini permise pentru Socket.IO și protecția CSRF
 
 Pentru deploy online setează `PUBLIC_ORIGIN` la adresa publică exactă a aplicației, fără slash sau path la final:

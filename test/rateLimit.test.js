@@ -79,6 +79,28 @@ test('rate limiter blocks requests after the configured limit', () => {
     assert.equal(blocked.res.headers['Retry-After'], '60');
 });
 
+test('HTTP rate limiter records only bounded aggregate decisions', () => {
+    const decisions = [];
+    const limiter = createMemoryRateLimiter({
+        windowMs: 60_000,
+        maxRequests: 1,
+        metrics: {
+            recordRateLimit(decision) {
+                decisions.push(decision);
+            }
+        }
+    });
+
+    runLimiter(limiter, { ip: '203.0.113.10' });
+    runLimiter(limiter, { ip: '203.0.113.10' });
+
+    assert.deepEqual(decisions, [
+        { channel: 'http', provider: 'memory', outcome: 'allowed' },
+        { channel: 'http', provider: 'memory', outcome: 'blocked' }
+    ]);
+    assert.equal(JSON.stringify(decisions).includes('203.0.113.10'), false);
+});
+
 test('rate limiter resets after the window expires', () => {
     let currentTime = 1000;
     const limiter = createMemoryRateLimiter({

@@ -14,6 +14,7 @@ function createRoomCleanupService({
     cleanupIntervalMs = DEFAULT_ROOM_CLEANUP_INTERVAL_MS,
     inactiveTtlMs = DEFAULT_ROOM_INACTIVE_TTL_MS,
     logger = console,
+    metrics = null,
     clock = Date.now,
     setIntervalFn = setInterval,
     clearIntervalFn = clearInterval
@@ -52,7 +53,12 @@ function createRoomCleanupService({
         for (const room of roomStore.values()) {
             if (!room?.roomId) continue;
             stats.scannedRoomCount += 1;
-            let changed = removeInactiveRoomMembers(room, isSocketActive, now);
+            let changed = removeInactiveRoomMembers(room, isSocketActive, now, {
+                onMemberExpired: event => metrics?.recordReconnect?.({
+                    ...event,
+                    outcome: 'grace_expired'
+                })
+            });
 
             if (hasActiveSocket(room)) {
                 if (room.inactiveSince !== null && room.inactiveSince !== undefined) {
@@ -66,7 +72,10 @@ function createRoomCleanupService({
                 }
 
                 if (now - room.inactiveSince >= effectiveInactiveTtlMs) {
-                    if (roomStore.remove(room.roomId)) stats.removedRoomCount += 1;
+                    if (roomStore.remove(room.roomId)) {
+                        stats.removedRoomCount += 1;
+                        metrics?.recordRoomEvent?.('inactive_cleanup');
+                    }
                     continue;
                 }
             }

@@ -17,7 +17,8 @@ function registerSocketHandlers(io, dependencies) {
         gameService,
         sessionService,
         accountStatsService = null,
-        logger = console
+        logger = console,
+        metrics = null
     } = dependencies;
     const dailySessions = new Map();
     const singleSessions = new Map();
@@ -25,7 +26,7 @@ function registerSocketHandlers(io, dependencies) {
 
     attachSocketAuth(io, sessionService);
 
-    const roomStateEmitter = createRoomStateEmitter(io, roomStore);
+    const roomStateEmitter = createRoomStateEmitter(io, roomStore, metrics);
     const {
         cleanupInactiveMembers,
         emitRoomStateUpdate
@@ -69,6 +70,7 @@ function registerSocketHandlers(io, dependencies) {
             sessionService,
             accountStatsService,
             logger,
+            metrics,
             dailySessions,
             singleSessions,
             socketEventRateLimiter,

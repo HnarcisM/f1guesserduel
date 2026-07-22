@@ -48,7 +48,13 @@ function hasFailedChecks(checks = {}) {
     return Object.values(checks).some(check => check?.status === CHECK_STATUS_ERROR);
 }
 
-function createHealthChecks({ db = null, redisClient = null, driversRepository = null, roomStore = null } = {}) {
+function createHealthChecks({
+    db = null,
+    redisClient = null,
+    driversRepository = null,
+    roomStore = null,
+    metrics = null
+} = {}) {
     const checks = {};
 
     if (db?.check) {
@@ -65,7 +71,12 @@ function createHealthChecks({ db = null, redisClient = null, driversRepository =
 
     if (redisClient?.ping) {
         checks.redis = async () => {
-            await redisClient.ping();
+            const pingRedis = () => redisClient.ping();
+            if (metrics?.observeDependencyOperation) {
+                await metrics.observeDependencyOperation('redis', 'health_check', pingRedis);
+            } else {
+                await pingRedis();
+            }
             return { status: CHECK_STATUS_OK };
         };
     }

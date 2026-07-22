@@ -8,6 +8,7 @@ function createAuthRoutes({
     rateLimiters = {},
     rateLimitStore = null,
     logger = console,
+    metrics = null,
     cookieOptions = {}
 }) {
     const router = express.Router();
@@ -17,7 +18,8 @@ function createAuthRoutes({
         keyPrefix: 'auth-login',
         message: 'Prea multe încercări de login. Încearcă din nou peste câteva minute.',
         store: rateLimitStore,
-        logger
+        logger,
+        metrics
     });
     const registerRateLimiter = rateLimiters.register || createMemoryRateLimiter({
         windowMs: 10 * 60 * 1000,
@@ -25,7 +27,8 @@ function createAuthRoutes({
         keyPrefix: 'auth-register',
         message: 'Prea multe încercări de înregistrare. Încearcă din nou peste câteva minute.',
         store: rateLimitStore,
-        logger
+        logger,
+        metrics
     });
 
     function buildCookieOptions(extraOptions = {}) {

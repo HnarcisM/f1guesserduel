@@ -11,7 +11,8 @@ async function createRedisClient({
     url,
     connectTimeoutMs = 10_000,
     logger = console,
-    clientFactory = null
+    clientFactory = null,
+    metrics = null
 }) {
     if (!url || typeof url !== 'string') {
         throw new Error('REDIS_URL is required to create a Redis client.');
@@ -35,11 +36,20 @@ async function createRedisClient({
     });
 
     client.on?.('error', error => {
+        metrics?.recordDependencyOperation?.({
+            dependency: 'redis',
+            operation: 'client_event',
+            outcome: 'error'
+        });
         logger?.error?.('Redis client error.', { error, provider: 'redis' });
     });
 
     try {
-        await client.connect();
+        if (metrics?.observeDependencyOperation) {
+            await metrics.observeDependencyOperation('redis', 'connect', () => client.connect());
+        } else {
+            await client.connect();
+        }
     } catch (error) {
         client.destroy?.();
         throw error;

@@ -49,6 +49,56 @@ function wait(delayMs) {
     return new Promise(resolve => setTimeout(resolve, delayMs));
 }
 
+const METRICS_INSTRUMENTED = Symbol('metricsInstrumented');
+
+function instrumentPostgresQueryable(queryable, metrics) {
+    if (!queryable || typeof queryable.query !== 'function' || !metrics?.observeDependencyOperation) {
+        return queryable;
+    }
+    if (queryable[METRICS_INSTRUMENTED]) return queryable;
+
+    const query = queryable.query.bind(queryable);
+    Object.defineProperty(queryable, METRICS_INSTRUMENTED, { value: true });
+    queryable.query = (...args) => metrics.observeDependencyOperation(
+        'postgres',
+        'query',
+        () => query(...args)
+    );
+    return queryable;
+}
+
+function instrumentPostgresPool(pool, metrics) {
+    if (!pool || !metrics?.observeDependencyOperation) return pool;
+
+    return new Proxy(pool, {
+        get(target, property) {
+            if (property === 'query') {
+                return (...args) => metrics.observeDependencyOperation(
+                    'postgres',
+                    'query',
+                    () => target.query(...args)
+                );
+            }
+
+            if (property === 'connect') {
+                return (...args) => {
+                    if (args.some(argument => typeof argument === 'function')) {
+                        return target.connect(...args);
+                    }
+                    return metrics.observeDependencyOperation(
+                        'postgres',
+                        'connect',
+                        async () => instrumentPostgresQueryable(await target.connect(...args), metrics)
+                    );
+                };
+            }
+
+            const value = Reflect.get(target, property, target);
+            return typeof value === 'function' ? value.bind(target) : value;
+        }
+    });
+}
+
 async function closePostgresPool(pool, logger, contextMessage) {
     try {
         await pool.end();
@@ -105,7 +155,8 @@ async function createPostgresDatabase({
     poolClass = null,
     migrationRunner = runPostgresMigrations,
     logger = console,
-    sleep = wait
+    sleep = wait,
+    metrics = null
 }) {
     if (!databaseUrl || typeof databaseUrl !== 'string') {
         throw new Error('DATABASE_URL must be set when DATABASE_PROVIDER=postgres.');
@@ -143,6 +194,11 @@ async function createPostgresDatabase({
         });
 
         pool.on?.('error', error => {
+            metrics?.recordDependencyOperation?.({
+                dependency: 'postgres',
+                operation: 'pool_event',
+                outcome: 'error'
+            });
             logger?.error?.('Unexpected Postgres pool error.', {
                 error,
                 databaseProvider: 'postgres'
@@ -150,12 +206,15 @@ async function createPostgresDatabase({
         });
 
         try {
-            migrationResult = await migrationRunner({
+            const runMigrations = () => migrationRunner({
                 pool,
                 migrationsDirectoryPath,
                 fallbackSchemaFilePath: schemaFilePath,
                 logger
             });
+            migrationResult = metrics?.observeDependencyOperation
+                ? await metrics.observeDependencyOperation('postgres', 'migrate', runMigrations)
+                : await runMigrations();
             break;
         } catch (error) {
             await closePostgresPool(
@@ -190,22 +249,32 @@ async function createPostgresDatabase({
         appliedMigrations: migrationResult?.appliedCount || 0
     });
 
+    const instrumentedPool = instrumentPostgresPool(pool, metrics);
+
     let closePromise = null;
     function closeConnection() {
         if (!closePromise) {
-            closePromise = Promise.resolve().then(() => pool.end());
+            const closePool = () => Promise.resolve().then(() => pool.end());
+            closePromise = metrics?.observeDependencyOperation
+                ? metrics.observeDependencyOperation('postgres', 'shutdown', closePool)
+                : closePool();
         }
         return closePromise;
     }
 
     return {
         provider: 'postgres',
-        pool,
+        pool: instrumentedPool,
         async query(sql, params = []) {
-            return pool.query(sql, params);
+            return instrumentedPool.query(sql, params);
         },
         async check() {
-            await pool.query('SELECT 1 AS ok');
+            const runHealthCheck = () => instrumentedPool.query('SELECT 1 AS ok');
+            if (metrics?.observeDependencyOperation) {
+                await metrics.observeDependencyOperation('postgres', 'health_check', runHealthCheck);
+            } else {
+                await runHealthCheck();
+            }
             return { ok: true };
         },
         closeConnection
@@ -232,7 +301,8 @@ async function createDatabase(options = {}) {
             poolClass: options.poolClass,
             migrationRunner: options.migrationRunner,
             logger: options.logger,
-            sleep: options.sleep
+            sleep: options.sleep,
+            metrics: options.metrics
         });
     }
 
@@ -247,6 +317,7 @@ module.exports = {
     createDatabase,
     createSqliteDatabase,
     createPostgresDatabase,
+    instrumentPostgresPool,
     isTransientPostgresError,
     calculateRetryDelayMs
 };

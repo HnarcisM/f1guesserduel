@@ -23,6 +23,8 @@ const { createAuthMiddleware } = require('./middleware/authMiddleware');
 const { createErrorMiddleware } = require('./middleware/errorMiddleware');
 const { createServerErrorHandler } = require('./middleware/serverErrorHandler');
 const { createHealthRoutes, createHealthChecks } = require('./routes/healthRoutes');
+const { createMetricsRoutes } = require('./routes/metricsRoutes');
+const { createOperationalMetrics } = require('./metrics/operationalMetrics');
 const { createSecurityHeadersMiddleware } = require('./middleware/securityHeaders');
 const { createRequestLoggingMiddleware } = require('./middleware/requestLogging');
 const { createResponseCompressionMiddleware } = require('./middleware/responseCompression');
@@ -43,6 +45,10 @@ const config = createAppConfig(process.env, {
 const logger = createLogger({
     isProduction: config.isProduction,
     level: config.logging.level
+});
+const operationalMetrics = createOperationalMetrics({
+    enabled: config.metrics.enabled,
+    includeProcessMetrics: config.metrics.includeProcessMetrics
 });
 
 function logPersistenceMode(currentConfig) {
@@ -100,8 +106,10 @@ const db = await createDatabase({
     schemaFilePath: config.schemaFilePath,
     postgresSchemaFilePath: config.postgresSchemaFilePath,
     postgresMigrationsDirPath: config.postgresMigrationsDirPath,
-    logger
+    logger,
+    metrics: operationalMetrics
 });
+operationalMetrics.setDatabase(db);
 let redisClient = null;
 let roomStore;
 
@@ -110,15 +118,18 @@ try {
         redisClient = await createRedisClient({
             url: config.redis.url,
             connectTimeoutMs: config.redis.connectTimeoutMs,
-            logger
+            logger,
+            metrics: operationalMetrics
         });
+        operationalMetrics.setRedisClient(redisClient);
         roomStore = await createRedisRoomStore({
             redisClient,
             keyPrefix: config.redis.keyPrefix,
             roomTtlSeconds: config.redis.roomTtlSeconds,
             saveDebounceMs: config.rooms.saveDebounceMs,
             driversRepository,
-            logger
+            logger,
+            metrics: operationalMetrics
         });
     } else {
         roomStore = createPersistentRoomStore({
@@ -135,6 +146,7 @@ try {
     ]);
     throw error;
 }
+operationalMetrics.setRoomStore(roomStore);
 const sessionService = createSessionService(db, {
     cookieName: config.auth.sessionCookieName,
     sessionMaxAgeMs: config.auth.sessionMaxAgeMs,
@@ -147,7 +159,8 @@ const accountStatsService = createAccountStatsService(db);
 const redisRateLimitStore = redisClient
     ? createRedisRateLimitStore({
         redisClient,
-        keyPrefix: config.redis.keyPrefix
+        keyPrefix: config.redis.keyPrefix,
+        metrics: operationalMetrics
     })
     : null;
 const stopExpiredSessionCleanup = sessionService.startExpiredSessionCleanup({
@@ -159,7 +172,8 @@ const roomCleanupService = createRoomCleanupService({
     isSocketActive: socketId => io.sockets.sockets.has(socketId),
     cleanupIntervalMs: config.rooms.cleanupIntervalMs,
     inactiveTtlMs: config.rooms.inactiveTtlMs,
-    logger
+    logger,
+    metrics: operationalMetrics
 });
 const stopInactiveRoomCleanup = roomCleanupService.start();
 const csrfProtection = createCsrfProtectionMiddleware({
@@ -174,6 +188,11 @@ app.use(createRequestLoggingMiddleware({
     enabled: config.logging.requestLoggingEnabled
 }));
 app.use(createResponseCompressionMiddleware());
+app.use(createMetricsRoutes({
+    enabled: config.metrics.enabled,
+    token: config.metrics.token,
+    operationalMetrics
+}));
 app.use(express.json({ limit: '32kb' }));
 app.use(cookieParser());
 app.use(createAuthMiddleware(sessionService));
@@ -188,7 +207,8 @@ app.use('/api', createHealthRoutes({
         db,
         redisClient,
         driversRepository,
-        roomStore
+        roomStore,
+        metrics: operationalMetrics
     })
 }));
 app.use('/api/auth', createAuthRoutes({
@@ -196,6 +216,7 @@ app.use('/api/auth', createAuthRoutes({
     sessionService,
     rateLimitStore: redisRateLimitStore,
     logger,
+    metrics: operationalMetrics,
     cookieOptions: config.auth.cookie
 }));
 app.use('/api/account', createAccountRoutes({
@@ -204,6 +225,7 @@ app.use('/api/account', createAccountRoutes({
     sessionService,
     rateLimitStore: redisRateLimitStore,
     logger,
+    metrics: operationalMetrics,
     cookieOptions: config.auth.cookie
 }));
 app.use(express.static(config.publicDir, {
@@ -217,9 +239,10 @@ const socketRateLimit = redisClient
         ...config.socket.rateLimit,
         store: redisRateLimitStore,
         identityResolver: getDistributedSocketIdentity,
-        logger
+        logger,
+        metrics: operationalMetrics
     }
-    : config.socket.rateLimit;
+    : { ...config.socket.rateLimit, metrics: operationalMetrics };
 
 registerSocketHandlers(io, {
     roomStore,
@@ -227,6 +250,7 @@ registerSocketHandlers(io, {
     sessionService,
     accountStatsService,
     logger,
+    metrics: operationalMetrics,
     socketRateLimit
 });
 

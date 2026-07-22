@@ -87,6 +87,7 @@ Răspunsul corect este ținut pe server până la finalul jocului, pentru a evit
 - **esbuild** – bundle-uri CSS/JavaScript minificate și versionate prin hash.
 - **Playwright, axe-core și sharp** – E2E, accesibilitate și regresie vizuală.
 - **Node test runner și c8** – teste unitare, integrare și coverage cu praguri CI.
+- **prom-client** – metrici operaționale Prometheus/OpenMetrics protejate cu Bearer token.
 
 ---
 
@@ -331,6 +332,9 @@ Aplicația poate fi configurată prin variabile de mediu. Pentru rulare locală 
 | `SOCKET_RATE_LIMIT_WINDOW_MS` | `60000` | Fereastra de timp pentru limitele Socket.IO, în milisecunde. |
 | `LOG_LEVEL` | `debug` local, `info` production | Nivelul minim de log: `silent`, `error`, `warn`, `info`, `debug`. |
 | `REQUEST_LOGGING_ENABLED` | `false` local, `true` production | Activează logurile HTTP pe request-uri, fără body/query string. |
+| `METRICS_ENABLED` | `false` | Activează endpoint-ul operațional protejat `GET /metrics`. |
+| `METRICS_TOKEN` | none | Bearer token separat, de minimum 32 de caractere, obligatoriu când metricile sunt active. |
+| `METRICS_INCLUDE_PROCESS` | `true` | Include metricile standard Node.js pentru CPU, memorie și event loop. |
 
 Validarea configului este strictă: dacă o variabilă este setată cu o valoare invalidă, serverul se oprește cu un mesaj clar. Reguli importante:
 
@@ -352,6 +356,7 @@ Validarea configului este strictă: dacă o variabilă este setată cu o valoare
 - `SOCKET_RATE_LIMIT_WINDOW_MS` trebuie să fie între `1000` și `3600000`;
 - `REDIS_URL`, dacă este setat, trebuie să fie un URL `redis://` sau `rediss://`, iar prefixul Redis acceptă numai litere, cifre, `.`, `_`, `-` și `:`;
 - `LOG_LEVEL` trebuie să fie `silent`, `error`, `warn`, `info` sau `debug`.
+- `METRICS_ENABLED=true` cere un `METRICS_TOKEN` separat de minimum 32 de caractere.
 
 Există și un fișier `.env.example` cu un exemplu de configurare. Aplicația nu încarcă automat `.env`, ca să nu adăugăm dependințe noi; setează variabilele direct în mediul de rulare sau folosește un loader extern dacă ai nevoie.
 
@@ -457,6 +462,31 @@ Protecții incluse:
 - erorile 500 sunt logate cu requestId/metodă/path/status, dar răspunsul public rămâne generic în production;
 - `uncaughtException` și `unhandledRejection` sunt logate și serverul încearcă un shutdown controlat.
 ```
+
+### Metrici operaționale Prometheus/OpenMetrics
+
+Metricile sunt independente de platforma de monitorizare și sunt dezactivate implicit.
+Pentru o verificare locală sau pentru conectarea ulterioară a unui scraper:
+
+```env
+METRICS_ENABLED=true
+METRICS_TOKEN=<token-random-de-minimum-32-caractere>
+METRICS_INCLUDE_PROCESS=true
+```
+
+Endpoint-ul nu este public și nu folosește sesiunea utilizatorului. Trimite token-ul
+dedicat exclusiv în headerul `Authorization`:
+
+```bash
+curl -H "Authorization: Bearer <metrics-token>" http://localhost:3000/metrics
+```
+
+Sunt agregate numărul și starea camerelor, membrii conectați/deconectați, lifecycle-ul
+camerelor, reconectările și expirarea grace period-ului, operațiile și duratele Redis/
+PostgreSQL, conexiunile pool-ului PostgreSQL și deciziile de rate limiting HTTP/Socket.IO.
+Etichetele au valori fixe și nu includ ID-uri de cameră, socket, utilizator, IP sau alte
+date cu cardinalitate mare. Când `METRICS_ENABLED=false`, ruta răspunde cu `404`, iar
+colectarea custom nu adaugă lucru suplimentar fluxurilor aplicației.
 
 ---
 
@@ -753,6 +783,7 @@ Valorile `?v=` nu trebuie modificate manual. Hash-urile normalizează terminatoa
 - Rate limiting-ul funcționează local sau distribuit prin Redis pentru HTTP și Socket.IO.
 - Helmet configurează CSP fără `unsafe-inline`, blochează atributele inline de script/stil și activează protecție anti-clickjacking, `Referrer-Policy` și HSTS în production.
 - Health checks, logging structurat, redactarea datelor sensibile și graceful shutdown sunt active.
+- Metricile operaționale agregate sunt disponibile în format Prometheus/OpenMetrics printr-un endpoint opt-in protejat.
 
 ### Asset-uri
 
@@ -832,17 +863,12 @@ Aplicația este stabilă pentru deployment pe o singură instanță Node.js și 
 - CSP strict fără `unsafe-inline`, cu procente dinamice limitate la clase CSS predefinite;
 - health checks, logging structurat și graceful shutdown.
 
-Lista consolidată de optimizări este finalizată cu excepția celor două puncte
-tehnice de mai jos.
+Lista consolidată de optimizări este finalizată pentru deployment-ul actual pe o
+singură instanță. A rămas un singur punct tehnic condiționat de arhitectura de deploy.
 
 ### Optimizări tehnice rămase
 
-1. **Metrici operaționale agregate**
-
-   Contoare și durate pentru camere, reconnect, Redis, PostgreSQL și rate limiting,
-   expuse într-un format potrivit pentru platforma de monitorizare aleasă.
-
-2. **Scalare Socket.IO multi-instance**
+1. **Scalare Socket.IO multi-instance**
 
    Redis adapter pentru distribuirea evenimentelor, ownership/concurență pentru
    camere și teste cu minimum două instanțe. Această etapă devine necesară doar

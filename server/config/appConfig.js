@@ -20,6 +20,7 @@ const DEFAULT_POSTGRES_MAX_LIFETIME_SECONDS = 5 * 60;
 const DEFAULT_REDIS_CONNECT_TIMEOUT_MS = 10 * 1000;
 const DEFAULT_REDIS_ROOM_TTL_SECONDS = 24 * 60 * 60;
 const DEFAULT_REDIS_KEY_PREFIX = 'f1guesserduel';
+const MIN_METRICS_TOKEN_LENGTH = 32;
 const DEV_SESSION_SECRET = 'f1-guesser-duel-dev-session-secret';
 const DEV_SOCKET_AUTH_SECRET = 'f1-guesser-duel-dev-socket-auth-secret';
 const ALLOWED_NODE_ENV_VALUES = new Set(['development', 'test', 'production']);
@@ -309,6 +310,14 @@ function createAppConfig(env = process.env, options = {}) {
     const databaseProvider = normalizeDatabaseProvider(env.DATABASE_PROVIDER);
     const databaseUrl = getOptionalEnvString(env, 'DATABASE_URL');
     const redisUrl = normalizeRedisUrl(env.REDIS_URL);
+    const metricsEnabled = parseBooleanEnv(env, 'METRICS_ENABLED', false);
+    const metricsToken = getOptionalEnvString(env, 'METRICS_TOKEN');
+    if (metricsEnabled && !metricsToken) {
+        throw new Error('METRICS_TOKEN must be set when METRICS_ENABLED=true.');
+    }
+    if (metricsToken && metricsToken.length < MIN_METRICS_TOKEN_LENGTH) {
+        throw new Error(`METRICS_TOKEN must contain at least ${MIN_METRICS_TOKEN_LENGTH} characters.`);
+    }
     if (databaseProvider === 'postgres' && !databaseUrl) {
         throw new Error('DATABASE_URL must be set when DATABASE_PROVIDER=postgres.');
     }
@@ -474,6 +483,11 @@ function createAppConfig(env = process.env, options = {}) {
             level: normalizeLogLevel(env.LOG_LEVEL, isProduction ? 'info' : 'debug'),
             requestLoggingEnabled: parseBooleanEnv(env, 'REQUEST_LOGGING_ENABLED', isProduction)
         },
+        metrics: {
+            enabled: metricsEnabled,
+            token: metricsToken,
+            includeProcessMetrics: parseBooleanEnv(env, 'METRICS_INCLUDE_PROCESS', true)
+        },
         socket: {
             allowedOrigins: socketAllowedOrigins,
             rateLimit: {
@@ -544,5 +558,6 @@ module.exports = {
     DEFAULT_POSTGRES_MAX_LIFETIME_SECONDS,
     DEFAULT_REDIS_CONNECT_TIMEOUT_MS,
     DEFAULT_REDIS_ROOM_TTL_SECONDS,
-    DEFAULT_REDIS_KEY_PREFIX
+    DEFAULT_REDIS_KEY_PREFIX,
+    MIN_METRICS_TOKEN_LENGTH
 };

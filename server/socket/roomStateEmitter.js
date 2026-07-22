@@ -8,17 +8,22 @@ const {
     buildPublicRoomState
 } = require('../rooms/roomService');
 
-function createRoomStateEmitter(io, roomStore) {
+function createRoomStateEmitter(io, roomStore, metrics = null) {
     function isSocketActive(socketId) {
         return io.sockets.sockets.has(socketId);
     }
 
     function cleanupInactiveMembers(roomId, room) {
         if (!room) return false;
-        const changed = removeInactiveRoomMembers(room, isSocketActive);
+        const changed = removeInactiveRoomMembers(room, isSocketActive, Date.now(), {
+            onMemberExpired: event => metrics?.recordReconnect?.({
+                ...event,
+                outcome: 'grace_expired'
+            })
+        });
 
         if (getRoomMemberCount(room) === 0) {
-            roomStore.remove(roomId);
+            if (roomStore.remove(roomId)) metrics?.recordRoomEvent?.('removed');
             return true;
         }
 

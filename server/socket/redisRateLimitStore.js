@@ -30,7 +30,7 @@ function getDistributedSocketIdentity(socket) {
     return `anonymous:${address}`;
 }
 
-function createRedisRateLimitStore({ redisClient, keyPrefix = 'f1guesserduel' }) {
+function createRedisRateLimitStore({ redisClient, keyPrefix = 'f1guesserduel', metrics = null }) {
     if (!redisClient || typeof redisClient.eval !== 'function') {
         throw new Error('A connected Redis client is required for Redis rate limiting.');
     }
@@ -39,10 +39,13 @@ function createRedisRateLimitStore({ redisClient, keyPrefix = 'f1guesserduel' })
         provider: 'redis',
         async consume({ key, maxEvents, windowMs, currentTime = Date.now() }) {
             const redisKey = `${keyPrefix}:rate-limit:${hashRateLimitIdentity(key)}`;
-            const result = await redisClient.eval(REDIS_RATE_LIMIT_SCRIPT, {
+            const consumeLimit = () => redisClient.eval(REDIS_RATE_LIMIT_SCRIPT, {
                 keys: [redisKey],
                 arguments: [String(windowMs)]
             });
+            const result = metrics?.observeDependencyOperation
+                ? await metrics.observeDependencyOperation('redis', 'rate_limit', consumeLimit)
+                : await consumeLimit();
             const count = Number(result?.[0]);
             const rawTtlMs = Number(result?.[1]);
             if (!Number.isFinite(count) || count < 1 || !Number.isFinite(rawTtlMs)) {

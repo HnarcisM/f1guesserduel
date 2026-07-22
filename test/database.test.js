@@ -5,9 +5,44 @@ const test = require('node:test');
 
 const {
     createPostgresDatabase,
+    instrumentPostgresPool,
     isTransientPostgresError,
     calculateRetryDelayMs
 } = require('../server/db/database');
+
+test('Postgres pool instrumentation observes pooled and checked-out client queries', async () => {
+    const operations = [];
+    const client = {
+        async query(sql) {
+            return { rows: [{ sql }] };
+        }
+    };
+    const pool = {
+        async query(sql) {
+            return { rows: [{ sql }] };
+        },
+        async connect() {
+            return client;
+        }
+    };
+    const metrics = {
+        async observeDependencyOperation(dependency, operation, callback) {
+            operations.push({ dependency, operation });
+            return callback();
+        }
+    };
+
+    const instrumentedPool = instrumentPostgresPool(pool, metrics);
+    await instrumentedPool.query('SELECT 1');
+    const checkedOutClient = await instrumentedPool.connect();
+    await checkedOutClient.query('BEGIN');
+
+    assert.deepEqual(operations, [
+        { dependency: 'postgres', operation: 'query' },
+        { dependency: 'postgres', operation: 'connect' },
+        { dependency: 'postgres', operation: 'query' }
+    ]);
+});
 
 const schemaFilePath = path.join(__dirname, '..', 'server', 'db', 'postgresSchema.sql');
 const migrationsDirectoryPath = path.join(__dirname, '..', 'server', 'db', 'migrations', 'postgres');

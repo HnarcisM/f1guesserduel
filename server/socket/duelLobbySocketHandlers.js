@@ -30,7 +30,8 @@ function registerDuelLobbySocketHandlers(context) {
         emitHostStatus,
         emitRoomRoleStatuses,
         emitRoomStateUpdate,
-        emitRoomListUpdate
+        emitRoomListUpdate,
+        metrics
     } = context;
 
     onSocketEvent('requestRoomList', () => {
@@ -44,9 +45,16 @@ function registerDuelLobbySocketHandlers(context) {
             return;
         }
 
-        const memberOptions = { clientId };
+        const memberOptions = {
+            clientId,
+            onReconnect: event => metrics?.recordReconnect?.({
+                ...event,
+                outcome: 'restored'
+            })
+        };
         if (!roomStore.has(roomId)) {
             roomStore.set(roomId, createRoom(roomId, socket.id, socket.user || null, memberOptions));
+            metrics?.recordRoomEvent?.('created');
         }
 
         const room = roomStore.get(roomId);

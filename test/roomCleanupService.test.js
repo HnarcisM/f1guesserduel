@@ -44,12 +44,18 @@ test('periodic room cleanup removes only rooms inactive for 30 minutes', () => {
     const recentRoom = createReconnectableRoom('recent-room', 'socket-recent');
     const roomStore = createRoomStore([activeRoom, expiredRoom, recentRoom]);
     const activeSocketIds = new Set(['socket-active']);
+    const roomEvents = [];
     const service = createRoomCleanupService({
         roomStore,
         isSocketActive: socketId => activeSocketIds.has(socketId),
         inactiveTtlMs: INACTIVE_TTL_MS,
         clock: () => now,
-        logger: { info() {}, error() {} }
+        logger: { info() {}, error() {} },
+        metrics: {
+            recordRoomEvent(event) {
+                roomEvents.push(event);
+            }
+        }
     });
 
     const result = service.cleanupInactiveRooms();
@@ -64,18 +70,25 @@ test('periodic room cleanup removes only rooms inactive for 30 minutes', () => {
     assert.equal(roomStore.get('expired-room'), null);
     assert.deepEqual(roomStore.removedRoomIds, ['expired-room']);
     assert.ok(roomStore.dirtyCalls.every(call => call.options.touchActivity === false));
+    assert.deepEqual(roomEvents, ['inactive_cleanup']);
 });
 
 test('disconnected members keep their room through reconnect grace and inactive TTL', () => {
     let now = 5_000_000;
     const room = createReconnectableRoom('grace-room', 'socket-old');
     const roomStore = createRoomStore([room]);
+    const reconnectEvents = [];
     const service = createRoomCleanupService({
         roomStore,
         isSocketActive: () => false,
         inactiveTtlMs: INACTIVE_TTL_MS,
         clock: () => now,
-        logger: { info() {}, error() {} }
+        logger: { info() {}, error() {} },
+        metrics: {
+            recordReconnect(event) {
+                reconnectEvents.push(event);
+            }
+        }
     });
 
     service.cleanupInactiveRooms();
@@ -86,6 +99,9 @@ test('disconnected members keep their room through reconnect grace and inactive 
     service.cleanupInactiveRooms();
     assert.equal(Object.keys(room.players).length, 0);
     assert.ok(roomStore.get('grace-room'));
+    assert.equal(reconnectEvents[0].outcome, 'grace_expired');
+    assert.equal(reconnectEvents[0].role, 'player');
+    assert.ok(reconnectEvents[0].durationMs > 2 * 60 * 1000);
 
     now = 5_000_000 + INACTIVE_TTL_MS - 1;
     service.cleanupInactiveRooms();

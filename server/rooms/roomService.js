@@ -194,9 +194,16 @@ function addPlayerToRoom(room, socketId, authUser = null, options = {}) {
 
     const existingMember = findRoomMemberByParticipantKey(room, participantKey);
     if (existingMember) {
+        const disconnectedAt = existingMember.member.disconnectedAt;
         const member = moveRoomMemberSocket(room, existingMember, socketId, authUser, options);
         if (member.role === 'player') ensureMemberScoreEntry(room, member);
         syncHostFlags(room);
+        options.onReconnect?.({
+            role: member.role,
+            durationMs: Number.isFinite(disconnectedAt)
+                ? Math.max(0, Date.now() - disconnectedAt)
+                : null
+        });
         return { joined: true, role: member.role, reconnected: true };
     }
 
@@ -324,7 +331,7 @@ function shouldRemoveDisconnectedMember(member, now = Date.now()) {
     return now - member.disconnectedAt > DISCONNECTED_MEMBER_GRACE_MS;
 }
 
-function removeInactiveRoomMembers(room, isSocketActive, now = Date.now()) {
+function removeInactiveRoomMembers(room, isSocketActive, now = Date.now(), options = {}) {
     if (!room || typeof isSocketActive !== 'function') return false;
     ensureRoomCollections(room);
 
@@ -340,6 +347,12 @@ function removeInactiveRoomMembers(room, isSocketActive, now = Date.now()) {
             if (!wasAlreadyDisconnected) changed = true;
 
             if (shouldRemoveDisconnectedMember(player, now)) {
+                options.onMemberExpired?.({
+                    role: 'player',
+                    durationMs: Number.isFinite(player.disconnectedAt)
+                        ? Math.max(0, now - player.disconnectedAt)
+                        : null
+                });
                 delete room.players[socketId];
                 changed = true;
                 removedActivePlayer = true;
@@ -360,6 +373,12 @@ function removeInactiveRoomMembers(room, isSocketActive, now = Date.now()) {
             if (!wasAlreadyDisconnected) changed = true;
 
             if (shouldRemoveDisconnectedMember(spectator, now)) {
+                options.onMemberExpired?.({
+                    role: 'spectator',
+                    durationMs: Number.isFinite(spectator.disconnectedAt)
+                        ? Math.max(0, now - spectator.disconnectedAt)
+                        : null
+                });
                 delete room.spectators[socketId];
                 changed = true;
             }

@@ -40,6 +40,7 @@ function createAccountRoutes({
     rateLimiters = {},
     rateLimitStore = null,
     logger = console,
+    metrics = null,
     cookieOptions = {}
 }) {
     const router = express.Router();
@@ -50,7 +51,8 @@ function createAccountRoutes({
         keyGenerator: getAccountRateLimitKey,
         message: 'Prea multe încercări de modificare a profilului. Încearcă din nou mai târziu.',
         store: rateLimitStore,
-        logger
+        logger,
+        metrics
     });
     const updatePasswordRateLimiter = rateLimiters.updatePassword || createMemoryRateLimiter({
         windowMs: 15 * 60 * 1000,
@@ -59,7 +61,8 @@ function createAccountRoutes({
         keyGenerator: getAccountRateLimitKey,
         message: 'Prea multe încercări de schimbare a parolei. Încearcă din nou mai târziu.',
         store: rateLimitStore,
-        logger
+        logger,
+        metrics
     });
     const logoutAllRateLimiter = rateLimiters.logoutAll || createMemoryRateLimiter({
         windowMs: 60 * 1000,
@@ -68,7 +71,8 @@ function createAccountRoutes({
         keyGenerator: getAccountRateLimitKey,
         message: 'Prea multe cereri de logout. Încearcă din nou peste un minut.',
         store: rateLimitStore,
-        logger
+        logger,
+        metrics
     });
     const updateAvatarRateLimiter = rateLimiters.updateAvatar || createMemoryRateLimiter({
         windowMs: 60 * 1000,
@@ -77,7 +81,8 @@ function createAccountRoutes({
         keyGenerator: getAccountRateLimitKey,
         message: 'Prea multe schimbări de avatar. Încearcă din nou peste un minut.',
         store: rateLimitStore,
-        logger
+        logger,
+        metrics
     });
 
     function getSessionToken(req) {

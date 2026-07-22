@@ -83,7 +83,8 @@ function createSocketEventRateLimiter({
     store = null,
     identityResolver = getSocketId,
     failOpen = true,
-    logger = console
+    logger = console,
+    metrics = null
 } = {}) {
     const normalizedLimits = normalizeLimits(limits, windowMs);
     const buckets = new Map();
@@ -180,7 +181,17 @@ function createSocketEventRateLimiter({
         return (...args) => {
             const result = consume(socket, eventName);
 
-            function handleResult(resolvedResult) {
+            function handleResult(resolvedResult, {
+                provider = store?.provider || 'memory',
+                fallback = false
+            } = {}) {
+                if (enabled && getLimit(eventName)) {
+                    metrics?.recordRateLimit?.({
+                        channel: 'socket',
+                        provider,
+                        outcome: `${fallback ? 'fallback_' : ''}${resolvedResult.allowed ? 'allowed' : 'blocked'}`
+                    });
+                }
                 if (!resolvedResult.allowed) {
                     emitRateLimitError(socket, eventName, resolvedResult, message);
                     return undefined;
@@ -190,21 +201,32 @@ function createSocketEventRateLimiter({
             }
 
             if (result && typeof result.then === 'function') {
-                return result.then(handleResult, error => {
-                    logStoreError(error, eventName);
-                    if (failOpen) {
-                        const limit = getLimit(eventName);
-                        return handleResult(consumeFromMemory(socket, eventName, limit));
-                    }
+                return result.then(
+                    resolvedResult => handleResult(resolvedResult, { provider: store?.provider || 'external' }),
+                    error => {
+                        logStoreError(error, eventName);
+                        if (failOpen) {
+                            const limit = getLimit(eventName);
+                            return handleResult(consumeFromMemory(socket, eventName, limit), {
+                                provider: 'memory',
+                                fallback: true
+                            });
+                        }
 
-                    emitRateLimitError(socket, eventName, {
-                        retryAfterMs: getLimit(eventName)?.windowMs || windowMs
-                    }, message);
-                    return undefined;
-                });
+                        metrics?.recordRateLimit?.({
+                            channel: 'socket',
+                            provider: store?.provider || 'external',
+                            outcome: 'fallback_blocked'
+                        });
+                        emitRateLimitError(socket, eventName, {
+                            retryAfterMs: getLimit(eventName)?.windowMs || windowMs
+                        }, message);
+                        return undefined;
+                    }
+                );
             }
 
-            return handleResult(result);
+            return handleResult(result, { provider: store?.provider || 'memory' });
         };
     }
 

@@ -29,7 +29,8 @@ function createMemoryRateLimiter({
     store = null,
     failOpen = true,
     logger = console,
-    storeErrorLogIntervalMs = 30_000
+    storeErrorLogIntervalMs = 30_000,
+    metrics = null
 } = {}) {
     if (!Number.isFinite(windowMs) || windowMs <= 0) {
         throw new Error('Rate limiter windowMs must be a positive number.');
@@ -89,7 +90,10 @@ function createMemoryRateLimiter({
         };
     }
 
-    function applyResult(result, res, next) {
+    function applyResult(result, res, next, {
+        provider = store?.provider || 'memory',
+        fallback = false
+    } = {}) {
         const resetAt = Number.isFinite(result?.resetAt)
             ? result.resetAt
             : clock() + Math.max(1, Number(result?.retryAfterMs) || windowMs);
@@ -97,6 +101,12 @@ function createMemoryRateLimiter({
         res.setHeader('X-RateLimit-Limit', String(maxRequests));
         res.setHeader('X-RateLimit-Remaining', String(Math.max(0, Number(result?.remaining) || 0)));
         res.setHeader('X-RateLimit-Reset', String(Math.ceil(resetAt / 1000)));
+
+        metrics?.recordRateLimit?.({
+            channel: 'http',
+            provider,
+            outcome: `${fallback ? 'fallback_' : ''}${result?.allowed ? 'allowed' : 'blocked'}`
+        });
 
         if (!result?.allowed) {
             res.setHeader('Retry-After', formatRetryAfter((result?.retryAfterMs || windowMs) / 1000));
@@ -122,14 +132,20 @@ function createMemoryRateLimiter({
     function handleStoreError(error, key, res, next) {
         logStoreError(error);
         if (failOpen) {
-            return applyResult(consumeFromMemory(key), res, next);
+            return applyResult(consumeFromMemory(key), res, next, {
+                provider: 'memory',
+                fallback: true
+            });
         }
         return applyResult({
             allowed: false,
             remaining: 0,
             retryAfterMs: windowMs,
             resetAt: clock() + windowMs
-        }, res, next);
+        }, res, next, {
+            provider: store?.provider || 'external',
+            fallback: true
+        });
     }
 
     function middleware(req, res, next) {
@@ -137,7 +153,7 @@ function createMemoryRateLimiter({
         const key = getKey(req);
 
         if (!store?.consume) {
-            return applyResult(consumeFromMemory(key, currentTime), res, next);
+            return applyResult(consumeFromMemory(key, currentTime), res, next, { provider: 'memory' });
         }
 
         let result;
@@ -153,11 +169,11 @@ function createMemoryRateLimiter({
         }
 
         if (!result || typeof result.then !== 'function') {
-            return applyResult(result, res, next);
+            return applyResult(result, res, next, { provider: store.provider || 'external' });
         }
 
         return result.then(
-            resolvedResult => applyResult(resolvedResult, res, next),
+            resolvedResult => applyResult(resolvedResult, res, next, { provider: store.provider || 'external' }),
             error => handleStoreError(error, key, res, next)
         );
     }

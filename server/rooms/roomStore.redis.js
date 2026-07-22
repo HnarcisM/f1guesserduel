@@ -177,7 +177,8 @@ async function createRedisRoomStore({
     roomTtlSeconds = 86_400,
     saveDebounceMs = 250,
     driversRepository = null,
-    logger = console
+    logger = console,
+    metrics = null
 }) {
     if (!redisClient
         || typeof redisClient.get !== 'function'
@@ -186,13 +187,16 @@ async function createRedisRoomStore({
         throw new Error('A connected Redis client with get, set and del support is required for room persistence.');
     }
 
-    const restoredRooms = await restoreRedisRooms({
+    const restoreRooms = () => restoreRedisRooms({
         redisClient,
         keyPrefix,
         roomTtlSeconds,
         driversRepository,
         logger
     });
+    const restoredRooms = metrics?.observeDependencyOperation
+        ? await metrics.observeDependencyOperation('redis', 'room_restore', restoreRooms)
+        : await restoreRooms();
     const rooms = new Map(restoredRooms.map(room => [room.roomId, room]));
     const pendingUpserts = new Set();
     const pendingDeletes = new Set();
@@ -239,7 +243,17 @@ async function createRedisRoomStore({
             const deletedKeys = deleteIds.map(roomId => buildRedisRoomKey(keyPrefix, roomId));
 
             try {
-                await executeRedisMutations(redisClient, upserts, deletedKeys, roomTtlSeconds);
+                const persistRooms = () => executeRedisMutations(
+                    redisClient,
+                    upserts,
+                    deletedKeys,
+                    roomTtlSeconds
+                );
+                if (metrics?.observeDependencyOperation) {
+                    await metrics.observeDependencyOperation('redis', 'room_persist', persistRooms);
+                } else {
+                    await persistRooms();
+                }
                 lastSavedRoomCount = rooms.size;
                 lastSaveError = null;
             } catch (error) {

@@ -26,7 +26,8 @@ function registerDuelLifecycleSocketHandlers(context) {
         emitRoomRoleStatuses,
         emitRoomStateUpdate,
         emitRoomListUpdate,
-        dailySessions
+        dailySessions,
+        metrics
     } = context;
 
     function leaveCurrentRoom() {
@@ -61,7 +62,7 @@ function registerDuelLifecycleSocketHandlers(context) {
         cleanupInactiveMembers(roomId, room);
 
         if (getRoomMemberCount(room) === 0) {
-            roomStore.remove(roomId);
+            if (roomStore.remove(roomId)) metrics?.recordRoomEvent?.('removed');
             emitRoomListUpdate();
             return;
         }
@@ -79,6 +80,11 @@ function registerDuelLifecycleSocketHandlers(context) {
 
         const disconnectedMember = markRoomMemberDisconnectedBySocketId(room, socket.id);
         if (!disconnectedMember) return;
+
+        metrics?.recordReconnect?.({
+            outcome: 'disconnected',
+            role: disconnectedMember.role
+        });
 
         state.hasMarkedCurrentRoomDisconnected = true;
         roomStore.markDirty?.(roomId);

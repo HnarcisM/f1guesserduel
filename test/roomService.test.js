@@ -122,7 +122,11 @@ test('refresh reconnects the same browser participant and preserves duel progres
     markRoomMemberDisconnectedBySocketId(room, 'socket-1');
     assert.equal(getPlayer(room, 'socket-1').connected, false);
 
-    const result = addPlayerToRoom(room, 'socket-1-refresh', null, { clientId: 'tab-one' });
+    const reconnectEvents = [];
+    const result = addPlayerToRoom(room, 'socket-1-refresh', null, {
+        clientId: 'tab-one',
+        onReconnect: event => reconnectEvents.push(event)
+    });
     const reconnectedPlayer = getPlayer(room, 'socket-1-refresh');
 
     assert.deepEqual(result, { joined: true, role: 'player', reconnected: true });
@@ -133,6 +137,9 @@ test('refresh reconnects the same browser participant and preserves duel progres
     assert.equal(reconnectedPlayer.connected, true);
     assert.equal(room.hostId, 'socket-1-refresh');
     assert.equal(isHost(room, 'socket-1-refresh'), true);
+    assert.equal(reconnectEvents.length, 1);
+    assert.equal(reconnectEvents[0].role, 'player');
+    assert.ok(reconnectEvents[0].durationMs >= 0);
 });
 
 test('inactive participant with reconnect key is kept during cleanup grace period', () => {

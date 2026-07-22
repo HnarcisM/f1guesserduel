@@ -68,6 +68,11 @@ test('app config provides safe development defaults', () => {
         level: 'debug',
         requestLoggingEnabled: false
     });
+    assert.deepEqual(config.metrics, {
+        enabled: false,
+        token: null,
+        includeProcessMetrics: true
+    });
 });
 
 test('app config reads production values from environment', () => {
@@ -111,7 +116,10 @@ test('app config reads production values from environment', () => {
         SOCKET_RATE_LIMIT_ENABLED: 'false',
         SOCKET_RATE_LIMIT_WINDOW_MS: '30000',
         LOG_LEVEL: 'warn',
-        REQUEST_LOGGING_ENABLED: 'true'
+        REQUEST_LOGGING_ENABLED: 'true',
+        METRICS_ENABLED: 'true',
+        METRICS_TOKEN: 'metrics-token-with-at-least-32-characters',
+        METRICS_INCLUDE_PROCESS: 'false'
     }, { projectRoot });
 
     assert.equal(config.isProduction, true);
@@ -169,6 +177,30 @@ test('app config reads production values from environment', () => {
         level: 'warn',
         requestLoggingEnabled: true
     });
+    assert.deepEqual(config.metrics, {
+        enabled: true,
+        token: 'metrics-token-with-at-least-32-characters',
+        includeProcessMetrics: false
+    });
+});
+
+test('metrics config is opt-in and requires a strong bearer token', () => {
+    assert.throws(
+        () => createAppConfig({ METRICS_ENABLED: 'true' }),
+        /METRICS_TOKEN must be set/
+    );
+    assert.throws(
+        () => createAppConfig({ METRICS_ENABLED: 'true', METRICS_TOKEN: 'too-short' }),
+        /at least 32 characters/
+    );
+    assert.throws(
+        () => createAppConfig({ METRICS_ENABLED: 'sometimes' }),
+        /METRICS_ENABLED must be one of/
+    );
+    assert.throws(
+        () => createAppConfig({ METRICS_INCLUDE_PROCESS: 'sometimes' }),
+        /METRICS_INCLUDE_PROCESS must be one of/
+    );
 });
 
 test('production config requires SESSION_SECRET', () => {

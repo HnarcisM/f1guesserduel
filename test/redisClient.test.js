@@ -60,6 +60,44 @@ test('Redis client uses bounded connection retries and does not log its URL', as
     assert.equal(fakeClient.quitCalls, 1);
 });
 
+test('Redis client reports connection timing and runtime errors without its URL', async () => {
+    const observed = [];
+    const recorded = [];
+    let errorHandler = null;
+    const metrics = {
+        async observeDependencyOperation(dependency, operation, callback) {
+            observed.push({ dependency, operation });
+            return callback();
+        },
+        recordDependencyOperation(event) {
+            recorded.push(event);
+        }
+    };
+
+    await createRedisClient({
+        url: 'rediss://default:secret@redis.example.com:6379',
+        clientFactory() {
+            return {
+                on(eventName, handler) {
+                    if (eventName === 'error') errorHandler = handler;
+                },
+                async connect() {}
+            };
+        },
+        logger: { info() {}, error() {} },
+        metrics
+    });
+    errorHandler(new Error('connection lost'));
+
+    assert.deepEqual(observed, [{ dependency: 'redis', operation: 'connect' }]);
+    assert.deepEqual(recorded, [{
+        dependency: 'redis',
+        operation: 'client_event',
+        outcome: 'error'
+    }]);
+    assert.equal(JSON.stringify({ observed, recorded }).includes('secret'), false);
+});
+
 test('Redis reconnect strategy stops after its configured retry count', () => {
     const strategy = createReconnectStrategy(2);
 

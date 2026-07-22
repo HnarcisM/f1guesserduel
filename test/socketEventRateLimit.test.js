@@ -146,6 +146,29 @@ test('socket event limiter blocks events after the configured limit and resets a
     assert.equal(limiter.consume(socket, 'startSingleGame').allowed, true);
 });
 
+test('Socket.IO rate limiter records aggregate decisions without event or socket identifiers', () => {
+    const decisions = [];
+    const socket = createFakeSocket('private-socket-id');
+    const limiter = createSocketEventRateLimiter({
+        limits: { submitGuess: { maxEvents: 1, windowMs: 60_000 } },
+        metrics: {
+            recordRateLimit(decision) {
+                decisions.push(decision);
+            }
+        }
+    });
+    const wrapped = limiter.wrap(socket, 'submitGuess', () => {});
+
+    wrapped();
+    wrapped();
+
+    assert.deepEqual(decisions, [
+        { channel: 'socket', provider: 'memory', outcome: 'allowed' },
+        { channel: 'socket', provider: 'memory', outcome: 'blocked' }
+    ]);
+    assert.doesNotMatch(JSON.stringify(decisions), /submitGuess|private-socket-id/);
+});
+
 test('socket event limiter wraps handlers and emits a safe rate limit payload', () => {
     let currentTime = 1000;
     const socket = createFakeSocket();
