@@ -3,6 +3,13 @@ name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
+    inputs:
+      update_visual_baselines:
+        description: Regenerate the committed visual baselines in the CI environment
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -14,7 +21,7 @@ concurrency:
 jobs:
   verify:
     name: Test and build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
 
     steps:
@@ -50,7 +57,7 @@ jobs:
 
   integration-services:
     name: Redis and PostgreSQL integration tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
       TEST_REDIS_URL: redis://127.0.0.1:6379
@@ -99,7 +106,7 @@ jobs:
 
   responsive-visual:
     name: Responsive, visual and accessibility browser tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     needs: [verify, integration-services]
 
@@ -121,6 +128,8 @@ jobs:
 
       - name: Run responsive and visual tests
         run: npm run test:e2e:responsive
+        env:
+          UPDATE_VISUAL_BASELINES: ${{ github.event_name == 'workflow_dispatch' && inputs.update_visual_baselines && '1' || '0' }}
 
       - name: Run profile and reconnection flows
         run: npm run test:e2e:flows
@@ -137,4 +146,13 @@ jobs:
             test-results/responsive-visual/
             test-results/accessibility/
           if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload regenerated visual baselines
+        if: ${{ always() && github.event_name == 'workflow_dispatch' && inputs.update_visual_baselines }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: visual-baselines-${{ github.run_attempt }}
+          path: test/e2e/baselines/responsive-visual/
+          if-no-files-found: error
           retention-days: 14

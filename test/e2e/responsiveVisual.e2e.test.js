@@ -68,40 +68,49 @@ async function compareWithBaseline(fileName, screenshot) {
         };
     }
 
-    assert.ok(
-        fs.existsSync(baselinePath),
-        `${fileName}: lipsește baseline-ul. Rulează cu UPDATE_VISUAL_BASELINES=1 pentru a-l genera.`
-    );
+    if (!fs.existsSync(baselinePath)) {
+        return {
+            status: 'missing',
+            baseline: path.relative(process.cwd(), baselinePath).replace(/\\/g, '/'),
+            failure: `${fileName}: lipsește baseline-ul. Regenerează-l din workflow-ul CI manual.`
+        };
+    }
 
     const baseline = fs.readFileSync(baselinePath);
     const comparison = await comparePngBuffers(baseline, screenshot, {
         channelThreshold: DEFAULT_CHANNEL_THRESHOLD
     });
 
-    assert.deepEqual(
-        comparison.currentSize,
-        comparison.baselineSize,
-        `${fileName}: dimensiunea capturii diferă de baseline`
-    );
+    if (!comparison.dimensionsMatch) {
+        return {
+            status: 'dimension-mismatch',
+            baseline: path.relative(process.cwd(), baselinePath).replace(/\\/g, '/'),
+            baselineSize: comparison.baselineSize,
+            currentSize: comparison.currentSize,
+            failure: `${fileName}: dimensiunea capturii ${comparison.currentSize.width}x${comparison.currentSize.height} `
+                + `diferă de baseline-ul ${comparison.baselineSize.width}x${comparison.baselineSize.height}`
+        };
+    }
 
     if (comparison.diffRatio > DEFAULT_MAX_DIFF_RATIO) {
         await writeDiffPng(comparison, diffPath);
     }
 
-    assert.ok(
-        comparison.diffRatio <= DEFAULT_MAX_DIFF_RATIO,
-        `${fileName}: diferență vizuală ${(comparison.diffRatio * 100).toFixed(3)}% `
-            + `> ${(DEFAULT_MAX_DIFF_RATIO * 100).toFixed(3)}%; diff: ${diffPath}`
-    );
+    const hasRegression = comparison.diffRatio > DEFAULT_MAX_DIFF_RATIO;
 
     return {
-        status: 'matched',
+        status: hasRegression ? 'mismatch' : 'matched',
         baseline: path.relative(process.cwd(), baselinePath).replace(/\\/g, '/'),
         channelThreshold: DEFAULT_CHANNEL_THRESHOLD,
         maxDiffRatio: DEFAULT_MAX_DIFF_RATIO,
         diffRatio: comparison.diffRatio,
         differentPixels: comparison.differentPixels,
-        totalPixels: comparison.totalPixels
+        totalPixels: comparison.totalPixels,
+        ...(hasRegression ? {
+            diff: path.relative(process.cwd(), diffPath).replace(/\\/g, '/'),
+            failure: `${fileName}: diferență vizuală ${(comparison.diffRatio * 100).toFixed(3)}% `
+                + `> ${(DEFAULT_MAX_DIFF_RATIO * 100).toFixed(3)}%; diff: ${diffPath}`
+        } : {})
     };
 }
 
@@ -241,6 +250,7 @@ test('responsive layouts match committed visual baselines', { concurrency: false
     const { chromium } = requirePlaywright();
     const app = await startAppServer();
     const report = [];
+    const visualFailures = [];
     let browser;
 
     try {
@@ -259,6 +269,7 @@ test('responsive layouts match committed visual baselines', { concurrency: false
                 const page = await openAppPage(context, app.baseUrl);
                 await page.locator('#difficulty-overlay').waitFor({ state: 'visible', timeout: 7000 });
                 const home = await captureState(page, viewport, 'home', HOME_SELECTORS);
+                if (home.visualRegression.failure) visualFailures.push(home.visualRegression.failure);
                 await assertNoVisibleOverlap(page, '.site-header h1', '#menu-hamburger', `${viewport.label}/home`);
                 await assertNoVisibleOverlap(page, '.site-header h1', '#authOpenBtn', `${viewport.label}/home`);
 
@@ -266,6 +277,7 @@ test('responsive layouts match committed visual baselines', { concurrency: false
                 await page.locator('#gameZone:not(.game-zone-hidden)').waitFor({ state: 'visible', timeout: 7000 });
                 await page.locator('body.mode-single').waitFor({ timeout: 7000 });
                 const game = await captureState(page, viewport, 'game', GAME_SELECTORS);
+                if (game.visualRegression.failure) visualFailures.push(game.visualRegression.failure);
                 await assertNoVisibleOverlap(page, '#driverInput', '#sendGuessBtn', `${viewport.label}/game`);
 
                 report.push({ viewport, states: { home, game } });
@@ -273,10 +285,20 @@ test('responsive layouts match committed visual baselines', { concurrency: false
                 await context.close();
             }
         }
+
+        assert.equal(
+            visualFailures.length,
+            0,
+            `Regresii vizuale detectate (${visualFailures.length}):\n${visualFailures.join('\n')}`
+        );
     } finally {
         fs.writeFileSync(
             path.join(OUTPUT_DIR, 'layout-report.json'),
-            `${JSON.stringify({ generatedAt: new Date().toISOString(), viewports: report }, null, 2)}\n`,
+            `${JSON.stringify({
+                generatedAt: new Date().toISOString(),
+                visualFailures,
+                viewports: report
+            }, null, 2)}\n`,
             'utf8'
         );
         try {

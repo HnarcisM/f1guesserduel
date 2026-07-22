@@ -51,7 +51,9 @@ Numai testele responsive și vizuale:
 npm run test:e2e:responsive
 ```
 
-Baseline-urile se actualizează numai după verificarea intenționată a schimbării vizuale:
+Baseline-urile oficiale se regenerează numai după verificarea intenționată a schimbării vizuale, din GitHub Actions: deschide workflow-ul `CI`, alege `Run workflow`, bifează `update_visual_baselines`, apoi descarcă artefactul `visual-baselines-<run_attempt>` și înlocuiește conținutul din `test/e2e/baselines/responsive-visual/`. Workflow-ul rulează pe imaginea fixată `ubuntu-24.04`, cu fonturile instalate de Playwright, pentru rezultate reproductibile.
+
+Comanda locală rămâne utilă pentru previzualizare, dar capturile ei nu trebuie comise dacă sistemul nu reproduce exact browserul și fonturile din CI:
 
 ```bash
 UPDATE_VISUAL_BASELINES=1 npm run test:e2e:responsive
@@ -82,6 +84,8 @@ păstrează identificatorul tabului, rolul de host, numărul participanților ș
 încercările deja trimise.
 
 Rapoartele și capturile generate local nu intră în Git. În GitHub Actions sunt încărcate ca artefact `browser-quality-<run_attempt>` și sunt păstrate 14 zile, inclusiv când un test eșuează.
+
+Suita responsive finalizează toate cele 10 capturi înainte să eșueze, astfel încât artefactul conține toate diferențele detectate într-o singură rulare.
 
 `npm run test:e2e` rulează automat `pretest:e2e`, care verifică Chromium înainte de pornirea browserului. Dacă Chromium lipsește, scriptul încearcă instalarea și oprește testele cu mesaj explicit dacă instalarea nu reușește.
 

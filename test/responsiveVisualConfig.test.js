@@ -37,6 +37,9 @@ test('responsive E2E suite captures home and game states and checks horizontal o
     assert.match(source, /compareWithBaseline/);
     assert.match(source, /UPDATE_VISUAL_BASELINES/);
     assert.match(source, /\.diff\.png/);
+    assert.match(source, /const visualFailures = \[\]/);
+    assert.match(source, /Regresii vizuale detectate/);
+    assert.match(source, /visualFailures\.length/);
     assert.match(html, /id=["']menu-hamburger["']/);
     assert.match(source, /#menu-hamburger/);
     assert.doesNotMatch(source, /#menuToggle/);

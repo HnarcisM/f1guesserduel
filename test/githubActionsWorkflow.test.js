@@ -13,10 +13,12 @@ test('GitHub Actions CI runs for pushes and pull requests with minimal permissio
     const source = readWorkflow();
 
     assert.match(source, /^name:\s*CI$/m);
-    assert.match(source, /^on:\s*\n\s+push:\s*\n\s+pull_request:/m);
+    assert.match(source, /^on:\s*\n\s+push:\s*\n\s+pull_request:\s*\n\s+workflow_dispatch:/m);
     assert.match(source, /^permissions:\s*\n\s+contents:\s*read$/m);
     assert.match(source, /cancel-in-progress:\s*true/);
     assert.match(source, /timeout-minutes:\s*15/);
+    assert.doesNotMatch(source, /runs-on:\s*ubuntu-latest/);
+    assert.equal((source.match(/runs-on:\s*ubuntu-24\.04/g) || []).length, 3);
 });
 
 test('GitHub Actions CI uses Node 22 and the locked npm dependencies', () => {
@@ -77,4 +79,17 @@ test('GitHub Actions CI runs responsive and accessibility browser tests and reta
     assert.match(source, /if:\s*always\(\)/);
     assert.match(source, /test-results\/responsive-visual\//);
     assert.match(source, /test-results\/accessibility\//);
+});
+
+test('GitHub Actions CI regenerates visual baselines only through an explicit manual input', () => {
+    const source = readWorkflow();
+
+    assert.match(source, /update_visual_baselines:/);
+    assert.match(source, /type:\s*boolean/);
+    assert.match(
+        source,
+        /UPDATE_VISUAL_BASELINES:\s*\$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.update_visual_baselines && '1' \|\| '0' \}\}/
+    );
+    assert.match(source, /name:\s*visual-baselines-\$\{\{ github\.run_attempt \}\}/);
+    assert.match(source, /path:\s*test\/e2e\/baselines\/responsive-visual\//);
 });
