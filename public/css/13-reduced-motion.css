@@ -1,0 +1,26 @@
+/**
+ * Global reduced-motion policy.
+ *
+ * Keep this module last in public/style.css so it also covers motion introduced
+ * by future components. Near-zero durations preserve animation/transition end
+ * events while removing visible movement for users who request reduced motion.
+ */
+
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --transition-fast: 0.01ms linear;
+        --transition-medium: 0.01ms linear;
+        scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+        animation-delay: 0ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-delay: 0ms !important;
+        transition-duration: 0.01ms !important;
+    }
+}
