@@ -19,6 +19,7 @@ function createClassList(initialClasses = []) {
 function createElement({ classes = [] } = {}) {
     const attrs = new Map();
     const listeners = new Map();
+    const children = [];
     return {
         classList: createClassList(classes),
         textContent: '',
@@ -30,8 +31,15 @@ function createElement({ classes = [] } = {}) {
         removeAttribute(name) { attrs.delete(name); },
         setAttribute(name, value) { attrs.set(name, String(value)); },
         getAttribute(name) { return attrs.get(name) ?? null; },
-        replaceChildren() {},
-        append() {},
+        replaceChildren(...nextChildren) {
+            children.splice(0, children.length, ...nextChildren);
+        },
+        appendChild(child) {
+            children.push(child);
+            return child;
+        },
+        append(...nextChildren) { children.push(...nextChildren); },
+        children,
         listeners
     };
 }
@@ -44,7 +52,17 @@ function setupDocumentStub() {
         ['status', createElement(['is-hidden'])],
         ['sendGuessBtn', createElement()],
         ['closeEndGamePopup', createElement()],
-        ['menu-hamburger', createElement()]
+        ['menu-hamburger', createElement()],
+        ['endGameTitle', createElement()],
+        ['endGameMessage', createElement()],
+        ['restartGameBtn', createElement()],
+        ['endGameReward', createElement({ classes: ['is-hidden'] })],
+        ['endGameRewardOutcome', createElement()],
+        ['endGameXpAwarded', createElement()],
+        ['endGameRewardLevel', createElement()],
+        ['endGameLevelUpMessage', createElement({ classes: ['is-hidden'] })],
+        ['endGameBadgeEmpty', createElement()],
+        ['endGameBadgeList', createElement({ classes: ['is-hidden'] })]
     ]);
     elements.get('sendGuessBtn').disabled = true;
 
@@ -130,6 +148,57 @@ test('closing the popup returns focus to the menu when rematch is unavailable', 
 
     assert.equal(controller.isRematchMode(), false);
     assert.equal(global.document.activeElement, elements.get('menu-hamburger'));
+});
+
+test('authenticated reward combines result, XP, level-up and newly unlocked badges', async () => {
+    const { createEndGameController } = await import('../public/js/endGameController.js');
+    const { elements } = setupDocumentStub();
+    let isRoundFinished = false;
+    const controller = createEndGameController({
+        roleState: {
+            isSpectator: () => false,
+            requirePlayer: () => true
+        },
+        timer: {
+            stopRoundTimer() {},
+            buildRestartOptions: () => ({})
+        },
+        dailyChallengeState: {
+            getCountdownText: () => '24h'
+        },
+        getSocket: () => null,
+        getIsDailyMode: () => false,
+        getIsDuelMode: () => false,
+        getIsSingleMode: () => true,
+        getIsRoundFinished: () => isRoundFinished,
+        setRoundFinished(value) { isRoundFinished = Boolean(value); }
+    });
+
+    controller.showEndGamePopup({ isCorrect: true, attempts: 1, target: { name: 'Pilot' } });
+    controller.showAccountReward({
+        mode: 'single',
+        outcome: 'win',
+        xpAwarded: 50,
+        previousLevel: 1,
+        level: 2,
+        leveledUp: true,
+        unlockedAchievements: [{
+            key: 'pole-position',
+            title: 'Pole Position',
+            description: 'Ghicește pilotul din prima încercare.',
+            icon: '⚡'
+        }]
+    });
+
+    assert.equal(elements.get('endGameReward').hidden, false);
+    assert.equal(elements.get('endGameReward').classList.contains('is-hidden'), false);
+    assert.equal(elements.get('endGameRewardOutcome').textContent, 'Victorie · Single');
+    assert.equal(elements.get('endGameXpAwarded').textContent, '+50 XP');
+    assert.equal(elements.get('endGameRewardLevel').textContent, 'Nivel 1 → 2');
+    assert.equal(elements.get('endGameLevelUpMessage').hidden, false);
+    assert.equal(elements.get('endGameBadgeEmpty').classList.contains('is-hidden'), true);
+    assert.equal(elements.get('endGameBadgeList').children.length, 1);
+    assert.equal(elements.get('endGameBadgeList').children[0].children[1].children[0].textContent, 'Pole Position');
 });
 
 test('end-game dialog has an accessible name, description and no global Enter shortcut', () => {

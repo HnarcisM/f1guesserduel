@@ -18,7 +18,10 @@ const {
     normalizeRoundOptions,
     normalizeRestartOptions
 } = require('./socketPayloadValidators');
-const { recordAccountGameResultSafely } = require('../account/accountStatsService');
+const {
+    buildAccountStatsSocketPayload,
+    recordAccountGameResultSafely
+} = require('../account/accountStatsService');
 
 function buildDuelAccountResults(roomId, room, roundResult) {
     if (!room || !roundResult) return [];
@@ -36,17 +39,6 @@ function buildDuelAccountResults(roomId, room, roundResult) {
             difficulty: room.difficulty,
             socketId: player.socketId
         }));
-}
-
-function buildAccountStatsPayload(userId, result) {
-    return {
-        userId,
-        stats: result.stats,
-        recentGames: result.recentGames || [],
-        progress: result.progress || null,
-        achievements: result.achievements || [],
-        xpAwarded: Number(result.xpAwarded) || 0
-    };
 }
 
 function registerDuelRoundSocketHandlers(context) {
@@ -78,7 +70,10 @@ function registerDuelRoundSocketHandlers(context) {
             }).then(result => {
                 const playerSocket = io.sockets?.sockets?.get?.(accountResult.socketId);
                 if (result?.stats && playerSocket) {
-                    playerSocket.emit('accountStatsUpdated', buildAccountStatsPayload(accountResult.userId, result));
+                    playerSocket.emit(
+                        'accountStatsUpdated',
+                        buildAccountStatsSocketPayload(accountResult.userId, result)
+                    );
                 }
             });
         }
@@ -224,7 +219,7 @@ function registerDuelRoundSocketHandlers(context) {
                 difficulty: singleSession.difficulty
             }).then(result => {
                 if (result?.stats) {
-                    socket.emit('accountStatsUpdated', buildAccountStatsPayload(userId, result));
+                    socket.emit('accountStatsUpdated', buildAccountStatsSocketPayload(userId, result));
                 }
             });
             return;

@@ -181,6 +181,7 @@ export function registerSocketEvents(socket, app) {
 			achievements: payload.achievements || [],
 			xpAwarded: Number(payload.xpAwarded) || 0
 		}, payload.userId ?? null);
+		app.showAccountReward?.(payload.reward || null);
 	});
 
 	socket.on('initDailyChallenge', (data) => {

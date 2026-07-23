@@ -60,6 +60,7 @@ export function createGameSocketController({
 			initializeGridStructure,
 			renderGuessResult,
 			showEndGamePopup: endGameController.showEndGamePopup,
+			showAccountReward: endGameController.showAccountReward,
 			hideEndGamePopup: endGameController.hideEndGamePopup,
 			renderLiveBoard,
 			renderRoomScoreboard,

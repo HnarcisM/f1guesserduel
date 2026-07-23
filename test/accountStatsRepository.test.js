@@ -1,7 +1,13 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const test = require('node:test');
+const Database = require('better-sqlite3');
 
-const { createPostgresAccountStatsRepository } = require('../server/account/accountStatsRepository');
+const {
+    createPostgresAccountStatsRepository,
+    createSqliteAccountStatsRepository
+} = require('../server/account/accountStatsRepository');
 
 class FakePostgresClient {
     constructor() {
@@ -97,6 +103,7 @@ test('Postgres account stats use a transaction, parameters and idempotent result
     const resultInsert = client.queries.find(query => query.sql.startsWith('INSERT INTO user_game_results'));
     const statsUpserts = client.queries.filter(query => query.sql.startsWith('INSERT INTO user_game_stats'));
     const progressUpserts = client.queries.filter(query => query.sql.startsWith('INSERT INTO user_progress'));
+    const accountLocks = client.queries.filter(query => query.sql.startsWith('SELECT pg_advisory_xact_lock'));
     const historyQueries = client.queries.filter(query => query.sql.startsWith('SELECT mode, outcome'));
 
     assert.equal(first.recorded, true);
@@ -106,6 +113,9 @@ test('Postgres account stats use a transaction, parameters and idempotent result
     assert.equal(statsUpserts.length, 1);
     assert.equal(progressUpserts.length, 1);
     assert.deepEqual(progressUpserts[0].params, [7, 50]);
+    assert.equal(accountLocks.length, 2);
+    assert.deepEqual(accountLocks[0].params, [7]);
+    assert.ok(Array.isArray(first.previousRows));
     assert.equal(first.progressRow.total_xp, 50);
     assert.equal(first.recentResults.length, 1);
     assert.equal(historyQueries.length, 2);
@@ -143,4 +153,45 @@ test('Postgres Daily claims use parameterized ON CONFLICT protection', async () 
     assert.deepEqual(claimQuery.params, [7, attempt.challengeId, '2026-07-23', 'easy']);
     assert.match(selectQuery.sql, /to_char\(daily_date, 'YYYY-MM-DD'\) AS "dailyDate"/);
     assert.deepEqual(selectQuery.params, [7, '2026-07-23']);
+});
+
+test('SQLite captures the exact pre-round progress inside the result transaction', async t => {
+    let database;
+    try {
+        database = new Database(':memory:');
+    } catch (error) {
+        if (error?.code === 'ERR_DLOPEN_FAILED') {
+            t.skip('better-sqlite3 is not compiled for the local Node.js runtime');
+            return;
+        }
+        throw error;
+    }
+    t.after(() => database.close());
+    database.exec(fs.readFileSync(path.join(__dirname, '..', 'server', 'db', 'schema.sql'), 'utf8'));
+    database.prepare(`
+        INSERT INTO users (username, email, password_hash)
+        VALUES ('Narcis', 'narcis@example.com', 'hash')
+    `).run();
+    const repository = createSqliteAccountStatsRepository(database);
+    const baseResult = {
+        userId: 1,
+        mode: 'single',
+        outcome: 'win',
+        attempts: 2,
+        difficulty: 'easy',
+        xpEarned: 50
+    };
+
+    const first = await repository.recordGameResult({ ...baseResult, resultKey: 'round-1' });
+    const second = await repository.recordGameResult({ ...baseResult, resultKey: 'round-2' });
+    const duplicate = await repository.recordGameResult({ ...baseResult, resultKey: 'round-2' });
+
+    assert.deepEqual(first.previousRows, []);
+    assert.equal(first.previousProgressRow, null);
+    assert.equal(second.previousRows[0].games_played, 1);
+    assert.equal(second.previousProgressRow.total_xp, 50);
+    assert.equal(second.progressRow.total_xp, 100);
+    assert.equal(duplicate.recorded, false);
+    assert.equal(duplicate.previousRows, null);
+    assert.equal(duplicate.progressRow.total_xp, 100);
 });

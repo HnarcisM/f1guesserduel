@@ -83,9 +83,13 @@ function createMemoryStatsRepository() {
                     recorded: false,
                     rows: await getStatsRows(result.userId),
                     recentResults: await getRecentResults(result.userId),
-                    progressRow: await getProgressRow(result.userId)
+                    progressRow: await getProgressRow(result.userId),
+                    previousRows: null,
+                    previousProgressRow: null
                 };
             }
+            const previousRows = await getStatsRows(result.userId);
+            const previousProgressRow = await getProgressRow(result.userId);
             resultKeys.add(uniqueKey);
             progressByUser.set(result.userId, (progressByUser.get(result.userId) || 0) + result.xpEarned);
             recentResults.push({
@@ -108,7 +112,9 @@ function createMemoryStatsRepository() {
                 recorded: true,
                 rows: await getStatsRows(result.userId),
                 recentResults: await getRecentResults(result.userId),
-                progressRow: await getProgressRow(result.userId)
+                progressRow: await getProgressRow(result.userId),
+                previousRows,
+                previousProgressRow
             };
         }
     };
@@ -146,8 +152,31 @@ test('account stats aggregate modes and ignore duplicate server result keys', as
 
     assert.equal(first.recorded, true);
     assert.equal(first.xpAwarded, 50);
+    assert.deepEqual(first.reward, {
+        mode: 'single',
+        outcome: 'win',
+        xpAwarded: 50,
+        previousLevel: 1,
+        level: 1,
+        leveledUp: false,
+        unlockedAchievements: [
+            {
+                key: 'first-lap',
+                title: 'Primul tur',
+                description: 'Finalizează primul joc.',
+                icon: '🏁'
+            },
+            {
+                key: 'first-win',
+                title: 'Prima victorie',
+                description: 'Câștigă primul joc.',
+                icon: '🏆'
+            }
+        ]
+    });
     assert.equal(duplicate.recorded, false);
     assert.equal(duplicate.xpAwarded, 0);
+    assert.equal(duplicate.reward, null);
     assert.deepEqual(stats.totals, {
         played: 2,
         won: 1,
@@ -178,6 +207,37 @@ test('account stats aggregate modes and ignore duplicate server result keys', as
     });
     assert.equal(Object.hasOwn(dashboard.recentGames[0], 'resultKey'), false);
     assert.equal(Object.hasOwn(dashboard.recentGames[0], 'userId'), false);
+});
+
+test('account reward reports an exact level-up without repeating unlocked badges', async () => {
+    const service = createAccountStatsService(createMemoryStatsRepository());
+    await service.recordGameResult({
+        userId: 7,
+        mode: 'single',
+        resultKey: 'single:level-1',
+        outcome: 'win',
+        attempts: 2,
+        difficulty: 'easy'
+    });
+    const result = await service.recordGameResult({
+        userId: 7,
+        mode: 'single',
+        resultKey: 'single:level-2',
+        outcome: 'win',
+        attempts: 2,
+        difficulty: 'easy'
+    });
+
+    assert.equal(result.progress.totalXp, 100);
+    assert.deepEqual(result.reward, {
+        mode: 'single',
+        outcome: 'win',
+        xpAwarded: 50,
+        previousLevel: 1,
+        level: 2,
+        leveledUp: true,
+        unlockedAchievements: []
+    });
 });
 
 test('Daily attempts are claimed atomically and exposed per account and UTC date', async () => {

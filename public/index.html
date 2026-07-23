@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>F1 Guesser</title>
     <script src="/js/themeBootstrap.js?v=6afc6a3773845bb4"></script>
-<link rel="stylesheet" href="/style.bundle.css?v=9460cdc94a162254">
+<link rel="stylesheet" href="/style.bundle.css?v=3628e23f6feab175">
 </head>
 <body>
 
@@ -266,6 +266,32 @@
         <button type="button" class="end-game-close" id="closeEndGamePopup" aria-label="Închide popup-ul">×</button>
         <h2 id="endGameTitle">🏆 Felicitări!</h2>
         <p id="endGameMessage">Ai ghicit pilotul.</p>
+
+        <section id="endGameReward" class="end-game-reward is-hidden" aria-labelledby="endGameRewardTitle" aria-live="polite" hidden>
+            <div class="end-game-reward-header">
+                <div>
+                    <p class="end-game-reward-eyebrow">Progres cont</p>
+                    <h3 id="endGameRewardTitle">Rezultatul rundei</h3>
+                </div>
+                <strong id="endGameRewardOutcome" class="end-game-reward-outcome">Victorie · Single</strong>
+            </div>
+            <div class="end-game-reward-summary">
+                <div>
+                    <span>XP primit</span>
+                    <strong id="endGameXpAwarded">+0 XP</strong>
+                </div>
+                <div>
+                    <span>Nivel</span>
+                    <strong id="endGameRewardLevel">Nivel 1</strong>
+                </div>
+            </div>
+            <p id="endGameLevelUpMessage" class="end-game-level-up is-hidden" hidden>Ai avansat la un nivel nou!</p>
+            <div class="end-game-badges">
+                <strong>Badge-uri noi</strong>
+                <p id="endGameBadgeEmpty">Niciun badge nou în această rundă.</p>
+                <ul id="endGameBadgeList" class="end-game-badge-list is-hidden" aria-label="Badge-uri nou deblocate" hidden></ul>
+            </div>
+        </section>
 
         <div id="stats-container" class="stats-container">
             <p class="stats-title">📊 STATISTICI REALE</p>
@@ -546,6 +572,6 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
-<script defer src="/game.bundle.min.js?v=c29e08fffc1f13de"></script>
+<script defer src="/game.bundle.min.js?v=a5730ebcf3218b04"></script>
 </body>
 </html>

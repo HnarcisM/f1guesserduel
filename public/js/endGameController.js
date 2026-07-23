@@ -1,6 +1,9 @@
 import { updateStats, renderStats } from './stats.js';
 import { createDialogFocusManager } from './dialogFocusManager.js';
 
+const REWARD_MODE_LABELS = Object.freeze({ single: 'Single', daily: 'Daily', duel: 'Duel' });
+const REWARD_OUTCOME_LABELS = Object.freeze({ win: 'Victorie', loss: 'Înfrângere', draw: 'Remiză' });
+
 function setText(id, value) {
 	const element = document.getElementById(id);
 	if (element) element.textContent = value;
@@ -27,6 +30,11 @@ function appendDailyCountdown(messageElement, countdown) {
 	messageElement.append(small);
 }
 
+function asNonNegativeInteger(value) {
+	const number = Number(value);
+	return Number.isSafeInteger(number) && number >= 0 ? number : 0;
+}
+
 export function createEndGameController({
 	roleState,
 	timer,
@@ -40,6 +48,85 @@ export function createEndGameController({
 }) {
 	let isRematchMode = false;
 	let dialogFocusManager = null;
+	let acceptsAccountReward = false;
+
+	function resetAccountReward() {
+		acceptsAccountReward = false;
+		const reward = document.getElementById('endGameReward');
+		const levelUp = document.getElementById('endGameLevelUpMessage');
+		const badgeList = document.getElementById('endGameBadgeList');
+		const badgeEmpty = document.getElementById('endGameBadgeEmpty');
+		if (reward) {
+			reward.hidden = true;
+			reward.classList.add('is-hidden');
+		}
+		if (levelUp) {
+			levelUp.hidden = true;
+			levelUp.classList.add('is-hidden');
+		}
+		if (badgeList) {
+			badgeList.replaceChildren();
+			badgeList.hidden = true;
+			badgeList.classList.add('is-hidden');
+		}
+		if (badgeEmpty) badgeEmpty.classList.remove('is-hidden');
+	}
+
+	function showAccountReward(rewardPayload = null) {
+		const popup = document.getElementById('endGameDisplay');
+		const reward = document.getElementById('endGameReward');
+		if (!acceptsAccountReward || !popup?.classList.contains('show') || !rewardPayload || !reward) return;
+		acceptsAccountReward = false;
+
+		const modeLabel = REWARD_MODE_LABELS[rewardPayload.mode] || 'Joc';
+		const outcomeLabel = REWARD_OUTCOME_LABELS[rewardPayload.outcome] || 'Rezultat';
+		const xpAwarded = asNonNegativeInteger(rewardPayload.xpAwarded);
+		const previousLevel = Math.max(1, asNonNegativeInteger(rewardPayload.previousLevel));
+		const level = Math.max(previousLevel, asNonNegativeInteger(rewardPayload.level) || 1);
+		const leveledUp = rewardPayload.leveledUp === true && level > previousLevel;
+		const achievements = Array.isArray(rewardPayload.unlockedAchievements)
+			? rewardPayload.unlockedAchievements.filter(item => item && typeof item === 'object').slice(0, 8)
+			: [];
+
+		setText('endGameRewardOutcome', `${outcomeLabel} · ${modeLabel}`);
+		setText('endGameXpAwarded', `+${xpAwarded} XP`);
+		setText('endGameRewardLevel', leveledUp ? `Nivel ${previousLevel} → ${level}` : `Nivel ${level}`);
+
+		const levelUp = document.getElementById('endGameLevelUpMessage');
+		if (levelUp) {
+			levelUp.textContent = `⬆ Nivel nou deblocat: ${level}`;
+			levelUp.hidden = !leveledUp;
+			levelUp.classList.toggle('is-hidden', !leveledUp);
+		}
+
+		const badgeList = document.getElementById('endGameBadgeList');
+		const badgeEmpty = document.getElementById('endGameBadgeEmpty');
+		if (badgeList) {
+			badgeList.replaceChildren();
+			for (const achievement of achievements) {
+				const item = document.createElement('li');
+				const icon = document.createElement('span');
+				const copy = document.createElement('div');
+				const title = document.createElement('strong');
+				const description = document.createElement('span');
+				item.className = 'end-game-badge-item';
+				icon.className = 'end-game-badge-icon';
+				icon.textContent = String(achievement.icon || '★').slice(0, 2);
+				icon.setAttribute('aria-hidden', 'true');
+				title.textContent = String(achievement.title || 'Badge nou').slice(0, 80);
+				description.textContent = String(achievement.description || '').slice(0, 180);
+				copy.append(title, description);
+				item.append(icon, copy);
+				badgeList.appendChild(item);
+			}
+			badgeList.hidden = achievements.length === 0;
+			badgeList.classList.toggle('is-hidden', achievements.length === 0);
+		}
+		if (badgeEmpty) badgeEmpty.classList.toggle('is-hidden', achievements.length > 0);
+
+		reward.hidden = false;
+		reward.classList.remove('is-hidden');
+	}
 
 	function getDialogFocusManager() {
 		if (dialogFocusManager) return dialogFocusManager;
@@ -114,6 +201,7 @@ export function createEndGameController({
 	}
 
 	function hideEndGamePopup(keepRematchAvailable = true) {
+		acceptsAccountReward = false;
 		const popup = document.getElementById('endGameDisplay');
 		const backdrop = document.getElementById('endGameBackdrop');
 
@@ -150,6 +238,8 @@ export function createEndGameController({
 		const backdrop = document.getElementById('endGameBackdrop');
 		const messageEl = document.getElementById('endGameMessage');
 		if (!popup) return;
+		resetAccountReward();
+		acceptsAccountReward = true;
 
 		popup.classList.remove('win-style', 'lose-style');
 
@@ -220,6 +310,7 @@ export function createEndGameController({
 		exitRematchMode,
 		requestRematch,
 		hideEndGamePopup,
+		showAccountReward,
 		showEndGamePopup
 	};
 }

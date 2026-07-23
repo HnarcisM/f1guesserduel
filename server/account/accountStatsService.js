@@ -173,6 +173,51 @@ function buildAccountAchievements(stats = buildAccountStats(), progress = buildA
     });
 }
 
+function buildAccountReward({
+    result,
+    xpAwarded,
+    previousRows,
+    previousProgressRow,
+    progress,
+    achievements
+}) {
+    if (!Array.isArray(previousRows)) return null;
+
+    const previousStats = buildAccountStats(previousRows);
+    const previousProgress = buildAccountProgress(previousProgressRow);
+    const previousAchievements = buildAccountAchievements(previousStats, previousProgress);
+    const previouslyUnlocked = new Set(
+        previousAchievements
+            .filter(achievement => achievement.unlocked)
+            .map(achievement => achievement.key)
+    );
+    const unlockedAchievements = achievements
+        .filter(achievement => achievement.unlocked && !previouslyUnlocked.has(achievement.key))
+        .map(({ key, title, description, icon }) => ({ key, title, description, icon }));
+
+    return {
+        mode: result.mode,
+        outcome: result.outcome,
+        xpAwarded: asNonNegativeInteger(xpAwarded),
+        previousLevel: previousProgress.level,
+        level: progress.level,
+        leveledUp: progress.level > previousProgress.level,
+        unlockedAchievements
+    };
+}
+
+function buildAccountStatsSocketPayload(userId, result) {
+    return {
+        userId,
+        stats: result.stats,
+        recentGames: result.recentGames || [],
+        progress: result.progress || null,
+        achievements: result.achievements || [],
+        xpAwarded: Number(result.xpAwarded) || 0,
+        reward: result.reward || null
+    };
+}
+
 function normalizeUserId(userId) {
     const value = Number(userId);
     return Number.isSafeInteger(value) && value > 0 ? value : null;
@@ -276,13 +321,23 @@ function createAccountStatsService(databaseOrRepository) {
         const recorded = Boolean(repositoryResult.recorded);
         const stats = buildAccountStats(repositoryResult.rows);
         const progress = buildAccountProgress(repositoryResult.progressRow);
+        const achievements = buildAccountAchievements(stats, progress);
+        const xpAwarded = recorded ? xpEarned : 0;
         return {
             recorded,
             stats,
             recentGames: buildRecentGames(repositoryResult.recentResults),
             progress,
-            achievements: buildAccountAchievements(stats, progress),
-            xpAwarded: recorded ? xpEarned : 0
+            achievements,
+            xpAwarded,
+            reward: recorded ? buildAccountReward({
+                result,
+                xpAwarded,
+                previousRows: repositoryResult.previousRows,
+                previousProgressRow: repositoryResult.previousProgressRow,
+                progress,
+                achievements
+            }) : null
         };
     }
 
@@ -348,7 +403,9 @@ module.exports = {
     ACCOUNT_ACHIEVEMENT_DEFINITIONS,
     buildAccountAchievements,
     buildAccountProgress,
+    buildAccountReward,
     buildAccountStats,
+    buildAccountStatsSocketPayload,
     buildRecentGames,
     calculateXpReward,
     createAccountStatsService,

@@ -50,6 +50,8 @@ const POSTGRES_CLAIM_DAILY_ATTEMPT_SQL = `
     RETURNING challenge_id
 `;
 
+const POSTGRES_LOCK_ACCOUNT_PROGRESS_SQL = 'SELECT pg_advisory_xact_lock($1)';
+
 const POSTGRES_UPSERT_STATS_SQL = `
     INSERT INTO user_game_stats (
         user_id, mode, games_played, games_won, games_drawn,
@@ -142,6 +144,7 @@ function createPostgresAccountStatsRepository(database) {
         try {
             await client.query('BEGIN');
             transactionStarted = true;
+            await client.query(POSTGRES_LOCK_ACCOUNT_PROGRESS_SQL, [result.userId]);
             const insertResult = await client.query(`
                 INSERT INTO user_game_results (
                     user_id, mode, result_key, outcome, attempts, difficulty
@@ -159,7 +162,13 @@ function createPostgresAccountStatsRepository(database) {
             ]);
 
             const recorded = insertResult.rowCount === 1;
+            let previousRows = null;
+            let previousProgressRow = null;
             if (recorded) {
+                [previousRows, previousProgressRow] = await Promise.all([
+                    getStatsRows(result.userId, client),
+                    getProgressRow(result.userId, client)
+                ]);
                 await client.query(POSTGRES_UPSERT_STATS_SQL, [
                     result.userId,
                     result.mode,
@@ -180,7 +189,14 @@ function createPostgresAccountStatsRepository(database) {
             ]);
             await client.query('COMMIT');
             transactionStarted = false;
-            return { recorded, rows, recentResults, progressRow };
+            return {
+                recorded,
+                rows,
+                recentResults,
+                progressRow,
+                previousRows,
+                previousProgressRow
+            };
         } catch (error) {
             if (transactionStarted) await client.query('ROLLBACK');
             throw error;
@@ -262,7 +278,12 @@ function createSqliteAccountStatsRepository(database) {
     `);
     const recordTransaction = database.transaction(result => {
         const insert = insertResult.run(result);
-        if (insert.changes !== 1) return false;
+        if (insert.changes !== 1) {
+            return { recorded: false, previousRows: null, previousProgressRow: null };
+        }
+
+        const previousRows = selectStats.all(result.userId);
+        const previousProgressRow = selectProgress.get(result.userId) || null;
 
         const increments = buildResultIncrements(result.outcome, result.attempts);
         upsertStats.run({
@@ -281,7 +302,7 @@ function createSqliteAccountStatsRepository(database) {
             userId: result.userId,
             xpEarned: normalizeXpEarned(result.xpEarned)
         });
-        return true;
+        return { recorded: true, previousRows, previousProgressRow };
     });
 
     async function getStatsRows(userId) {
@@ -305,9 +326,9 @@ function createSqliteAccountStatsRepository(database) {
     }
 
     async function recordGameResult(result) {
-        const recorded = recordTransaction(result);
+        const transactionResult = recordTransaction(result);
         return {
-            recorded,
+            ...transactionResult,
             rows: await getStatsRows(result.userId),
             recentResults: await getRecentResults(result.userId),
             progressRow: await getProgressRow(result.userId)

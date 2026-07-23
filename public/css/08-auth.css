@@ -19,7 +19,7 @@
 .auth-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 1190;
+    z-index: 10990;
     background: rgba(0, 0, 0, 0.62);
     backdrop-filter: blur(5px);
     opacity: 0;
@@ -39,7 +39,7 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) scale(0.96);
-    z-index: 1200;
+    z-index: 11000;
     width: min(420px, calc(100vw - 28px));
     max-height: min(90vh, 820px);
     overflow-x: hidden;

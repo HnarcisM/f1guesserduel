@@ -151,6 +151,17 @@ test('authenticated account dashboard is present while the login form remains se
     assert.match(css, /\.auth-settings-disclosure\[open\]/);
 });
 
+test('login remains interactive above the initial mode overlay', () => {
+    const headerCss = fs.readFileSync(path.join(projectRoot, 'public', 'css', '02-header-menu.css'), 'utf8');
+    const overlayCss = fs.readFileSync(path.join(projectRoot, 'public', 'css', '04-difficulty-overlay.css'), 'utf8');
+    const authCss = fs.readFileSync(path.join(projectRoot, 'public', 'css', '08-auth.css'), 'utf8');
+
+    assert.match(headerCss, /\.site-header\s*\{[\s\S]*?z-index:\s*2000\b/);
+    assert.match(overlayCss, /\.overlay\s*\{[\s\S]*?z-index:\s*1500\b/);
+    assert.match(authCss, /\.auth-backdrop\s*\{[\s\S]*?z-index:\s*10990\b/);
+    assert.match(authCss, /\.auth-panel\s*\{[\s\S]*?z-index:\s*11000\b/);
+});
+
 test('auth dialog moves focus inside, closes with Escape and restores the opener', async t => {
     const originalDocument = globalThis.document;
     const originalFetch = globalThis.fetch;
@@ -190,6 +201,7 @@ test('server account stats updates are forwarded to the account dashboard', asyn
     const { registerSocketEvents } = await import('../public/js/socketEvents.js');
     const handlers = new Map();
     const received = [];
+    const rewards = [];
     const socket = {
         off() {},
         on(eventName, handler) {
@@ -200,10 +212,14 @@ test('server account stats updates are forwarded to the account dashboard', asyn
     registerSocketEvents(socket, {
         refreshAccountSummary(stats) {
             received.push(stats);
+        },
+        showAccountReward(reward) {
+            rewards.push(reward);
         }
     });
     const stats = { totals: { played: 4 }, modes: {} };
-    handlers.get('accountStatsUpdated')({ stats });
+    const reward = { mode: 'single', outcome: 'win', xpAwarded: 50 };
+    handlers.get('accountStatsUpdated')({ stats, reward });
 
     assert.deepEqual(received, [{
         stats,
@@ -212,6 +228,7 @@ test('server account stats updates are forwarded to the account dashboard', asyn
         achievements: [],
         xpAwarded: 0
     }]);
+    assert.deepEqual(rewards, [reward]);
 });
 
 test('a delayed initial auth refresh cannot overwrite a newer login or another account stats event', async t => {

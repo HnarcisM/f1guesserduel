@@ -1,6 +1,9 @@
 const { MAX_ATTEMPTS } = require('../config/constants');
 const { compareGuess } = require('../game/compareDriver');
-const { recordAccountGameResultSafely } = require('../account/accountStatsService');
+const {
+    buildAccountStatsSocketPayload,
+    recordAccountGameResultSafely
+} = require('../account/accountStatsService');
 const { getDailyDateKey, getNextDailyResetAt } = require('../game/dailyChallenge');
 const {
     normalizeDriverId,
@@ -102,14 +105,7 @@ function registerDailyChallengeSocketHandlers({
             difficulty: dailySession.difficulty
         }).then(result => {
             if (result?.stats) {
-                socket.emit('accountStatsUpdated', {
-                    userId,
-                    stats: result.stats,
-                    recentGames: result.recentGames || [],
-                    progress: result.progress || null,
-                    achievements: result.achievements || [],
-                    xpAwarded: Number(result.xpAwarded) || 0
-                });
+                socket.emit('accountStatsUpdated', buildAccountStatsSocketPayload(userId, result));
             }
         });
     }

@@ -62,7 +62,12 @@ test('Single records an authenticated result only after the server validates the
                     stats: { totals: { played: 1 }, modes: {} },
                     progress: { level: 1, totalXp: 50, progressPercent: 50 },
                     achievements: [{ key: 'first-win', unlocked: true }],
-                    xpAwarded: 50
+                    xpAwarded: 50,
+                    reward: {
+                        mode: 'single', outcome: 'win', xpAwarded: 50,
+                        previousLevel: 1, level: 1, leveledUp: false,
+                        unlockedAchievements: [{ key: 'first-win', title: 'Prima victorie', icon: '🏆' }]
+                    }
                 };
             }
         }
@@ -84,6 +89,7 @@ test('Single records an authenticated result only after the server validates the
     assert.equal(accountUpdate.payload.progress.totalXp, 50);
     assert.equal(accountUpdate.payload.achievements[0].key, 'first-win');
     assert.equal(accountUpdate.payload.xpAwarded, 50);
+    assert.equal(accountUpdate.payload.reward.unlockedAchievements[0].key, 'first-win');
 });
 
 test('Duel account results map authenticated winners, losses and draws without guests', () => {
@@ -156,7 +162,12 @@ test('Daily uses the server challenge id as the idempotent account result key', 
                     stats: { totals: { played: 1 }, modes: {} },
                     progress: { level: 1, totalXp: 65, progressPercent: 65 },
                     achievements: [{ key: 'first-win', unlocked: true }],
-                    xpAwarded: 65
+                    xpAwarded: 65,
+                    reward: {
+                        mode: 'daily', outcome: 'win', xpAwarded: 65,
+                        previousLevel: 1, level: 1, leveledUp: false,
+                        unlockedAchievements: []
+                    }
                 };
             }
         },
@@ -175,4 +186,5 @@ test('Daily uses the server challenge id as the idempotent account result key', 
     assert.equal(accountUpdate.payload.progress.totalXp, 65);
     assert.equal(accountUpdate.payload.achievements[0].unlocked, true);
     assert.equal(accountUpdate.payload.xpAwarded, 65);
+    assert.equal(accountUpdate.payload.reward.mode, 'daily');
 });
