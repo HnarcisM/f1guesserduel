@@ -53,11 +53,20 @@ function createAuthRoutes({
         res.clearCookie(sessionService.cookieName, clearOptions);
     }
 
-    async function buildAuthResponse(user, sessionToken = null) {
+    function buildAuthResponse(user, socketAuthToken = null) {
         return {
             user: sanitizeUser(user),
-            socketAuthToken: await sessionService.createSocketAuthToken(sessionToken)
+            socketAuthToken
         };
+    }
+
+    async function getSocketAuthToken(req, session = null) {
+        if (session?.socketAuthToken) return session.socketAuthToken;
+        if (req.authContext?.socketAuthToken) return req.authContext.socketAuthToken;
+
+        const sessionToken = session?.token
+            || (req.cookies ? req.cookies[sessionService.cookieName] : null);
+        return sessionService.createSocketAuthToken(sessionToken);
     }
 
     router.post('/register', registerRateLimiter, async (req, res, next) => {
@@ -68,7 +77,10 @@ function createAuthRoutes({
             }
 
             setSessionCookie(res, result.session.token);
-            return res.status(201).json(await buildAuthResponse(result.user, result.session.token));
+            return res.status(201).json(buildAuthResponse(
+                result.user,
+                await getSocketAuthToken(req, result.session)
+            ));
         } catch (error) {
             return next(error);
         }
@@ -82,7 +94,10 @@ function createAuthRoutes({
             }
 
             setSessionCookie(res, result.session.token);
-            return res.json(await buildAuthResponse(result.user, result.session.token));
+            return res.json(buildAuthResponse(
+                result.user,
+                await getSocketAuthToken(req, result.session)
+            ));
         } catch (error) {
             return next(error);
         }
@@ -105,8 +120,10 @@ function createAuthRoutes({
                 return res.json({ user: null, socketAuthToken: null });
             }
 
-            const token = req.cookies ? req.cookies[sessionService.cookieName] : null;
-            return res.json(await buildAuthResponse(req.user, token));
+            return res.json(buildAuthResponse(
+                req.user,
+                await getSocketAuthToken(req)
+            ));
         } catch (error) {
             return next(error);
         }

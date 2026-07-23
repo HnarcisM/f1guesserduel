@@ -14,15 +14,21 @@ function createFakeSessionRepository() {
         }]
     ]);
     const sessions = new Map();
+    const calls = {
+        getSessionUserByHash: 0,
+        deleteExpiredSessions: 0
+    };
 
     return {
         users,
         sessions,
+        calls,
         async createSession({ userId, tokenHash, expiresAt }) {
             sessions.set(tokenHash, { userId, tokenHash, expiresAt });
             return { changes: 1 };
         },
         async getSessionUserByHash(tokenHash) {
+            calls.getSessionUserByHash += 1;
             const session = sessions.get(tokenHash);
             if (!session || new Date(session.expiresAt).getTime() <= Date.now()) return null;
             return users.get(session.userId) || null;
@@ -52,6 +58,7 @@ function createFakeSessionRepository() {
             return { changes };
         },
         async deleteExpiredSessions() {
+            calls.deleteExpiredSessions += 1;
             let changes = 0;
             for (const [tokenHash, session] of sessions.entries()) {
                 if (new Date(session.expiresAt).getTime() <= Date.now()) {
@@ -82,6 +89,32 @@ test('socket auth token resolves the user from an active session', async () => {
     assert.equal(user.username, 'Narcis');
     assert.equal(user.email, 'narcis@example.com');
     assert.equal(user.avatarKey, 'helmet-green');
+});
+
+test('new sessions create socket auth without cleanup or a session lookup', async () => {
+    const { repository, sessionService } = createTestSessionService();
+
+    const session = await sessionService.createSession(1);
+
+    assert.equal(repository.calls.deleteExpiredSessions, 0);
+    assert.equal(repository.calls.getSessionUserByHash, 0);
+    assert.equal(typeof session.socketAuthToken, 'string');
+    assert.ok(session.socketAuthToken.includes('.'));
+});
+
+test('auth context reuses one session lookup for HTTP and socket authentication', async () => {
+    const { repository, sessionService } = createTestSessionService();
+    const session = await sessionService.createSession(1);
+
+    const context = await sessionService.getAuthContextByToken(session.token);
+
+    assert.equal(context.user.username, 'Narcis');
+    assert.equal(typeof context.socketAuthToken, 'string');
+    assert.equal(repository.calls.getSessionUserByHash, 1);
+
+    const socketUser = await sessionService.getUserBySocketAuthToken(context.socketAuthToken);
+    assert.equal(socketUser.username, 'Narcis');
+    assert.equal(repository.calls.getSessionUserByHash, 2);
 });
 
 test('socket auth token rejects tampered payloads', async () => {

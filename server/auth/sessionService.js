@@ -67,14 +67,16 @@ function createSessionService(databaseOrRepository, options = {}) {
     }
 
     async function createSession(userId) {
-        await cleanupExpiredSessions();
-
         const token = crypto.randomBytes(32).toString('hex');
         const tokenHash = hashToken(token);
         const expiresAt = new Date(Date.now() + maxAgeMs).toISOString();
 
         await repository.createSession({ userId, tokenHash, expiresAt });
-        return { token, expiresAt };
+        return {
+            token,
+            expiresAt,
+            socketAuthToken: createSocketAuthTokenForSessionHash(tokenHash)
+        };
     }
 
     async function getUserBySessionHash(sessionHash) {
@@ -82,18 +84,15 @@ function createSessionService(databaseOrRepository, options = {}) {
         return repository.getSessionUserByHash(sessionHash);
     }
 
-    async function getUserByToken(token) {
+    async function resolveSessionToken(token) {
         if (!token || typeof token !== 'string') return null;
-        return getUserBySessionHash(hashToken(token));
+
+        const sessionHash = hashToken(token);
+        const user = await getUserBySessionHash(sessionHash);
+        return user ? { user, sessionHash } : null;
     }
 
-    async function createSocketAuthToken(sessionToken) {
-        if (!sessionToken || typeof sessionToken !== 'string') return null;
-
-        const sessionHash = hashToken(sessionToken);
-        const user = await getUserBySessionHash(sessionHash);
-        if (!user) return null;
-
+    function createSocketAuthTokenForSessionHash(sessionHash) {
         const payload = {
             sessionHash,
             exp: Date.now() + socketAuthTokenMaxAgeMs
@@ -102,6 +101,28 @@ function createSessionService(databaseOrRepository, options = {}) {
         const signature = signSocketAuthPayload(encodedPayload, socketAuthSecret);
 
         return `${encodedPayload}.${signature}`;
+    }
+
+    async function getUserByToken(token) {
+        const session = await resolveSessionToken(token);
+        return session?.user || null;
+    }
+
+    async function getAuthContextByToken(token) {
+        const session = await resolveSessionToken(token);
+        if (!session) return null;
+
+        return {
+            user: session.user,
+            socketAuthToken: createSocketAuthTokenForSessionHash(session.sessionHash)
+        };
+    }
+
+    async function createSocketAuthToken(sessionToken) {
+        const session = await resolveSessionToken(sessionToken);
+        return session
+            ? createSocketAuthTokenForSessionHash(session.sessionHash)
+            : null;
     }
 
     async function getUserBySocketAuthToken(socketAuthToken) {
@@ -144,6 +165,7 @@ function createSessionService(databaseOrRepository, options = {}) {
     return {
         createSession,
         getUserByToken,
+        getAuthContextByToken,
         createSocketAuthToken,
         getUserBySocketAuthToken,
         cleanupExpiredSessions,

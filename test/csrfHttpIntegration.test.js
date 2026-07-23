@@ -26,10 +26,14 @@ function allowRequest(req, res, next) {
 function createTestApp() {
     const app = express();
     const authCalls = { login: 0, register: 0 };
+    const sessionCalls = { createSocketAuthToken: 0 };
     const sessionService = {
         cookieName: 'f1_session',
         maxAgeMs: 60_000,
-        async createSocketAuthToken() { return 'socket-token'; },
+        async createSocketAuthToken() {
+            sessionCalls.createSocketAuthToken += 1;
+            return 'socket-token';
+        },
         async destroySession() {},
         async destroyAllSessionsForUser() {},
         async destroyOtherSessionsForUser() { return { changes: 0 }; }
@@ -65,7 +69,10 @@ function createTestApp() {
                         email: 'login@example.com',
                         avatarKey: 'helmet-blue'
                     },
-                    session: { token: 'login-session' }
+                    session: {
+                        token: 'login-session',
+                        socketAuthToken: 'login-socket-token'
+                    }
                 };
             },
             async register() {
@@ -78,7 +85,10 @@ function createTestApp() {
                         email: 'register@example.com',
                         avatarKey: 'helmet-green'
                     },
-                    session: { token: 'register-session' }
+                    session: {
+                        token: 'register-session',
+                        socketAuthToken: 'register-socket-token'
+                    }
                 };
             }
         },
@@ -108,7 +118,7 @@ function createTestApp() {
         }
     }));
 
-    return { app, authCalls };
+    return { app, authCalls, sessionCalls };
 }
 
 async function sendJson(baseUrl, path, {
@@ -185,7 +195,7 @@ test('real account routes enforce CSRF origins without breaking trusted updates'
 });
 
 test('real auth routes reject login CSRF and allow trusted login and registration', async () => {
-    const { app, authCalls } = createTestApp();
+    const { app, authCalls, sessionCalls } = createTestApp();
     const server = app.listen(0, '127.0.0.1');
     await once(server, 'listening');
     const baseUrl = `http://127.0.0.1:${server.address().port}`;
@@ -226,6 +236,7 @@ test('real auth routes reject login CSRF and allow trusted login and registratio
         });
         assert.equal(trustedLogin.response.status, 200);
         assert.equal(trustedLogin.data.user.username, 'Login_Test');
+        assert.equal(trustedLogin.data.socketAuthToken, 'login-socket-token');
 
         const trustedRegister = await sendJson(baseUrl, '/api/auth/register', {
             method: 'POST',
@@ -239,11 +250,14 @@ test('real auth routes reject login CSRF and allow trusted login and registratio
         });
         assert.equal(trustedRegister.response.status, 201);
         assert.equal(trustedRegister.data.user.username, 'Register_Test');
+        assert.equal(trustedRegister.data.socketAuthToken, 'register-socket-token');
         assert.deepEqual(authCalls, { login: 1, register: 1 });
+        assert.equal(sessionCalls.createSocketAuthToken, 0);
 
         const safeAuthRead = await sendJson(baseUrl, '/api/auth/me');
         assert.equal(safeAuthRead.response.status, 200);
         assert.equal(safeAuthRead.data.user.username, 'Csrf_Test');
+        assert.equal(sessionCalls.createSocketAuthToken, 1);
     } finally {
         server.close();
         await once(server, 'close');

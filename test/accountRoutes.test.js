@@ -139,13 +139,14 @@ test('profile update uses the authenticated user and refreshes socket authentica
 
     await handler({
         user: { id: 7 },
+        authContext: { socketAuthToken: 'verified-socket-token' },
         body: { username: 'Narcis_New', currentPassword: 'secret', userId: 999 },
         cookies: { f1_session: 'current-session' }
     }, response, error => { throw error; });
 
     assert.deepEqual(calls, [{ userId: 7, username: 'Narcis_New', currentPassword: 'secret' }]);
     assert.equal(response.body.user.username, 'Narcis_New');
-    assert.equal(response.body.socketAuthToken, 'fresh-socket-token');
+    assert.equal(response.body.socketAuthToken, 'verified-socket-token');
 });
 
 test('password update revokes other sessions while preserving the current session', async () => {
@@ -169,6 +170,7 @@ test('password update revokes other sessions while preserving the current sessio
 
     await handler({
         user: { id: 7 },
+        authContext: { socketAuthToken: 'verified-socket-token' },
         body: { currentPassword: 'old-secret', newPassword: 'new-secret', userId: 999 },
         cookies: { f1_session: 'current-session' }
     }, response, error => { throw error; });
@@ -176,7 +178,7 @@ test('password update revokes other sessions while preserving the current sessio
     assert.deepEqual(calls[0], { userId: 7, currentPassword: 'old-secret', newPassword: 'new-secret' });
     assert.deepEqual(calls[1], { userId: 7, token: 'current-session' });
     assert.equal(response.body.sessionsRevoked, 2);
-    assert.equal(response.body.socketAuthToken, 'fresh-socket-token');
+    assert.equal(response.body.socketAuthToken, 'verified-socket-token');
 });
 
 test('avatar update uses the authenticated user and refreshes socket authentication', async () => {
@@ -197,13 +199,14 @@ test('avatar update uses the authenticated user and refreshes socket authenticat
 
     await handler({
         user: { id: 7 },
+        authContext: { socketAuthToken: 'verified-socket-token' },
         body: { avatarKey: 'helmet-purple', userId: 999 },
         cookies: { f1_session: 'current-session' }
     }, response, error => { throw error; });
 
     assert.deepEqual(calls, [{ userId: 7, avatarKey: 'helmet-purple' }]);
     assert.equal(response.body.user.avatarKey, 'helmet-purple');
-    assert.equal(response.body.socketAuthToken, 'fresh-socket-token');
+    assert.equal(response.body.socketAuthToken, 'verified-socket-token');
 });
 
 test('logout everywhere revokes every session and clears the hardened cookie', async () => {

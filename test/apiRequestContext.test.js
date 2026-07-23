@@ -12,10 +12,13 @@ test('static assets and unrelated API routes skip session lookups', async () => 
     let sessionLookups = 0;
     const sessionService = {
         cookieName: 'f1_session',
-        async getUserByToken(token) {
+        async getAuthContextByToken(token) {
             sessionLookups += 1;
             return token === 'valid-session'
-                ? { id: 7, username: 'Static_Test' }
+                ? {
+                    user: { id: 7, username: 'Static_Test' },
+                    socketAuthToken: 'verified-socket-token'
+                }
                 : null;
         }
     };
@@ -26,7 +29,7 @@ test('static assets and unrelated API routes skip session lookups', async () => 
         createApiRequestContextMiddleware(sessionService)
     );
     app.get('/api/auth/probe', (req, res) => {
-        res.json({ user: req.user });
+        res.json({ user: req.user, socketAuthToken: req.authContext?.socketAuthToken });
     });
     app.post('/api/account/probe', (req, res) => {
         res.json({ user: req.user, body: req.body });
@@ -53,7 +56,8 @@ test('static assets and unrelated API routes skip session lookups', async () => 
         const authResponse = await fetch(`${baseUrl}/api/auth/probe`, { headers });
         assert.equal(authResponse.status, 200);
         assert.deepEqual(await authResponse.json(), {
-            user: { id: 7, username: 'Static_Test' }
+            user: { id: 7, username: 'Static_Test' },
+            socketAuthToken: 'verified-socket-token'
         });
         assert.equal(sessionLookups, 1);
 

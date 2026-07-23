@@ -89,6 +89,11 @@ function createAccountRoutes({
         return req.cookies ? req.cookies[sessionService.cookieName] : null;
     }
 
+    async function getSocketAuthToken(req) {
+        return req.authContext?.socketAuthToken
+            || sessionService.createSocketAuthToken(getSessionToken(req));
+    }
+
     function clearSessionCookie(res) {
         const { maxAge, ...clearOptions } = {
             httpOnly: true,
@@ -113,10 +118,9 @@ function createAccountRoutes({
                 return res.status(result.status || 400).json({ message: result.message });
             }
 
-            const token = getSessionToken(req);
             return res.json({
                 user: result.user,
-                socketAuthToken: await sessionService.createSocketAuthToken(token)
+                socketAuthToken: await getSocketAuthToken(req)
             });
         } catch (error) {
             return next(error);
@@ -139,7 +143,7 @@ function createAccountRoutes({
             return res.json({
                 ok: true,
                 user: result.user,
-                socketAuthToken: await sessionService.createSocketAuthToken(token),
+                socketAuthToken: await getSocketAuthToken(req),
                 sessionsRevoked: Number(revoked?.changes ?? revoked?.rowCount) || 0
             });
         } catch (error) {
@@ -157,10 +161,9 @@ function createAccountRoutes({
                 return res.status(result.status || 400).json({ message: result.message });
             }
 
-            const token = getSessionToken(req);
             return res.json({
                 user: result.user,
-                socketAuthToken: await sessionService.createSocketAuthToken(token)
+                socketAuthToken: await getSocketAuthToken(req)
             });
         } catch (error) {
             return next(error);
