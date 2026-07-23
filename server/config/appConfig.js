@@ -5,6 +5,9 @@ const DEFAULT_SESSION_COOKIE_NAME = 'f1_session';
 const DEFAULT_SESSION_MAX_AGE_DAYS = 7;
 const DEFAULT_SOCKET_AUTH_TOKEN_MAX_AGE_MS = 2 * 60 * 1000;
 const DEFAULT_SESSION_CLEANUP_INTERVAL_MS = 15 * 60 * 1000;
+const DEFAULT_GAME_HISTORY_RETENTION_DAYS = 365;
+const DEFAULT_GAME_HISTORY_CLEANUP_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
+const DEFAULT_GAME_HISTORY_CLEANUP_BATCH_SIZE = 5_000;
 const DEFAULT_ROOM_SAVE_DEBOUNCE_MS = 250;
 const DEFAULT_ROOM_CLEANUP_INTERVAL_MS = 60 * 1000;
 const DEFAULT_ROOM_INACTIVE_TTL_MS = 30 * 60 * 1000;
@@ -529,6 +532,28 @@ function createAppConfig(env = process.env, options = {}) {
                 )
             }
         },
+        account: {
+            gameHistory: {
+                retentionDays: parseIntegerEnv(
+                    env,
+                    'GAME_HISTORY_RETENTION_DAYS',
+                    DEFAULT_GAME_HISTORY_RETENTION_DAYS,
+                    { min: 1, max: 3650 }
+                ),
+                cleanupIntervalMs: parseIntegerEnv(
+                    env,
+                    'GAME_HISTORY_CLEANUP_INTERVAL_MS',
+                    DEFAULT_GAME_HISTORY_CLEANUP_INTERVAL_MS,
+                    { min: 0, max: 30 * 24 * 60 * 60 * 1000 }
+                ),
+                cleanupBatchSize: parseIntegerEnv(
+                    env,
+                    'GAME_HISTORY_CLEANUP_BATCH_SIZE',
+                    DEFAULT_GAME_HISTORY_CLEANUP_BATCH_SIZE,
+                    { min: 1, max: 100_000 }
+                )
+            }
+        },
         auth: {
             sessionSecret,
             socketAuthSecret,
@@ -573,6 +598,9 @@ module.exports = {
     DEFAULT_SESSION_MAX_AGE_DAYS,
     DEFAULT_SOCKET_AUTH_TOKEN_MAX_AGE_MS,
     DEFAULT_SESSION_CLEANUP_INTERVAL_MS,
+    DEFAULT_GAME_HISTORY_RETENTION_DAYS,
+    DEFAULT_GAME_HISTORY_CLEANUP_INTERVAL_MS,
+    DEFAULT_GAME_HISTORY_CLEANUP_BATCH_SIZE,
     DEFAULT_ROOM_SAVE_DEBOUNCE_MS,
     DEFAULT_ROOM_CLEANUP_INTERVAL_MS,
     DEFAULT_ROOM_INACTIVE_TTL_MS,

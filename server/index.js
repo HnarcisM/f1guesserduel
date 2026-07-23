@@ -17,6 +17,7 @@ const { createSessionService } = require('./auth/sessionService');
 const { createAuthService } = require('./auth/authService');
 const { createAuthRoutes } = require('./auth/authRoutes');
 const { createAccountStatsService } = require('./account/accountStatsService');
+const { createGameHistoryCleanupService } = require('./account/gameHistoryCleanupService');
 const { createAccountRoutes } = require('./account/accountRoutes');
 const {
     createApiRequestContextMiddleware
@@ -172,6 +173,14 @@ const sessionService = createSessionService(db, {
 });
 const authService = createAuthService(db, sessionService);
 const accountStatsService = createAccountStatsService(db);
+const gameHistoryCleanupService = createGameHistoryCleanupService({
+    databaseOrRepository: db,
+    retentionDays: config.account.gameHistory.retentionDays,
+    cleanupIntervalMs: config.account.gameHistory.cleanupIntervalMs,
+    batchSize: config.account.gameHistory.cleanupBatchSize,
+    logger
+});
+gameHistoryCleanupService.start({ runImmediately: true });
 const redisRateLimitStore = redisClient
     ? createRedisRateLimitStore({
         redisClient,
@@ -291,6 +300,7 @@ async function shutdownRoomStore() {
 }
 
 function prepareApplicationShutdown() {
+    gameHistoryCleanupService.stopScheduling();
     stopInactiveRoomCleanup?.();
     const disconnectTarget = config.socket.redisAdapter.enabled && io.local ? io.local : io;
     disconnectTarget.disconnectSockets?.(true);
@@ -299,6 +309,7 @@ function prepareApplicationShutdown() {
 async function cleanupApplicationResources() {
     stopExpiredSessionCleanup?.();
     stopInactiveRoomCleanup?.();
+    await gameHistoryCleanupService.stop();
     await shutdownRoomStore();
     const connectionResults = await Promise.allSettled([
         redisSocketAdapter?.close?.(),
@@ -339,11 +350,24 @@ server.listen(config.port, () => {
         roomPersistenceProvider: roomStore.provider || 'file',
         roomCleanupIntervalMs: config.rooms.cleanupIntervalMs,
         roomInactiveTtlMs: config.rooms.inactiveTtlMs,
+        gameHistoryRetentionDays: config.account.gameHistory.retentionDays,
+        gameHistoryCleanupIntervalMs: config.account.gameHistory.cleanupIntervalMs,
+        gameHistoryCleanupBatchSize: config.account.gameHistory.cleanupBatchSize,
         rateLimitProvider: redisClient ? 'redis' : 'memory'
     });
 });
 
-return { app, server, io, db, redisClient, redisSocketAdapter, roomStore, roomCleanupService };
+return {
+    app,
+    server,
+    io,
+    db,
+    redisClient,
+    redisSocketAdapter,
+    roomStore,
+    roomCleanupService,
+    gameHistoryCleanupService
+};
 }
 
 

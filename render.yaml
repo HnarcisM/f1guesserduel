@@ -33,6 +33,12 @@ services:
         value: true
       - key: DATABASE_URL
         sync: false
+      - key: GAME_HISTORY_RETENTION_DAYS
+        value: 365
+      - key: GAME_HISTORY_CLEANUP_INTERVAL_MS
+        value: 604800000
+      - key: GAME_HISTORY_CLEANUP_BATCH_SIZE
+        value: 5000
       - key: SOCKET_REDIS_ADAPTER_ENABLED
         value: false
       - key: SOCKET_RATE_LIMIT_ENABLED

@@ -22,6 +22,9 @@ test('Render blueprint documents production web service settings', () => {
     assert.match(source, /key:\s*DATABASE_PROVIDER\s+value:\s*postgres/s);
     assert.match(source, /key:\s*POSTGRES_SSL\s+value:\s*true/s);
     assert.match(source, /key:\s*DATABASE_URL\s+sync:\s*false/s);
+    assert.match(source, /key:\s*GAME_HISTORY_RETENTION_DAYS\s+value:\s*365/s);
+    assert.match(source, /key:\s*GAME_HISTORY_CLEANUP_INTERVAL_MS\s+value:\s*604800000/s);
+    assert.match(source, /key:\s*GAME_HISTORY_CLEANUP_BATCH_SIZE\s+value:\s*5000/s);
     assert.match(source, /key:\s*SOCKET_RATE_LIMIT_ENABLED\s+value:\s*true/s);
     assert.match(source, /key:\s*SOCKET_RATE_LIMIT_WINDOW_MS\s+value:\s*60000/s);
     assert.match(source, /key:\s*LOG_LEVEL\s+value:\s*info/s);
@@ -64,6 +67,9 @@ test('example environment uses Render-safe production defaults', () => {
     assert.match(source, /DATABASE_PROVIDER=postgres/);
     assert.match(source, /DATABASE_URL=postgresql:\/\/user:password@host\/database\?sslmode=require/);
     assert.match(source, /POSTGRES_SSL=true/);
+    assert.match(source, /GAME_HISTORY_RETENTION_DAYS=365/);
+    assert.match(source, /GAME_HISTORY_CLEANUP_INTERVAL_MS=604800000/);
+    assert.match(source, /GAME_HISTORY_CLEANUP_BATCH_SIZE=5000/);
     assert.match(source, /COOKIE_SECURE=true/);
     assert.match(source, /COOKIE_SAMESITE=lax/);
     assert.match(source, /TRUST_PROXY=true/);
@@ -86,6 +92,9 @@ test('deployment guide includes manual Render checks and secret generation', () 
     assert.match(source, /PUBLIC_ORIGIN=https:\/\/numele-serviciului-tau\.onrender\.com/);
     assert.match(source, /DATABASE_PROVIDER=postgres/);
     assert.match(source, /DATABASE_URL=postgresql:\/\/user:password@host\/database\?sslmode=require/);
+    assert.match(source, /GAME_HISTORY_RETENTION_DAYS=365/);
+    assert.match(source, /GAME_HISTORY_CLEANUP_INTERVAL_MS=604800000/);
+    assert.match(source, /GAME_HISTORY_CLEANUP_BATCH_SIZE=5000/);
     assert.match(source, /Conturi persistente cu Neon Postgres/);
     assert.match(source, /SOCKET_ALLOWED_ORIGINS/);
     assert.match(source, /SOCKET_RATE_LIMIT_ENABLED=true/);

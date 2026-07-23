@@ -110,3 +110,16 @@ test('Duel room browser series metadata stays isolated and renders safely', () =
     assertFileBudget('server/socket/roomListPayloads.js', 4_000);
 });
 
+
+test('game history retention stays isolated from account statistics and server startup', () => {
+    const cleanupService = readProjectFile('server/account/gameHistoryCleanupService.js');
+    const retentionRepository = readProjectFile('server/account/gameHistoryRetentionRepository.js');
+    const server = readProjectFile('server/index.js');
+
+    assert.match(cleanupService, /createGameHistoryRetentionRepository/);
+    assert.match(retentionRepository, /pg_try_advisory_lock/);
+    assert.match(retentionRepository, /LIMIT \$2/);
+    assert.match(server, /gameHistoryCleanupService\.start\(\{ runImmediately: true \}\)/);
+    assertFileBudget('server/account/gameHistoryCleanupService.js', 8_000);
+    assertFileBudget('server/account/gameHistoryRetentionRepository.js', 9_000);
+});

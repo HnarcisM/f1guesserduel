@@ -35,6 +35,13 @@ test('app config provides safe development defaults', () => {
             maxLifetimeSeconds: 300
         }
     });
+    assert.deepEqual(config.account, {
+        gameHistory: {
+            retentionDays: 365,
+            cleanupIntervalMs: 604_800_000,
+            cleanupBatchSize: 5_000
+        }
+    });
     assert.deepEqual(config.redis, {
         enabled: false,
         url: null,
@@ -101,6 +108,9 @@ test('app config reads production values from environment', () => {
         POSTGRES_KEEP_ALIVE_INITIAL_DELAY_MS: '12000',
         POSTGRES_MAX_LIFETIME_SECONDS: '600',
         POSTGRES_MIGRATIONS_DIR: '/opt/f1/migrations/postgres',
+        GAME_HISTORY_RETENTION_DAYS: '730',
+        GAME_HISTORY_CLEANUP_INTERVAL_MS: '86400000',
+        GAME_HISTORY_CLEANUP_BATCH_SIZE: '2500',
         REDIS_URL: 'rediss://default:secret@redis.example.com:6379',
         REDIS_KEY_PREFIX: 'f1:production',
         REDIS_CONNECT_TIMEOUT_MS: '15000',
@@ -151,6 +161,13 @@ test('app config reads production values from environment', () => {
             initializationRetryBaseDelayMs: 1500,
             keepAliveInitialDelayMs: 12_000,
             maxLifetimeSeconds: 600
+        }
+    });
+    assert.deepEqual(config.account, {
+        gameHistory: {
+            retentionDays: 730,
+            cleanupIntervalMs: 86_400_000,
+            cleanupBatchSize: 2_500
         }
     });
     assert.deepEqual(config.redis, {
@@ -254,6 +271,18 @@ test('app config rejects invalid numeric environment values', () => {
     assert.throws(
         () => createAppConfig({ POSTGRES_POOL_MAX: '0' }),
         /POSTGRES_POOL_MAX must be an integer/
+    );
+    assert.throws(
+        () => createAppConfig({ GAME_HISTORY_RETENTION_DAYS: '0' }),
+        /GAME_HISTORY_RETENTION_DAYS must be an integer/
+    );
+    assert.throws(
+        () => createAppConfig({ GAME_HISTORY_CLEANUP_INTERVAL_MS: '-1' }),
+        /GAME_HISTORY_CLEANUP_INTERVAL_MS must be an integer/
+    );
+    assert.throws(
+        () => createAppConfig({ GAME_HISTORY_CLEANUP_BATCH_SIZE: '100001' }),
+        /GAME_HISTORY_CLEANUP_BATCH_SIZE must be an integer/
     );
     assert.throws(
         () => createAppConfig({ POSTGRES_CONNECTION_TIMEOUT_MS: '500' }),

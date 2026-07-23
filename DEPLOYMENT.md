@@ -61,6 +61,9 @@ SESSION_COOKIE_NAME=f1_session
 SESSION_MAX_AGE_DAYS=7
 SOCKET_AUTH_TOKEN_MAX_AGE_MS=120000
 SESSION_CLEANUP_INTERVAL_MS=900000
+GAME_HISTORY_RETENTION_DAYS=365
+GAME_HISTORY_CLEANUP_INTERVAL_MS=604800000
+GAME_HISTORY_CLEANUP_BATCH_SIZE=5000
 ROOM_SAVE_DEBOUNCE_MS=250
 PERSISTENCE_MODE=ephemeral
 DATA_DIR=/tmp/f1guesserduel
@@ -117,7 +120,7 @@ user_game_results
 user_game_stats
 ```
 
-Conturile, sesiunile și statisticile utilizatorilor autentificați se păstrează în Postgres. Migrarea `002_account_game_stats.sql` este aplicată automat la primul deploy al acestei versiuni și nu necesită variabile noi. Fără Redis, camerele active rămân în `rooms.json` pe `/tmp`, deci pot dispărea la restart/redeploy/sleep.
+Conturile, sesiunile și statisticile utilizatorilor autentificați se păstrează în Postgres. Migrările numerotate sunt aplicate automat la deploy. Rezultatele detaliate din `user_game_results` sunt păstrate implicit 365 de zile și curățate la pornire, apoi săptămânal, în query-uri de maximum 5.000 de rânduri; statisticile agregate, XP-ul și badge-urile rămân permanente. Fără Redis, camerele active rămân în `rooms.json` pe `/tmp`, deci pot dispărea la restart/redeploy/sleep.
 
 ### Redis opțional pentru camere și rate limiting
 

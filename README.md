@@ -308,6 +308,9 @@ Aplicația poate fi configurată prin variabile de mediu. Pentru rulare locală 
 | `POSTGRES_MAX_LIFETIME_SECONDS` | `300` | Reciclează controlat conexiunile vechi din pool; `0` dezactivează limita. |
 | `POSTGRES_MIGRATIONS_DIR` | `server/db/migrations/postgres` | Directorul cu migrările PostgreSQL numerotate. În mod normal nu trebuie suprascris. |
 | `DB_FILE_PATH` | `<DATA_DIR>/f1guesser.sqlite` | Path SQLite local, folosit doar când `DATABASE_PROVIDER=sqlite`. |
+| `GAME_HISTORY_RETENTION_DAYS` | `365` | Păstrează rezultatele detaliate pentru acest număr de zile; statisticile agregate și XP-ul rămân permanent. |
+| `GAME_HISTORY_CLEANUP_INTERVAL_MS` | `604800000` | Rulează cleanup-ul la pornire și apoi o dată la 7 zile; `0` dezactivează jobul automat. |
+| `GAME_HISTORY_CLEANUP_BATCH_SIZE` | `5000` | Numărul maxim de rezultate șterse într-o singură interogare de cleanup. |
 | `SESSION_SECRET` | dev fallback local | Secret pentru sesiuni; obligatoriu în production. |
 | `SOCKET_AUTH_SECRET` | `SESSION_SECRET` sau dev fallback | Secret pentru token-ul scurt folosit de socket auth refresh. |
 | `SESSION_COOKIE_NAME` | `f1_session` | Numele cookie-ului de sesiune. |
@@ -428,7 +431,9 @@ La primul deploy peste baza existentă, migrarea `001` folosește operații `IF 
 - `user_game_stats` păstrează contoare agregate pentru încărcarea rapidă a panoului.
 - Actualizarea registrului și a contoarelor este tranzacțională în PostgreSQL. Dacă actualizarea statisticilor eșuează temporar, jocul continuă, iar eroarea este logată fără identificatorul utilizatorului.
 - `GET /api/account/summary` folosește exclusiv utilizatorul sesiunii curente și răspunde cu `Cache-Control: no-store`.
-- Interogarea istoricului este limitată și folosește indexul existent pe utilizator și data finalizării; răspunsul nu expune `userId`, cheia internă a rezultatului sau informații despre pilotul țintă.
+- Interogarea istoricului este limitată și folosește indexul pe utilizator și data finalizării; răspunsul nu expune `userId` sau cheia internă a rezultatului.
+- Rezultatele detaliate mai vechi de 365 de zile sunt verificate la pornire și apoi eliminate săptămânal, în loturi de maximum 5.000 de rânduri per query. Statisticile agregate, XP-ul, streak-urile și badge-urile nu sunt afectate.
+- În PostgreSQL, cleanup-ul folosește un advisory lock pentru ca o singură instanță Node.js să ruleze ștergerea; în SQLite jobul rulează local pe conexiunea aplicației.
 - Statisticile Guest din `localStorage` rămân separate și nu sunt importate automat într-un cont.
 
 Local poți rămâne pe SQLite, fără `DATABASE_URL`:
