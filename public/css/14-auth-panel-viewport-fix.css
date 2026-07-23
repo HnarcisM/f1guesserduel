@@ -1,37 +1,30 @@
-/* --- AUTH/PROFILE MODAL: viewport guard when the full header is visible --- */
-/*
- * The profile content is taller than the login form, so it reaches the modal's
- * max-height and becomes scrollable. Keep the border-box inside the visual
- * viewport and reserve the fixed header area while the game UI is active.
- */
+/* Keep the profile modal inside the viewport below the fixed header. */
 .auth-panel {
     box-sizing: border-box;
-    max-height: min(90vh, 820px);
     max-height: min(90dvh, 820px);
     overscroll-behavior: contain;
-    scrollbar-gutter: stable;
 }
 
 body:has(#difficulty-overlay.hidden) .auth-panel {
-    top: calc(var(--header-height) + max(12px, env(safe-area-inset-top)));
-    max-height: min(820px, calc(100vh - var(--header-height) - 24px));
+    top: calc(var(--header-height) + 12px + env(safe-area-inset-top));
     max-height: min(
         820px,
         calc(
             100dvh
             - var(--header-height)
-            - max(12px, env(safe-area-inset-top))
-            - max(12px, env(safe-area-inset-bottom))
+            - 24px
+            - env(safe-area-inset-top)
+            - env(safe-area-inset-bottom)
         )
     );
-    transform: translate(-50%, 0) scale(0.96);
+    transform: translate(-50%) scale(0.96);
 }
 
 body:has(#difficulty-overlay.hidden) .auth-panel.show {
-    transform: translate(-50%, 0) scale(1);
+    transform: translate(-50%) scale(1);
 }
 
-/* Keep the close control reachable even after the profile content is scrolled. */
+/* Keep the close control reachable while the profile content scrolls. */
 .auth-close {
     position: sticky;
     top: 0;
@@ -42,15 +35,7 @@ body:has(#difficulty-overlay.hidden) .auth-panel.show {
     height: 40px;
     margin: -14px -14px -40px auto;
     border-radius: 50%;
-    background: color-mix(in srgb, var(--surface-card) 88%, transparent);
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.32);
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
-}
-
-.auth-close:hover {
-    background: color-mix(in srgb, var(--surface-card) 76%, var(--accent-f1) 24%);
-    color: var(--text-primary);
+    background: var(--surface-card);
 }
 
 .auth-panel h2 {
