@@ -12,6 +12,7 @@ const DEFAULT_IGNORED_DIRECTORIES = new Set([
     '.turbo',
     'coverage',
     'dist',
+    'assets-src',
     'node_modules',
     'playwright-report',
     'test-results'

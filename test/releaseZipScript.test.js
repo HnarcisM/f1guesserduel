@@ -99,6 +99,7 @@ test('release path filter keeps only required runtime flags and logos by default
     assert.equal(shouldIncludePath('public/flags/de.svg', { requiredAssets }), false);
     assert.equal(shouldIncludePath('public/logos/Ferrari.png', { requiredAssets }), false);
     assert.equal(shouldIncludePath('public/flags/de.svg', { requiredAssets, includeAllAssets: true }), true);
+    assert.equal(shouldIncludePath('assets-src/logos/Ferrari.png', { requiredAssets }), false);
 });
 
 test('release collector includes assets used by driver data and skips unused assets', () => {

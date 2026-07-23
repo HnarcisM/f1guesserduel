@@ -10,7 +10,8 @@ const {
     calculateNormalizedRmse,
     compareRasterBuffers,
     optimizeRasterFile,
-    resolveOriginalForWebp
+    resolveOriginalForWebp,
+    resolveOutputPath
 } = require('../scripts/optimize-raster-assets');
 const { collectRequiredReleaseAssets } = require('../scripts/create-release-zip');
 
@@ -84,6 +85,29 @@ test('raster comparison utilities reject incompatible buffers and changed dimens
 
     assert.equal(comparison.dimensionsMatch, false);
     assert.equal(comparison.normalizedRmse, Number.POSITIVE_INFINITY);
+});
+
+
+test('raster sources stay outside public while runtime JPG fallbacks remain deployable', () => {
+    const rootDir = path.resolve(__dirname, '..');
+    const publicRasterSources = fs.readdirSync(path.join(rootDir, 'public', 'logos'))
+        .filter(fileName => /\.(?:png|jpe?g)$/i.test(fileName))
+        .sort();
+    const privateRasterSources = fs.readdirSync(path.join(rootDir, 'assets-src', 'logos'))
+        .filter(fileName => /\.(?:png|jpe?g)$/i.test(fileName))
+        .sort();
+
+    assert.deepEqual(publicRasterSources, ['BrawnGP.jpg', 'Spyker.jpg']);
+    assert.equal(privateRasterSources.length, 30);
+    assert.ok(privateRasterSources.includes('Ferrari.png'));
+    assert.equal(
+        resolveOriginalForWebp(rootDir, 'public/logos/Ferrari.webp'),
+        'assets-src/logos/Ferrari.png'
+    );
+    assert.equal(
+        resolveOutputPath(rootDir, 'assets-src/logos/Ferrari.png'),
+        path.join(rootDir, 'public', 'logos', 'Ferrari.webp')
+    );
 });
 
 test('production WebP logos are smaller than their sources and stay within the visual threshold', async () => {

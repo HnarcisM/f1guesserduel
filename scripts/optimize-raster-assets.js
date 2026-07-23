@@ -5,6 +5,8 @@ const sharp = require('sharp');
 const { collectRequiredReleaseAssets, normalizePath } = require('./create-release-zip');
 
 const SOURCE_EXTENSIONS = ['.png', '.jpg', '.jpeg'];
+const RASTER_SOURCE_DIRECTORY = 'assets-src/logos';
+const PUBLIC_LOGO_DIRECTORY = 'public/logos';
 const MAX_NORMALIZED_RMSE = 0.005;
 const COMPARISON_BACKGROUNDS = [
     { r: 255, g: 255, b: 255 },
@@ -72,11 +74,26 @@ async function encodeWebp(sourceBuffer) {
 
 function resolveOriginalForWebp(rootDir, relativeWebpPath) {
     const parsed = path.parse(relativeWebpPath);
-    for (const extension of SOURCE_EXTENSIONS) {
-        const candidate = normalizePath(path.join(parsed.dir, `${parsed.name}${extension}`));
-        if (fs.existsSync(path.join(rootDir, candidate))) return candidate;
+    const sourceDirectories = [
+        RASTER_SOURCE_DIRECTORY,
+        parsed.dir
+    ];
+
+    for (const sourceDirectory of sourceDirectories) {
+        for (const extension of SOURCE_EXTENSIONS) {
+            const candidate = normalizePath(path.join(sourceDirectory, `${parsed.name}${extension}`));
+            if (fs.existsSync(path.join(rootDir, candidate))) return candidate;
+        }
     }
     return null;
+}
+
+function resolveOutputPath(rootDir, relativeSourcePath) {
+    const parsed = path.parse(relativeSourcePath);
+    if (normalizePath(parsed.dir) === RASTER_SOURCE_DIRECTORY) {
+        return path.join(rootDir, PUBLIC_LOGO_DIRECTORY, `${parsed.name}.webp`);
+    }
+    return path.join(rootDir, parsed.dir, `${parsed.name}.webp`);
 }
 
 function collectRasterSourcePaths(rootDir) {
@@ -136,7 +153,9 @@ async function optimizeRasterAssets(rootDir = process.cwd()) {
     const results = [];
 
     for (const relativePath of sourcePaths) {
-        results.push(await optimizeRasterFile(path.join(rootDir, relativePath)));
+        results.push(await optimizeRasterFile(path.join(rootDir, relativePath), {
+            outputPath: resolveOutputPath(rootDir, relativePath)
+        }));
     }
 
     return {
@@ -184,5 +203,6 @@ module.exports = {
     compareRasterBuffers,
     optimizeRasterAssets,
     optimizeRasterFile,
-    resolveOriginalForWebp
+    resolveOriginalForWebp,
+    resolveOutputPath
 };
