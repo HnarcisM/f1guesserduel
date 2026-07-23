@@ -1,5 +1,4 @@
 const express = require('express');
-const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -254,23 +253,6 @@ registerSocketHandlers(io, {
     logger,
     metrics: operationalMetrics,
     socketRateLimit
-});
-
-app.get('/', (req, res, next) => {
-    const htmlPath = path.join(config.publicDir, 'index.html');
-    const txtPath = path.join(config.publicDir, 'index.txt');
-
-    if (fs.existsSync(htmlPath)) {
-        return res.sendFile(htmlPath, error => {
-            if (error) next(error);
-        });
-    } else if (fs.existsSync(txtPath)) {
-        return res.sendFile(txtPath, error => {
-            if (error) next(error);
-        });
-    } else {
-        return res.status(404).send("<h2>Eroare: Nu am găsit 'index.html' în folderul /public! Asigură-te că fișierul se află acolo.</h2>");
-    }
 });
 
 app.use(createErrorMiddleware({
