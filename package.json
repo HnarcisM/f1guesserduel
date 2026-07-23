@@ -25,6 +25,8 @@
     "optimize:svg": "node scripts/optimize-svg-assets.js",
     "postgres:backup": "node scripts/backup-postgres.js",
     "postgres:backup:verify": "node scripts/verify-postgres-backup.js",
+    "postgres:backup:encrypt": "node scripts/encrypt-postgres-backup.js",
+    "postgres:backup:decrypt": "node scripts/decrypt-postgres-backup.js",
     "postgres:restore": "node scripts/restore-postgres.js",
     "test": "node --test test/*.test.js test/regression/*.test.js",
     "test:coverage": "c8 node --test test/*.test.js test/regression/*.test.js",

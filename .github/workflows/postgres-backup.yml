@@ -1,0 +1,171 @@
+name: PostgreSQL backup and restore drill
+
+on:
+  schedule:
+    # Duminică, 03:17 UTC. Ora neuniformă reduce riscul întârzierilor la ore fixe.
+    - cron: '17 3 * * 0'
+  workflow_dispatch:
+    inputs:
+      run_restore:
+        description: Restore backup into temporary PostgreSQL and validate it
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: postgres-backup-production
+  cancel-in-progress: false
+
+jobs:
+  backup-and-verify:
+    name: Backup production PostgreSQL
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      POSTGRES_BACKUP_DATABASE_URL: ${{ secrets.POSTGRES_BACKUP_DATABASE_URL }}
+      POSTGRES_BACKUP_ENCRYPTION_KEY: ${{ secrets.POSTGRES_BACKUP_ENCRYPTION_KEY }}
+      POSTGRES_TOOLS_DOCKER_IMAGE: postgres:17-alpine
+      POSTGRES_TOOLS_DOCKER_NETWORK: host
+      BACKUP_FILE: backups/postgres/f1guesser-${{ github.run_id }}-${{ github.run_attempt }}.dump
+      RESTORE_DATABASE_URL: postgresql://f1guesser_restore:f1guesser_restore@127.0.0.1:5432/f1guesser_restore
+
+    services:
+      postgres-restore:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: f1guesser_restore
+          POSTGRES_PASSWORD: f1guesser_restore
+          POSTGRES_DB: f1guesser_restore
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U f1guesser_restore -d f1guesser_restore"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22.x'
+
+      - name: Validate backup secrets
+        shell: bash
+        run: |
+          if [[ -z "$POSTGRES_BACKUP_DATABASE_URL" ]]; then
+            echo "POSTGRES_BACKUP_DATABASE_URL is not configured." >&2
+            exit 1
+          fi
+          if [[ -z "$POSTGRES_BACKUP_ENCRYPTION_KEY" ]]; then
+            echo "POSTGRES_BACKUP_ENCRYPTION_KEY is not configured." >&2
+            exit 1
+          fi
+
+      - name: Create PostgreSQL backup
+        id: backup
+        run: npm run postgres:backup -- --output "$BACKUP_FILE"
+
+      - name: Verify archive and checksum
+        id: verify
+        run: npm run postgres:backup:verify -- --file "$BACKUP_FILE"
+
+      - name: Decide whether to run restore drill
+        id: restore-plan
+        shell: bash
+        env:
+          MANUAL_RESTORE: ${{ github.event_name == 'workflow_dispatch' && inputs.run_restore || false }}
+        run: |
+          run_restore=false
+          reason="weekly backup only"
+
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$MANUAL_RESTORE" == "true" ]]; then
+            run_restore=true
+            reason="manual restore requested"
+          elif [[ "$GITHUB_EVENT_NAME" == "schedule" && 10#$(date -u +%d) -le 7 ]]; then
+            run_restore=true
+            reason="first weekly run of the month"
+          fi
+
+          echo "run_restore=$run_restore" >> "$GITHUB_OUTPUT"
+          echo "reason=$reason" >> "$GITHUB_OUTPUT"
+
+      - name: Restore backup into temporary PostgreSQL
+        id: restore
+        if: steps.restore-plan.outputs.run_restore == 'true'
+        env:
+          POSTGRES_RESTORE_DATABASE_URL: ${{ env.RESTORE_DATABASE_URL }}
+        run: >-
+          npm run postgres:restore --
+          --file "$BACKUP_FILE"
+          --confirm RESTORE
+
+      - name: Validate restored database
+        id: restore-validation
+        if: steps.restore-plan.outputs.run_restore == 'true'
+        shell: bash
+        run: |
+          restored_tables=$(docker run --rm --network host \
+            -e PGPASSWORD=f1guesser_restore \
+            postgres:17-alpine \
+            psql "$RESTORE_DATABASE_URL" -v ON_ERROR_STOP=1 -tAc \
+            "SELECT count(*) FROM pg_catalog.pg_tables WHERE schemaname = 'public';")
+
+          if [[ ! "$restored_tables" =~ ^[1-9][0-9]*$ ]]; then
+            echo "Restore validation failed: no application tables were found." >&2
+            exit 1
+          fi
+
+          docker run --rm --network host \
+            -e PGPASSWORD=f1guesser_restore \
+            postgres:17-alpine \
+            psql "$RESTORE_DATABASE_URL" -v ON_ERROR_STOP=1 -tAc \
+            "SELECT count(*) FROM schema_migrations;" >/dev/null
+
+          echo "Validated $restored_tables restored public tables."
+
+      - name: Encrypt backup before upload
+        id: encrypt
+        run: npm run postgres:backup:encrypt -- --file "$BACKUP_FILE"
+
+      - name: Upload encrypted verified backup
+        id: upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: postgres-backup-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ env.BACKUP_FILE }}.enc
+            ${{ env.BACKUP_FILE }}.json.enc
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
+
+      - name: Ensure plaintext backup was removed
+        shell: bash
+        run: |
+          test ! -e "$BACKUP_FILE"
+          test ! -e "$BACKUP_FILE.json"
+
+      - name: Write monitoring summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## PostgreSQL backup status"
+            echo
+            echo "- Backup: ${{ steps.backup.outcome }}"
+            echo "- Archive verification: ${{ steps.verify.outcome }}"
+            echo "- Restore drill planned: ${{ steps.restore-plan.outputs.run_restore || 'unknown' }}"
+            echo "- Restore reason: ${{ steps.restore-plan.outputs.reason || 'not evaluated' }}"
+            echo "- Restore: ${{ steps.restore.outcome }}"
+            echo "- Restore validation: ${{ steps.restore-validation.outcome }}"
+            echo "- Encryption: ${{ steps.encrypt.outcome }}"
+            echo "- Artifact upload: ${{ steps.upload.outcome }}"
+            echo "- Retention: 30 days"
+          } >> "$GITHUB_STEP_SUMMARY"

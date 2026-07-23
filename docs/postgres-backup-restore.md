@@ -100,3 +100,57 @@ CI rulează testul cu PostgreSQL 17 și `pg_dump`/`pg_restore` din imaginea `pos
 - Definește o retenție, de exemplu 7 backup-uri zilnice și 4 săptămânale.
 - Rulează periodic un restore drill într-o bază separată; un backup neverificat nu este suficient.
 - Nu restaura direct peste producție înainte de a valida backup-ul într-un mediu separat.
+
+## Automatizare inițială prin GitHub Actions
+
+Workflow-ul `.github/workflows/postgres-backup.yml` folosește o frecvență redusă, potrivită pentru etapa inițială:
+
+- backup în fiecare duminică la `03:17 UTC`;
+- verificarea checksum-ului și a structurii arhivei la fiecare rulare;
+- restore drill în prima rulare săptămânală a fiecărei luni;
+- restaurarea se face într-un PostgreSQL temporar din GitHub Actions, niciodată peste producție;
+- backupul și metadata sunt criptate cu AES-256-GCM înainte de upload;
+- fișierele necriptate sunt șterse înainte de finalizarea jobului;
+- artefactul criptat este păstrat 30 de zile;
+- workflow-ul scrie un rezumat și eșuează dacă oricare etapă obligatorie nu reușește.
+
+### Secrete GitHub obligatorii
+
+În GitHub, deschide `Settings` → `Secrets and variables` → `Actions` și adaugă:
+
+- `POSTGRES_BACKUP_DATABASE_URL` — URL-ul **extern** al bazei PostgreSQL din Render, inclusiv `sslmode=require` dacă este necesar;
+- `POSTGRES_BACKUP_ENCRYPTION_KEY` — cheie Base64 de exact 32 bytes.
+
+Generează cheia local, o singură dată:
+
+```bash
+node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"
+```
+
+Păstrează cheia și într-un manager de parole separat de GitHub. Fără ea, backupurile criptate nu pot fi recuperate.
+
+Nu folosi URL-ul intern Render: runnerul GitHub Actions rulează în afara rețelei private Render.
+
+După configurarea secretelor, rulează manual workflow-ul din `Actions` → `PostgreSQL backup and restore drill` → `Run workflow`, cu `run_restore` activat.
+
+### Recuperarea unui artefact
+
+Descarcă artefactul GitHub Actions și decriptează ambele fișiere:
+
+```bash
+POSTGRES_BACKUP_ENCRYPTION_KEY='cheia-base64' \
+npm run postgres:backup:decrypt -- --file f1guesser-backup.dump.enc
+
+POSTGRES_BACKUP_ENCRYPTION_KEY='cheia-base64' \
+npm run postgres:backup:decrypt -- --file f1guesser-backup.dump.json.enc
+```
+
+Apoi verifică și restaurează arhiva folosind comenzile documentate anterior.
+
+### Monitorizare și frecvență
+
+GitHub marchează rulările eșuate cu status roșu și trimite notificări conform setărilor contului. Verifică lunar că restore drill-ul a trecut și că artefactul criptat poate fi descărcat.
+
+Backupul săptămânal este suficient doar cât timp pierderea a până la șapte zile de conturi și rezultate este acceptabilă. Treci la backup zilnic înainte de promovarea publică sau imediat ce aplicația începe să aibă utilizatori activi constanți.
+
+Artefactele GitHub Actions sunt o soluție inițială, nu arhivare permanentă. Când datele devin importante, păstrează suplimentar backupurile într-un bucket S3 compatibil, cu versionare și retenție mai lungă.
