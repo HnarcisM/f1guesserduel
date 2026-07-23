@@ -36,9 +36,36 @@ test('public room list exposes safe summaries for joinable rooms', () => {
         timeLimitSeconds: 90,
         bestOf: 3
     });
+    assert.equal(payload.rooms[0].bestOf, 3);
+    assert.equal(payload.rooms[0].roundsPlayed, 0);
+    assert.deepEqual(payload.rooms[0].score, [0, 0]);
     assert.equal(payload.rooms[0].statusLabel, 'Lobby');
     assert.equal('players' in payload.rooms[0], false);
     assert.equal('scoreboard' in payload.rooms[0], false);
+});
+
+test('public room list exposes Best of progress and numeric score without internal scoreboard keys', () => {
+    const room = createRoom('SERIES1', 'socket-host', { id: 1, username: 'Host' }, { clientId: 'host-client' });
+    addPlayerToRoom(room, 'socket-2', { id: 2, username: 'Guest' }, { clientId: 'guest-client' });
+    updateDuelLobbySettings(room, {
+        difficulty: 'easy',
+        timed: false,
+        timeLimitSeconds: 60,
+        bestOf: 3
+    });
+    room.matchState.status = 'active';
+    room.matchState.roundsPlayed = 2;
+    room.scoreboard['user:1'].wins = 1;
+    room.scoreboard['user:2'].wins = 1;
+
+    const entry = buildPublicRoomListPayload(createRoomStore([room])).rooms[0];
+
+    assert.equal(entry.bestOf, 3);
+    assert.equal(entry.roundsPlayed, 2);
+    assert.deepEqual(entry.score, [1, 1]);
+    assert.equal('scoreboard' in entry, false);
+    assert.equal(JSON.stringify(entry).includes('user:1'), false);
+    assert.equal(JSON.stringify(entry).includes('user:2'), false);
 });
 
 test('public room list marks full rooms as spectator joins', () => {

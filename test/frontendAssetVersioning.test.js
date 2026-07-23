@@ -28,6 +28,7 @@ function createFixture() {
     writeFile(rootDir, 'public/js/duelSeriesController.js', 'installSeries();\n');
     writeFile(rootDir, 'public/js/duelRoundHistoryController.js', 'installHistory();\n');
     writeFile(rootDir, 'public/js/accountGameHistoryController.js', 'installAccountHistory();\n');
+    writeFile(rootDir, 'public/js/duelRoomBrowserSeriesController.js', 'installRoomSeries();\n');
     writeFile(rootDir, 'public/style.bundle.css', '.app { color: red; }\n');
     writeFile(rootDir, 'public/game.bundle.min.js', 'startGame();\n');
     writeFile(rootDir, 'public/index.html', [
@@ -43,7 +44,8 @@ function createFixture() {
         '<script type="module" src="/js/duelReadyController.js?v=manual-version"></script>',
         '<script type="module" src="/js/duelSeriesController.js?v=manual-version"></script>',
         '<script type="module" src="/js/duelRoundHistoryController.js?v=manual-version"></script>',
-        '<script type="module" src="/js/accountGameHistoryController.js?v=manual-version"></script>'
+        '<script type="module" src="/js/accountGameHistoryController.js?v=manual-version"></script>',
+        '<script type="module" src="/js/duelRoomBrowserSeriesController.js?v=manual-version"></script>'
     ].join('\n'));
     return rootDir;
 }
@@ -54,7 +56,7 @@ test('frontend asset versioning replaces manual values with deterministic conten
     const firstHtml = fs.readFileSync(path.join(rootDir, 'public', 'index.html'), 'utf8');
 
     assert.equal(firstResult.changed, true);
-    assert.equal(firstResult.assets.length, 12);
+    assert.equal(firstResult.assets.length, 13);
     for (const asset of firstResult.assets) {
         assert.match(asset.version, /^[a-f0-9]{16}$/);
         assert.ok(firstHtml.includes(`${asset.publicPath}?v=${asset.version}`));

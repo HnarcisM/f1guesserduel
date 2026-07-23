@@ -55,6 +55,11 @@ const DEFAULT_ASSETS = Object.freeze([
         sourceFile: path.join('public', 'js', 'accountGameHistoryController.js')
     },
     {
+        attribute: 'src',
+        publicPath: '/js/duelRoomBrowserSeriesController.js',
+        sourceFile: path.join('public', 'js', 'duelRoomBrowserSeriesController.js')
+    },
+    {
         attribute: 'href',
         publicPath: '/style.bundle.css',
         sourceFile: path.join('public', 'style.bundle.css')

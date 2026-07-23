@@ -98,3 +98,15 @@ test('complete account history stays isolated and renders without innerHTML', ()
     assertFileBudget('public/js/accountGameHistoryController.js', 13_000);
     assertFileBudget('server/db/sqliteSchemaUpgrade.js', 4_000);
 });
+
+test('Duel room browser series metadata stays isolated and renders safely', () => {
+    const controller = readProjectFile('public/js/duelRoomBrowserSeriesController.js');
+    const roomListPayloads = readProjectFile('server/socket/roomListPayloads.js');
+
+    assert.doesNotMatch(controller, /innerHTML/);
+    assert.match(controller, /Best of \$\{progress\}\/\$\{bestOf\}/);
+    assert.match(roomListPayloads, /score,/);
+    assertFileBudget('public/js/duelRoomBrowserSeriesController.js', 6_000);
+    assertFileBudget('server/socket/roomListPayloads.js', 4_000);
+});
+

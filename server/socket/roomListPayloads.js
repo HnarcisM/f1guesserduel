@@ -17,6 +17,22 @@ function normalizeRoomListEntry(room) {
     const spectatorCount = Number.isFinite(state.spectatorCount) ? state.spectatorCount : spectators.length;
     const maxPlayers = Number.isFinite(state.maxPlayers) ? state.maxPlayers : 2;
     const totalCount = playerCount + spectatorCount;
+    const bestOf = [3, 5, 7].includes(Number(state.match?.bestOf))
+        ? Number(state.match.bestOf)
+        : 3;
+    const roundsPlayed = Number.isSafeInteger(Number(state.match?.roundsPlayed))
+        && Number(state.match.roundsPlayed) >= 0
+        ? Number(state.match.roundsPlayed)
+        : 0;
+    const scoreboard = Array.isArray(state.scoreboard) ? state.scoreboard.slice(0, 2) : [];
+    const score = [
+        Number.isSafeInteger(Number(scoreboard[0]?.wins)) && Number(scoreboard[0].wins) >= 0
+            ? Number(scoreboard[0].wins)
+            : 0,
+        Number.isSafeInteger(Number(scoreboard[1]?.wins)) && Number(scoreboard[1].wins) >= 0
+            ? Number(scoreboard[1].wins)
+            : 0
+    ];
 
     if (totalCount <= 0) return null;
 
@@ -30,6 +46,9 @@ function normalizeRoomListEntry(room) {
         roundState: state.roundState || 'waiting',
         statusLabel: getStatusLabel(state.roundState),
         lobbySettings: state.lobbySettings || { difficulty: 'easy', timed: false, timeLimitSeconds: 60, bestOf: 3 },
+        bestOf,
+        roundsPlayed,
+        score,
         canJoinAsPlayer: playerCount < maxPlayers,
         canSpectate: playerCount >= maxPlayers
     };
