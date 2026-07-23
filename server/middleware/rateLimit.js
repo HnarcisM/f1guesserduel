@@ -30,6 +30,8 @@ function createMemoryRateLimiter({
     failOpen = true,
     logger = console,
     storeErrorLogIntervalMs = 30_000,
+    memoryCleanupIntervalMs = null,
+    maxMemoryBuckets = 10_000,
     metrics = null
 } = {}) {
     if (!Number.isFinite(windowMs) || windowMs <= 0) {
@@ -40,13 +42,30 @@ function createMemoryRateLimiter({
         throw new Error('Rate limiter maxRequests must be a positive integer.');
     }
 
+    const cleanupIntervalMs = memoryCleanupIntervalMs ?? windowMs;
+    if (!Number.isFinite(cleanupIntervalMs) || cleanupIntervalMs <= 0) {
+        throw new Error('Rate limiter memoryCleanupIntervalMs must be a positive number.');
+    }
+
+    if (!Number.isInteger(maxMemoryBuckets) || maxMemoryBuckets <= 0) {
+        throw new Error('Rate limiter maxMemoryBuckets must be a positive integer.');
+    }
+
     const buckets = new Map();
     let lastStoreErrorLogAt = Number.NEGATIVE_INFINITY;
+    let nextCleanupAt = Number.NEGATIVE_INFINITY;
 
     function getBucket(key, currentTime) {
         const existingBucket = buckets.get(key);
         if (existingBucket && existingBucket.resetAt > currentTime) {
             return existingBucket;
+        }
+
+        if (!existingBucket && buckets.size >= maxMemoryBuckets) {
+            const oldestKey = buckets.keys().next().value;
+            if (oldestKey !== undefined) {
+                buckets.delete(oldestKey);
+            }
         }
 
         const nextBucket = {
@@ -63,6 +82,13 @@ function createMemoryRateLimiter({
                 buckets.delete(key);
             }
         }
+    }
+
+    function maybeCleanup(currentTime) {
+        if (currentTime < nextCleanupAt || buckets.size === 0) return;
+
+        cleanup(currentTime);
+        nextCleanupAt = currentTime + cleanupIntervalMs;
     }
 
     function getKey(req) {
@@ -151,6 +177,7 @@ function createMemoryRateLimiter({
     function middleware(req, res, next) {
         const currentTime = clock();
         const key = getKey(req);
+        maybeCleanup(currentTime);
 
         if (!store?.consume) {
             return applyResult(consumeFromMemory(key, currentTime), res, next, { provider: 'memory' });
@@ -183,6 +210,7 @@ function createMemoryRateLimiter({
         const bucket = buckets.get(getKey(req));
         return bucket ? bucket.count : 0;
     };
+    middleware._getBucketSize = () => buckets.size;
 
     return middleware;
 }

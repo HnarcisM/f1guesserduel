@@ -135,6 +135,64 @@ test('rate limiter uses separate buckets for different IPs', () => {
     assert.equal(otherIp.res.statusCode, 200);
 });
 
+test('rate limiter automatically removes expired memory buckets', () => {
+    let currentTime = 1000;
+    const limiter = createMemoryRateLimiter({
+        windowMs: 60_000,
+        maxRequests: 1,
+        memoryCleanupIntervalMs: 1_000,
+        clock: () => currentTime
+    });
+
+    runLimiter(limiter, { ip: '10.0.0.1' });
+    runLimiter(limiter, { ip: '10.0.0.2' });
+    assert.equal(limiter._getBucketSize(), 2);
+
+    currentTime += 60_001;
+    runLimiter(limiter, { ip: '10.0.0.3' });
+
+    assert.equal(limiter._getBucketSize(), 1);
+    assert.equal(limiter._getBucketCount({ ip: '10.0.0.1' }), 0);
+    assert.equal(limiter._getBucketCount({ ip: '10.0.0.3' }), 1);
+});
+
+test('rate limiter bounds memory buckets under high-cardinality traffic', () => {
+    const limiter = createMemoryRateLimiter({
+        windowMs: 60_000,
+        maxRequests: 1,
+        maxMemoryBuckets: 2,
+        clock: () => 1000
+    });
+
+    runLimiter(limiter, { ip: '10.0.0.1' });
+    runLimiter(limiter, { ip: '10.0.0.2' });
+    runLimiter(limiter, { ip: '10.0.0.3' });
+
+    assert.equal(limiter._getBucketSize(), 2);
+    assert.equal(limiter._getBucketCount({ ip: '10.0.0.1' }), 0);
+    assert.equal(limiter._getBucketCount({ ip: '10.0.0.2' }), 1);
+    assert.equal(limiter._getBucketCount({ ip: '10.0.0.3' }), 1);
+});
+
+test('rate limiter rejects invalid memory cleanup settings', () => {
+    assert.throws(
+        () => createMemoryRateLimiter({
+            windowMs: 60_000,
+            maxRequests: 1,
+            memoryCleanupIntervalMs: 0
+        }),
+        /memoryCleanupIntervalMs must be a positive number/
+    );
+    assert.throws(
+        () => createMemoryRateLimiter({
+            windowMs: 60_000,
+            maxRequests: 1,
+            maxMemoryBuckets: 0
+        }),
+        /maxMemoryBuckets must be a positive integer/
+    );
+});
+
 test('HTTP rate limiter supports an asynchronous distributed store', async () => {
     const consumed = [];
     const results = [
