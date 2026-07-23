@@ -74,3 +74,16 @@ test('Duel match state stays isolated from general room orchestration', () => {
     assertFileBudget('server/rooms/duelMatchService.js', 7_000);
     assertFileBudget('public/js/duelSeriesController.js', 13_000);
 });
+
+
+test('Duel round history stays isolated and uses safe DOM rendering', () => {
+    const roundResultService = readProjectFile('server/rooms/roundResultService.js');
+    const historyService = readProjectFile('server/rooms/roundHistoryService.js');
+    const historyController = readProjectFile('public/js/duelRoundHistoryController.js');
+
+    assert.match(roundResultService, /require\('\.\/roundHistoryService'\)/);
+    assert.match(historyService, /MAX_DUEL_ROUND_HISTORY = 10/);
+    assert.doesNotMatch(historyController, /innerHTML/);
+    assertFileBudget('server/rooms/roundHistoryService.js', 10_000);
+    assertFileBudget('public/js/duelRoundHistoryController.js', 9_000);
+});

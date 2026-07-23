@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="/style.bundle.css?v=9b31ae015af3c57e">
 <link rel="stylesheet" href="/css/16-duel-ready.css?v=325c0498b808b8c1">
 <link rel="stylesheet" href="/css/17-duel-series.css?v=519233effd931ef4">
+<link rel="stylesheet" href="/css/18-duel-round-history.css?v=2d04b48dd080faa8">
 </head>
 <body>
 
@@ -231,6 +232,18 @@
                     <p id="duelSeriesStatus" class="duel-series-status">Meciul nu a început încă.</p>
                 </div>
                 <button type="button" id="duelSeriesResetBtn" class="duel-series-reset-btn" hidden>Începe meci nou</button>
+            </section>
+
+            <section id="duelRoundHistory" class="duel-round-history" aria-live="polite">
+                <div class="duel-round-history-header">
+                    <div>
+                        <p class="duel-lobby-eyebrow">Istoric cameră</p>
+                        <strong>Ultimele runde</strong>
+                    </div>
+                    <span id="duelRoundHistoryCount" class="duel-round-history-count">0/10</span>
+                </div>
+                <p id="duelRoundHistoryEmpty" class="duel-round-history-empty">Istoricul va apărea după prima rundă finalizată.</p>
+                <div id="duelRoundHistoryList" class="duel-round-history-list" hidden></div>
             </section>
 
             <button type="button" id="duelLobbyStartBtn" class="duel-lobby-start-btn">Pornește runda</button>
@@ -605,5 +618,6 @@
 <script defer src="/game.bundle.min.js?v=b219bfb3479ec0dc"></script>
 <script type="module" src="/js/duelReadyController.js?v=96b30c49ace86444"></script>
 <script type="module" src="/js/duelSeriesController.js?v=14bfad7705c45b6d"></script>
+<script type="module" src="/js/duelRoundHistoryController.js?v=77fa53fbfa13103a"></script>
 </body>
 </html>

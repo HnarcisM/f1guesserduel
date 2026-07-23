@@ -175,6 +175,7 @@ function createRoom(roomId, hostSocketId, authUser = null, options = {}) {
         roundState: 'waiting',
         roundResult: null,
         scoreboard: {},
+        roundHistory: [],
         isDailyChallenge: false,
         dailyDate: null,
         dailyChallengeId: null,

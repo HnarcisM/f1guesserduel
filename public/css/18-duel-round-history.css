@@ -1,0 +1,146 @@
+.duel-round-history {
+    margin: 1rem 0;
+    padding: 0.9rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    background: rgba(7, 12, 23, 0.24);
+}
+
+.duel-round-history-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.duel-round-history-count {
+    min-width: 3.4rem;
+    padding: 0.3rem 0.55rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--muted-text, #b8c0ce);
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-align: center;
+}
+
+.duel-round-history-empty {
+    margin: 0.7rem 0 0;
+    color: var(--muted-text, #b8c0ce);
+    font-size: 0.86rem;
+}
+
+.duel-round-history-list {
+    display: grid;
+    gap: 0.55rem;
+    margin-top: 0.75rem;
+}
+
+.duel-round-history-item {
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.duel-round-history-item summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    padding: 0.7rem 0.8rem;
+    cursor: pointer;
+    list-style: none;
+}
+
+.duel-round-history-item summary::-webkit-details-marker {
+    display: none;
+}
+
+.duel-round-history-item summary::after {
+    content: '⌄';
+    color: var(--muted-text, #b8c0ce);
+    transition: transform 0.18s ease;
+}
+
+.duel-round-history-item[open] summary::after {
+    transform: rotate(180deg);
+}
+
+.duel-round-history-heading {
+    display: grid;
+    gap: 0.18rem;
+    min-width: 0;
+}
+
+.duel-round-history-heading strong,
+.duel-round-history-heading small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.duel-round-history-heading small,
+.duel-round-history-score {
+    color: var(--muted-text, #b8c0ce);
+    font-size: 0.78rem;
+}
+
+.duel-round-history-score {
+    flex: 0 0 auto;
+    font-weight: 800;
+}
+
+.duel-round-history-body {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+    padding: 0 0.8rem 0.8rem;
+}
+
+.duel-round-history-player {
+    min-width: 0;
+    padding: 0.65rem;
+    border-radius: 9px;
+    background: rgba(0, 0, 0, 0.16);
+}
+
+.duel-round-history-player > strong {
+    display: block;
+    margin-bottom: 0.45rem;
+    font-size: 0.82rem;
+}
+
+.duel-round-history-guesses {
+    display: grid;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    color: var(--muted-text, #b8c0ce);
+    font-size: 0.78rem;
+    list-style: none;
+}
+
+.duel-round-history-guesses .is-correct {
+    color: #5fe0a4;
+    font-weight: 700;
+}
+
+.duel-round-history-empty-guess {
+    font-style: italic;
+}
+
+@media (max-width: 640px) {
+    .duel-round-history-item summary {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .duel-round-history-score {
+        width: calc(100% - 1.5rem);
+    }
+
+    .duel-round-history-body {
+        grid-template-columns: 1fr;
+    }
+}

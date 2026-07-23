@@ -63,7 +63,7 @@ test('persistent room store saves compact rooms and restores round state from dr
     await store.saveNow();
 
     const persistedPayload = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    assert.equal(persistedPayload.version, 3);
+    assert.equal(persistedPayload.version, 4);
     assert.equal(persistedPayload.rooms[0].targetDriverId, 'hamilton');
     assert.equal(Object.hasOwn(persistedPayload.rooms[0], 'targetDriver'), false);
     assert.equal(Object.hasOwn(persistedPayload.rooms[0], 'driversList'), false);

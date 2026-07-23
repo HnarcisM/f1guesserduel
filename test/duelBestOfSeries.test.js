@@ -146,7 +146,7 @@ test('public and persisted room state include only safe Best of match data', () 
     assert.equal(JSON.stringify(publicState).includes('scoreKey'), false);
 
     const serialized = serializeRoom(room);
-    assert.equal(ROOM_PERSISTENCE_VERSION, 3);
+    assert.equal(ROOM_PERSISTENCE_VERSION, 4);
     assert.equal(serialized.lobbyBestOf, 5);
     assert.equal(serialized.matchState.status, 'finished');
     const restored = deserializeRoom(serialized);

@@ -1,4 +1,5 @@
 const { applyRoundResultToScoreboard } = require('./scoreboardService');
+const { appendRoundHistory } = require('./roundHistoryService');
 function getActivePlayers(room) {
     return Object.values(room?.players || {});
 }
@@ -116,6 +117,7 @@ function buildPublicRoundResult(roundResult) {
         allPlayersFinished: Boolean(roundResult.allPlayersFinished),
         scoreApplied: Boolean(roundResult.scoreApplied),
         matchApplied: Boolean(roundResult.matchApplied),
+        historyEntryId: roundResult.historyEntryId || null,
         match: roundResult.match && typeof roundResult.match === 'object' ? { ...roundResult.match } : null,
         target: roundResult.target || null,
         players: Array.isArray(roundResult.players)
@@ -155,6 +157,7 @@ function resolveRoundWinner(room, reason = 'guess') {
     room.roundResult = result;
     room.roundState = 'finished';
     applyRoundResultToScoreboard(room, result);
+    appendRoundHistory(room, result);
 
     return result;
 }

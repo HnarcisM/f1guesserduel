@@ -20,6 +20,11 @@ const DEFAULT_ASSETS = Object.freeze([
         sourceFile: path.join('public', 'css', '17-duel-series.css')
     },
     {
+        attribute: 'href',
+        publicPath: '/css/18-duel-round-history.css',
+        sourceFile: path.join('public', 'css', '18-duel-round-history.css')
+    },
+    {
         attribute: 'src',
         publicPath: '/js/socketBridgeBootstrap.js',
         sourceFile: path.join('public', 'js', 'socketBridgeBootstrap.js')
@@ -33,6 +38,11 @@ const DEFAULT_ASSETS = Object.freeze([
         attribute: 'src',
         publicPath: '/js/duelSeriesController.js',
         sourceFile: path.join('public', 'js', 'duelSeriesController.js')
+    },
+    {
+        attribute: 'src',
+        publicPath: '/js/duelRoundHistoryController.js',
+        sourceFile: path.join('public', 'js', 'duelRoundHistoryController.js')
     },
     {
         attribute: 'href',

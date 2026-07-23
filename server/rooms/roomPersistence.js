@@ -1,7 +1,8 @@
 const fs = require('fs');
 const path = require('path');
+const { normalizeRoundHistory } = require('./roundHistoryService');
 
-const ROOM_PERSISTENCE_VERSION = 3;
+const ROOM_PERSISTENCE_VERSION = 4;
 let tempFileSequence = 0;
 
 function cloneRoundResult(roundResult) {
@@ -17,6 +18,8 @@ function cloneRoundResult(roundResult) {
         allPlayersFinished: Boolean(roundResult.allPlayersFinished),
         scoreApplied: Boolean(roundResult.scoreApplied),
         matchApplied: Boolean(roundResult.matchApplied),
+        historyApplied: Boolean(roundResult.historyApplied),
+        historyEntryId: typeof roundResult.historyEntryId === 'string' ? roundResult.historyEntryId : null,
         match: roundResult.match && typeof roundResult.match === 'object' ? { ...roundResult.match } : null,
         target: roundResult.target ? { ...roundResult.target } : null,
         players: Array.isArray(roundResult.players)
@@ -128,6 +131,7 @@ function serializeRoom(room) {
         roundState: room.roundState || 'waiting',
         roundResult: cloneRoundResult(room.roundResult),
         scoreboard: cloneScoreboard(room.scoreboard),
+        roundHistory: normalizeRoundHistory(room.roundHistory),
         isDailyChallenge: Boolean(room.isDailyChallenge),
         dailyDate: room.dailyDate || null,
         dailyChallengeId: room.dailyChallengeId || null,
