@@ -1,0 +1,67 @@
+.auth-history-item-complete {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px 12px;
+    padding: 11px 12px;
+    border: 1px solid color-mix(in srgb, var(--border-color) 75%, transparent);
+}
+
+.auth-history-header {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+    text-align: left;
+}
+
+.auth-history-title,
+.auth-history-summary,
+.auth-history-time {
+    min-width: 0;
+}
+
+.auth-history-time {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+}
+
+.auth-history-facts {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px 7px;
+    text-align: left;
+}
+
+.auth-history-fact {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 3px 7px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--surface-elevated) 82%, transparent);
+    border: 1px solid var(--border-soft);
+    color: var(--text-secondary);
+    font-size: 0.68rem;
+    line-height: 1.25;
+}
+
+.auth-history-target {
+    color: var(--text-primary);
+    border-color: color-mix(in srgb, var(--accent-f1) 35%, var(--border-soft));
+}
+
+.auth-history-id {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+@media (max-width: 520px) {
+    .auth-history-item-complete {
+        grid-template-columns: 1fr;
+    }
+
+    .auth-history-time {
+        grid-column: 1;
+        grid-row: auto;
+        justify-self: start;
+    }
+}

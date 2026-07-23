@@ -20,7 +20,19 @@ const SELECT_STATS_SQL = `
 `;
 
 const SELECT_RECENT_RESULTS_SQL = `
-    SELECT mode, outcome, attempts, difficulty, completed_at AS "completedAt"
+    SELECT
+        mode,
+        outcome,
+        attempts,
+        difficulty,
+        target_driver_id AS "targetDriverId",
+        target_driver_name AS "targetDriverName",
+        duration_ms AS "durationMs",
+        room_id AS "roomId",
+        match_id AS "matchId",
+        opponent_username AS "opponentUsername",
+        winner_username AS "winnerUsername",
+        completed_at AS "completedAt"
     FROM user_game_results
     WHERE user_id = $1
     ORDER BY completed_at DESC, id DESC
@@ -147,9 +159,11 @@ function createPostgresAccountStatsRepository(database) {
             await client.query(POSTGRES_LOCK_ACCOUNT_PROGRESS_SQL, [result.userId]);
             const insertResult = await client.query(`
                 INSERT INTO user_game_results (
-                    user_id, mode, result_key, outcome, attempts, difficulty
+                    user_id, mode, result_key, outcome, attempts, difficulty,
+                    target_driver_id, target_driver_name, duration_ms,
+                    room_id, match_id, opponent_username, winner_username
                 )
-                VALUES ($1, $2, $3, $4, $5, $6)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
                 ON CONFLICT (user_id, mode, result_key) DO NOTHING
                 RETURNING id
             `, [
@@ -158,7 +172,14 @@ function createPostgresAccountStatsRepository(database) {
                 result.resultKey,
                 result.outcome,
                 result.attempts,
-                result.difficulty
+                result.difficulty,
+                result.targetDriverId,
+                result.targetDriverName,
+                result.durationMs,
+                result.roomId,
+                result.matchId,
+                result.opponentUsername,
+                result.winnerUsername
             ]);
 
             const recorded = insertResult.rowCount === 1;
@@ -219,7 +240,19 @@ function createPostgresAccountStatsRepository(database) {
 function createSqliteAccountStatsRepository(database) {
     const selectStats = database.prepare(SELECT_STATS_SQL.replace('$1', '?'));
     const selectRecentResults = database.prepare(`
-        SELECT mode, outcome, attempts, difficulty, completed_at AS completedAt
+        SELECT
+            mode,
+            outcome,
+            attempts,
+            difficulty,
+            target_driver_id AS targetDriverId,
+            target_driver_name AS targetDriverName,
+            duration_ms AS durationMs,
+            room_id AS roomId,
+            match_id AS matchId,
+            opponent_username AS opponentUsername,
+            winner_username AS winnerUsername,
+            completed_at AS completedAt
         FROM user_game_results
         WHERE user_id = ?
         ORDER BY completed_at DESC, id DESC
@@ -239,8 +272,14 @@ function createSqliteAccountStatsRepository(database) {
     `);
     const insertResult = database.prepare(`
         INSERT OR IGNORE INTO user_game_results (
-            user_id, mode, result_key, outcome, attempts, difficulty
-        ) VALUES (@userId, @mode, @resultKey, @outcome, @attempts, @difficulty)
+            user_id, mode, result_key, outcome, attempts, difficulty,
+            target_driver_id, target_driver_name, duration_ms,
+            room_id, match_id, opponent_username, winner_username
+        ) VALUES (
+            @userId, @mode, @resultKey, @outcome, @attempts, @difficulty,
+            @targetDriverId, @targetDriverName, @durationMs,
+            @roomId, @matchId, @opponentUsername, @winnerUsername
+        )
     `);
     const upsertStats = database.prepare(`
         INSERT INTO user_game_stats (

@@ -8,10 +8,8 @@ const { createRoomMutationCoordinator } = require('./roomMutationCoordinator');
 const { registerDuelLobbySocketHandlers } = require('./duelLobbySocketHandlers');
 const { registerDuelMatchSocketHandlers } = require('./duelMatchSocketHandlers');
 const { registerDuelLifecycleSocketHandlers } = require('./duelLifecycleSocketHandlers');
-const {
-    buildDuelAccountResults,
-    registerDuelRoundSocketHandlers
-} = require('./duelRoundSocketHandlers');
+const { registerDuelRoundSocketHandlers } = require('./duelRoundSocketHandlers');
+const { buildDuelAccountResults } = require('./duelAccountResultBuilder');
 
 function registerSocketHandlers(io, dependencies) {
     const {

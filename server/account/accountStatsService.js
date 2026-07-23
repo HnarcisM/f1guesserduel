@@ -8,6 +8,14 @@ const DAILY_DIFFICULTIES = Object.freeze(['easy', 'medium', 'hard']);
 const DAILY_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const DEFAULT_ACCOUNT_HISTORY_LIMIT = 10;
 const MAX_ACCOUNT_HISTORY_LIMIT = 20;
+const MAX_GAME_DURATION_MS = 24 * 60 * 60 * 1000;
+const GAME_HISTORY_TEXT_LIMITS = Object.freeze({
+    driverId: 100,
+    driverName: 160,
+    roomId: 50,
+    matchId: 200,
+    username: 100
+});
 const XP_LEVEL_SCALE = 100;
 const XP_REWARDS = Object.freeze({
     participation: 10,
@@ -229,6 +237,36 @@ function normalizeHistoryLimit(limit) {
     return Math.min(value, MAX_ACCOUNT_HISTORY_LIMIT);
 }
 
+function normalizeOptionalText(value, maxLength) {
+    if (typeof value !== 'string') return null;
+    const normalized = value.trim();
+    if (!normalized || normalized.length > maxLength) return null;
+    return normalized;
+}
+
+function normalizeDurationMs(value) {
+    const durationMs = Number(value);
+    if (!Number.isSafeInteger(durationMs) || durationMs < 0 || durationMs > MAX_GAME_DURATION_MS) {
+        return null;
+    }
+    return durationMs;
+}
+
+function normalizeTargetDriver(input = {}) {
+    const targetDriver = input.targetDriver && typeof input.targetDriver === 'object'
+        ? input.targetDriver
+        : {};
+    const id = normalizeOptionalText(
+        input.targetDriverId ?? targetDriver.id,
+        GAME_HISTORY_TEXT_LIMITS.driverId
+    );
+    const name = normalizeOptionalText(
+        input.targetDriverName ?? targetDriver.name,
+        GAME_HISTORY_TEXT_LIMITS.driverName
+    );
+    return { id, name };
+}
+
 function buildRecentGames(rows = [], limit = DEFAULT_ACCOUNT_HISTORY_LIMIT) {
     const normalizedLimit = normalizeHistoryLimit(limit);
     return rows
@@ -236,13 +274,34 @@ function buildRecentGames(rows = [], limit = DEFAULT_ACCOUNT_HISTORY_LIMIT) {
             && ACCOUNT_GAME_MODES.includes(row.mode)
             && ACCOUNT_GAME_OUTCOMES.includes(row.outcome))
         .slice(0, normalizedLimit)
-        .map(row => ({
-            mode: row.mode,
-            outcome: row.outcome,
-            attempts: Math.min(MAX_ATTEMPTS, asNonNegativeInteger(row.attempts)),
-            difficulty: typeof row.difficulty === 'string' ? row.difficulty : null,
-            completedAt: row.completedAt || row.completed_at || null
-        }));
+        .map(row => {
+            const targetDriver = normalizeTargetDriver(row);
+            const durationMs = normalizeDurationMs(row.durationMs ?? row.duration_ms);
+            const roomId = normalizeOptionalText(row.roomId ?? row.room_id, GAME_HISTORY_TEXT_LIMITS.roomId);
+            const matchId = normalizeOptionalText(row.matchId ?? row.match_id, GAME_HISTORY_TEXT_LIMITS.matchId);
+            const opponentUsername = normalizeOptionalText(
+                row.opponentUsername ?? row.opponent_username,
+                GAME_HISTORY_TEXT_LIMITS.username
+            );
+            const winnerUsername = normalizeOptionalText(
+                row.winnerUsername ?? row.winner_username,
+                GAME_HISTORY_TEXT_LIMITS.username
+            );
+            const game = {
+                mode: row.mode,
+                outcome: row.outcome,
+                attempts: Math.min(MAX_ATTEMPTS, asNonNegativeInteger(row.attempts)),
+                difficulty: typeof row.difficulty === 'string' ? row.difficulty : null,
+                completedAt: row.completedAt || row.completed_at || null
+            };
+            if (targetDriver.id || targetDriver.name) game.targetDriver = targetDriver;
+            if (durationMs !== null) game.durationMs = durationMs;
+            if (roomId) game.roomId = roomId;
+            if (matchId) game.matchId = matchId;
+            if (opponentUsername) game.opponentUsername = opponentUsername;
+            if (winnerUsername) game.winnerUsername = winnerUsername;
+            return game;
+        });
 }
 
 function normalizeResultInput(input = {}) {
@@ -254,6 +313,18 @@ function normalizeResultInput(input = {}) {
     const difficulty = typeof input.difficulty === 'string' && input.difficulty.length <= 30
         ? input.difficulty
         : null;
+    const targetDriver = normalizeTargetDriver(input);
+    const durationMs = normalizeDurationMs(input.durationMs);
+    const roomId = normalizeOptionalText(input.roomId, GAME_HISTORY_TEXT_LIMITS.roomId);
+    const matchId = normalizeOptionalText(input.matchId, GAME_HISTORY_TEXT_LIMITS.matchId);
+    const opponentUsername = normalizeOptionalText(
+        input.opponentUsername,
+        GAME_HISTORY_TEXT_LIMITS.username
+    );
+    const winnerUsername = normalizeOptionalText(
+        input.winnerUsername,
+        GAME_HISTORY_TEXT_LIMITS.username
+    );
 
     if (!userId || !mode || !outcome || !resultKey || resultKey.length > 200) {
         throw new Error('Invalid account game result.');
@@ -262,7 +333,21 @@ function normalizeResultInput(input = {}) {
         throw new Error('Invalid account game attempts.');
     }
 
-    return { userId, mode, outcome, attempts, resultKey, difficulty };
+    return {
+        userId,
+        mode,
+        outcome,
+        attempts,
+        resultKey,
+        difficulty,
+        targetDriverId: targetDriver.id,
+        targetDriverName: targetDriver.name,
+        durationMs,
+        roomId,
+        matchId,
+        opponentUsername,
+        winnerUsername
+    };
 }
 
 function createGameResultKey(prefix = 'game') {
@@ -398,6 +483,8 @@ module.exports = {
     DAILY_DIFFICULTIES,
     DEFAULT_ACCOUNT_HISTORY_LIMIT,
     MAX_ACCOUNT_HISTORY_LIMIT,
+    MAX_GAME_DURATION_MS,
+    GAME_HISTORY_TEXT_LIMITS,
     XP_LEVEL_SCALE,
     XP_REWARDS,
     ACCOUNT_ACHIEVEMENT_DEFINITIONS,
@@ -412,6 +499,9 @@ module.exports = {
     createEmptyModeStats,
     createGameResultKey,
     normalizeResultInput,
+    normalizeDurationMs,
+    normalizeOptionalText,
+    normalizeTargetDriver,
     normalizeDailyAttemptInput,
     normalizeHistoryLimit,
     recordAccountGameResultSafely

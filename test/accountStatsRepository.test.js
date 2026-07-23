@@ -42,13 +42,20 @@ class FakePostgresClient {
                 }]
             };
         }
-        if (normalizedSql.startsWith('SELECT mode, outcome')) {
+        if (normalizedSql.startsWith('SELECT') && normalizedSql.includes('FROM user_game_results')) {
             return {
                 rows: [{
                     mode: 'single',
                     outcome: 'win',
                     attempts: 2,
                     difficulty: 'easy',
+                    targetDriverId: 'VER',
+                    targetDriverName: 'Max Verstappen',
+                    durationMs: 42000,
+                    roomId: 'ABC',
+                    matchId: 'ABC:123',
+                    opponentUsername: 'Guest',
+                    winnerUsername: 'Narcis',
                     completedAt: '2026-07-18T12:00:00.000Z'
                 }]
             };
@@ -95,6 +102,13 @@ test('Postgres account stats use a transaction, parameters and idempotent result
         outcome: 'win',
         attempts: 2,
         difficulty: 'easy',
+        targetDriverId: 'VER',
+        targetDriverName: 'Max Verstappen',
+        durationMs: 42000,
+        roomId: 'ABC',
+        matchId: 'ABC:123',
+        opponentUsername: 'Guest',
+        winnerUsername: 'Narcis',
         xpEarned: 50
     };
 
@@ -104,12 +118,21 @@ test('Postgres account stats use a transaction, parameters and idempotent result
     const statsUpserts = client.queries.filter(query => query.sql.startsWith('INSERT INTO user_game_stats'));
     const progressUpserts = client.queries.filter(query => query.sql.startsWith('INSERT INTO user_progress'));
     const accountLocks = client.queries.filter(query => query.sql.startsWith('SELECT pg_advisory_xact_lock'));
-    const historyQueries = client.queries.filter(query => query.sql.startsWith('SELECT mode, outcome'));
+    const historyQueries = client.queries.filter(query => query.sql.includes('FROM user_game_results'));
 
     assert.equal(first.recorded, true);
     assert.equal(duplicate.recorded, false);
     assert.equal(resultInsert.params[2], input.resultKey);
     assert.equal(resultInsert.sql.includes(input.resultKey), false);
+    assert.deepEqual(resultInsert.params.slice(6), [
+        'VER',
+        'Max Verstappen',
+        42000,
+        'ABC',
+        'ABC:123',
+        'Guest',
+        'Narcis'
+    ]);
     assert.equal(statsUpserts.length, 1);
     assert.equal(progressUpserts.length, 1);
     assert.deepEqual(progressUpserts[0].params, [7, 50]);
@@ -179,6 +202,11 @@ test('SQLite captures the exact pre-round progress inside the result transaction
         outcome: 'win',
         attempts: 2,
         difficulty: 'easy',
+        targetDriverId: 'VER',
+        targetDriverName: 'Max Verstappen',
+        durationMs: 42000,
+        matchId: 'single:round',
+        winnerUsername: 'Narcis',
         xpEarned: 50
     };
 
@@ -194,4 +222,7 @@ test('SQLite captures the exact pre-round progress inside the result transaction
     assert.equal(duplicate.recorded, false);
     assert.equal(duplicate.previousRows, null);
     assert.equal(duplicate.progressRow.total_xp, 100);
+    assert.equal(second.recentResults[0].targetDriverName, 'Max Verstappen');
+    assert.equal(second.recentResults[0].durationMs, 42000);
+    assert.equal(second.recentResults[0].winnerUsername, 'Narcis');
 });

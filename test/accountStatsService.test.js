@@ -5,6 +5,7 @@ const {
     buildAccountAchievements,
     buildAccountProgress,
     buildAccountStats,
+    buildRecentGames,
     calculateXpReward,
     createAccountStatsService,
     normalizeResultInput,
@@ -207,6 +208,60 @@ test('account stats aggregate modes and ignore duplicate server result keys', as
     });
     assert.equal(Object.hasOwn(dashboard.recentGames[0], 'resultKey'), false);
     assert.equal(Object.hasOwn(dashboard.recentGames[0], 'userId'), false);
+});
+
+
+test('complete account history normalizes and exposes replay context without internal keys', async () => {
+    const normalized = normalizeResultInput({
+        userId: 7,
+        mode: 'duel',
+        resultKey: 'ROOM1:round-1',
+        outcome: 'win',
+        attempts: 3,
+        difficulty: 'hard',
+        targetDriver: { id: 'VER', name: 'Max Verstappen' },
+        durationMs: 65432,
+        roomId: 'ROOM1',
+        matchId: 'ROOM1:match-1',
+        opponentUsername: 'Rival',
+        winnerUsername: 'Narcis'
+    });
+
+    assert.deepEqual(normalized, {
+        userId: 7,
+        mode: 'duel',
+        outcome: 'win',
+        attempts: 3,
+        resultKey: 'ROOM1:round-1',
+        difficulty: 'hard',
+        targetDriverId: 'VER',
+        targetDriverName: 'Max Verstappen',
+        durationMs: 65432,
+        roomId: 'ROOM1',
+        matchId: 'ROOM1:match-1',
+        opponentUsername: 'Rival',
+        winnerUsername: 'Narcis'
+    });
+
+    const games = buildRecentGames([{
+        ...normalized,
+        completedAt: '2026-07-23T12:00:00.000Z'
+    }]);
+    assert.deepEqual(games, [{
+        mode: 'duel',
+        outcome: 'win',
+        attempts: 3,
+        difficulty: 'hard',
+        targetDriver: { id: 'VER', name: 'Max Verstappen' },
+        durationMs: 65432,
+        roomId: 'ROOM1',
+        matchId: 'ROOM1:match-1',
+        opponentUsername: 'Rival',
+        winnerUsername: 'Narcis',
+        completedAt: '2026-07-23T12:00:00.000Z'
+    }]);
+    assert.equal(Object.hasOwn(games[0], 'resultKey'), false);
+    assert.equal(Object.hasOwn(games[0], 'userId'), false);
 });
 
 test('account reward reports an exact level-up without repeating unlocked badges', async () => {

@@ -70,7 +70,7 @@ test('migration loader reads numbered files and keeps the legacy fallback checks
         fallbackSchemaFilePath
     });
 
-    assert.equal(migrations.length, 6);
+    assert.equal(migrations.length, 7);
     assert.equal(migrations[0].version, 1);
     assert.equal(migrations[0].name, 'initial_auth_schema');
     assert.equal(migrations[0].checksum, fallbackMigrations[0].checksum);
@@ -93,7 +93,7 @@ test('migration runner applies pending migrations transactionally under an advis
         }
     });
 
-    assert.deepEqual(result, { appliedCount: 6, currentVersion: 6 });
+    assert.deepEqual(result, { appliedCount: 7, currentVersion: 7 });
     assert.equal(pool.connectCalls, 1);
     assert.equal(client.queries[0].sql, 'BEGIN');
     assert.deepEqual(client.queries[1], {
@@ -105,7 +105,7 @@ test('migration runner applies pending migrations transactionally under an advis
     assert.match(client.queries[5].sql, /INSERT INTO schema_migrations/);
     assert.equal(client.queries.at(-1).sql, 'COMMIT');
     assert.equal(client.releaseCalls, 1);
-    assert.equal(logs.length, 6);
+    assert.equal(logs.length, 7);
     assert.equal(logs[0].metadata.version, 1);
     assert.equal(logs[1].metadata.version, 2);
     assert.equal(logs[2].metadata.version, 3);
@@ -116,6 +116,8 @@ test('migration runner applies pending migrations transactionally under an advis
     assert.equal(logs[4].metadata.name, 'username_change_cooldown');
     assert.equal(logs[5].metadata.version, 6);
     assert.equal(logs[5].metadata.name, 'daily_attempts');
+    assert.equal(logs[6].metadata.version, 7);
+    assert.equal(logs[6].metadata.name, 'complete_game_history');
 });
 
 test('migration runner skips migrations that were already applied with the same checksum', async () => {
@@ -134,7 +136,7 @@ test('migration runner skips migrations that were already applied with the same 
         logger: { info() {}, error() {} }
     });
 
-    assert.deepEqual(result, { appliedCount: 0, currentVersion: 6 });
+    assert.deepEqual(result, { appliedCount: 0, currentVersion: 7 });
     assert.equal(
         client.queries.some(query => query.sql.startsWith('INSERT INTO schema_migrations')),
         false
@@ -190,7 +192,7 @@ test('migration validation rejects database versions missing from the applicatio
 
     assert.throws(
         () => validateAppliedMigrations([{
-            version: 7,
+            version: 8,
             name: 'future_migration',
             checksum: 'a'.repeat(64)
         }], migrations),

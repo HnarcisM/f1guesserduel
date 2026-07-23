@@ -87,3 +87,14 @@ test('Duel round history stays isolated and uses safe DOM rendering', () => {
     assertFileBudget('server/rooms/roundHistoryService.js', 10_000);
     assertFileBudget('public/js/duelRoundHistoryController.js', 9_000);
 });
+
+
+test('complete account history stays isolated and renders without innerHTML', () => {
+    const controller = readProjectFile('public/js/accountGameHistoryController.js');
+    const sqliteUpgrade = readProjectFile('server/db/sqliteSchemaUpgrade.js');
+
+    assert.doesNotMatch(controller, /innerHTML/);
+    assert.match(sqliteUpgrade, /ALTER TABLE user_game_results ADD COLUMN/);
+    assertFileBudget('public/js/accountGameHistoryController.js', 13_000);
+    assertFileBudget('server/db/sqliteSchemaUpgrade.js', 4_000);
+});

@@ -49,7 +49,7 @@ test('real PostgreSQL applies every migration and remains idempotent', async () 
     `);
     assert.deepEqual(
         migrationRows.rows.map(row => Number(row.version)),
-        [1, 2, 3, 4, 5, 6]
+        [1, 2, 3, 4, 5, 6, 7]
     );
 
     const secondRun = await runPostgresMigrations({
@@ -58,7 +58,7 @@ test('real PostgreSQL applies every migration and remains idempotent', async () 
         fallbackSchemaFilePath: schemaFilePath,
         logger: silentLogger
     });
-    assert.deepEqual(secondRun, { appliedCount: 0, currentVersion: 6 });
+    assert.deepEqual(secondRun, { appliedCount: 0, currentVersion: 7 });
 });
 
 test('real PostgreSQL enforces auth constraints, sessions and account result idempotency', async () => {
@@ -119,6 +119,11 @@ test('real PostgreSQL enforces auth constraints, sessions and account result ide
         outcome: 'win',
         attempts: 2,
         difficulty: 'hard',
+        targetDriverId: 'VER',
+        targetDriverName: 'Max Verstappen',
+        durationMs: 42_000,
+        matchId: `single:${suffix}`,
+        winnerUsername: username,
         xpEarned: 60
     };
     const recorded = await statsRepository.recordGameResult(gameResult);
@@ -129,4 +134,9 @@ test('real PostgreSQL enforces auth constraints, sessions and account result ide
     assert.equal(Number(duplicate.rows[0].games_played), 1);
     assert.equal(Number(duplicate.rows[0].guess_2), 1);
     assert.equal(Number(duplicate.progressRow.total_xp), 60);
+    assert.equal(duplicate.recentResults[0].targetDriverId, 'VER');
+    assert.equal(duplicate.recentResults[0].targetDriverName, 'Max Verstappen');
+    assert.equal(Number(duplicate.recentResults[0].durationMs), 42_000);
+    assert.equal(duplicate.recentResults[0].matchId, `single:${suffix}`);
+    assert.equal(duplicate.recentResults[0].winnerUsername, username);
 });

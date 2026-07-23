@@ -49,11 +49,12 @@ test('Single records an authenticated result only after the server validates the
                     difficulty: 'easy',
                     timed: false,
                     timeLimitSeconds: 60,
-                    roundStartedAt: Date.now()
+                    roundStartedAt: 1_000
                 };
             },
             restartSingleRound() { return null; }
         },
+        clock: () => 31_000,
         accountStatsService: {
             async recordGameResult(result) {
                 recorded.push(result);
@@ -85,6 +86,10 @@ test('Single records an authenticated result only after the server validates the
     assert.equal(recorded[0].mode, 'single');
     assert.equal(recorded[0].outcome, 'win');
     assert.equal(recorded[0].attempts, 1);
+    assert.deepEqual(recorded[0].targetDriver, target);
+    assert.equal(recorded[0].durationMs, 30_000);
+    assert.match(recorded[0].matchId, /^single:/);
+    assert.equal(recorded[0].winnerUsername, 'Narcis');
     const accountUpdate = socket.emitted.find(event => event.eventName === 'accountStatsUpdated');
     assert.equal(accountUpdate.payload.progress.totalXp, 50);
     assert.equal(accountUpdate.payload.achievements[0].key, 'first-win');
@@ -94,27 +99,40 @@ test('Single records an authenticated result only after the server validates the
 
 test('Duel account results map authenticated winners, losses and draws without guests', () => {
     const room = {
-        roundStartedAt: 12345,
+        roomId: 'ABC',
+        roundStartedAt: 12_345,
         difficulty: 'hard',
+        targetDriver: { id: 'VER', name: 'Max Verstappen' },
+        matchState: { startedAt: 10_000 },
         players: {
-            winner: { socketId: 'winner', userId: 7, attempts: 2 },
-            loser: { socketId: 'loser', userId: 8, attempts: 4 },
-            guest: { socketId: 'guest', userId: null, attempts: 6 }
+            winner: { socketId: 'winner', userId: 7, username: 'Narcis', attempts: 2 },
+            loser: { socketId: 'loser', userId: 8, username: 'Rival', attempts: 4 },
+            guest: { socketId: 'guest', userId: null, username: 'Guest', attempts: 6 }
         }
     };
 
     const winResults = buildDuelAccountResults('ABC', room, {
         status: 'win',
-        winnerSocketId: 'winner'
+        winnerSocketId: 'winner',
+        winnerUsername: 'Narcis',
+        finishedAt: 52_345
     });
     const drawResults = buildDuelAccountResults('ABC', room, {
         status: 'draw',
-        winnerSocketId: null
+        winnerSocketId: null,
+        finishedAt: 52_345
     });
 
     assert.deepEqual(winResults.map(result => result.outcome), ['win', 'loss']);
     assert.deepEqual(drawResults.map(result => result.outcome), ['draw', 'draw']);
     assert.equal(winResults[0].resultKey, 'ABC:12345');
+    assert.equal(winResults[0].roomId, 'ABC');
+    assert.equal(winResults[0].matchId, 'ABC:10000');
+    assert.equal(winResults[0].durationMs, 40_000);
+    assert.deepEqual(winResults[0].targetDriver, room.targetDriver);
+    assert.equal(winResults[0].opponentUsername, 'Rival');
+    assert.equal(winResults[0].winnerUsername, 'Narcis');
+    assert.equal(winResults[1].opponentUsername, 'Narcis');
     assert.equal(winResults.some(result => result.userId === null), false);
 });
 
@@ -144,10 +162,11 @@ test('Daily uses the server challenge id as the idempotent account result key', 
                     difficulty: 'medium',
                     dailyDate: '2026-07-18',
                     dailyChallengeId: 'daily:2026-07-18:medium',
-                    roundStartedAt: Date.now()
+                    roundStartedAt: 2_000
                 };
             }
         },
+        clock: () => 47_000,
         accountStatsService: {
             async claimDailyChallenge() {
                 return true;
@@ -182,6 +201,10 @@ test('Daily uses the server challenge id as the idempotent account result key', 
     assert.equal(recorded[0].mode, 'daily');
     assert.equal(recorded[0].resultKey, 'daily:2026-07-18:medium');
     assert.equal(recorded[0].outcome, 'win');
+    assert.deepEqual(recorded[0].targetDriver, target);
+    assert.equal(recorded[0].durationMs, 45_000);
+    assert.equal(recorded[0].matchId, 'daily:2026-07-18:medium');
+    assert.equal(recorded[0].winnerUsername, 'Narcis');
     const accountUpdate = socket.emitted.find(event => event.eventName === 'accountStatsUpdated');
     assert.equal(accountUpdate.payload.progress.totalXp, 65);
     assert.equal(accountUpdate.payload.achievements[0].unlocked, true);

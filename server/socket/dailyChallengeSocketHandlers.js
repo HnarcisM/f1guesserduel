@@ -19,7 +19,8 @@ function createDailySession(dailyPayload, userId) {
         attempts: 0,
         finished: false,
         dailyDate: dailyPayload.dailyDate,
-        dailyChallengeId: dailyPayload.dailyChallengeId
+        dailyChallengeId: dailyPayload.dailyChallengeId,
+        roundStartedAt: dailyPayload.roundStartedAt
     };
 }
 
@@ -55,7 +56,8 @@ function registerDailyChallengeSocketHandlers({
     accountStatsService = null,
     logger = console,
     now = () => new Date(),
-    onSocketEvent = socket.on.bind(socket)
+    onSocketEvent = socket.on.bind(socket),
+    clock = Date.now
 }) {
     function getCurrentDailyContext() {
         const currentDate = now();
@@ -102,7 +104,13 @@ function registerDailyChallengeSocketHandlers({
             resultKey: dailySession.dailyChallengeId,
             outcome,
             attempts: dailySession.attempts,
-            difficulty: dailySession.difficulty
+            difficulty: dailySession.difficulty,
+            targetDriver: dailySession.targetDriver,
+            durationMs: Number.isFinite(dailySession.roundStartedAt)
+                ? Math.max(0, clock() - dailySession.roundStartedAt)
+                : null,
+            matchId: dailySession.dailyChallengeId,
+            winnerUsername: outcome === 'win' ? socket.user?.username || null : null
         }).then(result => {
             if (result?.stats) {
                 socket.emit('accountStatsUpdated', buildAccountStatsSocketPayload(userId, result));

@@ -43,6 +43,13 @@ CREATE TABLE IF NOT EXISTS user_game_results (
     outcome TEXT NOT NULL CHECK (outcome IN ('win', 'loss', 'draw')),
     attempts INTEGER NOT NULL CHECK (attempts BETWEEN 0 AND 6),
     difficulty TEXT,
+    target_driver_id TEXT,
+    target_driver_name TEXT,
+    duration_ms INTEGER CHECK (duration_ms IS NULL OR duration_ms >= 0),
+    room_id TEXT,
+    match_id TEXT,
+    opponent_username TEXT,
+    winner_username TEXT,
     completed_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE (user_id, mode, result_key),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE

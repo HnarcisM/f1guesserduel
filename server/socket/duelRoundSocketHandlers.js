@@ -28,23 +28,7 @@ const {
     recordAccountGameResultSafely
 } = require('../account/accountStatsService');
 
-function buildDuelAccountResults(roomId, room, roundResult) {
-    if (!room || !roundResult) return [];
-
-    return Object.values(room.players || {})
-        .filter(player => player.userId !== null && player.userId !== undefined)
-        .map(player => ({
-            userId: player.userId,
-            mode: 'duel',
-            resultKey: `${roomId}:${room.roundStartedAt}`,
-            outcome: roundResult.status === 'draw'
-                ? 'draw'
-                : roundResult.winnerSocketId === player.socketId ? 'win' : 'loss',
-            attempts: typeof player.attempts === 'number' ? player.attempts : 0,
-            difficulty: room.difficulty,
-            socketId: player.socketId
-        }));
-}
+const { buildDuelAccountResults } = require('./duelAccountResultBuilder');
 
 function registerDuelRoundSocketHandlers(context) {
     const {
@@ -335,7 +319,4 @@ function registerDuelRoundSocketHandlers(context) {
     });
 }
 
-module.exports = {
-    buildDuelAccountResults,
-    registerDuelRoundSocketHandlers
-};
+module.exports = { registerDuelRoundSocketHandlers };

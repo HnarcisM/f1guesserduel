@@ -45,7 +45,8 @@ function registerSoloGameSocketHandlers({
     leaveCurrentRoom,
     accountStatsService = null,
     logger = console,
-    onSocketEvent = socket.on.bind(socket)
+    onSocketEvent = socket.on.bind(socket),
+    clock = Date.now
 }) {
     function recordResult(singleSession, outcome) {
         const userId = socket.user?.id;
@@ -57,7 +58,13 @@ function registerSoloGameSocketHandlers({
             resultKey: singleSession.resultKey,
             outcome,
             attempts: singleSession.attempts,
-            difficulty: singleSession.difficulty
+            difficulty: singleSession.difficulty,
+            targetDriver: singleSession.targetDriver,
+            durationMs: Number.isFinite(singleSession.roundStartedAt)
+                ? Math.max(0, clock() - singleSession.roundStartedAt)
+                : null,
+            matchId: singleSession.resultKey,
+            winnerUsername: outcome === 'win' ? socket.user?.username || null : null
         }).then(result => {
             if (result?.stats) {
                 socket.emit('accountStatsUpdated', buildAccountStatsSocketPayload(userId, result));
