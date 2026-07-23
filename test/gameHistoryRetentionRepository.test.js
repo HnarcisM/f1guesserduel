@@ -3,7 +3,10 @@ const test = require('node:test');
 
 const {
     POSTGRES_GAME_HISTORY_CLEANUP_LOCK_KEYS,
+    normalizeBatchSize,
+    normalizeCutoff,
     formatSqliteTimestamp,
+    createGameHistoryRetentionRepository,
     createPostgresGameHistoryRetentionRepository,
     createSqliteGameHistoryRetentionRepository
 } = require('../server/account/gameHistoryRetentionRepository');
@@ -51,6 +54,47 @@ function createPostgresDatabase(client) {
         }
     };
 }
+
+test('retention input normalization accepts supported values and rejects unsafe cleanup options', () => {
+    const cutoff = normalizeCutoff('2025-07-23T12:34:56.789Z');
+
+    assert.equal(cutoff.toISOString(), '2025-07-23T12:34:56.789Z');
+    assert.equal(normalizeCutoff(cutoff), cutoff);
+    assert.equal(normalizeBatchSize('25'), 25);
+    assert.throws(() => normalizeBatchSize(0), /positive integer/);
+    assert.throws(() => normalizeBatchSize(1.5), /positive integer/);
+    assert.throws(() => normalizeCutoff('not-a-date'), /valid date/);
+});
+
+test('retention repository factory selects custom, Postgres and SQLite adapters defensively', () => {
+    const customRepository = { deleteExpiredGameResults() {} };
+    const postgresDatabase = createPostgresDatabase(new FakePostgresClient());
+    const sqliteDatabase = {
+        prepare() {
+            return {
+                run() {
+                    return { changes: 0 };
+                }
+            };
+        }
+    };
+
+    assert.equal(createGameHistoryRetentionRepository(customRepository), customRepository);
+    assert.equal(createGameHistoryRetentionRepository(postgresDatabase).provider, 'postgres');
+    assert.equal(createGameHistoryRetentionRepository(sqliteDatabase).provider, 'sqlite');
+    assert.throws(
+        () => createGameHistoryRetentionRepository({ provider: 'postgres' }),
+        /connection pool/
+    );
+    assert.throws(
+        () => createSqliteGameHistoryRetentionRepository({}),
+        /database connection/
+    );
+    assert.throws(
+        () => createGameHistoryRetentionRepository({}),
+        /Unsupported database adapter/
+    );
+});
 
 test('Postgres retention deletes expired history in bounded batches under one advisory lock', async () => {
     const client = new FakePostgresClient({ deleteCounts: [2, 2, 1] });
@@ -115,6 +159,26 @@ test('Postgres retention discards a client when advisory unlock fails', async ()
     assert.deepEqual(client.releaseCalls, [unlockFailure]);
 });
 
+test('Postgres retention preserves the cleanup failure when advisory unlock also fails', async () => {
+    const deleteFailure = new Error('delete failed first');
+    const unlockFailure = new Error('unlock failed second');
+    const client = new FakePostgresClient({
+        failDelete: deleteFailure,
+        failUnlock: unlockFailure
+    });
+    const repository = createPostgresGameHistoryRetentionRepository(createPostgresDatabase(client));
+
+    await assert.rejects(
+        repository.deleteExpiredGameResults({
+            cutoff: new Date('2025-07-23T12:00:00.000Z'),
+            batchSize: 5000
+        }),
+        error => error === deleteFailure
+    );
+
+    assert.deepEqual(client.releaseCalls, [unlockFailure]);
+});
+
 test('SQLite retention formats UTC cutoffs and deletes in bounded batches', async () => {
     const calls = [];
     const counts = [3, 2];
@@ -143,7 +207,6 @@ test('SQLite retention formats UTC cutoffs and deletes in bounded batches', asyn
         { cutoff: '2025-07-23 12:34:56', batchSize: 3 }
     ]);
 });
-
 
 test('retention migration and SQLite schema index global cleanup by completion time', () => {
     const fs = require('node:fs');
