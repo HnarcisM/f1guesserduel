@@ -10,6 +10,7 @@ function createReadyApi() {
         const players = getPlayers(roomState);
         const you = roomState.you || players.find(player => player?.isYou) || null;
         const isPlaying = roomState.roundState === 'playing';
+        const matchFinished = roomState.match?.status === 'finished';
         const isSpectator = you?.role === 'spectator';
         const isPlayer = Boolean(you && !isSpectator && players.some(player => player?.isYou));
         const isHost = Boolean(you?.isHost);
@@ -20,13 +21,14 @@ function createReadyApi() {
             players,
             you,
             isPlaying,
+            matchFinished,
             isSpectator,
             isPlayer,
             isHost,
             allReady,
             currentReady: Boolean(isPlayer && you?.ready === true),
-            canReady: Boolean(isPlayer && !isPlaying && you?.connected !== false),
-            canStart: Boolean(isHost && !isSpectator && !isPlaying && allReady)
+            canReady: Boolean(isPlayer && !isPlaying && !matchFinished && you?.connected !== false),
+            canStart: Boolean(isHost && !isSpectator && !isPlaying && !matchFinished && allReady)
         };
     }
 
@@ -164,8 +166,20 @@ function createReadyApi() {
             return Boolean(target?.closest?.('#restartGameBtn, #closeEndGamePopup, #sendGuessBtn.rematch-submit-btn, #endGameBackdrop'));
         }
 
+        function isRematchIntent(target) {
+            return Boolean(target?.closest?.('#restartGameBtn, #sendGuessBtn.rematch-submit-btn'));
+        }
+
+        function ensureCurrentPlayerReady() {
+            const viewState = getReadyViewState(latestRoomState || {});
+            if (!viewState.canReady || viewState.currentReady || !socket?.emit) return false;
+            socket.emit('setDuelReady', { ready: true });
+            return true;
+        }
+
         function handleCaptureClick(event) {
             if (allowResultCloseClick || !shouldReturnToLobby(event.target)) return;
+            const shouldAutoReady = isRematchIntent(event.target);
             event.preventDefault();
             event.stopImmediatePropagation();
 
@@ -179,6 +193,8 @@ function createReadyApi() {
                 }
             }
 
+            if (shouldAutoReady) ensureCurrentPlayerReady();
+
             schedule(() => {
                 closeDuelResultUi(documentObject);
                 render();
@@ -187,6 +203,7 @@ function createReadyApi() {
 
         return {
             attachSocket,
+            ensureCurrentPlayerReady,
             getLatestRoomState: () => latestRoomState,
             handleCaptureClick,
             render,

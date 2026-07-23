@@ -7,7 +7,7 @@ async function importDuelReadyController() {
     return import(`../public/js/duelReadyController.js?readyControllerTest=${Date.now()}-${Math.random()}`);
 }
 
-function createRoomState({ hostReady = false, guestReady = false, you = 'host', roundState = 'waiting' } = {}) {
+function createRoomState({ hostReady = false, guestReady = false, you = 'host', roundState = 'waiting', matchStatus = 'active' } = {}) {
     const players = [
         {
             username: 'Host',
@@ -30,6 +30,7 @@ function createRoomState({ hostReady = false, guestReady = false, you = 'host', 
     return {
         roomId: 'READY1',
         roundState,
+        match: { status: matchStatus },
         players,
         you: current || { role: 'spectator', isHost: false }
     };
@@ -153,7 +154,15 @@ test('Duel rematch returns to the Ready lobby without sending the old restart ac
     const closeButton = document.getElementById('closeEndGamePopup');
     const gameZone = document.getElementById('gameZone');
     const sendButton = document.getElementById('sendGuessBtn');
+    const emitted = [];
     let closeCount = 0;
+
+    controller.attachSocket({
+        on() {},
+        emit(eventName, payload) {
+            emitted.push([eventName, payload]);
+        }
+    });
 
     closeButton.addEventListener('click', () => {
         closeCount += 1;
@@ -188,6 +197,59 @@ test('Duel rematch returns to the Ready lobby without sending the old restart ac
     assert.equal(sendButton.classList.contains('rematch-submit-btn'), false);
     assert.equal(sendButton.disabled, true);
     assert.match(document.getElementById('status').textContent, /Ready/);
+    assert.deepEqual(emitted, [['setDuelReady', { ready: true }]]);
+});
+
+test('Closing the Duel result without choosing rematch does not auto-ready the player', async () => {
+    const { createController } = await importDuelReadyController();
+    const document = createDocumentStub();
+    const controller = createController({ document, schedule: callback => callback() });
+    const emitted = [];
+
+    controller.attachSocket({
+        on() {},
+        emit(eventName, payload) {
+            emitted.push([eventName, payload]);
+        }
+    });
+    controller.render(createRoomState({ roundState: 'finished' }));
+    controller.handleCaptureClick({
+        target: {
+            closest(selector) {
+                return selector.includes('#closeEndGamePopup') ? this : null;
+            }
+        },
+        preventDefault() {},
+        stopImmediatePropagation() {}
+    });
+
+    assert.deepEqual(emitted, []);
+});
+
+test('Rematch does not auto-ready after the Best of match is already finished', async () => {
+    const { createController } = await importDuelReadyController();
+    const document = createDocumentStub();
+    const controller = createController({ document, schedule: callback => callback() });
+    const emitted = [];
+
+    controller.attachSocket({
+        on() {},
+        emit(eventName, payload) {
+            emitted.push([eventName, payload]);
+        }
+    });
+    controller.render(createRoomState({ roundState: 'finished', matchStatus: 'finished' }));
+    controller.handleCaptureClick({
+        target: {
+            closest(selector) {
+                return selector.includes('#restartGameBtn') ? this : null;
+            }
+        },
+        preventDefault() {},
+        stopImmediatePropagation() {}
+    });
+
+    assert.deepEqual(emitted, []);
 });
 
 test('HTML loads the Ready panel and bridge around the unchanged main bundle', () => {
