@@ -33,14 +33,16 @@ test('GitHub Actions CI uses Node 22 and the locked npm dependencies', () => {
 
 test('GitHub Actions CI enforces coverage, builds and rejects stale generated frontend files', () => {
     const source = readWorkflow();
-    const coveragePosition = source.indexOf('run: npm run test:coverage');
+    const coveragePosition = source.indexOf('npm run test:coverage 2>&1 | tee');
+    const enforcementPosition = source.indexOf('name: Enforce backend test result');
     const buildPosition = source.indexOf('run: npm run build');
     const generatedCheckPosition = source.indexOf(
         'git diff --exit-code -- public/index.html public/style.bundle.css public/game.bundle.min.js'
     );
 
     assert.ok(coveragePosition >= 0);
-    assert.ok(buildPosition > coveragePosition);
+    assert.ok(enforcementPosition > coveragePosition);
+    assert.ok(buildPosition > enforcementPosition);
     assert.ok(generatedCheckPosition > buildPosition);
 });
 
@@ -51,6 +53,23 @@ test('GitHub Actions CI retains the machine-readable coverage summary', () => {
     assert.match(source, /test-results\/coverage\/coverage-summary\.json/);
     assert.match(source, /if-no-files-found:\s*error/);
     assert.match(source, /retention-days:\s*14/);
+});
+
+test('GitHub Actions CI preserves backend test logs and publishes failed tests in the job summary', () => {
+    const source = readWorkflow();
+
+    assert.match(source, /id:\s*backend_tests/);
+    assert.match(source, /npm run test:coverage 2>&1 \| tee test-results\/ci\/backend-tests\.log/);
+    assert.match(source, /test_exit_code=\$\{PIPESTATUS\[0\]\}/);
+    assert.match(source, /GITHUB_STEP_SUMMARY/);
+    assert.ok(source.includes("grep -q '^✖ failing tests:'"));
+    assert.ok(source.includes("awk '/^✖ failing tests:/{show=1} show{print}'"));
+    assert.ok(source.includes('tail -n 100 "$log_file"'));
+    assert.match(source, /name:\s*backend-test-log-\$\{\{ github\.run_attempt \}\}/);
+    assert.match(source, /path:\s*test-results\/ci\/backend-tests\.log/);
+    assert.match(source, /TEST_EXIT_CODE:\s*\$\{\{ steps\.backend_tests\.outputs\.exit_code \}\}/);
+    assert.match(source, /Backend tests failed/);
+    assert.ok(source.includes('exit "${TEST_EXIT_CODE:-1}"'));
 });
 
 test('GitHub Actions CI provisions healthy Redis and PostgreSQL services', () => {

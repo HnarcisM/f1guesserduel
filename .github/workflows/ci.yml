@@ -38,7 +38,61 @@ jobs:
         run: npm ci
 
       - name: Run tests with coverage thresholds
-        run: npm run test:coverage
+        id: backend_tests
+        shell: bash
+        run: |
+          mkdir -p test-results/ci
+          set +e
+          npm run test:coverage 2>&1 | tee test-results/ci/backend-tests.log
+          test_exit_code=${PIPESTATUS[0]}
+          echo "exit_code=${test_exit_code}" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Publish backend test summary
+        if: always()
+        shell: bash
+        env:
+          TEST_EXIT_CODE: ${{ steps.backend_tests.outputs.exit_code }}
+        run: |
+          log_file="test-results/ci/backend-tests.log"
+          {
+            echo "## Backend test results"
+            echo
+            if [[ ! -s "$log_file" ]]; then
+              echo "> No backend test log was produced."
+            else
+              echo "### Totals"
+              echo
+              echo '```text'
+              grep '^ℹ ' "$log_file" | tail -n 8 || true
+              echo '```'
+
+              if [[ "${TEST_EXIT_CODE:-1}" == "0" ]]; then
+                echo
+                echo "✅ All backend tests and coverage thresholds passed."
+              else
+                echo
+                echo "### Failure details"
+                echo
+                echo '```text'
+                if grep -q '^✖ failing tests:' "$log_file"; then
+                  awk '/^✖ failing tests:/{show=1} show{print}' "$log_file" | tail -n 220
+                else
+                  tail -n 100 "$log_file"
+                fi
+                echo '```'
+              fi
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload backend test log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-test-log-${{ github.run_attempt }}
+          path: test-results/ci/backend-tests.log
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Upload coverage report
         if: always()
@@ -48,6 +102,17 @@ jobs:
           path: test-results/coverage/coverage-summary.json
           if-no-files-found: error
           retention-days: 14
+
+      - name: Enforce backend test result
+        if: always()
+        shell: bash
+        env:
+          TEST_EXIT_CODE: ${{ steps.backend_tests.outputs.exit_code }}
+        run: |
+          if [[ "${TEST_EXIT_CODE:-1}" != "0" ]]; then
+            echo "::error title=Backend tests failed::See the job summary and backend-test-log artifact for full details."
+          fi
+          exit "${TEST_EXIT_CODE:-1}"
 
       - name: Build production bundles
         run: npm run build
