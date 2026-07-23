@@ -1,6 +1,7 @@
 const { MAX_PLAYERS_PER_ROOM, DEFAULT_TIME_LIMIT_SECONDS } = require('../config/constants');
 const { buildPublicRoundResult } = require('./roundResultService');
 const { buildPublicScoreboard } = require('./scoreboardService');
+const { buildPublicDuelMatch } = require('./duelMatchService');
 
 function serializeGuessEntry(entry) {
     return {
@@ -51,6 +52,7 @@ function buildLiveBoardState(room) {
         roundState: room.roundState,
         roundResult: buildPublicRoundResult(room.roundResult),
         scoreboard: buildPublicScoreboard(room),
+        match: buildPublicDuelMatch(room),
         isDailyChallenge: Boolean(room.isDailyChallenge),
         dailyDate: room.dailyDate || null,
         players: Object.values(room.players || {}).map(member => serializeRoomMember(member, { includeGuesses: true }))
@@ -61,7 +63,8 @@ function buildPublicLobbySettings(room) {
     return {
         difficulty: room.lobbyDifficulty || room.difficulty || 'easy',
         timed: room.lobbyTimed === true,
-        timeLimitSeconds: room.lobbyTimeLimitSeconds || room.timeLimitSeconds || DEFAULT_TIME_LIMIT_SECONDS
+        timeLimitSeconds: room.lobbyTimeLimitSeconds || room.timeLimitSeconds || DEFAULT_TIME_LIMIT_SECONDS,
+        bestOf: buildPublicDuelMatch(room).bestOf
     };
 }
 
@@ -83,6 +86,7 @@ function buildPublicRoomState(room, options = {}) {
         roundState: room.roundState,
         roundResult: buildPublicRoundResult(room.roundResult),
         scoreboard: buildPublicScoreboard(room),
+        match: buildPublicDuelMatch(room),
         difficulty: room.difficulty || null,
         timed: Boolean(room.timed),
         timeLimitSeconds: room.timeLimitSeconds || null,

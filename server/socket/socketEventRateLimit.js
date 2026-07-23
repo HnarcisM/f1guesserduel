@@ -7,6 +7,7 @@ const DEFAULT_SOCKET_EVENT_LIMITS = Object.freeze({
     joinRoom: { maxEvents: 20 },
     updateDuelLobbySettings: { maxEvents: 30 },
     setDuelReady: { maxEvents: 30 },
+    resetDuelMatch: { maxEvents: 6 },
     setDifficulty: { maxEvents: 12 },
     submitGuess: { maxEvents: 90 },
     timeExpired: { maxEvents: 12 },

@@ -17,7 +17,8 @@ test('public room list exposes safe summaries for joinable rooms', () => {
     updateDuelLobbySettings(room, {
         difficulty: 'medium',
         timed: true,
-        timeLimitSeconds: 90
+        timeLimitSeconds: 90,
+        bestOf: 3
     });
 
     const payload = buildPublicRoomListPayload(createRoomStore([room]));
@@ -32,7 +33,8 @@ test('public room list exposes safe summaries for joinable rooms', () => {
     assert.deepEqual(payload.rooms[0].lobbySettings, {
         difficulty: 'medium',
         timed: true,
-        timeLimitSeconds: 90
+        timeLimitSeconds: 90,
+        bestOf: 3
     });
     assert.equal(payload.rooms[0].statusLabel, 'Lobby');
     assert.equal('players' in payload.rooms[0], false);

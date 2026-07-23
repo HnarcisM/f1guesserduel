@@ -37,6 +37,15 @@ const {
     resetRoomScoreboard,
     syncScoreboardWithPlayers
 } = require('./scoreboardService');
+const {
+    DEFAULT_DUEL_BEST_OF,
+    normalizeDuelBestOf,
+    createDuelMatchState,
+    buildPublicDuelMatch,
+    resetDuelMatch,
+    updateDuelMatchFormat,
+    isDuelMatchFinished
+} = require('./duelMatchService');
 
 const DEFAULT_LOBBY_DIFFICULTY = 'easy';
 
@@ -45,7 +54,8 @@ function normalizeDuelLobbySettings(options = {}) {
     return {
         difficulty,
         timed: options.timed === true,
-        timeLimitSeconds: normalizeTimeLimitSeconds(options.timeLimitSeconds)
+        timeLimitSeconds: normalizeTimeLimitSeconds(options.timeLimitSeconds),
+        bestOf: normalizeDuelBestOf(options.bestOf, DEFAULT_DUEL_BEST_OF)
     };
 }
 
@@ -57,25 +67,33 @@ function updateDuelLobbySettings(room, options = {}) {
     const nextSettings = normalizeDuelLobbySettings({
         difficulty: options.difficulty || room.lobbyDifficulty || room.difficulty || DEFAULT_LOBBY_DIFFICULTY,
         timed: options.timed === true,
-        timeLimitSeconds: options.timeLimitSeconds || room.lobbyTimeLimitSeconds || room.timeLimitSeconds || DEFAULT_TIME_LIMIT_SECONDS
+        timeLimitSeconds: options.timeLimitSeconds || room.lobbyTimeLimitSeconds || room.timeLimitSeconds || DEFAULT_TIME_LIMIT_SECONDS,
+        bestOf: options.bestOf ?? room.lobbyBestOf ?? room.matchState?.bestOf ?? DEFAULT_DUEL_BEST_OF
     });
 
-    const changed = room.lobbyDifficulty !== nextSettings.difficulty
-        || Boolean(room.lobbyTimed) !== nextSettings.timed
+    const difficultyChanged = room.lobbyDifficulty !== nextSettings.difficulty;
+    const timerChanged = Boolean(room.lobbyTimed) !== nextSettings.timed
         || Number(room.lobbyTimeLimitSeconds || DEFAULT_TIME_LIMIT_SECONDS) !== nextSettings.timeLimitSeconds;
+    const formatResult = updateDuelMatchFormat(room, nextSettings.bestOf);
 
     room.lobbyDifficulty = nextSettings.difficulty;
     room.lobbyTimed = nextSettings.timed;
     room.lobbyTimeLimitSeconds = nextSettings.timeLimitSeconds;
+    room.lobbyBestOf = nextSettings.bestOf;
 
-    return { changed, settings: nextSettings };
+    return {
+        changed: difficultyChanged || timerChanged || formatResult.changed,
+        matchReset: formatResult.matchReset === true,
+        settings: nextSettings
+    };
 }
 
 function getDuelLobbySettings(room) {
     return normalizeDuelLobbySettings({
         difficulty: room?.lobbyDifficulty || room?.difficulty || DEFAULT_LOBBY_DIFFICULTY,
         timed: room?.lobbyTimed === true,
-        timeLimitSeconds: room?.lobbyTimeLimitSeconds || room?.timeLimitSeconds || DEFAULT_TIME_LIMIT_SECONDS
+        timeLimitSeconds: room?.lobbyTimeLimitSeconds || room?.timeLimitSeconds || DEFAULT_TIME_LIMIT_SECONDS,
+        bestOf: room?.lobbyBestOf ?? room?.matchState?.bestOf ?? DEFAULT_DUEL_BEST_OF
     });
 }
 
@@ -113,6 +131,9 @@ function setDuelPlayerReady(room, socketId, ready) {
     if (!room || room.roundState === 'playing') {
         return { changed: false, reason: 'round-active', ready: false, allReady: false };
     }
+    if (isDuelMatchFinished(room)) {
+        return { changed: false, reason: 'match-finished', ready: false, allReady: false };
+    }
 
     const player = getPlayer(room, socketId);
     if (!player) {
@@ -148,6 +169,8 @@ function createRoom(roomId, hostSocketId, authUser = null, options = {}) {
         lobbyDifficulty: DEFAULT_LOBBY_DIFFICULTY,
         lobbyTimed: false,
         lobbyTimeLimitSeconds: DEFAULT_TIME_LIMIT_SECONDS,
+        lobbyBestOf: DEFAULT_DUEL_BEST_OF,
+        matchState: createDuelMatchState(DEFAULT_DUEL_BEST_OF),
         roundStartedAt: null,
         roundState: 'waiting',
         roundResult: null,
@@ -356,7 +379,8 @@ function selectSpectatorAsPlayer(room, spectatorLobbyId) {
     room.targetDriver = null;
     room.roundStartedAt = null;
     resetPlayersForNewRound(room);
-    resetRoomScoreboard(room);
+    resetDuelMatch(room);
+    syncScoreboardWithPlayers(room);
     syncHostFlags(room);
 
     return { changed: true, selectedSocketId: spectatorSocketId, replacedSocketId: nonHostPlayerSocketId };
@@ -376,6 +400,8 @@ function removePlayerFromRoom(room, socketId) {
     if (wasPlayer) {
         promoteNextSpectatorToPlayer(room);
         resetDuelReadyState(room);
+        resetDuelMatch(room);
+        syncScoreboardWithPlayers(room);
     }
 
     if (!room.hostId) {
@@ -452,6 +478,12 @@ function removeInactiveRoomMembers(room, isSocketActive, now = Date.now(), optio
         const promoted = promoteNextSpectatorToPlayer(room);
         if (!promoted) break;
         changed = true;
+    }
+
+    if (removedActivePlayer) {
+        resetDuelMatch(room);
+        syncScoreboardWithPlayers(room);
+        resetDuelReadyState(room);
     }
 
     ensureActiveHost(room);
@@ -551,6 +583,9 @@ module.exports = {
     selectSpectatorAsPlayer,
     updateDuelLobbySettings,
     getDuelLobbySettings,
+    buildPublicDuelMatch,
+    resetDuelMatch,
+    isDuelMatchFinished,
     resetDuelReadyState,
     areDuelPlayersReady,
     getDuelReadyStatus,

@@ -13,7 +13,8 @@ const {
     isHost,
     isSpectator,
     getRoomMemberCount,
-    buildLiveBoardState
+    buildLiveBoardState,
+    buildPublicDuelMatch
 } = require('../rooms/roomService');
 const { normalizeRoundOptions } = require('./socketPayloadValidators');
 const {
@@ -87,7 +88,8 @@ function registerDuelLobbySocketHandlers(context) {
             roundStartedAt: room.roundStartedAt,
             isDailyChallenge: Boolean(room.isDailyChallenge),
             dailyDate: room.dailyDate || null,
-            playerProgress: buildPlayerProgressPayload(getPlayer(room, socket.id))
+            playerProgress: buildPlayerProgressPayload(getPlayer(room, socket.id)),
+            match: buildPublicDuelMatch(room)
         };
         if (isSpectator(room, socket.id)) initPayload.liveBoard = buildLiveBoardState(room);
         socket.emit('initGame', initPayload);
@@ -142,6 +144,10 @@ function registerDuelLobbySocketHandlers(context) {
         const result = setDuelPlayerReady(room, socket.id, ready);
         if (result.reason === 'round-active') {
             socket.emit('errorMessage', 'Ready poate fi schimbat doar în lobby.');
+            return;
+        }
+        if (result.reason === 'match-finished') {
+            socket.emit('errorMessage', 'Meciul s-a încheiat. Hostul trebuie să pornească un meci nou.');
             return;
         }
         if (result.reason) {

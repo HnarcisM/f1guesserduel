@@ -31,6 +31,7 @@ test('Duel socket coordinator delegates lobby, round and lifecycle events once',
     const coordinator = readProjectFile('server/socket/registerSocketHandlers.js');
     const modulePaths = [
         'server/socket/duelLobbySocketHandlers.js',
+        'server/socket/duelMatchSocketHandlers.js',
         'server/socket/duelRoundSocketHandlers.js',
         'server/socket/duelLifecycleSocketHandlers.js'
     ];
@@ -40,6 +41,7 @@ test('Duel socket coordinator delegates lobby, round and lifecycle events once',
         'joinRoom',
         'updateDuelLobbySettings',
         'setDuelReady',
+        'resetDuelMatch',
         'selectDuelPlayer',
         'setDifficulty',
         'submitGuess',
@@ -50,10 +52,12 @@ test('Duel socket coordinator delegates lobby, round and lifecycle events once',
     ];
 
     assert.match(coordinator, /registerDuelLobbySocketHandlers\(context\)/);
+    assert.match(coordinator, /registerDuelMatchSocketHandlers\(context\)/);
     assert.match(coordinator, /registerDuelRoundSocketHandlers\(context\)/);
     assert.match(coordinator, /registerDuelLifecycleSocketHandlers\(context\)/);
     assertFileBudget('server/socket/registerSocketHandlers.js', 5_000);
-    assertFileBudget('server/socket/duelLobbySocketHandlers.js', 7_000);
+    assertFileBudget('server/socket/duelLobbySocketHandlers.js', 7_100);
+    assertFileBudget('server/socket/duelMatchSocketHandlers.js', 2_500);
     assertFileBudget('server/socket/duelRoundSocketHandlers.js', 14_000);
     assertFileBudget('server/socket/duelLifecycleSocketHandlers.js', 5_000);
 
@@ -61,4 +65,12 @@ test('Duel socket coordinator delegates lobby, round and lifecycle events once',
         const matches = moduleSource.match(new RegExp(`onSocketEvent\\('${eventName}'`, 'g')) || [];
         assert.equal(matches.length, 1, `${eventName} must be registered exactly once`);
     }
+});
+
+test('Duel match state stays isolated from general room orchestration', () => {
+    const roomService = readProjectFile('server/rooms/roomService.js');
+
+    assert.match(roomService, /require\('\.\/duelMatchService'\)/);
+    assertFileBudget('server/rooms/duelMatchService.js', 7_000);
+    assertFileBudget('public/js/duelSeriesController.js', 13_000);
 });

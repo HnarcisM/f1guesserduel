@@ -13,6 +13,9 @@ const {
     buildLiveBoardState,
     buildPersonalRoundResult,
     buildPublicRoomState,
+    buildPublicScoreboard,
+    buildPublicDuelMatch,
+    isDuelMatchFinished,
     resolveRoundWinner,
     abortDuelRound
 } = require('../rooms/roomService');
@@ -83,6 +86,8 @@ function registerDuelRoundSocketHandlers(context) {
             const member = room.players?.[memberSocket.id] || room.spectators?.[memberSocket.id] || null;
             const payload = buildPersonalRoundResult(roundResult, member);
             if (!payload) continue;
+            payload.scoreboard = buildPublicScoreboard(room);
+            payload.match = buildPublicDuelMatch(room);
             if (isSpectator(room, memberSocket.id)) payload.liveBoard = buildLiveBoardState(room);
             memberSocket.emit('roundResolved', payload);
         }
@@ -107,6 +112,10 @@ function registerDuelRoundSocketHandlers(context) {
         }
         if (room.roundState === 'playing') {
             socket.emit('errorMessage', 'Nu poți schimba dificultatea sau setările în timpul rundei. Așteaptă finalul rundei.');
+            return;
+        }
+        if (isDuelMatchFinished(room)) {
+            socket.emit('errorMessage', 'Meciul s-a încheiat. Pornește un meci nou din lobby.');
             return;
         }
 
@@ -273,6 +282,10 @@ function registerDuelRoundSocketHandlers(context) {
         }
         if (room.roundResult && room.roundState !== 'finished') {
             socket.emit('errorMessage', 'Runda a fost decisă, dar celălalt jucător încă joacă. Așteaptă să termine înainte de rematch.');
+            return;
+        }
+        if (isDuelMatchFinished(room)) {
+            socket.emit('errorMessage', 'Seria Best of s-a încheiat. Pornește un meci nou din lobby.');
             return;
         }
 

@@ -7,6 +7,7 @@
     <script src="/js/themeBootstrap.js?v=6afc6a3773845bb4"></script>
 <link rel="stylesheet" href="/style.bundle.css?v=9b31ae015af3c57e">
 <link rel="stylesheet" href="/css/16-duel-ready.css?v=325c0498b808b8c1">
+<link rel="stylesheet" href="/css/17-duel-series.css?v=519233effd931ef4">
 </head>
 <body>
 
@@ -212,6 +213,25 @@
                     <button type="button" class="duel-lobby-option timer-mode-option" data-timer-mode="120">⏱️ 120 sec</button>
                 </div>
             </div>
+
+            <div class="duel-lobby-setting-group duel-series-format-group">
+                <span class="duel-lobby-setting-label">Format meci</span>
+                <div class="duel-lobby-option-row" role="group" aria-label="Selectare format Best of">
+                    <button type="button" class="duel-lobby-option duel-series-option active" data-duel-best-of="3" aria-pressed="true">Best of 3</button>
+                    <button type="button" class="duel-lobby-option duel-series-option" data-duel-best-of="5" aria-pressed="false">Best of 5</button>
+                    <button type="button" class="duel-lobby-option duel-series-option" data-duel-best-of="7" aria-pressed="false">Best of 7</button>
+                </div>
+                <small id="duelSeriesFormatHint" class="duel-series-format-hint">Primul jucător la 2 victorii câștigă meciul.</small>
+            </div>
+
+            <section id="duelSeriesSummary" class="duel-series-summary" aria-live="polite">
+                <div>
+                    <p class="duel-lobby-eyebrow">Stare meci</p>
+                    <strong id="duelSeriesTitle">Best of 3 · primul la 2 victorii</strong>
+                    <p id="duelSeriesStatus" class="duel-series-status">Meciul nu a început încă.</p>
+                </div>
+                <button type="button" id="duelSeriesResetBtn" class="duel-series-reset-btn" hidden>Începe meci nou</button>
+            </section>
 
             <button type="button" id="duelLobbyStartBtn" class="duel-lobby-start-btn">Pornește runda</button>
         </div>
@@ -584,5 +604,6 @@
 <script src="/js/socketBridgeBootstrap.js?v=fd76646cd8126930"></script>
 <script defer src="/game.bundle.min.js?v=b219bfb3479ec0dc"></script>
 <script type="module" src="/js/duelReadyController.js?v=96b30c49ace86444"></script>
+<script type="module" src="/js/duelSeriesController.js?v=14bfad7705c45b6d"></script>
 </body>
 </html>

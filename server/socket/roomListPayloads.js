@@ -29,7 +29,7 @@ function normalizeRoomListEntry(room) {
         maxPlayers,
         roundState: state.roundState || 'waiting',
         statusLabel: getStatusLabel(state.roundState),
-        lobbySettings: state.lobbySettings || { difficulty: 'easy', timed: false, timeLimitSeconds: 60 },
+        lobbySettings: state.lobbySettings || { difficulty: 'easy', timed: false, timeLimitSeconds: 60, bestOf: 3 },
         canJoinAsPlayer: playerCount < maxPlayers,
         canSpectate: playerCount >= maxPlayers
     };

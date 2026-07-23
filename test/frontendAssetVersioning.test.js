@@ -20,18 +20,22 @@ function createFixture() {
     const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'f1-asset-versioning-'));
     writeFile(rootDir, 'public/js/themeBootstrap.js', 'bootstrap();\r\n');
     writeFile(rootDir, 'public/css/16-duel-ready.css', '.ready { color: green; }\n');
+    writeFile(rootDir, 'public/css/17-duel-series.css', '.series { color: gold; }\n');
     writeFile(rootDir, 'public/js/socketBridgeBootstrap.js', 'bridgeSocket();\n');
     writeFile(rootDir, 'public/js/duelReadyController.js', 'installReady();\n');
+    writeFile(rootDir, 'public/js/duelSeriesController.js', 'installSeries();\n');
     writeFile(rootDir, 'public/style.bundle.css', '.app { color: red; }\n');
     writeFile(rootDir, 'public/game.bundle.min.js', 'startGame();\n');
     writeFile(rootDir, 'public/index.html', [
         '<script src="/js/themeBootstrap.js?v=manual-version"></script>',
         '<link rel="stylesheet" href="/style.bundle.css?v=manual-version">',
         '<link rel="stylesheet" href="/css/16-duel-ready.css?v=manual-version">',
+        '<link rel="stylesheet" href="/css/17-duel-series.css?v=manual-version">',
         '<script src="/js/socketBridgeBootstrap.js?v=manual-version"></script>',
         '<script src="/other.js?v=keep-this"></script>',
         '<script defer src="/game.bundle.min.js?v=manual-version"></script>',
-        '<script type="module" src="/js/duelReadyController.js?v=manual-version"></script>'
+        '<script type="module" src="/js/duelReadyController.js?v=manual-version"></script>',
+        '<script type="module" src="/js/duelSeriesController.js?v=manual-version"></script>'
     ].join('\n'));
     return rootDir;
 }
@@ -42,7 +46,7 @@ test('frontend asset versioning replaces manual values with deterministic conten
     const firstHtml = fs.readFileSync(path.join(rootDir, 'public', 'index.html'), 'utf8');
 
     assert.equal(firstResult.changed, true);
-    assert.equal(firstResult.assets.length, 6);
+    assert.equal(firstResult.assets.length, 8);
     for (const asset of firstResult.assets) {
         assert.match(asset.version, /^[a-f0-9]{16}$/);
         assert.ok(firstHtml.includes(`${asset.publicPath}?v=${asset.version}`));

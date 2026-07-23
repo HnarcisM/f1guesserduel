@@ -6,6 +6,7 @@ const { createSocketEventRateLimiter } = require('./socketEventRateLimit');
 const { buildPublicRoomListPayload } = require('./roomListPayloads');
 const { createRoomMutationCoordinator } = require('./roomMutationCoordinator');
 const { registerDuelLobbySocketHandlers } = require('./duelLobbySocketHandlers');
+const { registerDuelMatchSocketHandlers } = require('./duelMatchSocketHandlers');
 const { registerDuelLifecycleSocketHandlers } = require('./duelLifecycleSocketHandlers');
 const {
     buildDuelAccountResults,
@@ -95,6 +96,7 @@ function registerSocketHandlers(io, dependencies) {
 
         const { leaveCurrentRoom } = registerDuelLifecycleSocketHandlers(context);
         registerDuelLobbySocketHandlers(context);
+        registerDuelMatchSocketHandlers(context);
         registerDuelRoundSocketHandlers(context);
         registerSoloGameSocketHandlers({
             socket,

@@ -2,6 +2,7 @@ const {
     normalizeTimeLimitSeconds,
     isValidDifficulty
 } = require('../config/constants');
+const { DUEL_BEST_OF_OPTIONS } = require('../rooms/duelMatchService');
 
 const MAX_DRIVER_ID_LENGTH = 30;
 const DRIVER_ID_PATTERN = /^[a-zA-Z0-9_-]+$/;
@@ -50,12 +51,18 @@ function normalizeRoundOptions(payload) {
         return null;
     }
 
+    const bestOf = source.bestOf === undefined || source.bestOf === null
+        ? null
+        : Number(source.bestOf);
+    if (bestOf !== null && !DUEL_BEST_OF_OPTIONS.includes(bestOf)) return null;
+
     return {
         difficulty,
         daily: source.daily === true,
         timed: source.timed === true,
         timeLimitSeconds: normalizeTimeLimitSeconds(source.timeLimitSeconds),
-        dailyDate: normalizeDailyDateKey(source.dailyDate)
+        dailyDate: normalizeDailyDateKey(source.dailyDate),
+        bestOf
     };
 }
 

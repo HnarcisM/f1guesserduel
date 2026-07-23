@@ -1,3 +1,4 @@
+const { applyRoundToDuelMatch } = require('./duelMatchService');
 function buildScoreKey(member) {
     if (!member) return null;
     if (member.scoreKey) return member.scoreKey;
@@ -58,10 +59,14 @@ function applyRoundResultToScoreboard(room, roundResult) {
     ensureRoomScoreboard(room);
     syncScoreboardWithPlayers(room);
 
-    if (roundResult.scoreApplied) return false;
+    if (roundResult.scoreApplied) {
+        if (!roundResult.matchApplied) applyRoundToDuelMatch(room, roundResult);
+        return false;
+    }
     if (!roundResult.allPlayersFinished) return false;
     if (roundResult.status !== 'win' || !roundResult.winnerSocketId) {
         roundResult.scoreApplied = true;
+        applyRoundToDuelMatch(room, roundResult);
         return false;
     }
 
@@ -71,6 +76,7 @@ function applyRoundResultToScoreboard(room, roundResult) {
 
     entry.wins += 1;
     roundResult.scoreApplied = true;
+    applyRoundToDuelMatch(room, roundResult);
     return true;
 }
 

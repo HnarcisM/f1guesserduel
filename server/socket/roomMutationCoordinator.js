@@ -4,6 +4,7 @@ const DISTRIBUTED_ROOM_MUTATION_EVENTS = new Set([
     'joinRoom',
     'updateDuelLobbySettings',
     'setDuelReady',
+    'resetDuelMatch',
     'selectDuelPlayer',
     'refreshAuthUser',
     'setDifficulty',

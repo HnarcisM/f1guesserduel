@@ -1,5 +1,10 @@
 const { normalizeTimeLimitSeconds, isValidDifficulty } = require('../config/constants');
 const { resetPlayersForNewRound, syncScoreboardWithPlayers } = require('../rooms/roomService');
+const {
+    buildPublicDuelMatch,
+    isDuelMatchFinished,
+    markDuelMatchStarted
+} = require('../rooms/duelMatchService');
 const { pickDailyDriver } = require('./dailyChallenge');
 
 function createGameService(driversRepository) {
@@ -89,7 +94,7 @@ function createGameService(driversRepository) {
     }
 
     function startNewRound(room, options) {
-        if (room && room.roundState === 'playing') return null;
+        if (room && (room.roundState === 'playing' || isDuelMatchFinished(room))) return null;
 
         const difficulty = options && options.difficulty;
         if (!isValidDifficulty(difficulty)) return null;
@@ -110,6 +115,7 @@ function createGameService(driversRepository) {
         room.roundStartedAt = Date.now();
         room.roundState = 'playing';
         room.roundResult = null;
+        markDuelMatchStarted(room);
 
         return {
             drivers,
@@ -118,12 +124,13 @@ function createGameService(driversRepository) {
             timeLimitSeconds: room.timeLimitSeconds,
             roundStartedAt: room.roundStartedAt,
             isDailyChallenge: false,
-            dailyDate: null
+            dailyDate: null,
+            match: buildPublicDuelMatch(room)
         };
     }
 
     function restartRound(room, options = {}) {
-        if (!room || !room.difficulty) return null;
+        if (!room || !room.difficulty || isDuelMatchFinished(room)) return null;
 
         const drivers = driversRepository.getDriversByDifficulty(room.difficulty);
         if (drivers.length === 0) return null;
@@ -140,13 +147,15 @@ function createGameService(driversRepository) {
         room.roundStartedAt = Date.now();
         room.roundState = 'playing';
         room.roundResult = null;
+        markDuelMatchStarted(room);
 
         return {
             timed: room.timed,
             timeLimitSeconds: room.timeLimitSeconds,
             roundStartedAt: room.roundStartedAt,
             isDailyChallenge: false,
-            dailyDate: null
+            dailyDate: null,
+            match: buildPublicDuelMatch(room)
         };
     }
 

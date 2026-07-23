@@ -115,6 +115,8 @@ function buildPublicRoundResult(roundResult) {
         finishedAt: roundResult.finishedAt || null,
         allPlayersFinished: Boolean(roundResult.allPlayersFinished),
         scoreApplied: Boolean(roundResult.scoreApplied),
+        matchApplied: Boolean(roundResult.matchApplied),
+        match: roundResult.match && typeof roundResult.match === 'object' ? { ...roundResult.match } : null,
         target: roundResult.target || null,
         players: Array.isArray(roundResult.players)
             ? roundResult.players.map(buildPublicPlayerResult)

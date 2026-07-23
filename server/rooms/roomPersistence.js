@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const ROOM_PERSISTENCE_VERSION = 2;
+const ROOM_PERSISTENCE_VERSION = 3;
 let tempFileSequence = 0;
 
 function cloneRoundResult(roundResult) {
@@ -16,6 +16,8 @@ function cloneRoundResult(roundResult) {
         finishedAt: typeof roundResult.finishedAt === 'number' ? roundResult.finishedAt : null,
         allPlayersFinished: Boolean(roundResult.allPlayersFinished),
         scoreApplied: Boolean(roundResult.scoreApplied),
+        matchApplied: Boolean(roundResult.matchApplied),
+        match: roundResult.match && typeof roundResult.match === 'object' ? { ...roundResult.match } : null,
         target: roundResult.target ? { ...roundResult.target } : null,
         players: Array.isArray(roundResult.players)
             ? roundResult.players.map(player => ({ ...player }))
@@ -23,6 +25,25 @@ function cloneRoundResult(roundResult) {
     };
 }
 
+
+function cloneMatchState(matchState, bestOf = 3) {
+    const normalizedBestOf = [3, 5, 7].includes(Number(bestOf)) ? Number(bestOf) : 3;
+    const source = matchState && typeof matchState === 'object' ? matchState : {};
+    const status = ['waiting', 'active', 'finished'].includes(source.status) ? source.status : 'waiting';
+
+    return {
+        bestOf: normalizedBestOf,
+        winsRequired: Math.floor(normalizedBestOf / 2) + 1,
+        status,
+        roundsPlayed: Number.isSafeInteger(source.roundsPlayed) && source.roundsPlayed >= 0 ? source.roundsPlayed : 0,
+        draws: Number.isSafeInteger(source.draws) && source.draws >= 0 ? source.draws : 0,
+        winnerUsername: status === 'finished' && typeof source.winnerUsername === 'string'
+            ? source.winnerUsername
+            : null,
+        startedAt: Number.isFinite(source.startedAt) ? source.startedAt : null,
+        finishedAt: status === 'finished' && Number.isFinite(source.finishedAt) ? source.finishedAt : null
+    };
+}
 
 function cloneScoreboard(scoreboard) {
     if (!scoreboard || typeof scoreboard !== 'object') return {};
@@ -99,6 +120,10 @@ function serializeRoom(room) {
         lobbyDifficulty: room.lobbyDifficulty || room.difficulty || 'easy',
         lobbyTimed: room.lobbyTimed === true,
         lobbyTimeLimitSeconds: room.lobbyTimeLimitSeconds || room.timeLimitSeconds,
+        lobbyBestOf: [3, 5, 7].includes(Number(room.lobbyBestOf ?? room.matchState?.bestOf))
+            ? Number(room.lobbyBestOf ?? room.matchState?.bestOf)
+            : 3,
+        matchState: cloneMatchState(room.matchState, room.lobbyBestOf ?? room.matchState?.bestOf),
         roundStartedAt: typeof room.roundStartedAt === 'number' ? room.roundStartedAt : null,
         roundState: room.roundState || 'waiting',
         roundResult: cloneRoundResult(room.roundResult),

@@ -25,7 +25,8 @@ test('normalizeRoundOptions accepts valid difficulty payload', () => {
         daily: false,
         dailyDate: null,
         timed: true,
-        timeLimitSeconds: 90
+        timeLimitSeconds: 90,
+        bestOf: null
     });
 });
 
@@ -35,8 +36,15 @@ test('normalizeRoundOptions accepts daily challenge flag', () => {
         daily: true,
         dailyDate: null,
         timed: false,
-        timeLimitSeconds: 60
+        timeLimitSeconds: 60,
+        bestOf: null
     });
+});
+
+
+test('normalizeRoundOptions accepts only supported Best of formats', () => {
+    assert.equal(normalizeRoundOptions({ level: 'easy', bestOf: 5 }).bestOf, 5);
+    assert.equal(normalizeRoundOptions({ level: 'easy', bestOf: 4 }), null);
 });
 
 test('normalizeRoundOptions rejects invalid difficulty', () => {
