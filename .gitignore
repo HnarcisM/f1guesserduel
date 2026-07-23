@@ -1,6 +1,7 @@
 node_modules/
 *.bak
 *.backup
+*.dump
 *.old
 .env
 .DS_Store
@@ -12,6 +13,9 @@ node_modules/
 
 # Runtime room persistence file
 /data/rooms.json
+
+# PostgreSQL logical backups and checksum metadata
+/backups/
 
 # Release artifacts
 /dist/
