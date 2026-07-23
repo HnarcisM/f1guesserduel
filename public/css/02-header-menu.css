@@ -109,6 +109,35 @@
     z-index: 3000;
 }
 
+/*
+ * În selectorul inițial păstrăm disponibilă autentificarea fără să afișăm
+ * întregul header peste meniul principal. Starea este derivată direct din
+ * vizibilitatea overlay-ului, astfel încât toate căile Home rămân sincronizate.
+ */
+body:has(#difficulty-overlay:not(.hidden)) .site-header {
+    display: flex;
+    justify-content: flex-end;
+    background: transparent;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    border-bottom-color: transparent;
+    box-shadow: none;
+    pointer-events: none;
+}
+
+body:has(#difficulty-overlay:not(.hidden)) .site-header::after,
+body:has(#difficulty-overlay:not(.hidden)) #menu-hamburger,
+body:has(#difficulty-overlay:not(.hidden)) #dropdown-menu,
+body:has(#difficulty-overlay:not(.hidden)) .site-header h1,
+body:has(#difficulty-overlay:not(.hidden)) #shareRoomBtn,
+body:has(#difficulty-overlay:not(.hidden)) #duelStatus {
+    display: none;
+}
+
+body:has(#difficulty-overlay:not(.hidden)) #authOpenBtn {
+    pointer-events: auto;
+}
+
 /* STIL BUTON PREMIUM DE PARTAJARE CAMERĂ */
 /* Butonul de share funcționează ca un control interactiv, dar este stilizat ca badge. */
 .share-btn {

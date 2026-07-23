@@ -151,12 +151,26 @@ test('authenticated account dashboard is present while the login form remains se
     assert.match(css, /\.auth-settings-disclosure\[open\]/);
 });
 
-test('login remains interactive above the initial mode overlay', () => {
+test('only login remains visible and interactive above the initial mode overlay', () => {
     const headerCss = fs.readFileSync(path.join(projectRoot, 'public', 'css', '02-header-menu.css'), 'utf8');
     const overlayCss = fs.readFileSync(path.join(projectRoot, 'public', 'css', '04-difficulty-overlay.css'), 'utf8');
     const authCss = fs.readFileSync(path.join(projectRoot, 'public', 'css', '08-auth.css'), 'utf8');
 
     assert.match(headerCss, /\.site-header\s*\{[\s\S]*?z-index:\s*2000\b/);
+    assert.match(
+        headerCss,
+        /body:has\(#difficulty-overlay:not\(\.hidden\)\)\s+\.site-header\s*\{[\s\S]*?display:\s*flex\b[\s\S]*?pointer-events:\s*none\b/
+    );
+    assert.match(
+        headerCss,
+        /body:has\(#difficulty-overlay:not\(\.hidden\)\)\s+#authOpenBtn\s*\{[\s\S]*?pointer-events:\s*auto\b/
+    );
+    for (const selector of ['#menu-hamburger', '#dropdown-menu', '.site-header h1', '#shareRoomBtn', '#duelStatus']) {
+        assert.match(
+            headerCss,
+            new RegExp(`body:has\\(#difficulty-overlay:not\\(\\.hidden\\)\\)[\\s\\S]*?${selector.replace('.', '\\.')}[\\s\\S]*?\\{[\\s\\S]*?display:\\s*none\\b`)
+        );
+    }
     assert.match(overlayCss, /\.overlay\s*\{[\s\S]*?z-index:\s*1500\b/);
     assert.match(authCss, /\.auth-backdrop\s*\{[\s\S]*?z-index:\s*10990\b/);
     assert.match(authCss, /\.auth-panel\s*\{[\s\S]*?z-index:\s*11000\b/);

@@ -23,8 +23,6 @@ const UPDATE_BASELINES = process.env.UPDATE_VISUAL_BASELINES === '1';
 
 const HOME_SELECTORS = Object.freeze([
     '.site-header',
-    '.site-header h1',
-    '#menu-hamburger',
     '#authOpenBtn',
     '.menu-container',
     '.game-mode-selection',
@@ -228,6 +226,50 @@ async function assertNoVisibleOverlap(page, firstSelector, secondSelector, label
     assert.equal(overlap, false, `${label}: ${firstSelector} se suprapune cu ${secondSelector}`);
 }
 
+async function assertMainMenuShowsOnlyLoginFromHeader(page, label) {
+    const presentation = await page.evaluate(() => {
+        const isVisible = selector => {
+            const element = document.querySelector(selector);
+            if (!element) return null;
+            const style = getComputedStyle(element);
+            const rectangle = element.getBoundingClientRect();
+            return style.display !== 'none'
+                && style.visibility !== 'hidden'
+                && Number.parseFloat(style.opacity || '1') > 0
+                && rectangle.width > 0
+                && rectangle.height > 0;
+        };
+
+        return {
+            auth: isVisible('#authOpenBtn'),
+            hamburger: isVisible('#menu-hamburger'),
+            dropdown: isVisible('#dropdown-menu'),
+            title: isVisible('.site-header h1'),
+            share: isVisible('#shareRoomBtn'),
+            duelStatus: isVisible('#duelStatus')
+        };
+    });
+
+    assert.equal(presentation.auth, true, `${label}: butonul Login nu este vizibil`);
+    assert.deepEqual(
+        {
+            hamburger: presentation.hamburger,
+            dropdown: presentation.dropdown,
+            title: presentation.title,
+            share: presentation.share,
+            duelStatus: presentation.duelStatus
+        },
+        {
+            hamburger: false,
+            dropdown: false,
+            title: false,
+            share: false,
+            duelStatus: false
+        },
+        `${label}: meniul principal trebuie să afișeze numai autentificarea din header`
+    );
+}
+
 async function captureState(page, viewport, stateLabel, selectors) {
     const fileName = `${viewport.label}-${stateLabel}.png`;
     const screenshotPath = path.join(OUTPUT_DIR, fileName);
@@ -270,8 +312,7 @@ test('responsive layouts match committed visual baselines', { concurrency: false
                 await page.locator('#difficulty-overlay').waitFor({ state: 'visible', timeout: 7000 });
                 const home = await captureState(page, viewport, 'home', HOME_SELECTORS);
                 if (home.visualRegression.failure) visualFailures.push(home.visualRegression.failure);
-                await assertNoVisibleOverlap(page, '.site-header h1', '#menu-hamburger', `${viewport.label}/home`);
-                await assertNoVisibleOverlap(page, '.site-header h1', '#authOpenBtn', `${viewport.label}/home`);
+                await assertMainMenuShowsOnlyLoginFromHeader(page, `${viewport.label}/home`);
 
                 await page.locator('.btn-diff.easy').click();
                 await page.locator('#gameZone:not(.game-zone-hidden)').waitFor({ state: 'visible', timeout: 7000 });
