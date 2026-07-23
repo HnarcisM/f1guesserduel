@@ -174,6 +174,7 @@ export function registerSocketEvents(socket, app) {
 	});
 
 	socket.on('accountStatsUpdated', (payload = {}) => {
+		app.syncEndGameAccountStats?.(payload.stats || null, payload.userId ?? null);
 		app.refreshAccountSummary?.({
 			stats: payload.stats || null,
 			recentGames: payload.recentGames || [],

@@ -52,3 +52,33 @@ test('frontend stats update recovers after corrupted localStorage state', async 
         distribution: { 1: 0, 2: 1, 3: 0, 4: 0, 5: 0, 6: 0 }
     });
 });
+
+test('account stats card uses authoritative totals and aggregates mode distributions', async () => {
+    const { normalizeAccountStatsForCard } = await import('../public/js/stats.js');
+
+    const stats = normalizeAccountStatsForCard({
+        totals: {
+            played: 32,
+            won: 20,
+            bestStreak: 5
+        },
+        modes: {
+            single: {
+                distribution: { 1: 2, 2: 3, 3: 1, 4: 0, 5: 0, 6: 0 }
+            },
+            daily: {
+                distribution: { 1: 1, 2: 0, 3: 2, 4: 1, 5: 0, 6: 0 }
+            },
+            duel: {
+                distribution: { 1: 0, 2: 4, 3: 0, 4: 0, 5: 1, 6: 1 }
+            }
+        }
+    });
+
+    assert.deepEqual(stats, {
+        played: 32,
+        won: 20,
+        streak: 5,
+        distribution: { 1: 3, 2: 7, 3: 3, 4: 1, 5: 1, 6: 1 }
+    });
+});

@@ -22,6 +22,7 @@ function createElement({ classes = [] } = {}) {
     const children = [];
     return {
         classList: createClassList(classes),
+        dataset: {},
         textContent: '',
         disabled: false,
         hidden: false,
@@ -62,7 +63,13 @@ function setupDocumentStub() {
         ['endGameRewardLevel', createElement()],
         ['endGameLevelUpMessage', createElement({ classes: ['is-hidden'] })],
         ['endGameBadgeEmpty', createElement()],
-        ['endGameBadgeList', createElement({ classes: ['is-hidden'] })]
+        ['endGameBadgeList', createElement({ classes: ['is-hidden'] })],
+        ['stats-title', createElement()],
+        ['stat-played', createElement()],
+        ['stat-winrate', createElement()],
+        ['stat-streak', createElement()],
+        ['stat-streak-label', createElement()],
+        ['guess-distribution', createElement()]
     ]);
     elements.get('sendGuessBtn').disabled = true;
 
@@ -199,6 +206,66 @@ test('authenticated reward combines result, XP, level-up and newly unlocked badg
     assert.equal(elements.get('endGameBadgeEmpty').classList.contains('is-hidden'), true);
     assert.equal(elements.get('endGameBadgeList').children.length, 1);
     assert.equal(elements.get('endGameBadgeList').children[0].children[1].children[0].textContent, 'Pole Position');
+});
+
+test('authenticated end-game card waits for and renders server account stats without changing local stats', async () => {
+    const { createEndGameController } = await import('../public/js/endGameController.js');
+    const { elements } = setupDocumentStub();
+    const storedStats = JSON.stringify({
+        played: 55,
+        won: 40,
+        streak: 3,
+        distribution: { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6 }
+    });
+    global.localStorage = {
+        getItem: () => storedStats,
+        setItem() {
+            assert.fail('authenticated games must not update local statistics');
+        },
+        removeItem() {}
+    };
+    let isRoundFinished = false;
+    const controller = createEndGameController({
+        roleState: {
+            isSpectator: () => false,
+            requirePlayer: () => true
+        },
+        timer: {
+            stopRoundTimer() {},
+            buildRestartOptions: () => ({})
+        },
+        dailyChallengeState: {
+            getCountdownText: () => '24h'
+        },
+        getSocket: () => null,
+        getIsDailyMode: () => false,
+        getIsDuelMode: () => false,
+        getIsSingleMode: () => true,
+        getIsRoundFinished: () => isRoundFinished,
+        getCurrentUser: () => ({ id: 7 }),
+        setRoundFinished(value) { isRoundFinished = Boolean(value); }
+    });
+
+    controller.showEndGamePopup({ isCorrect: true, attempts: 2, target: { name: 'Pilot' } });
+
+    assert.equal(elements.get('stat-played').textContent, '…');
+    assert.equal(elements.get('stats-title').textContent, '📊 SE SINCRONIZEAZĂ STATISTICILE CONTULUI…');
+
+    controller.syncAccountStats({
+        totals: { played: 32, won: 20, bestStreak: 5 },
+        modes: {
+            single: { distribution: { 1: 2, 2: 4 } },
+            daily: { distribution: { 1: 1, 2: 0 } },
+            duel: { distribution: { 1: 0, 2: 1 } }
+        }
+    }, 7);
+
+    assert.equal(elements.get('stat-played').textContent, 32);
+    assert.equal(elements.get('stat-winrate').textContent, '63%');
+    assert.equal(elements.get('stat-streak').textContent, 5);
+    assert.equal(elements.get('stat-streak-label').textContent, 'Best Streak');
+    assert.equal(elements.get('stats-title').textContent, '📊 STATISTICI CONT');
+    assert.equal(elements.get('guess-distribution').children.length, 6);
 });
 
 test('end-game dialog has an accessible name, description and no global Enter shortcut', () => {

@@ -3,6 +3,22 @@ import { createTextElement, setTextContentById } from './domUtils.js';
 import { setProgressPercent } from './progressStyle.js';
 import { safeGetItem, safeRemoveItem, safeSetItem } from './safeStorage.js';
 
+const EMPTY_DISTRIBUTION = Object.freeze({ 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 });
+
+function createEmptyDistribution() {
+	return { ...EMPTY_DISTRIBUTION };
+}
+
+function asNonNegativeInteger(value) {
+	const number = Number(value);
+	return Number.isSafeInteger(number) && number >= 0 ? number : 0;
+}
+
+function setStatsLabels({ title, streakLabel }) {
+	setTextContentById('stats-title', title);
+	setTextContentById('stat-streak-label', streakLabel);
+}
+
 /**
  * Citește statisticile locale din localStorage.
  * Dacă nu există statistici salvate, întoarce structura default.
@@ -12,7 +28,7 @@ export function getStats() {
 		played: 0,
 		won: 0,
 		streak: 0,
-		distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 }
+		distribution: createEmptyDistribution()
 	};
 
 	let stats = null;
@@ -29,6 +45,34 @@ export function getStats() {
 		stats.distribution = { ...defaultStats.distribution };
 	}
 	return stats;
+}
+
+/**
+ * Convertește statisticile autoritative ale contului în formatul cardului.
+ * Distribuția include toate modurile, la fel ca totalurile afișate.
+ */
+export function normalizeAccountStatsForCard(accountStats = {}) {
+	const totals = accountStats?.totals && typeof accountStats.totals === 'object'
+		? accountStats.totals
+		: {};
+	const modes = accountStats?.modes && typeof accountStats.modes === 'object'
+		? Object.values(accountStats.modes)
+		: [];
+	const distribution = createEmptyDistribution();
+
+	for (const mode of modes) {
+		if (!mode?.distribution || typeof mode.distribution !== 'object') continue;
+		for (let attemptNumber = 1; attemptNumber <= 6; attemptNumber++) {
+			distribution[attemptNumber] += asNonNegativeInteger(mode.distribution[attemptNumber]);
+		}
+	}
+
+	return {
+		played: asNonNegativeInteger(totals.played),
+		won: asNonNegativeInteger(totals.won),
+		streak: asNonNegativeInteger(totals.bestStreak),
+		distribution
+	};
 }
 
 /**
@@ -111,7 +155,33 @@ export function renderGuessDistribution(distribution) {
 /** Funcție centrală pentru redesenarea statisticilor din popup-ul de final. */
 export function renderStats() {
 	const stats = getStats();
+	setStatsLabels({
+		title: '📊 STATISTICI LOCALE',
+		streakLabel: 'Curent Streak'
+	});
 	renderStatsSummary(stats);
 	renderGuessDistribution(stats.distribution);
 }
 
+/** Randează statisticile persistate de server pentru utilizatorul autentificat. */
+export function renderAccountStats(accountStats) {
+	const stats = normalizeAccountStatsForCard(accountStats);
+	setStatsLabels({
+		title: '📊 STATISTICI CONT',
+		streakLabel: 'Best Streak'
+	});
+	renderStatsSummary(stats);
+	renderGuessDistribution(stats.distribution);
+}
+
+/** Evită afișarea temporară a statisticilor locale cât timp serverul răspunde. */
+export function renderAccountStatsPending() {
+	setStatsLabels({
+		title: '📊 SE SINCRONIZEAZĂ STATISTICILE CONTULUI…',
+		streakLabel: 'Best Streak'
+	});
+	setTextContentById('stat-played', '…');
+	setTextContentById('stat-winrate', '…');
+	setTextContentById('stat-streak', '…');
+	document.getElementById('guess-distribution')?.replaceChildren();
+}

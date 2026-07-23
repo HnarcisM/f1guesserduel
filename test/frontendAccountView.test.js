@@ -216,6 +216,7 @@ test('server account stats updates are forwarded to the account dashboard', asyn
     const handlers = new Map();
     const received = [];
     const rewards = [];
+    const endGameStats = [];
     const socket = {
         off() {},
         on(eventName, handler) {
@@ -229,11 +230,14 @@ test('server account stats updates are forwarded to the account dashboard', asyn
         },
         showAccountReward(reward) {
             rewards.push(reward);
+        },
+        syncEndGameAccountStats(stats, userId) {
+            endGameStats.push({ stats, userId });
         }
     });
     const stats = { totals: { played: 4 }, modes: {} };
     const reward = { mode: 'single', outcome: 'win', xpAwarded: 50 };
-    handlers.get('accountStatsUpdated')({ stats, reward });
+    handlers.get('accountStatsUpdated')({ stats, reward, userId: 7 });
 
     assert.deepEqual(received, [{
         stats,
@@ -243,6 +247,7 @@ test('server account stats updates are forwarded to the account dashboard', asyn
         xpAwarded: 0
     }]);
     assert.deepEqual(rewards, [reward]);
+    assert.deepEqual(endGameStats, [{ stats, userId: 7 }]);
 });
 
 test('a delayed initial auth refresh cannot overwrite a newer login or another account stats event', async t => {

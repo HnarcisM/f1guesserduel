@@ -1,4 +1,9 @@
-import { updateStats, renderStats } from './stats.js';
+import {
+	renderAccountStats,
+	renderAccountStatsPending,
+	renderStats,
+	updateStats
+} from './stats.js';
 import { createDialogFocusManager } from './dialogFocusManager.js';
 
 const REWARD_MODE_LABELS = Object.freeze({ single: 'Single', daily: 'Daily', duel: 'Duel' });
@@ -44,11 +49,53 @@ export function createEndGameController({
 	getIsDuelMode = () => true,
 	getIsSingleMode = () => false,
 	getIsRoundFinished,
+	getCurrentUser = () => null,
 	setRoundFinished
 }) {
 	let isRematchMode = false;
 	let dialogFocusManager = null;
 	let acceptsAccountReward = false;
+	let latestAccountStats = null;
+	let latestAccountStatsUserId = null;
+
+	function getCurrentUserId() {
+		return getCurrentUser()?.id ?? null;
+	}
+
+	function hasCurrentUserAccountStats() {
+		const currentUserId = getCurrentUserId();
+		return currentUserId !== null
+			&& latestAccountStats !== null
+			&& String(latestAccountStatsUserId) === String(currentUserId);
+	}
+
+	function renderResultStats(isWin, attempts) {
+		if (getCurrentUserId() !== null) {
+			if (hasCurrentUserAccountStats()) {
+				renderAccountStats(latestAccountStats);
+			} else {
+				renderAccountStatsPending();
+			}
+			return;
+		}
+
+		updateStats(isWin, attempts);
+		renderStats();
+	}
+
+	function syncAccountStats(stats, userId = null) {
+		if (!stats || typeof stats !== 'object') return;
+		const resolvedUserId = userId ?? getCurrentUserId();
+		if (resolvedUserId === null) return;
+
+		latestAccountStats = stats;
+		latestAccountStatsUserId = resolvedUserId;
+
+		const popup = document.getElementById('endGameDisplay');
+		if (popup?.classList.contains('show') && hasCurrentUserAccountStats()) {
+			renderAccountStats(latestAccountStats);
+		}
+	}
 
 	function resetAccountReward() {
 		acceptsAccountReward = false;
@@ -249,11 +296,11 @@ export function createEndGameController({
 			popup.classList.add(isCorrect ? 'win-style' : 'lose-style');
 
 			if (statsResult === 'loss') {
-				updateStats(false, 0);
+				renderResultStats(false, 0);
 			} else if (isCorrect) {
-				updateStats(true, attempts);
+				renderResultStats(true, attempts);
 			} else {
-				updateStats(false, 0);
+				renderResultStats(false, 0);
 			}
 		} else if (isCorrect) {
 			setText('endGameTitle', '🏆 AI CÂȘTIGAT!');
@@ -264,7 +311,7 @@ export function createEndGameController({
 				` ${attempts === 1 ? 'încercare' : 'încercări'}!`
 			);
 			popup.classList.add('win-style');
-			updateStats(true, attempts);
+			renderResultStats(true, attempts);
 		} else if (isTimedOut) {
 			setText('endGameTitle', '⏱️ TIMP EXPIRAT!');
 			setMessageWithStrong(
@@ -273,7 +320,7 @@ export function createEndGameController({
 				target ? target.name : 'Necunoscut'
 			);
 			popup.classList.add('lose-style');
-			updateStats(false, 0);
+			renderResultStats(false, 0);
 		} else {
 			setText('endGameTitle', '💀 AI PIERDUT!');
 			setMessageWithStrong(
@@ -282,7 +329,7 @@ export function createEndGameController({
 				target ? target.name : 'Necunoscut'
 			);
 			popup.classList.add('lose-style');
-			updateStats(false, 0);
+			renderResultStats(false, 0);
 		}
 
 		const restartBtn = document.getElementById('restartGameBtn');
@@ -296,7 +343,6 @@ export function createEndGameController({
 			restartBtn.classList.remove('is-hidden');
 		}
 
-		renderStats();
 		if (backdrop) backdrop.classList.add('show');
 		popup.classList.add('show');
 		getDialogFocusManager()?.activate({
@@ -310,6 +356,7 @@ export function createEndGameController({
 		exitRematchMode,
 		requestRematch,
 		hideEndGamePopup,
+		syncAccountStats,
 		showAccountReward,
 		showEndGamePopup
 	};

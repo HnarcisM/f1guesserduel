@@ -239,6 +239,7 @@ function createEndGameHandlers() {
 		getIsDuelMode: () => gameModeController?.isDuel?.() || false,
 		getIsSingleMode: () => gameModeController?.isSingle?.() || false,
 		getIsRoundFinished: () => isRoundFinished,
+		getCurrentUser: () => authView?.getCurrentUser?.() || null,
 		setRoundFinished
 	});
 }
