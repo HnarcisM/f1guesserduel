@@ -35,6 +35,8 @@ export function createDailyChallengeState({ getCurrentUser } = {}) {
 	let serverDailyDate = null;
 	let nextResetAt = null;
 	let claimedDifficulties = new Set();
+	let completedControls = [];
+	let resetInfoControl = null;
 
 	function getCurrentUserId() {
 		const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
@@ -86,10 +88,11 @@ export function createDailyChallengeState({ getCurrentUser } = {}) {
 	}
 
 	function clearExpiredStatus() {
-		if (!nextResetAt || Date.now() < nextResetAt) return;
+		if (!nextResetAt || Date.now() < nextResetAt) return false;
 		claimedDifficulties = new Set();
 		serverDailyDate = null;
 		nextResetAt = null;
+		return true;
 	}
 
 	function getCountdownText() {
@@ -97,11 +100,16 @@ export function createDailyChallengeState({ getCurrentUser } = {}) {
 		return formatDuration((nextResetAt || getNextUtcMidnight()) - Date.now());
 	}
 
-	function updateControl(control) {
-		const level = control.dataset.dailyLevel;
-		if (!level) return;
+	function setTextContent(control, text) {
+		if (control && control.textContent !== text) {
+			control.textContent = text;
+		}
+	}
 
-		const authenticated = isAuthenticated();
+	function updateControl(control, { authenticated, countdownText }) {
+		const level = control.dataset.dailyLevel;
+		if (!level) return false;
+
 		const completed = authenticated && isCompleted(level);
 		const baseLabel = control.dataset.baseLabel || getLevelLabel(level);
 		control.dataset.baseLabel = baseLabel;
@@ -114,43 +122,75 @@ export function createDailyChallengeState({ getCurrentUser } = {}) {
 		}
 
 		if (!authenticated) {
-			control.textContent = `🔒 ${baseLabel}`;
+			setTextContent(control, `🔒 ${baseLabel}`);
 			control.title = 'Autentifică-te pentru a juca Daily Challenge.';
 		} else if (completed) {
-			control.textContent = `✅ ${baseLabel} · ${getCountdownText()}`;
+			setTextContent(control, `✅ ${baseLabel} · ${countdownText}`);
 			control.title = 'Încercarea Daily a fost deja folosită. Revine la următorul reset UTC.';
 		} else {
-			control.textContent = baseLabel;
+			setTextContent(control, baseLabel);
 			control.title = 'Pornește Daily Challenge individual.';
 		}
+
+		return completed;
 	}
 
-	function updateInfo() {
-		const info = document.getElementById('dailyResetInfo');
+	function updateInfo(info, { authenticated, countdownText }) {
 		if (!info) return;
-		info.classList.toggle('daily-auth-message', !isAuthenticated());
-		info.textContent = isAuthenticated()
-			? `Individual, o încercare pe zi per cont și dificultate. Reset UTC în ${getCountdownText()}.`
-			: 'Autentifică-te pentru a debloca Daily Challenge și pentru a salva progresul.';
+		info.classList.toggle('daily-auth-message', !authenticated);
+		setTextContent(info, authenticated
+			? `Individual, o încercare pe zi per cont și dificultate. Reset UTC în ${countdownText}.`
+			: 'Autentifică-te pentru a debloca Daily Challenge și pentru a salva progresul.'
+		);
 	}
 
 	function updateControls() {
 		clearExpiredStatus();
-		document.querySelectorAll('[data-daily-level]').forEach(updateControl);
+		const authenticated = isAuthenticated();
+		const countdownText = getCountdownText();
+		completedControls = [];
+		document.querySelectorAll('[data-daily-level]').forEach(control => {
+			if (updateControl(control, { authenticated, countdownText })) {
+				completedControls.push(control);
+			}
+		});
 		const dailyModeControl = document.querySelector?.('[data-game-mode-choice="daily"]');
 		if (dailyModeControl) {
-			dailyModeControl.classList.toggle('daily-auth-required', !isAuthenticated());
-			dailyModeControl.title = isAuthenticated()
+			dailyModeControl.classList.toggle('daily-auth-required', !authenticated);
+			dailyModeControl.title = authenticated
 				? 'Deschide Daily Challenge.'
 				: 'Autentifică-te pentru a juca Daily Challenge.';
 		}
-		updateInfo();
+		resetInfoControl = document.getElementById('dailyResetInfo');
+		updateInfo(resetInfoControl, { authenticated, countdownText });
+	}
+
+	function updateCountdownText() {
+		if (clearExpiredStatus()) {
+			updateControls();
+			return;
+		}
+
+		if (!isAuthenticated()) return;
+
+		const countdownText = formatDuration(
+			(nextResetAt || getNextUtcMidnight()) - Date.now()
+		);
+		for (const control of completedControls) {
+			const level = control.dataset.dailyLevel;
+			const baseLabel = control.dataset.baseLabel || getLevelLabel(level);
+			setTextContent(control, `✅ ${baseLabel} · ${countdownText}`);
+		}
+		setTextContent(
+			resetInfoControl,
+			`Individual, o încercare pe zi per cont și dificultate. Reset UTC în ${countdownText}.`
+		);
 	}
 
 	function startCountdown() {
 		updateControls();
 		if (intervalId) clearInterval(intervalId);
-		intervalId = setInterval(updateControls, 1000);
+		intervalId = setInterval(updateCountdownText, 1000);
 	}
 
 	function canStart(level) {
