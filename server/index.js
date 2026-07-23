@@ -3,7 +3,6 @@ const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const { Server } = require('socket.io');
-const cookieParser = require('cookie-parser');
 
 const { createDriversRepository } = require('./data/driversRepository');
 const { createGameService } = require('./game/gameService');
@@ -19,7 +18,9 @@ const { createAuthService } = require('./auth/authService');
 const { createAuthRoutes } = require('./auth/authRoutes');
 const { createAccountStatsService } = require('./account/accountStatsService');
 const { createAccountRoutes } = require('./account/accountRoutes');
-const { createAuthMiddleware } = require('./middleware/authMiddleware');
+const {
+    createApiRequestContextMiddleware
+} = require('./middleware/apiRequestContext');
 const { createErrorMiddleware } = require('./middleware/errorMiddleware');
 const { createServerErrorHandler } = require('./middleware/serverErrorHandler');
 const { createHealthRoutes, createHealthChecks } = require('./routes/healthRoutes');
@@ -193,9 +194,10 @@ app.use(createMetricsRoutes({
     token: config.metrics.token,
     operationalMetrics
 }));
-app.use(express.json({ limit: '32kb' }));
-app.use(cookieParser());
-app.use(createAuthMiddleware(sessionService));
+app.use(
+    ['/api/auth', '/api/account'],
+    createApiRequestContextMiddleware(sessionService)
+);
 app.use('/api/auth', csrfProtection);
 app.use('/api/account', csrfProtection);
 app.use('/api', createHealthRoutes({
