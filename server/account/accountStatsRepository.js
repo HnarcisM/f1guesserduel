@@ -117,6 +117,25 @@ function normalizeXpEarned(value) {
     return Number.isSafeInteger(xp) && xp >= 0 ? xp : 0;
 }
 
+function buildGameResultPersistenceParameters(result) {
+    return {
+        userId: null,
+        mode: null,
+        resultKey: null,
+        outcome: null,
+        attempts: null,
+        difficulty: null,
+        targetDriverId: null,
+        targetDriverName: null,
+        durationMs: null,
+        roomId: null,
+        matchId: null,
+        opponentUsername: null,
+        winnerUsername: null,
+        ...result
+    };
+}
+
 function createPostgresAccountStatsRepository(database) {
     async function getStatsRows(userId, queryable = database) {
         const result = await queryable.query(SELECT_STATS_SQL, [userId]);
@@ -316,7 +335,7 @@ function createSqliteAccountStatsRepository(database) {
             updated_at = datetime('now')
     `);
     const recordTransaction = database.transaction(result => {
-        const insert = insertResult.run(result);
+        const insert = insertResult.run(buildGameResultPersistenceParameters(result));
         if (insert.changes !== 1) {
             return { recorded: false, previousRows: null, previousProgressRow: null };
         }

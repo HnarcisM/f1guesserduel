@@ -1,5 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const os = require('node:os');
 const path = require('path');
 
 const {
@@ -343,12 +344,12 @@ test('app config rejects invalid numeric environment values', () => {
 });
 
 test('app config resolves explicit and inferred persistence modes', () => {
-    const projectRoot = path.join('/tmp', 'f1guesserduel');
+    const projectRoot = path.join(os.tmpdir(), 'f1guesserduel');
 
     const explicitEphemeral = createAppConfig({
         NODE_ENV: 'production',
         SESSION_SECRET: 'session-secret',
-        DATA_DIR: '/tmp/f1guesserduel',
+        DATA_DIR: projectRoot,
         PERSISTENCE_MODE: 'ephemeral',
         DATABASE_PROVIDER: 'postgres',
         DATABASE_URL: 'postgresql://example.com/f1'
@@ -359,11 +360,29 @@ test('app config resolves explicit and inferred persistence modes', () => {
     const inferredEphemeral = createAppConfig({
         NODE_ENV: 'production',
         SESSION_SECRET: 'session-secret',
-        DATA_DIR: '/tmp/f1guesserduel',
+        DATA_DIR: projectRoot,
         DATABASE_PROVIDER: 'postgres',
         DATABASE_URL: 'postgresql://example.com/f1'
     }, { projectRoot });
     assert.equal(inferredEphemeral.persistence.mode, 'ephemeral');
+
+    const inferredSystemTempRoot = createAppConfig({
+        NODE_ENV: 'production',
+        SESSION_SECRET: 'session-secret',
+        DATA_DIR: os.tmpdir(),
+        DATABASE_PROVIDER: 'postgres',
+        DATABASE_URL: 'postgresql://example.com/f1'
+    }, { projectRoot });
+    assert.equal(inferredSystemTempRoot.persistence.mode, 'ephemeral');
+
+    const inferredUnixTemporaryDirectory = createAppConfig({
+        NODE_ENV: 'production',
+        SESSION_SECRET: 'session-secret',
+        DATA_DIR: '/var/tmp/f1guesserduel',
+        DATABASE_PROVIDER: 'postgres',
+        DATABASE_URL: 'postgresql://example.com/f1'
+    }, { projectRoot });
+    assert.equal(inferredUnixTemporaryDirectory.persistence.mode, 'ephemeral');
 
     const inferredPersistent = createAppConfig({
         NODE_ENV: 'production',
@@ -374,10 +393,11 @@ test('app config resolves explicit and inferred persistence modes', () => {
 });
 
 test('production config rejects SQLite on ephemeral storage', () => {
+    const ephemeralDataDir = path.join(os.tmpdir(), 'f1guesserduel');
     const baseEnvironment = {
         NODE_ENV: 'production',
         SESSION_SECRET: 'session-secret',
-        DATA_DIR: '/tmp/f1guesserduel'
+        DATA_DIR: ephemeralDataDir
     };
 
     assert.throws(

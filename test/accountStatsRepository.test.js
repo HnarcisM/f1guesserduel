@@ -224,5 +224,7 @@ test('SQLite captures the exact pre-round progress inside the result transaction
     assert.equal(duplicate.progressRow.total_xp, 100);
     assert.equal(second.recentResults[0].targetDriverName, 'Max Verstappen');
     assert.equal(second.recentResults[0].durationMs, 42000);
+    assert.equal(second.recentResults[0].roomId, null);
+    assert.equal(second.recentResults[0].opponentUsername, null);
     assert.equal(second.recentResults[0].winnerUsername, 'Narcis');
 });

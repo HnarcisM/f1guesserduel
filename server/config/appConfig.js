@@ -1,3 +1,4 @@
+const os = require('node:os');
 const path = require('path');
 
 const DEFAULT_PORT = 3000;
@@ -178,14 +179,24 @@ function normalizeRedisKeyPrefix(value) {
     return normalized;
 }
 
+function isPathInside(candidatePath, parentPath) {
+    const relativePath = path.relative(parentPath, candidatePath);
+    return relativePath === ''
+        || (!relativePath.startsWith('..') && !path.isAbsolute(relativePath));
+}
+
 function isEphemeralDataDirectory(dataDir) {
     if (typeof dataDir !== 'string' || dataDir.trim().length === 0) return false;
 
     const normalized = path.resolve(dataDir);
-    return normalized === '/tmp'
-        || normalized.startsWith('/tmp/')
-        || normalized === '/var/tmp'
-        || normalized.startsWith('/var/tmp/');
+    const systemTemporaryDirectory = path.resolve(os.tmpdir());
+    if (isPathInside(normalized, systemTemporaryDirectory)) return true;
+
+    const posixNormalized = path.posix.normalize(dataDir.replace(/\\/g, '/'));
+    return posixNormalized === '/tmp'
+        || posixNormalized.startsWith('/tmp/')
+        || posixNormalized === '/var/tmp'
+        || posixNormalized.startsWith('/var/tmp/');
 }
 
 function resolvePersistenceMode(env, { isProduction, dataDir }) {

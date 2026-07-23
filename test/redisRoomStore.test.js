@@ -267,6 +267,7 @@ function createSharedRedisBackend() {
     const data = new Map();
     const expiresAt = new Map();
     const subscribers = new Map();
+    let renewedLockCount = 0;
 
     function purgeExpired(key) {
         const deadline = expiresAt.get(key);
@@ -343,6 +344,7 @@ function createSharedRedisBackend() {
                 if (data.get(key) !== token) return 0;
                 if (script.includes('PEXPIRE')) {
                     expiresAt.set(key, Date.now() + Number(ttl));
+                    renewedLockCount += 1;
                     return 1;
                 }
                 data.delete(key);
@@ -371,7 +373,13 @@ function createSharedRedisBackend() {
         return client;
     }
 
-    return { createClient, data };
+    return {
+        createClient,
+        data,
+        getRenewedLockCount() {
+            return renewedLockCount;
+        }
+    };
 }
 
 test('distributed Redis room mutations serialize concurrent writers and synchronize instances', async () => {
@@ -432,8 +440,8 @@ test('distributed Redis room lock lease is renewed during long mutations', async
     const options = {
         keyPrefix: 'f1:lease',
         distributedCoordinationEnabled: true,
-        roomLockTtlMs: 30,
-        roomLockWaitTimeoutMs: 500,
+        roomLockTtlMs: 300,
+        roomLockWaitTimeoutMs: 1_500,
         saveDebounceMs: 60_000,
         logger: { error() {}, info() {} }
     };
@@ -458,11 +466,11 @@ test('distributed Redis room lock lease is renewed during long mutations', async
         firstStore.runExclusive('lease-room', async () => {
             const room = firstStore.get('lease-room');
             const value = room.nextGuestNumber;
-            await new Promise(resolve => setTimeout(resolve, 90));
+            await new Promise(resolve => setTimeout(resolve, 750));
             room.nextGuestNumber = value + 1;
             firstStore.markDirty('lease-room');
         }),
-        new Promise(resolve => setTimeout(resolve, 45)).then(() => secondStore.runExclusive('lease-room', () => {
+        new Promise(resolve => setTimeout(resolve, 450)).then(() => secondStore.runExclusive('lease-room', () => {
             const room = secondStore.get('lease-room');
             room.nextGuestNumber += 1;
             secondStore.markDirty('lease-room');
@@ -471,6 +479,7 @@ test('distributed Redis room lock lease is renewed during long mutations', async
 
     const payload = JSON.parse(backend.data.get(buildRedisRoomKey('f1:lease', 'lease-room')));
     assert.equal(payload.room.nextGuestNumber, 3);
+    assert.ok(backend.getRenewedLockCount() >= 2);
     await Promise.all([firstStore.close(), secondStore.close()]);
 });
 
