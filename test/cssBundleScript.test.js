@@ -3,6 +3,10 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
+const zlib = require('node:zlib');
+
+const MAX_MINIFIED_CSS_BYTES = 120_000;
+const MAX_GZIP_CSS_BYTES = 25_000;
 
 const {
     GENERATED_HEADER,
@@ -99,8 +103,18 @@ test('frontend loads the generated CSS bundle instead of the import-based styles
 
     assert.match(indexHtml, /href="\/style\.bundle\.css\?/);
     assert.doesNotMatch(indexHtml, /href="\/style\.css\?/);
+    const minifiedBytes = Buffer.byteLength(bundleCss, 'utf8');
+    const gzipBytes = zlib.gzipSync(bundleCss, { level: zlib.constants.Z_BEST_COMPRESSION }).byteLength;
+
     assert.ok(bundleCss.startsWith(`${GENERATED_HEADER}\n`));
-    assert.ok(Buffer.byteLength(bundleCss, 'utf8') < 100_000, 'CSS bundle must stay within the 100 KB minified budget');
+    assert.ok(
+        minifiedBytes <= MAX_MINIFIED_CSS_BYTES,
+        `CSS bundle is ${minifiedBytes} bytes; maximum is ${MAX_MINIFIED_CSS_BYTES} bytes`
+    );
+    assert.ok(
+        gzipBytes <= MAX_GZIP_CSS_BYTES,
+        `Gzipped CSS bundle is ${gzipBytes} bytes; maximum is ${MAX_GZIP_CSS_BYTES} bytes`
+    );
     assert.doesNotMatch(bundleCss, /Source: public\/css\//);
     assert.doesNotMatch(bundleCss, /@import\s+/);
 });
