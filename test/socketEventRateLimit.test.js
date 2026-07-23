@@ -219,7 +219,7 @@ test('socket event limiter clears socket buckets on disconnect cleanup', () => {
     assert.equal(limiter._getBucketCount(socket, 'submitGuess'), 0);
 });
 
-test('registerSocketHandlers rate limits protected game events before executing handlers', () => {
+test('registerSocketHandlers rate limits protected game events before executing handlers', async () => {
     const io = createFakeIo();
     const socket = createFakeSocket('socket-game');
     const singleRoundCounter = { count: 0 };
@@ -234,8 +234,8 @@ test('registerSocketHandlers rate limits protected game events before executing 
     registerSocketHandlers(io, dependencies);
     io.connectionHandler(socket);
 
-    socket.trigger('startSingleGame', { level: 'easy' });
-    socket.trigger('startSingleGame', { level: 'easy' });
+    await socket.trigger('startSingleGame', { level: 'easy' });
+    await socket.trigger('startSingleGame', { level: 'easy' });
 
     assert.equal(singleRoundCounter.count, 1);
     assert.equal(socket.emitted('initGame').length, 1);

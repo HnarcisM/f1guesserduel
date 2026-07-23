@@ -10,6 +10,7 @@ const { createRedisRoomStore } = require('./rooms/roomStore.redis');
 const { createRoomCleanupService } = require('./rooms/roomCleanupService');
 const { registerSocketHandlers } = require('./socket/registerSocketHandlers');
 const { createSocketServerOptions } = require('./socket/socketServerOptions');
+const { createRedisSocketAdapter } = require('./socket/redisSocketAdapter');
 const { createDatabase } = require('./db/database');
 const { createRedisClient, closeRedisClient } = require('./redis/redisClient');
 const { createSessionService } = require('./auth/sessionService');
@@ -111,6 +112,7 @@ const db = await createDatabase({
 });
 operationalMetrics.setDatabase(db);
 let redisClient = null;
+let redisSocketAdapter = null;
 let roomStore;
 
 try {
@@ -122,6 +124,16 @@ try {
             metrics: operationalMetrics
         });
         operationalMetrics.setRedisClient(redisClient);
+        if (config.socket.redisAdapter.enabled) {
+            redisSocketAdapter = await createRedisSocketAdapter({
+                io,
+                redisClient,
+                keyPrefix: config.redis.keyPrefix,
+                requestsTimeoutMs: config.socket.redisAdapter.requestsTimeoutMs,
+                logger,
+                metrics: operationalMetrics
+            });
+        }
         roomStore = await createRedisRoomStore({
             redisClient,
             keyPrefix: config.redis.keyPrefix,
@@ -129,7 +141,10 @@ try {
             saveDebounceMs: config.rooms.saveDebounceMs,
             driversRepository,
             logger,
-            metrics: operationalMetrics
+            metrics: operationalMetrics,
+            distributedCoordinationEnabled: config.redis.distributedRoomCoordinationEnabled,
+            roomLockTtlMs: config.redis.roomLockTtlMs,
+            roomLockWaitTimeoutMs: config.redis.roomLockWaitTimeoutMs
         });
     } else {
         roomStore = createPersistentRoomStore({
@@ -141,6 +156,7 @@ try {
     }
 } catch (error) {
     await Promise.allSettled([
+        redisSocketAdapter?.close?.(),
         closeRedisClient(redisClient),
         db.closeConnection?.()
     ]);
@@ -169,7 +185,13 @@ const stopExpiredSessionCleanup = sessionService.startExpiredSessionCleanup({
 });
 const roomCleanupService = createRoomCleanupService({
     roomStore,
-    isSocketActive: socketId => io.sockets.sockets.has(socketId),
+    ...(config.socket.redisAdapter.enabled
+        ? {
+            resolveActiveSocketIds: async () => new Set(
+                (await io.fetchSockets()).map(activeSocket => activeSocket.id)
+            )
+        }
+        : { isSocketActive: socketId => io.sockets.sockets.has(socketId) }),
     cleanupIntervalMs: config.rooms.cleanupIntervalMs,
     inactiveTtlMs: config.rooms.inactiveTtlMs,
     logger,
@@ -270,7 +292,8 @@ async function shutdownRoomStore() {
 
 function prepareApplicationShutdown() {
     stopInactiveRoomCleanup?.();
-    io.disconnectSockets?.(true);
+    const disconnectTarget = config.socket.redisAdapter.enabled && io.local ? io.local : io;
+    disconnectTarget.disconnectSockets?.(true);
 }
 
 async function cleanupApplicationResources() {
@@ -278,6 +301,7 @@ async function cleanupApplicationResources() {
     stopInactiveRoomCleanup?.();
     await shutdownRoomStore();
     const connectionResults = await Promise.allSettled([
+        redisSocketAdapter?.close?.(),
         db.closeConnection?.(),
         closeRedisClient(redisClient)
     ]);
@@ -310,6 +334,8 @@ server.listen(config.port, () => {
         persistenceMode: config.persistence.mode,
         databaseProvider: config.database.provider,
         redisEnabled: config.redis.enabled,
+        socketAdapterProvider: redisSocketAdapter?.provider || 'memory',
+        distributedRoomCoordinationEnabled: roomStore.distributedCoordinationEnabled === true,
         roomPersistenceProvider: roomStore.provider || 'file',
         roomCleanupIntervalMs: config.rooms.cleanupIntervalMs,
         roomInactiveTtlMs: config.rooms.inactiveTtlMs,
@@ -317,7 +343,7 @@ server.listen(config.port, () => {
     });
 });
 
-return { app, server, io, db, redisClient, roomStore, roomCleanupService };
+return { app, server, io, db, redisClient, redisSocketAdapter, roomStore, roomCleanupService };
 }
 
 

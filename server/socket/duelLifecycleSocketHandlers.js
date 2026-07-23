@@ -1,7 +1,6 @@
 const {
     removePlayerFromRoom,
     markRoomMemberDisconnectedBySocketId,
-    refreshRoomMemberAuth,
     getPlayer,
     hasRoomMember,
     isSpectator,
@@ -10,6 +9,7 @@ const {
     buildPublicRoomState,
     abortDuelRound
 } = require('../rooms/roomService');
+const { createRoomAuthRefreshHandler } = require('./roomAuthRefreshHandler');
 
 function registerDuelLifecycleSocketHandlers(context) {
     const {
@@ -20,6 +20,7 @@ function registerDuelLifecycleSocketHandlers(context) {
         sessionService,
         socketEventRateLimiter,
         onSocketEvent,
+        withRoomMutation,
         clearSoloModeSessions,
         cleanupInactiveMembers,
         emitHostStatus,
@@ -27,107 +28,99 @@ function registerDuelLifecycleSocketHandlers(context) {
         emitRoomStateUpdate,
         emitRoomListUpdate,
         dailySessions,
-        metrics
+        metrics,
+        logger = console
     } = context;
 
-    function leaveCurrentRoom() {
+    async function leaveCurrentRoom() {
         dailySessions.delete(socket.id);
         const roomId = state.currentRoom;
         if (!roomId) return;
-        const room = roomStore.get(roomId);
 
-        if (!room) {
+        return withRoomMutation(roomId, async () => {
+            const room = roomStore.get(roomId);
+
+            if (!room) {
+                state.currentRoom = null;
+                await socket.leave(roomId);
+                return;
+            }
+
+            if (hasRoomMember(room, socket.id) && room.roundState === 'playing' && !isSpectator(room, socket.id)) {
+                const result = abortDuelRound(room, 'player-aborted');
+                roomStore.markDirty?.(roomId);
+                io.to(roomId).emit('duelAborted', {
+                    message: `${getPlayer(room, socket.id)?.username || 'Un jucător'} a oprit runda. Revenim în lobby.`,
+                    roundResult: result,
+                    room: buildPublicRoomState(room),
+                    liveBoard: buildLiveBoardState(room)
+                });
+                await emitRoomStateUpdate(roomId, 'duel-aborted');
+                await emitRoomListUpdate();
+                return;
+            }
+
             state.currentRoom = null;
-            socket.leave(roomId);
-            return;
-        }
+            await socket.leave(roomId);
+            if (hasRoomMember(room, socket.id)) removePlayerFromRoom(room, socket.id);
+            await cleanupInactiveMembers(roomId, room);
 
-        if (hasRoomMember(room, socket.id) && room.roundState === 'playing' && !isSpectator(room, socket.id)) {
-            const result = abortDuelRound(room, 'player-aborted');
-            roomStore.markDirty?.(roomId);
-            io.to(roomId).emit('duelAborted', {
-                message: `${getPlayer(room, socket.id)?.username || 'Un jucător'} a oprit runda. Revenim în lobby.`,
-                roundResult: result,
-                room: buildPublicRoomState(room),
-                liveBoard: buildLiveBoardState(room)
-            });
-            emitRoomStateUpdate(roomId, 'duel-aborted');
-            emitRoomListUpdate();
-            return;
-        }
+            if (getRoomMemberCount(room) === 0) {
+                if (roomStore.remove(roomId)) metrics?.recordRoomEvent?.('removed');
+                await emitRoomListUpdate();
+                return;
+            }
 
-        state.currentRoom = null;
-        socket.leave(roomId);
-        if (hasRoomMember(room, socket.id)) removePlayerFromRoom(room, socket.id);
-        cleanupInactiveMembers(roomId, room);
-
-        if (getRoomMemberCount(room) === 0) {
-            if (roomStore.remove(roomId)) metrics?.recordRoomEvent?.('removed');
-            emitRoomListUpdate();
-            return;
-        }
-
-        emitRoomStateUpdate(roomId, 'leave');
-        emitRoomRoleStatuses(room);
-        emitRoomListUpdate();
+            await emitRoomStateUpdate(roomId, 'leave');
+            await emitRoomRoleStatuses(roomId, room);
+            await emitRoomListUpdate();
+        });
     }
 
-    function markCurrentRoomDisconnected() {
+    async function markCurrentRoomDisconnected() {
         const roomId = state.currentRoom;
         if (!roomId || state.hasMarkedCurrentRoomDisconnected) return;
-        const room = roomStore.get(roomId);
-        if (!room) return;
 
-        const disconnectedMember = markRoomMemberDisconnectedBySocketId(room, socket.id);
-        if (!disconnectedMember) return;
+        return withRoomMutation(roomId, async () => {
+            const room = roomStore.get(roomId);
+            if (!room) return;
 
-        metrics?.recordReconnect?.({
-            outcome: 'disconnected',
-            role: disconnectedMember.role
+            const disconnectedMember = markRoomMemberDisconnectedBySocketId(room, socket.id);
+            if (!disconnectedMember) return;
+
+            metrics?.recordReconnect?.({
+                outcome: 'disconnected',
+                role: disconnectedMember.role
+            });
+
+            state.hasMarkedCurrentRoomDisconnected = true;
+            roomStore.markDirty?.(roomId);
+            await emitRoomStateUpdate(roomId, 'disconnect');
+            await emitRoomListUpdate();
         });
-
-        state.hasMarkedCurrentRoomDisconnected = true;
-        roomStore.markDirty?.(roomId);
-        emitRoomStateUpdate(roomId, 'disconnect');
-        emitRoomListUpdate();
     }
 
-    onSocketEvent('refreshAuthUser', async (payload = {}, acknowledge) => {
-        const roomId = state.currentRoom;
-        const room = roomId ? roomStore.get(roomId) : null;
-        const socketAuthToken = payload && typeof payload === 'object'
-            ? payload.socketAuthToken
-            : null;
-        const authUser = socketAuthToken
-            ? await sessionService.getUserBySocketAuthToken(socketAuthToken)
-            : null;
+    onSocketEvent('refreshAuthUser', createRoomAuthRefreshHandler({
+        socket,
+        state,
+        roomStore,
+        sessionService,
+        emitHostStatus,
+        emitRoomStateUpdate,
+        emitRoomRoleStatuses,
+        emitRoomListUpdate
+    }));
 
-        socket.user = authUser;
-        if (socketAuthToken && !authUser) socket.emit('authRefreshFailed');
-        if (!room) {
-            if (typeof acknowledge === 'function') acknowledge({ authenticated: Boolean(authUser) });
-            return;
-        }
+    function runSafely(operation, message) {
+        return operation().catch(error => logger?.error?.(message, { error }));
+    }
 
-        const member = refreshRoomMemberAuth(room, socket.id, authUser);
-        if (!member) {
-            if (typeof acknowledge === 'function') acknowledge({ authenticated: Boolean(authUser) });
-            return;
-        }
-
-        emitHostStatus(socket, room);
-        emitRoomStateUpdate(roomId, 'auth-updated');
-        emitRoomRoleStatuses(room);
-        emitRoomListUpdate();
-        if (typeof acknowledge === 'function') acknowledge({ authenticated: Boolean(authUser) });
-    });
-
-    socket.on('leaveRoom', leaveCurrentRoom);
-    socket.on('disconnecting', markCurrentRoomDisconnected);
+    socket.on('leaveRoom', () => runSafely(leaveCurrentRoom, '[rooms] Leave room failed.'));
+    socket.on('disconnecting', () => runSafely(markCurrentRoomDisconnected, '[rooms] Disconnect sync failed.'));
     socket.on('disconnect', () => {
         clearSoloModeSessions();
-        markCurrentRoomDisconnected();
         socketEventRateLimiter.clearSocket(socket.id);
+        return runSafely(markCurrentRoomDisconnected, '[rooms] Disconnect cleanup failed.');
     });
 
     return { leaveCurrentRoom, markCurrentRoomDisconnected };

@@ -4,6 +4,7 @@ const { registerSoloGameSocketHandlers } = require('./soloGameSocketHandlers');
 const { registerDailyChallengeSocketHandlers } = require('./dailyChallengeSocketHandlers');
 const { createSocketEventRateLimiter } = require('./socketEventRateLimit');
 const { buildPublicRoomListPayload } = require('./roomListPayloads');
+const { createRoomMutationCoordinator } = require('./roomMutationCoordinator');
 const { registerDuelLobbySocketHandlers } = require('./duelLobbySocketHandlers');
 const { registerDuelLifecycleSocketHandlers } = require('./duelLifecycleSocketHandlers');
 const {
@@ -33,15 +34,17 @@ function registerSocketHandlers(io, dependencies) {
         emitRoomStateUpdate
     } = roomStateEmitter;
 
-    function cleanupRoomsBeforeList() {
+    async function cleanupRoomsBeforeList() {
+        await roomStore.refreshAll?.();
+        if (roomStore?.distributedCoordinationEnabled) return;
         if (typeof roomStore?.values !== 'function') return;
         for (const room of roomStore.values()) {
-            if (room?.roomId) cleanupInactiveMembers(room.roomId, room);
+            if (room?.roomId) await cleanupInactiveMembers(room.roomId, room);
         }
     }
 
-    function emitRoomListUpdate(target = io) {
-        cleanupRoomsBeforeList();
+    async function emitRoomListUpdate(target = io) {
+        await cleanupRoomsBeforeList();
         const payload = buildPublicRoomListPayload(roomStore);
         if (typeof target?.emit === 'function') target.emit('roomListUpdate', payload);
         return payload;
@@ -53,8 +56,15 @@ function registerSocketHandlers(io, dependencies) {
             hasMarkedCurrentRoomDisconnected: false
         };
 
+        const { withRoomMutation, coordinateEventHandler } = createRoomMutationCoordinator({
+            roomStore,
+            state,
+            socket,
+            logger
+        });
+
         function onSocketEvent(eventName, handler) {
-            socketEventRateLimiter.register(socket, eventName, handler);
+            socketEventRateLimiter.register(socket, eventName, coordinateEventHandler(eventName, handler));
         }
 
         function clearSoloModeSessions() {
@@ -79,6 +89,7 @@ function registerSocketHandlers(io, dependencies) {
             onSocketEvent,
             clearSoloModeSessions,
             emitRoomListUpdate,
+            withRoomMutation,
             ...roomStateEmitter
         };
 

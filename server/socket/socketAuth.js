@@ -21,6 +21,8 @@ function attachSocketAuth(io, sessionService) {
             const cookies = parseCookieHeader(socket.handshake.headers.cookie);
             const token = cookies[sessionService.cookieName];
             socket.user = await sessionService.getUserByToken(token);
+            socket.data = socket.data || {};
+            socket.data.authUser = socket.user || null;
             return next();
         } catch (error) {
             return next(error);

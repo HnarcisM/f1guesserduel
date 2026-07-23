@@ -10,7 +10,8 @@ const {
 
 function createRoomCleanupService({
     roomStore,
-    isSocketActive,
+    isSocketActive = null,
+    resolveActiveSocketIds = null,
     cleanupIntervalMs = DEFAULT_ROOM_CLEANUP_INTERVAL_MS,
     inactiveTtlMs = DEFAULT_ROOM_INACTIVE_TTL_MS,
     logger = console,
@@ -22,7 +23,7 @@ function createRoomCleanupService({
     if (!roomStore
         || typeof roomStore.values !== 'function'
         || typeof roomStore.remove !== 'function'
-        || typeof isSocketActive !== 'function') {
+        || (typeof isSocketActive !== 'function' && typeof resolveActiveSocketIds !== 'function')) {
         throw new Error('Room cleanup requires a room store and an active socket resolver.');
     }
 
@@ -34,71 +35,116 @@ function createRoomCleanupService({
         : DEFAULT_ROOM_INACTIVE_TTL_MS;
     let cleanupTimer = null;
 
-    function hasActiveSocket(room) {
-        const socketIds = [
-            ...getPlayerIds(room),
-            ...getSpectatorIds(room)
-        ];
-        return socketIds.some(socketId => isSocketActive(socketId));
-    }
-
-    function cleanupInactiveRooms(currentTime = clock()) {
-        const now = Number.isFinite(currentTime) ? currentTime : clock();
-        const stats = {
+    function createStats() {
+        return {
             scannedRoomCount: 0,
             updatedRoomCount: 0,
             removedRoomCount: 0
         };
+    }
 
-        for (const room of roomStore.values()) {
-            if (!room?.roomId) continue;
-            stats.scannedRoomCount += 1;
-            let changed = removeInactiveRoomMembers(room, isSocketActive, now, {
-                onMemberExpired: event => metrics?.recordReconnect?.({
-                    ...event,
-                    outcome: 'grace_expired'
-                })
-            });
+    function cleanupRoom(room, activeResolver, now, stats) {
+        if (!room?.roomId) return;
+        stats.scannedRoomCount += 1;
+        let changed = removeInactiveRoomMembers(room, activeResolver, now, {
+            onMemberExpired: event => metrics?.recordReconnect?.({
+                ...event,
+                outcome: 'grace_expired'
+            })
+        });
+        const socketIds = [
+            ...getPlayerIds(room),
+            ...getSpectatorIds(room)
+        ];
+        const hasActiveSocket = socketIds.some(socketId => activeResolver(socketId));
 
-            if (hasActiveSocket(room)) {
-                if (room.inactiveSince !== null && room.inactiveSince !== undefined) {
-                    room.inactiveSince = null;
-                    changed = true;
-                }
-            } else {
-                if (!Number.isFinite(room.inactiveSince)) {
-                    room.inactiveSince = now;
-                    changed = true;
-                }
-
-                if (now - room.inactiveSince >= effectiveInactiveTtlMs) {
-                    if (roomStore.remove(room.roomId)) {
-                        stats.removedRoomCount += 1;
-                        metrics?.recordRoomEvent?.('inactive_cleanup');
-                    }
-                    continue;
-                }
+        if (hasActiveSocket) {
+            if (room.inactiveSince !== null && room.inactiveSince !== undefined) {
+                room.inactiveSince = null;
+                changed = true;
+            }
+        } else {
+            if (!Number.isFinite(room.inactiveSince)) {
+                room.inactiveSince = now;
+                changed = true;
             }
 
-            if (changed) {
-                roomStore.markDirty?.(room.roomId, { touchActivity: false });
-                stats.updatedRoomCount += 1;
+            if (now - room.inactiveSince >= effectiveInactiveTtlMs) {
+                if (roomStore.remove(room.roomId)) {
+                    stats.removedRoomCount += 1;
+                    metrics?.recordRoomEvent?.('inactive_cleanup');
+                }
+                return;
             }
         }
 
+        if (changed) {
+            roomStore.markDirty?.(room.roomId, { touchActivity: false });
+            stats.updatedRoomCount += 1;
+        }
+    }
+
+    function logCleanup(stats) {
         if (stats.removedRoomCount > 0) {
             logger?.info?.('[rooms] Camere inactive eliminate periodic.', {
                 removedRoomCount: stats.removedRoomCount,
                 scannedRoomCount: stats.scannedRoomCount
             });
         }
-
         return stats;
+    }
+
+    function cleanupInactiveRoomsSync(currentTime = clock()) {
+        const now = Number.isFinite(currentTime) ? currentTime : clock();
+        const stats = createStats();
+        for (const room of roomStore.values()) cleanupRoom(room, isSocketActive, now, stats);
+        return logCleanup(stats);
+    }
+
+    async function cleanupInactiveRoomsDistributed(currentTime = clock()) {
+        const now = Number.isFinite(currentTime) ? currentTime : clock();
+        const stats = createStats();
+        await roomStore.refreshAll?.();
+        const resolvedSocketIds = await resolveActiveSocketIds();
+        const activeSocketIds = resolvedSocketIds instanceof Set
+            ? resolvedSocketIds
+            : new Set(Array.isArray(resolvedSocketIds) ? resolvedSocketIds : []);
+        const activeResolver = socketId => activeSocketIds.has(socketId);
+        const roomIds = roomStore.values()
+            .map(room => room?.roomId)
+            .filter(Boolean);
+
+        for (const roomId of roomIds) {
+            if (typeof roomStore.runExclusive === 'function') {
+                await roomStore.runExclusive(roomId, () => {
+                    const room = roomStore.get(roomId);
+                    if (room) cleanupRoom(room, activeResolver, now, stats);
+                });
+            } else {
+                const room = roomStore.get(roomId);
+                if (room) cleanupRoom(room, activeResolver, now, stats);
+            }
+        }
+        return logCleanup(stats);
+    }
+
+    function cleanupInactiveRooms(currentTime = clock()) {
+        if (typeof resolveActiveSocketIds === 'function') {
+            return cleanupInactiveRoomsDistributed(currentTime);
+        }
+        return cleanupInactiveRoomsSync(currentTime);
     }
 
     function runCleanupSafely() {
         try {
-            return cleanupInactiveRooms();
+            const result = cleanupInactiveRooms();
+            if (result && typeof result.then === 'function') {
+                return result.catch(error => {
+                    logger?.error?.('[rooms] Curățarea periodică a camerelor a eșuat.', { error });
+                    return null;
+                });
+            }
+            return result;
         } catch (error) {
             logger?.error?.('[rooms] Curățarea periodică a camerelor a eșuat.', { error });
             return null;

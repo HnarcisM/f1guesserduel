@@ -322,6 +322,10 @@ Aplicația poate fi configurată prin variabile de mediu. Pentru rulare locală 
 | `REDIS_KEY_PREFIX` | `f1guesserduel` | Prefix izolat pentru cheile Redis ale aplicației. |
 | `REDIS_CONNECT_TIMEOUT_MS` | `10000` | Timp maxim pentru conectarea inițială la Redis. |
 | `REDIS_ROOM_TTL_SECONDS` | `86400` | TTL-ul fiecărei camere Redis, reînnoit numai când camera respectivă este salvată. |
+| `SOCKET_REDIS_ADAPTER_ENABLED` | `false` | Activează broadcast-urile Socket.IO și coordonarea camerelor între mai multe instanțe. Cere `REDIS_URL` și sticky sessions la load balancer. |
+| `SOCKET_REDIS_ADAPTER_REQUEST_TIMEOUT_MS` | `5000` | Timeout pentru cererile inter-server ale adapterului Socket.IO Redis. |
+| `REDIS_ROOM_LOCK_TTL_MS` | `15000` | Durata maximă a lock-ului distribuit pentru o mutație de cameră. |
+| `REDIS_ROOM_LOCK_WAIT_TIMEOUT_MS` | `5000` | Timpul maxim de așteptare pentru lock înainte ca acțiunea să fie refuzată. |
 | `COOKIE_SECURE` | `true` în production, altfel `false` | Trimite cookie-ul doar prin HTTPS. |
 | `COOKIE_SAMESITE` | `lax` | Poate fi `lax`, `strict` sau `none`. |
 | `TRUST_PROXY` | `false` | Setează `true` când rulezi în spatele unui proxy/load balancer. |
@@ -351,6 +355,7 @@ Validarea configului este strictă: dacă o variabilă este setată cu o valoare
 - origin-urile Socket.IO trebuie să fie URL-uri `http`/`https` fără path, query sau hash;
 - `SOCKET_RATE_LIMIT_WINDOW_MS` trebuie să fie între `1000` și `3600000`;
 - `REDIS_URL`, dacă este setat, trebuie să fie un URL `redis://` sau `rediss://`, iar prefixul Redis acceptă numai litere, cifre, `.`, `_`, `-` și `:`;
+- `SOCKET_REDIS_ADAPTER_ENABLED=true` cere obligatoriu `REDIS_URL`, iar timeout-urile adapterului și lock-urilor sunt validate strict;
 - `LOG_LEVEL` trebuie să fie `silent`, `error`, `warn`, `info` sau `debug`.
 
 Există și un fișier `.env.example` cu un exemplu de configurare. Aplicația nu încarcă automat `.env`, ca să nu adăugăm dependințe noi; setează variabilele direct în mediul de rulare sau folosește un loader extern dacă ai nevoie.
@@ -395,7 +400,9 @@ O singură configurare `REDIS_URL` activează două mecanisme:
 
 Dacă `REDIS_URL` lipsește, aplicația păstrează automat comportamentul anterior: fișierul `rooms.json` și rate limiting în memoria procesului. O eroare de conectare inițială la Redis oprește pornirea, evitând un fallback silențios care ar putea pierde starea. Dacă Redis devine temporar indisponibil după pornire, rate limiting-ul revine la contoare locale în memorie, logurile de eroare sunt limitate, iar `/api/health` devine `degraded`.
 
-Cheile Redis separate permit restaurarea camerelor pentru o singură instanță și evită rescrierea întregului set la fiecare modificare. La prima pornire după upgrade, vechea cheie `<prefix>:rooms:snapshot` este migrată automat și eliminată numai după ce noile chei au fost salvate. Sincronizarea live a event-urilor și camerelor între mai multe instanțe necesită separat un adapter Socket.IO Redis; această versiune nu declară încă suport complet multi-instance pentru dueluri live.
+Cheile Redis separate evită rescrierea întregului set la fiecare modificare. La prima pornire după upgrade, vechea cheie `<prefix>:rooms:snapshot` este migrată automat și eliminată numai după ce noile chei au fost salvate.
+
+Pentru minimum două instanțe, setează suplimentar `SOCKET_REDIS_ADAPTER_ENABLED=true`. Adapterul distribuie broadcast-urile, iar mutațiile Duel sunt serializate cu lock-uri Redis per cameră și reîncărcare înainte de scriere. Opțiunea rămâne dezactivată implicit, astfel încât deployment-ul actual cu o singură instanță nu primește conexiuni sau latență suplimentară. Load balancer-ul trebuie să folosească sticky sessions cât timp transportul long-polling rămâne disponibil. Configurarea și procedura de rollout sunt documentate în `docs/socketio-multi-instance.md`.
 
 Un job periodic verifică o dată pe minut camerele din memorie. Când o cameră nu mai are niciun socket activ, începe un interval de inactivitate; camera este eliminată după 30 de minute. Reconectarea anulează intervalul, iar membrii deconectați beneficiază în continuare de fereastra de reconectare existentă. Ștergerea folosește providerul activ, deci elimină și cheia Redis individuală sau actualizează `rooms.json`.
 
@@ -832,21 +839,7 @@ Aplicația este stabilă pentru deployment pe o singură instanță Node.js și 
 - CSP strict fără `unsafe-inline`, cu procente dinamice limitate la clase CSS predefinite;
 - health checks, logging structurat și graceful shutdown.
 
-Lista consolidată de optimizări este finalizată cu excepția celor două puncte
-tehnice de mai jos.
-
-### Optimizări tehnice rămase
-
-1. **Metrici operaționale agregate**
-
-   Contoare și durate pentru camere, reconnect, Redis, PostgreSQL și rate limiting,
-   expuse într-un format potrivit pentru platforma de monitorizare aleasă.
-
-2. **Scalare Socket.IO multi-instance**
-
-   Redis adapter pentru distribuirea evenimentelor, ownership/concurență pentru
-   camere și teste cu minimum două instanțe. Această etapă devine necesară doar
-   când deployment-ul rulează mai mult de un proces al aplicației.
+Lista consolidată de optimizări tehnice este implementată. Metricile operaționale sunt expuse prin endpoint-ul protejat `/metrics`, iar scalarea Socket.IO multi-instance este disponibilă condițional prin Redis și rămâne dezactivată implicit pentru deployment-ul cu o singură instanță.
 
 ### Idei de produs, fără prioritate tehnică
 

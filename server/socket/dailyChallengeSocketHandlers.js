@@ -161,7 +161,7 @@ function registerDailyChallengeSocketHandlers({
             return;
         }
 
-        leaveCurrentRoom();
+        await leaveCurrentRoom();
         singleSessions.delete(socket.id);
 
         dailySessions.set(socket.id, createDailySession(dailyPayload, userId));

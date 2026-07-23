@@ -181,7 +181,7 @@ function setupConnectedSocket() {
 test('starting Daily Challenge clears the stale Single session for the same socket', async () => {
     const { socket, singleTarget } = setupConnectedSocket();
 
-    socket.trigger('startSingleGame', { level: 'easy' });
+    await socket.trigger('startSingleGame', { level: 'easy' });
     assert.equal(socket.emitted('initGame').length, 1);
 
     await socket.trigger('startDailyChallenge', { level: 'easy', dailyDate: '2099-01-01' });
@@ -200,9 +200,9 @@ test('starting Daily Challenge clears the stale Single session for the same sock
 test('joining a Duel room clears stale Single and Daily sessions for the same socket', async () => {
     const { socket, singleTarget, dailyTarget } = setupConnectedSocket();
 
-    socket.trigger('startSingleGame', { level: 'easy' });
+    await socket.trigger('startSingleGame', { level: 'easy' });
     await socket.trigger('startDailyChallenge', { level: 'easy' });
-    socket.trigger('joinRoom', { roomId: 'abc123', clientId: 'browser-one' });
+    await socket.trigger('joinRoom', { roomId: 'abc123', clientId: 'browser-one' });
 
     assert.equal(socket.hasJoined('abc123'), true);
 

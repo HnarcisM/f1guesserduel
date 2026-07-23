@@ -20,6 +20,9 @@ const DEFAULT_POSTGRES_MAX_LIFETIME_SECONDS = 5 * 60;
 const DEFAULT_REDIS_CONNECT_TIMEOUT_MS = 10 * 1000;
 const DEFAULT_REDIS_ROOM_TTL_SECONDS = 24 * 60 * 60;
 const DEFAULT_REDIS_KEY_PREFIX = 'f1guesserduel';
+const DEFAULT_REDIS_ROOM_LOCK_TTL_MS = 15 * 1000;
+const DEFAULT_REDIS_ROOM_LOCK_WAIT_TIMEOUT_MS = 5 * 1000;
+const DEFAULT_SOCKET_REDIS_ADAPTER_REQUEST_TIMEOUT_MS = 5 * 1000;
 const MIN_METRICS_TOKEN_LENGTH = 32;
 const DEV_SESSION_SECRET = 'f1-guesser-duel-dev-session-secret';
 const DEV_SOCKET_AUTH_SECRET = 'f1-guesser-duel-dev-socket-auth-secret';
@@ -310,6 +313,10 @@ function createAppConfig(env = process.env, options = {}) {
     const databaseProvider = normalizeDatabaseProvider(env.DATABASE_PROVIDER);
     const databaseUrl = getOptionalEnvString(env, 'DATABASE_URL');
     const redisUrl = normalizeRedisUrl(env.REDIS_URL);
+    const socketRedisAdapterEnabled = parseBooleanEnv(env, 'SOCKET_REDIS_ADAPTER_ENABLED', false);
+    if (socketRedisAdapterEnabled && !redisUrl) {
+        throw new Error('SOCKET_REDIS_ADAPTER_ENABLED=true requires REDIS_URL.');
+    }
     const metricsEnabled = parseBooleanEnv(env, 'METRICS_ENABLED', false);
     const metricsToken = getOptionalEnvString(env, 'METRICS_TOKEN');
     if (metricsEnabled && !metricsToken) {
@@ -455,6 +462,19 @@ function createAppConfig(env = process.env, options = {}) {
                 'REDIS_ROOM_TTL_SECONDS',
                 DEFAULT_REDIS_ROOM_TTL_SECONDS,
                 { min: 60, max: 30 * 24 * 60 * 60 }
+            ),
+            distributedRoomCoordinationEnabled: socketRedisAdapterEnabled,
+            roomLockTtlMs: parseIntegerEnv(
+                env,
+                'REDIS_ROOM_LOCK_TTL_MS',
+                DEFAULT_REDIS_ROOM_LOCK_TTL_MS,
+                { min: 1_000, max: 120_000 }
+            ),
+            roomLockWaitTimeoutMs: parseIntegerEnv(
+                env,
+                'REDIS_ROOM_LOCK_WAIT_TIMEOUT_MS',
+                DEFAULT_REDIS_ROOM_LOCK_WAIT_TIMEOUT_MS,
+                { min: 100, max: 60_000 }
             )
         },
         publicDir: resolveOptionalPath(env, 'PUBLIC_DIR', path.join(projectRoot, 'public')),
@@ -490,6 +510,15 @@ function createAppConfig(env = process.env, options = {}) {
         },
         socket: {
             allowedOrigins: socketAllowedOrigins,
+            redisAdapter: {
+                enabled: socketRedisAdapterEnabled,
+                requestsTimeoutMs: parseIntegerEnv(
+                    env,
+                    'SOCKET_REDIS_ADAPTER_REQUEST_TIMEOUT_MS',
+                    DEFAULT_SOCKET_REDIS_ADAPTER_REQUEST_TIMEOUT_MS,
+                    { min: 500, max: 60_000 }
+                )
+            },
             rateLimit: {
                 enabled: parseBooleanEnv(env, 'SOCKET_RATE_LIMIT_ENABLED', true),
                 windowMs: parseIntegerEnv(
@@ -559,5 +588,8 @@ module.exports = {
     DEFAULT_REDIS_CONNECT_TIMEOUT_MS,
     DEFAULT_REDIS_ROOM_TTL_SECONDS,
     DEFAULT_REDIS_KEY_PREFIX,
+    DEFAULT_REDIS_ROOM_LOCK_TTL_MS,
+    DEFAULT_REDIS_ROOM_LOCK_WAIT_TIMEOUT_MS,
+    DEFAULT_SOCKET_REDIS_ADAPTER_REQUEST_TIMEOUT_MS,
     MIN_METRICS_TOKEN_LENGTH
 };

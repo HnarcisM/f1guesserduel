@@ -68,7 +68,7 @@ function createDependencies(roomStore) {
     };
 }
 
-test('requestRoomList returns active Duel rooms to the requesting socket', () => {
+test('requestRoomList returns active Duel rooms to the requesting socket', async () => {
     const hostSocket = createFakeSocket('socket-host');
     const requesterSocket = createFakeSocket('socket-viewer');
     const io = createFakeIo();
@@ -81,7 +81,7 @@ test('requestRoomList returns active Duel rooms to the requesting socket', () =>
     registerSocketHandlers(io, createDependencies(roomStore));
     io.connectionHandler(requesterSocket);
 
-    requesterSocket.trigger('requestRoomList');
+    await requesterSocket.trigger('requestRoomList');
 
     const updates = requesterSocket.emitted('roomListUpdate');
     assert.equal(updates.length, 1);
@@ -90,7 +90,7 @@ test('requestRoomList returns active Duel rooms to the requesting socket', () =>
     assert.equal(updates[0].payload.rooms[0].hostUsername, 'Narcis');
 });
 
-test('joining a room broadcasts an updated Duel room list', () => {
+test('joining a room broadcasts an updated Duel room list', async () => {
     const io = createFakeIo();
     const socket = createFakeSocket('socket-host');
     socket.user = { id: 1, username: 'Host' };
@@ -101,7 +101,7 @@ test('joining a room broadcasts an updated Duel room list', () => {
     registerSocketHandlers(io, createDependencies(roomStore));
     io.connectionHandler(socket);
 
-    socket.trigger('joinRoom', { roomId: 'ROOMNEW', clientId: 'host-client' });
+    await socket.trigger('joinRoom', { roomId: 'ROOMNEW', clientId: 'host-client' });
 
     const updates = io.emitted('roomListUpdate');
     assert.equal(updates.length, 1);

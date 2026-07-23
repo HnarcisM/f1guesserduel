@@ -65,14 +65,14 @@ function registerSoloGameSocketHandlers({
         });
     }
 
-    onSocketEvent('startSingleGame', (payload) => {
+    onSocketEvent('startSingleGame', async (payload) => {
         const roundOptions = normalizeRoundOptions(payload);
         if (!roundOptions) {
             socket.emit('errorMessage', 'Dificultatea selectată nu este validă.');
             return;
         }
 
-        leaveCurrentRoom();
+        await leaveCurrentRoom();
 
         const singlePayload = gameService.startSingleRound(roundOptions);
         if (!singlePayload) {

@@ -259,3 +259,281 @@ test('socket room mutations identify the affected room for scoped Redis writes',
     assert.match(socketSources, /roomStore\.markDirty\?\.\(roomId\)/);
     assert.doesNotMatch(socketSources, /roomStore\.markDirty\?\.\(state\.currentRoom\)/);
 });
+
+function createSharedRedisBackend() {
+    const data = new Map();
+    const expiresAt = new Map();
+    const subscribers = new Map();
+
+    function purgeExpired(key) {
+        const deadline = expiresAt.get(key);
+        if (deadline !== undefined && deadline <= Date.now()) {
+            data.delete(key);
+            expiresAt.delete(key);
+        }
+    }
+
+    function createClient({ connected = true } = {}) {
+        const listeners = new Map();
+        const subscriptions = new Map();
+
+        const client = {
+            isOpen: connected,
+            on(eventName, handler) {
+                listeners.set(eventName, handler);
+            },
+            async connect() {
+                this.isOpen = true;
+            },
+            async quit() {
+                for (const [channel, handler] of subscriptions) {
+                    subscribers.get(channel)?.delete(handler);
+                }
+                subscriptions.clear();
+                this.isOpen = false;
+            },
+            destroy() {
+                this.isOpen = false;
+            },
+            duplicate() {
+                return createClient({ connected: false });
+            },
+            async subscribe(channel, handler) {
+                if (!subscribers.has(channel)) subscribers.set(channel, new Set());
+                subscribers.get(channel).add(handler);
+                subscriptions.set(channel, handler);
+            },
+            async publish(channel, message) {
+                const handlers = [...(subscribers.get(channel) || [])];
+                for (const handler of handlers) handler(message);
+                return handlers.length;
+            },
+            async get(key) {
+                purgeExpired(key);
+                return data.get(key) ?? null;
+            },
+            async mGet(keys) {
+                return Promise.all(keys.map(key => this.get(key)));
+            },
+            async * scanIterator({ MATCH }) {
+                const prefix = MATCH.endsWith('*') ? MATCH.slice(0, -1) : MATCH;
+                for (const key of [...data.keys()]) purgeExpired(key);
+                yield [...data.keys()].filter(key => key.startsWith(prefix));
+            },
+            async set(key, value, options = {}) {
+                purgeExpired(key);
+                if (options.NX && data.has(key)) return null;
+                data.set(key, value);
+                if (Number.isFinite(options.PX)) expiresAt.set(key, Date.now() + options.PX);
+                else if (Number.isFinite(options.EX)) expiresAt.set(key, Date.now() + options.EX * 1000);
+                else expiresAt.delete(key);
+                return 'OK';
+            },
+            async del(key) {
+                expiresAt.delete(key);
+                return data.delete(key) ? 1 : 0;
+            },
+            async eval(script, { keys, arguments: args }) {
+                const [key] = keys;
+                const [token, ttl] = args;
+                purgeExpired(key);
+                if (data.get(key) !== token) return 0;
+                if (script.includes('PEXPIRE')) {
+                    expiresAt.set(key, Date.now() + Number(ttl));
+                    return 1;
+                }
+                data.delete(key);
+                expiresAt.delete(key);
+                return 1;
+            },
+            multi() {
+                const commands = [];
+                return {
+                    set(key, value, options) {
+                        commands.push(() => client.set(key, value, options));
+                        return this;
+                    },
+                    del(key) {
+                        commands.push(() => client.del(key));
+                        return this;
+                    },
+                    async exec() {
+                        const results = [];
+                        for (const command of commands) results.push(await command());
+                        return results;
+                    }
+                };
+            }
+        };
+        return client;
+    }
+
+    return { createClient, data };
+}
+
+test('distributed Redis room mutations serialize concurrent writers and synchronize instances', async () => {
+    const backend = createSharedRedisBackend();
+    const commonOptions = {
+        keyPrefix: 'f1:cluster',
+        roomTtlSeconds: 3600,
+        saveDebounceMs: 60_000,
+        distributedCoordinationEnabled: true,
+        roomLockTtlMs: 2_000,
+        roomLockWaitTimeoutMs: 1_000,
+        logger: { error() {}, info() {} }
+    };
+    const firstStore = await createRedisRoomStore({
+        ...commonOptions,
+        redisClient: backend.createClient(),
+        instanceId: 'node-a'
+    });
+    const secondStore = await createRedisRoomStore({
+        ...commonOptions,
+        redisClient: backend.createClient(),
+        instanceId: 'node-b'
+    });
+
+    await firstStore.runExclusive('shared-room', () => {
+        const room = createRoom('shared-room', 'socket-a');
+        room.nextGuestNumber = 1;
+        firstStore.set('shared-room', room);
+    });
+    assert.equal(secondStore.get('shared-room').nextGuestNumber, 1);
+
+    await Promise.all([
+        firstStore.runExclusive('shared-room', async () => {
+            const room = firstStore.get('shared-room');
+            const value = room.nextGuestNumber;
+            await new Promise(resolve => setTimeout(resolve, 40));
+            room.nextGuestNumber = value + 1;
+            firstStore.markDirty('shared-room');
+        }),
+        secondStore.runExclusive('shared-room', () => {
+            const room = secondStore.get('shared-room');
+            room.nextGuestNumber += 1;
+            secondStore.markDirty('shared-room');
+        })
+    ]);
+
+    const storedPayload = JSON.parse(backend.data.get(buildRedisRoomKey('f1:cluster', 'shared-room')));
+    assert.equal(storedPayload.room.nextGuestNumber, 3);
+    assert.equal(firstStore.get('shared-room').nextGuestNumber, 3);
+    assert.equal(secondStore.get('shared-room').nextGuestNumber, 3);
+
+    await Promise.all([firstStore.close(), secondStore.close()]);
+});
+
+
+test('distributed Redis room lock lease is renewed during long mutations', async () => {
+    const backend = createSharedRedisBackend();
+    const options = {
+        keyPrefix: 'f1:lease',
+        distributedCoordinationEnabled: true,
+        roomLockTtlMs: 30,
+        roomLockWaitTimeoutMs: 500,
+        saveDebounceMs: 60_000,
+        logger: { error() {}, info() {} }
+    };
+    const firstStore = await createRedisRoomStore({
+        ...options,
+        redisClient: backend.createClient(),
+        instanceId: 'lease-a'
+    });
+    const secondStore = await createRedisRoomStore({
+        ...options,
+        redisClient: backend.createClient(),
+        instanceId: 'lease-b'
+    });
+
+    await firstStore.runExclusive('lease-room', () => {
+        const room = createRoom('lease-room', 'socket-a');
+        room.nextGuestNumber = 1;
+        firstStore.set('lease-room', room);
+    });
+
+    await Promise.all([
+        firstStore.runExclusive('lease-room', async () => {
+            const room = firstStore.get('lease-room');
+            const value = room.nextGuestNumber;
+            await new Promise(resolve => setTimeout(resolve, 90));
+            room.nextGuestNumber = value + 1;
+            firstStore.markDirty('lease-room');
+        }),
+        new Promise(resolve => setTimeout(resolve, 45)).then(() => secondStore.runExclusive('lease-room', () => {
+            const room = secondStore.get('lease-room');
+            room.nextGuestNumber += 1;
+            secondStore.markDirty('lease-room');
+        }))
+    ]);
+
+    const payload = JSON.parse(backend.data.get(buildRedisRoomKey('f1:lease', 'lease-room')));
+    assert.equal(payload.room.nextGuestNumber, 3);
+    await Promise.all([firstStore.close(), secondStore.close()]);
+});
+
+test('distributed Redis room store reports lock contention instead of overwriting state', async () => {
+    const backend = createSharedRedisBackend();
+    const redisClient = backend.createClient();
+    const store = await createRedisRoomStore({
+        redisClient,
+        keyPrefix: 'f1:locks',
+        distributedCoordinationEnabled: true,
+        roomLockTtlMs: 1_000,
+        roomLockWaitTimeoutMs: 10,
+        instanceId: 'node-a',
+        logger: { error() {}, info() {} }
+    });
+    await redisClient.set('f1:locks:rooms:lock:busy-room', 'other-owner', { PX: 1_000 });
+
+    await assert.rejects(
+        store.runExclusive('busy-room', () => {}),
+        error => error?.code === 'ROOM_LOCK_TIMEOUT'
+    );
+
+    await store.close();
+});
+
+
+test('distributed room persistence survives auxiliary publish and lock release errors', async () => {
+    const backend = createSharedRedisBackend();
+    const redisClient = backend.createClient();
+    const logMessages = [];
+    redisClient.publish = async () => {
+        throw new Error('Pub/Sub unavailable');
+    };
+    const originalEval = redisClient.eval.bind(redisClient);
+    redisClient.eval = async (script, options) => {
+        if (script.includes('PEXPIRE')) return originalEval(script, options);
+        throw new Error('Lock release unavailable');
+    };
+    const store = await createRedisRoomStore({
+        redisClient,
+        keyPrefix: 'f1:resilience',
+        distributedCoordinationEnabled: true,
+        roomLockTtlMs: 100,
+        roomLockWaitTimeoutMs: 50,
+        instanceId: 'node-a',
+        logger: {
+            info() {},
+            error(message) {
+                logMessages.push(message);
+            }
+        }
+    });
+
+    const result = await store.runExclusive('resilient-room', () => {
+        const room = createRoom('resilient-room', 'socket-a');
+        store.set('resilient-room', room);
+        return 'persisted';
+    });
+
+    assert.equal(result, 'persisted');
+    assert.equal(
+        backend.data.has(buildRedisRoomKey('f1:resilience', 'resilient-room')),
+        true
+    );
+    assert.equal(logMessages.some(message => /Publicarea sincronizării Redis/.test(message)), true);
+    assert.equal(logMessages.some(message => /Eliberarea lock-ului Redis/.test(message)), true);
+
+    await store.close();
+});

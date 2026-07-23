@@ -1,3 +1,4 @@
+const crypto = require('node:crypto');
 const {
     ROOM_PERSISTENCE_VERSION,
     deserializeRoom,
@@ -6,6 +7,21 @@ const {
 const { isValidRoomId } = require('../config/constants');
 
 const DEFAULT_SCAN_COUNT = 100;
+const DEFAULT_ROOM_LOCK_TTL_MS = 15_000;
+const DEFAULT_ROOM_LOCK_WAIT_TIMEOUT_MS = 5_000;
+const DEFAULT_ROOM_LOCK_RETRY_DELAY_MS = 25;
+const RELEASE_ROOM_LOCK_SCRIPT = `
+if redis.call('GET', KEYS[1]) == ARGV[1] then
+    return redis.call('DEL', KEYS[1])
+end
+return 0
+`;
+const RENEW_ROOM_LOCK_SCRIPT = `
+if redis.call('GET', KEYS[1]) == ARGV[1] then
+    return redis.call('PEXPIRE', KEYS[1], ARGV[2])
+end
+return 0
+`;
 
 function getLegacySnapshotKey(keyPrefix) {
     return `${keyPrefix}:rooms:snapshot`;
@@ -15,11 +31,22 @@ function getRoomKeyPrefix(keyPrefix) {
     return `${keyPrefix}:rooms:room:`;
 }
 
+function getRoomSyncChannel(keyPrefix) {
+    return `${keyPrefix}:rooms:sync`;
+}
+
 function buildRedisRoomKey(keyPrefix, roomId) {
     if (!isValidRoomId(roomId)) {
         throw new Error('A valid room id is required for Redis persistence.');
     }
     return `${getRoomKeyPrefix(keyPrefix)}${encodeURIComponent(roomId)}`;
+}
+
+function buildRedisRoomLockKey(keyPrefix, roomId) {
+    if (!isValidRoomId(roomId)) {
+        throw new Error('A valid room id is required for Redis room locking.');
+    }
+    return `${keyPrefix}:rooms:lock:${encodeURIComponent(roomId)}`;
 }
 
 function deserializeRedisRooms(rawPayload, options = {}) {
@@ -171,6 +198,105 @@ async function restoreRedisRooms({ redisClient, keyPrefix, roomTtlSeconds, drive
     return [...restoredRooms.values()];
 }
 
+function delay(milliseconds) {
+    return new Promise(resolve => setTimeout(resolve, milliseconds));
+}
+
+async function acquireRedisRoomLock({
+    redisClient,
+    keyPrefix,
+    roomId,
+    lockTtlMs,
+    waitTimeoutMs,
+    retryDelayMs = DEFAULT_ROOM_LOCK_RETRY_DELAY_MS,
+    clock = Date.now
+}) {
+    const lockKey = buildRedisRoomLockKey(keyPrefix, roomId);
+    const token = crypto.randomBytes(24).toString('hex');
+    const deadline = clock() + waitTimeoutMs;
+
+    while (clock() <= deadline) {
+        const result = await redisClient.set(lockKey, token, { NX: true, PX: lockTtlMs });
+        if (result === 'OK' || result === true) {
+            return { lockKey, token };
+        }
+        await delay(retryDelayMs);
+    }
+
+    const error = new Error(`Timed out waiting for the distributed lock for room ${roomId}.`);
+    error.code = 'ROOM_LOCK_TIMEOUT';
+    throw error;
+}
+
+function createRoomLockLostError(roomId) {
+    const error = new Error(`The distributed lock for room ${roomId} was lost before the mutation completed.`);
+    error.code = 'ROOM_LOCK_LOST';
+    return error;
+}
+
+async function renewRedisRoomLock(redisClient, lock, lockTtlMs) {
+    if (!lock) return 0;
+    if (typeof redisClient.eval !== 'function') {
+        throw new Error('Redis room locking requires EVAL support.');
+    }
+    return redisClient.eval(RENEW_ROOM_LOCK_SCRIPT, {
+        keys: [lock.lockKey],
+        arguments: [lock.token, String(lockTtlMs)]
+    });
+}
+
+async function releaseRedisRoomLock(redisClient, lock) {
+    if (!lock) return;
+    if (typeof redisClient.eval !== 'function') {
+        throw new Error('Redis room locking requires EVAL support.');
+    }
+    await redisClient.eval(RELEASE_ROOM_LOCK_SCRIPT, {
+        keys: [lock.lockKey],
+        arguments: [lock.token]
+    });
+}
+
+function createRedisRoomLockLease({ redisClient, lock, roomId, lockTtlMs }) {
+    const renewalIntervalMs = Math.max(10, Math.floor(lockTtlMs / 3));
+    let renewalError = null;
+    let renewalChain = Promise.resolve();
+
+    function queueRenewal() {
+        renewalChain = renewalChain.then(async () => {
+            if (renewalError) return;
+            const renewed = await renewRedisRoomLock(redisClient, lock, lockTtlMs);
+            if (renewed !== 1 && renewed !== true) renewalError = createRoomLockLostError(roomId);
+        }).catch(error => {
+            renewalError = error;
+        });
+    }
+
+    const timer = setInterval(queueRenewal, renewalIntervalMs);
+    timer.unref?.();
+
+    return {
+        async assertOwned() {
+            await renewalChain;
+            if (renewalError) throw renewalError;
+            const renewed = await renewRedisRoomLock(redisClient, lock, lockTtlMs);
+            if (renewed !== 1 && renewed !== true) throw createRoomLockLostError(roomId);
+        },
+        async stop() {
+            clearInterval(timer);
+            await renewalChain;
+        }
+    };
+}
+
+async function closeRedisSubscriber(client) {
+    if (!client) return;
+    if (client.isOpen && typeof client.quit === 'function') {
+        await client.quit();
+        return;
+    }
+    client.destroy?.();
+}
+
 async function createRedisRoomStore({
     redisClient,
     keyPrefix = 'f1guesserduel',
@@ -178,13 +304,29 @@ async function createRedisRoomStore({
     saveDebounceMs = 250,
     driversRepository = null,
     logger = console,
-    metrics = null
+    metrics = null,
+    distributedCoordinationEnabled = false,
+    roomLockTtlMs = DEFAULT_ROOM_LOCK_TTL_MS,
+    roomLockWaitTimeoutMs = DEFAULT_ROOM_LOCK_WAIT_TIMEOUT_MS,
+    instanceId = crypto.randomUUID()
 }) {
     if (!redisClient
         || typeof redisClient.get !== 'function'
         || typeof redisClient.set !== 'function'
         || typeof redisClient.del !== 'function') {
         throw new Error('A connected Redis client with get, set and del support is required for room persistence.');
+    }
+    if (distributedCoordinationEnabled
+        && (typeof redisClient.duplicate !== 'function'
+            || typeof redisClient.publish !== 'function'
+            || typeof redisClient.eval !== 'function')) {
+        throw new Error('Distributed Redis room coordination requires duplicate, publish and eval support.');
+    }
+    if (!Number.isFinite(roomLockTtlMs) || roomLockTtlMs <= 0) {
+        throw new Error('Redis room lock TTL must be a positive number.');
+    }
+    if (!Number.isFinite(roomLockWaitTimeoutMs) || roomLockWaitTimeoutMs <= 0) {
+        throw new Error('Redis room lock wait timeout must be a positive number.');
     }
 
     const restoreRooms = () => restoreRedisRooms({
@@ -200,7 +342,10 @@ async function createRedisRoomStore({
     const rooms = new Map(restoredRooms.map(room => [room.roomId, room]));
     const pendingUpserts = new Set();
     const pendingDeletes = new Set();
+    const lockedRoomIds = new Set();
     const debounceMs = Number.isFinite(saveDebounceMs) && saveDebounceMs >= 0 ? saveDebounceMs : 250;
+    const syncChannel = getRoomSyncChannel(keyPrefix);
+    let syncClient = null;
     let saveTimer = null;
     let savePromise = null;
     let closePromise = null;
@@ -226,17 +371,47 @@ async function createRedisRoomStore({
         saveTimer = null;
     }
 
+    async function publishRoomSync(action, roomId, payload = null) {
+        if (!distributedCoordinationEnabled) return;
+        await redisClient.publish(syncChannel, JSON.stringify({
+            sourceId: instanceId,
+            action,
+            roomId,
+            payload
+        }));
+    }
+
+    async function publishMutationBatch(upserts, deletedRoomIds) {
+        if (!distributedCoordinationEnabled) return;
+        const results = await Promise.allSettled([
+            ...upserts.map(({ roomId, payload }) => publishRoomSync('upsert', roomId, payload)),
+            ...deletedRoomIds.map(roomId => publishRoomSync('delete', roomId))
+        ]);
+        const errors = results
+            .filter(result => result.status === 'rejected')
+            .map(result => result.reason);
+        if (errors.length > 0) {
+            logger?.error?.('[rooms] Publicarea sincronizării Redis a eșuat; starea persistentă rămâne validă.', {
+                error: errors[0],
+                failedMessageCount: errors.length
+            });
+        }
+    }
+
     async function drainPendingSaves() {
         while (pendingUpserts.size > 0 || pendingDeletes.size > 0) {
-            const upsertIds = [...pendingUpserts];
-            const deleteIds = [...pendingDeletes];
-            pendingUpserts.clear();
-            pendingDeletes.clear();
+            const upsertIds = [...pendingUpserts].filter(roomId => !lockedRoomIds.has(roomId));
+            const deleteIds = [...pendingDeletes].filter(roomId => !lockedRoomIds.has(roomId));
+            if (upsertIds.length === 0 && deleteIds.length === 0) break;
+
+            for (const roomId of upsertIds) pendingUpserts.delete(roomId);
+            for (const roomId of deleteIds) pendingDeletes.delete(roomId);
 
             const upserts = upsertIds
                 .map(roomId => rooms.get(roomId))
                 .filter(Boolean)
                 .map(room => ({
+                    roomId: room.roomId,
                     key: buildRedisRoomKey(keyPrefix, room.roomId),
                     payload: JSON.stringify(serializeRedisRoom(room))
                 }));
@@ -254,6 +429,7 @@ async function createRedisRoomStore({
                 } else {
                     await persistRooms();
                 }
+                await publishMutationBatch(upserts, deleteIds);
                 lastSavedRoomCount = rooms.size;
                 lastSaveError = null;
             } catch (error) {
@@ -321,7 +497,7 @@ async function createRedisRoomStore({
         } else {
             return;
         }
-        scheduleSave();
+        if (!normalizedRoomId || !lockedRoomIds.has(normalizedRoomId)) scheduleSave();
     }
 
     function set(roomId, room) {
@@ -335,15 +511,164 @@ async function createRedisRoomStore({
         if (!removed) return false;
         pendingUpserts.delete(roomId);
         pendingDeletes.add(roomId);
-        scheduleSave();
+        if (!lockedRoomIds.has(roomId)) scheduleSave();
         return true;
     }
+
+    async function refreshRoom(roomId) {
+        const rawPayload = await redisClient.get(buildRedisRoomKey(keyPrefix, roomId));
+        if (!rawPayload) {
+            rooms.delete(roomId);
+            return null;
+        }
+        const room = deserializeRedisRoom(rawPayload, { driversRepository });
+        rooms.set(roomId, room);
+        return room;
+    }
+
+    async function refreshAll() {
+        if (!distributedCoordinationEnabled) return values();
+        const keys = await scanRedisRoomKeys(redisClient, keyPrefix);
+        const entries = await readRedisRoomEntries(redisClient, keys);
+        const refreshedRoomIds = new Set();
+
+        for (const [, payload] of entries) {
+            const room = deserializeRedisRoom(payload, { driversRepository });
+            refreshedRoomIds.add(room.roomId);
+            if (!lockedRoomIds.has(room.roomId)) rooms.set(room.roomId, room);
+        }
+        for (const roomId of [...rooms.keys()]) {
+            if (!refreshedRoomIds.has(roomId) && !lockedRoomIds.has(roomId)) rooms.delete(roomId);
+        }
+        return values();
+    }
+
+    async function persistRoomImmediately(roomId) {
+        pendingUpserts.delete(roomId);
+        pendingDeletes.delete(roomId);
+        const room = rooms.get(roomId);
+
+        if (!room) {
+            await redisClient.del(buildRedisRoomKey(keyPrefix, roomId));
+            await publishMutationBatch([], [roomId]);
+            lastSavedRoomCount = rooms.size;
+            return null;
+        }
+
+        const payload = JSON.stringify(serializeRedisRoom(room));
+        await redisClient.set(buildRedisRoomKey(keyPrefix, roomId), payload, { EX: roomTtlSeconds });
+        await publishMutationBatch([{ roomId, payload }], []);
+        lastSavedRoomCount = rooms.size;
+        return room;
+    }
+
+    async function runExclusive(roomId, callback) {
+        if (!isValidRoomId(roomId)) {
+            throw new Error('A valid room id is required for a coordinated room mutation.');
+        }
+        if (typeof callback !== 'function') {
+            throw new Error('A room mutation callback is required.');
+        }
+        if (!distributedCoordinationEnabled) {
+            return callback(get(roomId));
+        }
+
+        const lock = await acquireRedisRoomLock({
+            redisClient,
+            keyPrefix,
+            roomId,
+            lockTtlMs: roomLockTtlMs,
+            waitTimeoutMs: roomLockWaitTimeoutMs
+        });
+        lockedRoomIds.add(roomId);
+        const lockLease = createRedisRoomLockLease({
+            redisClient,
+            lock,
+            roomId,
+            lockTtlMs: roomLockTtlMs
+        });
+
+        try {
+            await refreshRoom(roomId);
+            pendingUpserts.delete(roomId);
+            pendingDeletes.delete(roomId);
+            const result = await callback(get(roomId));
+            await lockLease.assertOwned();
+            await persistRoomImmediately(roomId);
+            lastSaveError = null;
+            return result;
+        } catch (error) {
+            lastSaveError = error;
+            pendingUpserts.delete(roomId);
+            pendingDeletes.delete(roomId);
+            try {
+                await refreshRoom(roomId);
+            } catch (refreshError) {
+                logger?.error?.('[rooms] Nu am putut reîncărca camera după o mutație eșuată.', {
+                    error: refreshError,
+                    roomId
+                });
+            }
+            throw error;
+        } finally {
+            await lockLease.stop();
+            lockedRoomIds.delete(roomId);
+            try {
+                await releaseRedisRoomLock(redisClient, lock);
+            } catch (releaseError) {
+                logger?.error?.('[rooms] Eliberarea lock-ului Redis a eșuat; TTL-ul îl va elimina automat.', {
+                    error: releaseError,
+                    roomId
+                });
+            }
+        }
+    }
+
+    async function initializeRoomSync() {
+        if (!distributedCoordinationEnabled) return;
+        syncClient = redisClient.duplicate();
+        syncClient.on?.('error', error => {
+            logger?.error?.('[rooms] Redis room synchronization client error.', { error });
+        });
+        if (!syncClient.isOpen) await syncClient.connect();
+        await syncClient.subscribe(syncChannel, message => {
+            try {
+                const event = JSON.parse(message);
+                if (!event || event.sourceId === instanceId || !isValidRoomId(event.roomId)) return;
+                if (lockedRoomIds.has(event.roomId)) return;
+
+                if (event.action === 'delete') {
+                    rooms.delete(event.roomId);
+                    pendingUpserts.delete(event.roomId);
+                    pendingDeletes.delete(event.roomId);
+                    return;
+                }
+                if (event.action === 'upsert' && typeof event.payload === 'string') {
+                    const room = deserializeRedisRoom(event.payload, { driversRepository });
+                    rooms.set(event.roomId, room);
+                    pendingUpserts.delete(event.roomId);
+                    pendingDeletes.delete(event.roomId);
+                }
+            } catch (error) {
+                logger?.error?.('[rooms] Mesaj Redis de sincronizare invalid.', { error });
+            }
+        });
+        logger?.info?.('[rooms] Sincronizarea distribuită Redis este activă.', {
+            channel: syncChannel
+        });
+    }
+
+    await initializeRoomSync();
 
     function close() {
         if (closePromise) return closePromise;
         isClosing = true;
         clearSaveTimer();
-        closePromise = saveNow();
+        closePromise = (async () => {
+            await saveNow();
+            await closeRedisSubscriber(syncClient);
+            return lastSavedRoomCount;
+        })();
         return closePromise;
     }
 
@@ -353,6 +678,7 @@ async function createRedisRoomStore({
 
     return {
         provider: 'redis',
+        distributedCoordinationEnabled,
         get,
         set,
         remove,
@@ -360,6 +686,9 @@ async function createRedisRoomStore({
         values,
         markDirty,
         saveNow,
+        refreshRoom,
+        refreshAll,
+        runExclusive,
         close,
         getLastSaveError
     };
@@ -367,8 +696,14 @@ async function createRedisRoomStore({
 
 module.exports = {
     buildRedisRoomKey,
+    buildRedisRoomLockKey,
     deserializeRedisRoom,
     deserializeRedisRooms,
     scanRedisRoomKeys,
-    createRedisRoomStore
+    acquireRedisRoomLock,
+    renewRedisRoomLock,
+    releaseRedisRoomLock,
+    createRedisRoomStore,
+    DEFAULT_ROOM_LOCK_TTL_MS,
+    DEFAULT_ROOM_LOCK_WAIT_TIMEOUT_MS
 };

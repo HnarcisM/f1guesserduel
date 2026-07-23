@@ -40,7 +40,10 @@ test('app config provides safe development defaults', () => {
         url: null,
         keyPrefix: 'f1guesserduel',
         connectTimeoutMs: 10_000,
-        roomTtlSeconds: 86_400
+        roomTtlSeconds: 86_400,
+        distributedRoomCoordinationEnabled: false,
+        roomLockTtlMs: 15_000,
+        roomLockWaitTimeoutMs: 5_000
     });
     assert.equal(config.dbFilePath, path.join(projectRoot, 'data', 'f1guesser.sqlite'));
     assert.equal(config.rooms.cleanupIntervalMs, 60_000);
@@ -60,6 +63,10 @@ test('app config provides safe development defaults', () => {
         'http://[::1]:3000',
         'https://[::1]:3000'
     ]);
+    assert.deepEqual(config.socket.redisAdapter, {
+        enabled: false,
+        requestsTimeoutMs: 5_000
+    });
     assert.deepEqual(config.socket.rateLimit, {
         enabled: true,
         windowMs: 60_000
@@ -98,6 +105,10 @@ test('app config reads production values from environment', () => {
         REDIS_KEY_PREFIX: 'f1:production',
         REDIS_CONNECT_TIMEOUT_MS: '15000',
         REDIS_ROOM_TTL_SECONDS: '172800',
+        SOCKET_REDIS_ADAPTER_ENABLED: 'true',
+        SOCKET_REDIS_ADAPTER_REQUEST_TIMEOUT_MS: '7000',
+        REDIS_ROOM_LOCK_TTL_MS: '20000',
+        REDIS_ROOM_LOCK_WAIT_TIMEOUT_MS: '6000',
         SESSION_SECRET: 'session-secret',
         SOCKET_AUTH_SECRET: 'socket-secret',
         COOKIE_SECURE: 'false',
@@ -147,7 +158,10 @@ test('app config reads production values from environment', () => {
         url: 'rediss://default:secret@redis.example.com:6379',
         keyPrefix: 'f1:production',
         connectTimeoutMs: 15_000,
-        roomTtlSeconds: 172_800
+        roomTtlSeconds: 172_800,
+        distributedRoomCoordinationEnabled: true,
+        roomLockTtlMs: 20_000,
+        roomLockWaitTimeoutMs: 6_000
     });
     assert.equal(path.normalize(config.dbFilePath), path.normalize('/var/lib/f1guesser/f1guesser.sqlite'));
     assert.equal(config.postgresMigrationsDirPath, '/opt/f1/migrations/postgres');
@@ -169,6 +183,10 @@ test('app config reads production values from environment', () => {
         'http://localhost:5173',
         'https://f1guesserduel.onrender.com'
     ]);
+    assert.deepEqual(config.socket.redisAdapter, {
+        enabled: true,
+        requestsTimeoutMs: 7_000
+    });
     assert.deepEqual(config.socket.rateLimit, {
         enabled: false,
         windowMs: 30_000
@@ -274,6 +292,18 @@ test('app config rejects invalid numeric environment values', () => {
         /REDIS_ROOM_TTL_SECONDS must be an integer/
     );
     assert.throws(
+        () => createAppConfig({ REDIS_ROOM_LOCK_TTL_MS: '500' }),
+        /REDIS_ROOM_LOCK_TTL_MS must be an integer/
+    );
+    assert.throws(
+        () => createAppConfig({ REDIS_ROOM_LOCK_WAIT_TIMEOUT_MS: '50' }),
+        /REDIS_ROOM_LOCK_WAIT_TIMEOUT_MS must be an integer/
+    );
+    assert.throws(
+        () => createAppConfig({ SOCKET_REDIS_ADAPTER_REQUEST_TIMEOUT_MS: '100' }),
+        /SOCKET_REDIS_ADAPTER_REQUEST_TIMEOUT_MS must be an integer/
+    );
+    assert.throws(
         () => createAppConfig({ ROOM_CLEANUP_INTERVAL_MS: '-1' }),
         /ROOM_CLEANUP_INTERVAL_MS must be an integer/
     );
@@ -365,6 +395,14 @@ test('app config rejects invalid boolean and enum values', () => {
     assert.throws(
         () => createAppConfig({ SOCKET_RATE_LIMIT_ENABLED: 'maybe' }),
         /SOCKET_RATE_LIMIT_ENABLED must be one of/
+    );
+    assert.throws(
+        () => createAppConfig({ SOCKET_REDIS_ADAPTER_ENABLED: 'maybe' }),
+        /SOCKET_REDIS_ADAPTER_ENABLED must be one of/
+    );
+    assert.throws(
+        () => createAppConfig({ SOCKET_REDIS_ADAPTER_ENABLED: 'true' }),
+        /requires REDIS_URL/
     );
     assert.throws(
         () => createAppConfig({ COOKIE_SAMESITE: 'external' }),

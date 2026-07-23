@@ -73,11 +73,11 @@ test('Single records an authenticated result only after the server validates the
         }
     });
 
-    socket.trigger('startSingleGame', { level: 'easy' });
-    socket.trigger('submitSingleGuess', 'unknown-driver');
+    await socket.trigger('startSingleGame', { level: 'easy' });
+    await socket.trigger('submitSingleGuess', 'unknown-driver');
     assert.equal(recorded.length, 0);
 
-    socket.trigger('submitSingleGuess', target.id);
+    await socket.trigger('submitSingleGuess', target.id);
     await new Promise(resolve => setImmediate(resolve));
 
     assert.equal(recorded.length, 1);

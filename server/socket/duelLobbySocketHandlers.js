@@ -34,11 +34,11 @@ function registerDuelLobbySocketHandlers(context) {
         metrics
     } = context;
 
-    onSocketEvent('requestRoomList', () => {
-        emitRoomListUpdate(socket);
+    onSocketEvent('requestRoomList', async () => {
+        await emitRoomListUpdate(socket);
     });
 
-    onSocketEvent('joinRoom', (payload) => {
+    onSocketEvent('joinRoom', async (payload) => {
         const { roomId, clientId } = normalizeJoinRoomPayload(payload);
         if (!isValidRoomId(roomId)) {
             socket.emit('errorMessage', 'Camera este invalidă. Folosește un room ID de 3-20 caractere.');
@@ -58,7 +58,7 @@ function registerDuelLobbySocketHandlers(context) {
         }
 
         const room = roomStore.get(roomId);
-        if (getRoomMemberCount(room) > 0) cleanupInactiveMembers(roomId, room);
+        if (getRoomMemberCount(room) > 0) await cleanupInactiveMembers(roomId, room);
 
         const joinResult = addPlayerToRoom(room, socket.id, socket.user || null, memberOptions);
         roomStore.markDirty?.(roomId);
@@ -70,10 +70,10 @@ function registerDuelLobbySocketHandlers(context) {
         clearSoloModeSessions();
         state.currentRoom = roomId;
         state.hasMarkedCurrentRoomDisconnected = false;
-        socket.join(roomId);
+        await socket.join(roomId);
         emitHostStatus(socket, room);
-        emitRoomStateUpdate(roomId, 'join');
-        emitRoomListUpdate();
+        await emitRoomStateUpdate(roomId, 'join');
+        await emitRoomListUpdate();
 
         if (!room.difficulty || room.roundState !== 'playing') return;
 
@@ -91,7 +91,7 @@ function registerDuelLobbySocketHandlers(context) {
         socket.emit('initGame', initPayload);
     });
 
-    onSocketEvent('updateDuelLobbySettings', (payload) => {
+    onSocketEvent('updateDuelLobbySettings', async (payload) => {
         const roomId = state.currentRoom;
         if (!roomId) return;
         const room = roomStore.get(roomId);
@@ -118,11 +118,11 @@ function registerDuelLobbySocketHandlers(context) {
 
         updateDuelLobbySettings(room, roundOptions);
         roomStore.markDirty?.(roomId);
-        emitRoomStateUpdate(roomId, 'lobby-settings-updated');
-        emitRoomListUpdate();
+        await emitRoomStateUpdate(roomId, 'lobby-settings-updated');
+        await emitRoomListUpdate();
     });
 
-    onSocketEvent('selectDuelPlayer', (payload = {}) => {
+    onSocketEvent('selectDuelPlayer', async (payload = {}) => {
         const roomId = state.currentRoom;
         if (!roomId) return;
         const room = roomStore.get(roomId);
@@ -151,9 +151,9 @@ function registerDuelLobbySocketHandlers(context) {
         }
 
         roomStore.markDirty?.(roomId);
-        emitRoomRoleStatuses(room);
-        emitRoomStateUpdate(roomId, 'player-selected');
-        emitRoomListUpdate();
+        await emitRoomRoleStatuses(roomId, room);
+        await emitRoomStateUpdate(roomId, 'player-selected');
+        await emitRoomListUpdate();
     });
 }
 

@@ -122,7 +122,7 @@ function connectSocket(io, socket) {
     io.connectionHandler(socket);
 }
 
-test('socket disconnect is marked once across disconnecting and disconnect events', () => {
+test('socket disconnect is marked once across disconnecting and disconnect events', async () => {
     const roomStore = createRoomStore();
     const io = createFakeIo();
     registerSocketHandlers(io, createDependencies(roomStore));
@@ -134,8 +134,8 @@ test('socket disconnect is marked once across disconnecting and disconnect event
     connectSocket(io, hostSocket);
     connectSocket(io, guestSocket);
 
-    hostSocket.trigger('joinRoom', { roomId: 'abc123', clientId: 'browser-host' });
-    guestSocket.trigger('joinRoom', { roomId: 'abc123', clientId: 'browser-guest' });
+    await hostSocket.trigger('joinRoom', { roomId: 'abc123', clientId: 'browser-host' });
+    await guestSocket.trigger('joinRoom', { roomId: 'abc123', clientId: 'browser-guest' });
     assert.equal(hostSocket.hasJoined('abc123'), true);
     assert.equal(guestSocket.hasJoined('abc123'), true);
 
@@ -143,8 +143,8 @@ test('socket disconnect is marked once across disconnecting and disconnect event
     guestSocket.clearEmitted();
     roomStore.resetMarkDirtyCalls();
 
-    hostSocket.trigger('disconnecting');
-    hostSocket.trigger('disconnect');
+    await hostSocket.trigger('disconnecting');
+    await hostSocket.trigger('disconnect');
 
     const guestDisconnectUpdates = guestSocket
         .emitted('roomStateUpdate')

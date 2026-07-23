@@ -9,13 +9,42 @@ const {
 } = require('../rooms/roomService');
 
 function createRoomStateEmitter(io, roomStore, metrics = null) {
-    function isSocketActive(socketId) {
-        return io.sockets.sockets.has(socketId);
+    function getLocalSockets() {
+        return io?.sockets?.sockets instanceof Map
+            ? [...io.sockets.sockets.values()]
+            : [];
     }
 
-    function cleanupInactiveMembers(roomId, room) {
+    async function fetchMatchingSockets(roomId, socketIds = null) {
+        if (!roomId) return [];
+        const target = typeof io?.in === 'function' ? io.in(roomId) : null;
+        const sockets = typeof target?.fetchSockets === 'function'
+            ? await target.fetchSockets()
+            : getLocalSockets();
+        if (!socketIds) return sockets;
+        return sockets.filter(socket => socketIds.has(socket.id));
+    }
+
+    async function fetchRoomSockets(roomId, room = null) {
+        if (!room) return fetchMatchingSockets(roomId);
+        const memberSocketIds = new Set([
+            ...Object.keys(room.players || {}),
+            ...Object.keys(room.spectators || {})
+        ]);
+        return fetchMatchingSockets(roomId, memberSocketIds);
+    }
+
+    async function isSocketActive(socketId) {
+        if (!socketId) return false;
+        const sockets = await fetchMatchingSockets(socketId, new Set([socketId]));
+        return sockets.some(socket => socket.id === socketId);
+    }
+
+    async function cleanupInactiveMembers(roomId, room, activeSockets = null) {
         if (!room) return false;
-        const changed = removeInactiveRoomMembers(room, isSocketActive, Date.now(), {
+        const sockets = activeSockets || await fetchRoomSockets(roomId, room);
+        const activeSocketIds = new Set(sockets.map(socket => socket.id));
+        const changed = removeInactiveRoomMembers(room, socketId => activeSocketIds.has(socketId), Date.now(), {
             onMemberExpired: event => metrics?.recordReconnect?.({
                 ...event,
                 outcome: 'grace_expired'
@@ -30,15 +59,8 @@ function createRoomStateEmitter(io, roomStore, metrics = null) {
         return changed;
     }
 
-    function getActiveRoomSockets(room) {
-        const socketIds = new Set([
-            ...Object.keys(room.players || {}),
-            ...Object.keys(room.spectators || {})
-        ]);
-
-        return [...socketIds]
-            .map(socketId => io.sockets.sockets.get(socketId))
-            .filter(Boolean);
+    async function getActiveRoomSockets(roomId, room = null) {
+        return fetchRoomSockets(roomId, room);
     }
 
     function buildRoomStatePayload(room, reason = 'sync', recipientSocketId = null) {
@@ -54,30 +76,32 @@ function createRoomStateEmitter(io, roomStore, metrics = null) {
         return payload;
     }
 
-    function emitRoomStateUpdate(roomId, reason = 'sync') {
+    async function emitRoomStateUpdate(roomId, reason = 'sync') {
         const room = roomStore.get(roomId);
         if (!room) return;
 
-        const roomWasRemoved = cleanupInactiveMembers(roomId, room);
+        const memberSockets = await getActiveRoomSockets(roomId, room);
+        const roomWasRemoved = await cleanupInactiveMembers(roomId, room, memberSockets);
         if (roomWasRemoved && !roomStore.has(roomId)) return;
 
         roomStore.markDirty?.(roomId);
 
-        for (const memberSocket of getActiveRoomSockets(room)) {
+        for (const memberSocket of memberSockets) {
             memberSocket.emit('roomStateUpdate', buildRoomStatePayload(room, reason, memberSocket.id));
         }
     }
 
-    function emitGameStateToActiveRoomMembers(roomId, eventName, payload, options = {}) {
+    async function emitGameStateToActiveRoomMembers(roomId, eventName, payload, options = {}) {
         const room = roomStore.get(roomId);
         if (!room) return;
 
-        const roomWasRemoved = cleanupInactiveMembers(roomId, room);
+        const memberSockets = await getActiveRoomSockets(roomId, room);
+        const roomWasRemoved = await cleanupInactiveMembers(roomId, room, memberSockets);
         if (roomWasRemoved && !roomStore.has(roomId)) return;
 
         roomStore.markDirty?.(roomId);
 
-        for (const memberSocket of getActiveRoomSockets(room)) {
+        for (const memberSocket of memberSockets) {
             const recipientPayload = { ...payload };
 
             if (options.includeLiveBoardForSpectators && isSpectator(room, memberSocket.id)) {
@@ -90,24 +114,23 @@ function createRoomStateEmitter(io, roomStore, metrics = null) {
 
     function emitHostStatus(socket, room) {
         const member = getRoomMember(room, socket.id);
+        const authUser = socket.user || socket.data?.authUser || null;
         const role = member?.role || (isSpectator(room, socket.id) ? 'spectator' : 'player');
 
         socket.emit('hostStatus', {
             isHost: isHost(room, socket.id),
             isSpectator: role === 'spectator',
             role,
-            username: member?.username || socket.user?.username || 'Guest',
-            user: socket.user || null
+            username: member?.username || authUser?.username || 'Guest',
+            user: authUser
         });
     }
 
-    function emitRoomRoleStatuses(room) {
-        for (const member of [...Object.values(room.players || {}), ...Object.values(room.spectators || {})]) {
-            const memberSocket = io.sockets.sockets.get(member.socketId);
-            if (memberSocket) {
-                emitHostStatus(memberSocket, room);
-            }
-        }
+    async function emitRoomRoleStatuses(roomId, room = null) {
+        const resolvedRoom = room || roomStore.get(roomId);
+        if (!resolvedRoom) return;
+        const sockets = await getActiveRoomSockets(roomId, resolvedRoom);
+        for (const memberSocket of sockets) emitHostStatus(memberSocket, resolvedRoom);
     }
 
     return {

@@ -58,7 +58,7 @@ function registerDuelRoundSocketHandlers(context) {
         emitRoomListUpdate
     } = context;
 
-    function emitRoundResolved(roomId, room, roundResult) {
+    async function emitRoundResolved(roomId, room, roundResult) {
         if (!room || !roundResult) return;
         roomStore.markDirty?.(roomId);
 
@@ -68,9 +68,8 @@ function registerDuelRoundSocketHandlers(context) {
                 logger,
                 ...accountResult
             }).then(result => {
-                const playerSocket = io.sockets?.sockets?.get?.(accountResult.socketId);
-                if (result?.stats && playerSocket) {
-                    playerSocket.emit(
+                if (result?.stats) {
+                    io.to(accountResult.socketId).emit(
                         'accountStatsUpdated',
                         buildAccountStatsSocketPayload(accountResult.userId, result)
                     );
@@ -78,7 +77,7 @@ function registerDuelRoundSocketHandlers(context) {
             });
         }
 
-        for (const memberSocket of getActiveRoomSockets(room)) {
+        for (const memberSocket of await getActiveRoomSockets(roomId, room)) {
             const member = room.players?.[memberSocket.id] || room.spectators?.[memberSocket.id] || null;
             const payload = buildPersonalRoundResult(roundResult, member);
             if (!payload) continue;
@@ -86,11 +85,11 @@ function registerDuelRoundSocketHandlers(context) {
             memberSocket.emit('roundResolved', payload);
         }
 
-        emitRoomStateUpdate(roomId, 'round-resolved');
-        emitRoomListUpdate();
+        await emitRoomStateUpdate(roomId, 'round-resolved');
+        await emitRoomListUpdate();
     }
 
-    onSocketEvent('setDifficulty', (payload) => {
+    onSocketEvent('setDifficulty', async (payload) => {
         const roomId = state.currentRoom;
         if (!roomId) return;
         const room = roomStore.get(roomId);
@@ -122,14 +121,14 @@ function registerDuelRoundSocketHandlers(context) {
             return;
         }
 
-        emitGameStateToActiveRoomMembers(roomId, 'initGame', initPayload, {
+        await emitGameStateToActiveRoomMembers(roomId, 'initGame', initPayload, {
             includeLiveBoardForSpectators: true
         });
-        emitRoomStateUpdate(roomId, 'round-started');
-        emitRoomListUpdate();
+        await emitRoomStateUpdate(roomId, 'round-started');
+        await emitRoomListUpdate();
     });
 
-    onSocketEvent('submitGuess', (driverId) => {
+    onSocketEvent('submitGuess', async (driverId) => {
         const roomId = state.currentRoom;
         if (!roomId) return;
         const room = roomStore.get(roomId);
@@ -152,8 +151,8 @@ function registerDuelRoundSocketHandlers(context) {
                 attempts: MAX_ATTEMPTS,
                 roundResult: roundResult ? buildPersonalRoundResult(roundResult, player) : null
             });
-            if (roundResult && !hadRoundResult) emitRoundResolved(roomId, room, roundResult);
-            else emitRoomStateUpdate(roomId, roundResult ? 'round-progress' : 'timeout');
+            if (roundResult && !hadRoundResult) await emitRoundResolved(roomId, room, roundResult);
+            else await emitRoomStateUpdate(roomId, roundResult ? 'round-progress' : 'timeout');
             return;
         }
 
@@ -190,11 +189,11 @@ function registerDuelRoundSocketHandlers(context) {
         if (isGameOver) responseData.target = { name: target.name };
         socket.emit('guessResult', responseData);
 
-        if (roundResult && !hadRoundResult) emitRoundResolved(roomId, room, roundResult);
-        else emitRoomStateUpdate(roomId, roundResult ? 'round-progress' : 'guess');
+        if (roundResult && !hadRoundResult) await emitRoundResolved(roomId, room, roundResult);
+        else await emitRoomStateUpdate(roomId, roundResult ? 'round-progress' : 'guess');
     });
 
-    onSocketEvent('timeExpired', () => {
+    onSocketEvent('timeExpired', async () => {
         const roomId = state.currentRoom;
         if (!roomId) {
             const singleSession = singleSessions.get(socket.id);
@@ -240,11 +239,11 @@ function registerDuelRoundSocketHandlers(context) {
             attempts: MAX_ATTEMPTS,
             roundResult: roundResult ? buildPersonalRoundResult(roundResult, player) : null
         });
-        if (roundResult && !hadRoundResult) emitRoundResolved(roomId, room, roundResult);
-        else emitRoomStateUpdate(roomId, roundResult ? 'round-progress' : 'timeout');
+        if (roundResult && !hadRoundResult) await emitRoundResolved(roomId, room, roundResult);
+        else await emitRoomStateUpdate(roomId, roundResult ? 'round-progress' : 'timeout');
     });
 
-    onSocketEvent('restartGame', (payload = {}) => {
+    onSocketEvent('restartGame', async (payload = {}) => {
         const roomId = state.currentRoom;
         if (!roomId) return;
         const room = roomStore.get(roomId);
@@ -269,14 +268,14 @@ function registerDuelRoundSocketHandlers(context) {
             return;
         }
 
-        emitGameStateToActiveRoomMembers(roomId, 'gameRestarted', restartPayload, {
+        await emitGameStateToActiveRoomMembers(roomId, 'gameRestarted', restartPayload, {
             includeLiveBoardForSpectators: true
         });
-        emitRoomStateUpdate(roomId, 'restart');
-        emitRoomListUpdate();
+        await emitRoomStateUpdate(roomId, 'restart');
+        await emitRoomListUpdate();
     });
 
-    onSocketEvent('abortDuelRound', () => {
+    onSocketEvent('abortDuelRound', async () => {
         const roomId = state.currentRoom;
         if (!roomId) return;
         const room = roomStore.get(roomId);
@@ -299,8 +298,8 @@ function registerDuelRoundSocketHandlers(context) {
             room: buildPublicRoomState(room),
             liveBoard: buildLiveBoardState(room)
         });
-        emitRoomStateUpdate(roomId, 'duel-aborted');
-        emitRoomListUpdate();
+        await emitRoomStateUpdate(roomId, 'duel-aborted');
+        await emitRoomListUpdate();
     });
 }
 
