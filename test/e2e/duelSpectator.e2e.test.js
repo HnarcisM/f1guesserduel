@@ -9,16 +9,7 @@ const {
     requirePlaywright,
     startAppServer
 } = require('./e2eTestHarness');
-
-
-async function startDuelRoundFromLobby(page, level = 'easy') {
-    const button = page.locator(`[data-duel-lobby-level="${level}"]`);
-    await page.locator('#duelLobbyPanel:not(.is-hidden)').waitFor({ state: 'visible', timeout: 7000 });
-    await button.waitFor({ state: 'visible', timeout: 7000 });
-    await button.click();
-    await page.locator('#duelLobbyStartBtn:not(:disabled)').waitFor({ state: 'visible', timeout: 7000 });
-    await page.locator('#duelLobbyStartBtn').click();
-}
+const { startReadyDuelRound } = require('./duelReadyE2eHelpers');
 
 async function pickFirstSuggestion(page, query) {
     await page.locator('#driverInput').fill(query);
@@ -228,7 +219,7 @@ test('2 players can play while a third browser tab watches live as spectator', {
         await assertElementHidden(playerTwo.locator('#liveDuelBoard'));
 
         logE2E('Hostul pornește runda pe Easy...');
-        await startDuelRoundFromLobby(playerOne, 'easy');
+        await startReadyDuelRound(playerOne, playerTwo, 'easy');
 
         logE2E('Aștept inițializarea jocului pentru playeri și spectator...');
         await playerOne.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
@@ -276,7 +267,7 @@ test('non-host correct guess is marked correct and spectator sees the live resul
         const spectator = await openRoomPage(context, app.baseUrl, roomId);
 
         await spectator.locator('body.spectator-active').waitFor({ timeout: 7000 });
-        await startDuelRoundFromLobby(host, 'easy');
+        await startReadyDuelRound(host, playerTwo, 'easy');
         await host.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
         await playerTwo.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
         await spectator.locator('#liveDuelBoard:not(.is-hidden)').waitFor({ timeout: 7000 });
@@ -363,9 +354,10 @@ test('room round is restored after server restart', { concurrency: false }, asyn
         app = await startAppServer({ dataDir });
         const firstContext = await browser.newContext({ viewport: { width: 1366, height: 900 } });
         const host = await openRoomPage(firstContext, app.baseUrl, roomId);
+        const playerTwo = await openRoomPage(firstContext, app.baseUrl, roomId);
 
         logE2E('Pornesc o rundă Easy care trebuie salvată pe disk...');
-        await startDuelRoundFromLobby(host, 'easy');
+        await startReadyDuelRound(host, playerTwo, 'easy');
         await host.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
         await sleep(300);
         await firstContext.close();
@@ -413,7 +405,7 @@ test('auth register login logout refreshes room member name while staying in the
         const spectator = await openRoomPage(context, app.baseUrl, roomId);
         await spectator.locator('body.spectator-active').waitFor({ timeout: 7000 });
 
-        await startDuelRoundFromLobby(host, 'easy');
+        await startReadyDuelRound(host, playerTwo, 'easy');
         await spectator.locator('#liveDuelBoard:not(.is-hidden)').waitFor({ timeout: 7000 });
 
         await registerViaUi(host, credentials);
@@ -451,7 +443,7 @@ test('host can start a rematch after a round ends', { concurrency: false }, asyn
         const host = await openRoomPage(context, app.baseUrl, roomId);
         const playerTwo = await openRoomPage(context, app.baseUrl, roomId);
 
-        await startDuelRoundFromLobby(host, 'easy');
+        await startReadyDuelRound(host, playerTwo, 'easy');
         await host.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
         await playerTwo.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
 
@@ -460,8 +452,12 @@ test('host can start a rematch after a round ends', { concurrency: false }, asyn
         await host.locator('#endGameDisplay.show').waitFor({ timeout: 7000 });
         await playerTwo.locator('#endGameDisplay.show').waitFor({ timeout: 7000 });
         await host.locator('#restartGameBtn').click();
+        await playerTwo.locator('#closeEndGamePopup').click();
 
-        await host.locator('#endGameDisplay').waitFor({ state: 'hidden', timeout: 7000 });
+        await host.locator('#duelLobbyPanel:not(.is-hidden)').waitFor({ state: 'visible', timeout: 7000 });
+        await playerTwo.locator('#duelLobbyPanel:not(.is-hidden)').waitFor({ state: 'visible', timeout: 7000 });
+        await startReadyDuelRound(host, playerTwo, 'easy');
+
         await host.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
         await playerTwo.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
         await expectText(host.locator('#status'), /Ghicește noul pilot misterios|Ghicește pilotul misterios/i);

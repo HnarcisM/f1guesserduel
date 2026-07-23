@@ -10,6 +10,7 @@ const {
     requirePlaywright,
     startAppServer
 } = require('./e2eTestHarness');
+const { startReadyDuelRound } = require('./duelReadyE2eHelpers');
 
 const AXE_SOURCE = require('axe-core').source;
 const THEMES = Object.freeze(['default', 'neon', 'carbon']);
@@ -173,7 +174,7 @@ test('axe finds no accessibility violations across application screens and state
         await spectator.locator('body.spectator-active').waitFor({ timeout: 7000 });
         reports.push(...await auditPageThemes(host, 'duel-lobby'));
 
-        await host.locator('#duelLobbyStartBtn:not(:disabled)').click();
+        await startReadyDuelRound(host, playerTwo, 'easy');
         await host.locator('#gameZone:not(.game-zone-hidden)').waitFor({ state: 'visible', timeout: 7000 });
         await playerTwo.locator('#gameZone:not(.game-zone-hidden)').waitFor({ state: 'visible', timeout: 7000 });
         await spectator.locator('#liveDuelBoard:not(.is-hidden)').waitFor({ state: 'visible', timeout: 7000 });

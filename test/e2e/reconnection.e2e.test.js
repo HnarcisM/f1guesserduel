@@ -9,18 +9,12 @@ const {
     stabilizePage,
     startAppServer
 } = require('./e2eTestHarness');
+const { startReadyDuelRound } = require('./duelReadyE2eHelpers');
 
 const ROOM_CLIENT_ID_STORAGE_KEY = 'f1guesserduel.tabClientId';
 
 async function expectText(locator, pattern, timeoutMs = 7000) {
     await locator.filter({ hasText: pattern }).waitFor({ state: 'visible', timeout: timeoutMs });
-}
-
-async function startDuelRound(page, level = 'easy') {
-    await page.locator('#duelLobbyPanel:not(.is-hidden)').waitFor({ state: 'visible', timeout: 7000 });
-    await page.locator(`[data-duel-lobby-level="${level}"]`).click();
-    await page.locator('#duelLobbyStartBtn:not(:disabled)').click();
-    await page.locator('#gameZone:not(.game-zone-hidden)').waitFor({ state: 'visible', timeout: 7000 });
 }
 
 async function submitSuggestion(page, query) {
@@ -48,7 +42,7 @@ test('duel refresh preserves participant identity, role and previous guesses', {
         const host = await openRoomPage(context, app.baseUrl, roomId);
         const playerTwo = await openRoomPage(context, app.baseUrl, roomId);
 
-        await startDuelRound(host, 'easy');
+        await startReadyDuelRound(host, playerTwo, 'easy');
         await playerTwo.locator('#gameZone:not(.game-zone-hidden)').waitFor({ state: 'visible', timeout: 7000 });
         await expectText(host.locator('#duelStatus'), /Jucători:\s*2\/2.*Host/i);
 
