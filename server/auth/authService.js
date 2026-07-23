@@ -8,7 +8,7 @@ const { createAuthRepository } = require('./authRepository');
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
-const MAX_PASSWORD_LENGTH = 128;
+const MAX_PASSWORD_LENGTH = 64;
 const USERNAME_CHANGE_COOLDOWN_DAYS = 7;
 const USERNAME_CHANGE_COOLDOWN_MS = USERNAME_CHANGE_COOLDOWN_DAYS * 24 * 60 * 60 * 1000;
 const DEFAULT_AVATAR_KEY = 'helmet-red';
@@ -88,8 +88,10 @@ function createAuthService(databaseOrRepository, sessionService) {
             return 'Email-ul nu este valid.';
         }
 
-        if (typeof password !== 'string' || password.length < 8) {
-            return 'Parola trebuie să aibă minimum 8 caractere.';
+        if (typeof password !== 'string'
+            || password.length < MIN_PASSWORD_LENGTH
+            || password.length > MAX_PASSWORD_LENGTH) {
+            return `Parola trebuie să aibă între ${MIN_PASSWORD_LENGTH} și ${MAX_PASSWORD_LENGTH} de caractere.`;
         }
 
         return null;
@@ -127,6 +129,13 @@ function createAuthService(databaseOrRepository, sessionService) {
         if (!EMAIL_REGEX.test(cleanEmail) || typeof password !== 'string' || password.length === 0) {
             return { ok: false, status: 400, message: 'Email sau parolă invalidă.' };
         }
+        if (password.length > MAX_PASSWORD_LENGTH) {
+            return {
+                ok: false,
+                status: 400,
+                message: `Parola poate avea maximum ${MAX_PASSWORD_LENGTH} de caractere.`
+            };
+        }
 
         const userRow = await repository.findUserByEmail(cleanEmail);
         const passwordHash = userRow ? userRow.password_hash : DUMMY_PASSWORD_HASH;
@@ -146,7 +155,9 @@ function createAuthService(databaseOrRepository, sessionService) {
 
     async function verifyCurrentPassword(userId, currentPassword) {
         if (!Number.isSafeInteger(Number(userId)) || Number(userId) <= 0) return null;
-        if (typeof currentPassword !== 'string' || currentPassword.length === 0) return null;
+        if (typeof currentPassword !== 'string'
+            || currentPassword.length === 0
+            || currentPassword.length > MAX_PASSWORD_LENGTH) return null;
 
         const userRow = await repository.findUserCredentialsById(Number(userId));
         if (!userRow || !(await verifyPassword(currentPassword, userRow.password_hash))) return null;

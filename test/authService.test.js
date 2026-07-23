@@ -162,6 +162,48 @@ test('auth service login awaits async password verification', async () => {
     assert.equal(loginResult.session.token, 'session-2');
 });
 
+test('auth service accepts 64-character passwords and rejects longer credentials', async () => {
+    const repository = createFakeAuthRepository();
+    const authService = createAuthService(repository, createFakeSessionService());
+    const password64 = `A${'b'.repeat(61)}1!`;
+    const password65 = `${password64}x`;
+
+    assert.equal(password64.length, 64);
+    assert.equal(password65.length, 65);
+
+    const registered = await authService.register({
+        username: 'BoundaryUser',
+        email: 'boundary@example.com',
+        password: password64
+    });
+    const login = await authService.login({
+        email: 'boundary@example.com',
+        password: password64
+    });
+    const rejectedRegistration = await authService.register({
+        username: 'TooLongPassword',
+        email: 'too-long@example.com',
+        password: password65
+    });
+    let rejectedLogin;
+    const rejectedLoginHashRequests = await countPbkdf2Requests(async () => {
+        rejectedLogin = await authService.login({
+            email: 'boundary@example.com',
+            password: password65
+        });
+    });
+
+    assert.equal(registered.ok, true);
+    assert.equal(login.ok, true);
+    assert.equal(rejectedRegistration.ok, false);
+    assert.equal(rejectedRegistration.status, 400);
+    assert.match(rejectedRegistration.message, /8 și 64/);
+    assert.equal(rejectedLogin.ok, false);
+    assert.equal(rejectedLogin.status, 400);
+    assert.match(rejectedLogin.message, /maximum 64/);
+    assert.equal(rejectedLoginHashRequests, 0);
+});
+
 test('auth service performs PBKDF2 verification for an unknown email', async () => {
     const repository = createFakeAuthRepository();
     const authService = createAuthService(repository, createFakeSessionService());
@@ -288,6 +330,37 @@ test('account password change validates, hashes and replaces the credential', as
     assert.equal(updated.ok, true);
     assert.equal(await verifyPassword('StrongPassword123!', storedUser.password_hash), false);
     assert.equal(await verifyPassword('AnotherStrongPassword456!', storedUser.password_hash), true);
+});
+
+test('account password change enforces the 64-character maximum', async () => {
+    const repository = createFakeAuthRepository();
+    const authService = createAuthService(repository, createFakeSessionService());
+    const currentPassword = 'StrongPassword123!';
+    const password64 = `N${'e'.repeat(61)}1!`;
+    const password65 = `${password64}x`;
+    const registered = await authService.register({
+        username: 'PasswordBoundary',
+        email: 'password-boundary@example.com',
+        password: currentPassword
+    });
+
+    const rejected = await authService.updatePassword({
+        userId: registered.user.id,
+        currentPassword,
+        newPassword: password65
+    });
+    const accepted = await authService.updatePassword({
+        userId: registered.user.id,
+        currentPassword,
+        newPassword: password64
+    });
+    const storedUser = repository.users.get(registered.user.id);
+
+    assert.equal(rejected.ok, false);
+    assert.equal(rejected.status, 400);
+    assert.match(rejected.message, /8 și 64/);
+    assert.equal(accepted.ok, true);
+    assert.equal(await verifyPassword(password64, storedUser.password_hash), true);
 });
 
 test('account avatar accepts only server-approved helmet presets', async () => {

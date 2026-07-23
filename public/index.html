@@ -508,7 +508,7 @@
                     </label>
                     <label>
                         Parola curentă
-                        <input type="password" id="authUsernameCurrentPassword" autocomplete="current-password" required>
+                        <input type="password" id="authUsernameCurrentPassword" autocomplete="current-password" maxlength="64" required>
                     </label>
                     <button type="submit" id="authSaveUsernameBtn" class="auth-settings-submit">Salvează username-ul</button>
                 </form>
@@ -521,15 +521,15 @@
                 <form id="authPasswordSettingsForm" class="auth-settings-form">
                     <label>
                         Parola curentă
-                        <input type="password" id="authPasswordCurrent" autocomplete="current-password" required>
+                        <input type="password" id="authPasswordCurrent" autocomplete="current-password" maxlength="64" required>
                     </label>
                     <label>
                         Parola nouă
-                        <input type="password" id="authPasswordNew" autocomplete="new-password" minlength="8" maxlength="128" required>
+                        <input type="password" id="authPasswordNew" autocomplete="new-password" minlength="8" maxlength="64" required>
                     </label>
                     <label>
                         Confirmă parola nouă
-                        <input type="password" id="authPasswordConfirm" autocomplete="new-password" minlength="8" maxlength="128" required>
+                        <input type="password" id="authPasswordConfirm" autocomplete="new-password" minlength="8" maxlength="64" required>
                     </label>
                     <button type="submit" id="authSavePasswordBtn" class="auth-settings-submit">Schimbă parola</button>
                 </form>
@@ -559,7 +559,7 @@
         </label>
         <label>
             Parolă
-            <input type="password" id="authPassword" autocomplete="current-password" minlength="8" placeholder="minimum 8 caractere" required>
+            <input type="password" id="authPassword" autocomplete="current-password" minlength="8" maxlength="64" placeholder="8-64 caractere" required>
         </label>
         <button type="submit" id="authSubmitBtn" class="auth-submit-btn">Login</button>
     </form>

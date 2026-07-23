@@ -137,6 +137,19 @@ test('authenticated account dashboard is present while the login form remains se
     assert.match(html, /id="authUsernameCooldownHint"/);
     assert.match(html, /o dată la 7 zile/);
     assert.match(html, /id="authPasswordSettingsForm"/);
+    for (const inputId of [
+        'authPassword',
+        'authUsernameCurrentPassword',
+        'authPasswordCurrent',
+        'authPasswordNew',
+        'authPasswordConfirm'
+    ]) {
+        assert.match(
+            html,
+            new RegExp(`id="${inputId}"[^>]*maxlength="64"`),
+            `${inputId} must enforce the 64-character password maximum`
+        );
+    }
     assert.match(html, /id="authLogoutAllBtn"/);
     assert.match(html, /id="authPanel"[^>]*aria-describedby="authSubtitle"[^>]*aria-hidden="true"[^>]*tabindex="-1"/);
     assert.equal((html.match(/<details class="auth-settings-card auth-settings-disclosure/g) || []).length, 3);
