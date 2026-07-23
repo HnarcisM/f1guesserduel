@@ -366,3 +366,102 @@ test('socket event limiter does not treat an asynchronous handler rejection as a
     assert.equal(handlerCalls, 1);
     assert.equal(logCalls, 0);
 });
+
+test('socket event limiter removes expired fallback buckets while Redis is unavailable', async () => {
+    let currentTime = 1_000;
+    const limiter = createSocketEventRateLimiter({
+        clock: () => currentTime,
+        limits: { submitGuess: { maxEvents: 10, windowMs: 60_000 } },
+        memoryCleanupIntervalMs: 1_000,
+        store: {
+            provider: 'redis',
+            async consume() {
+                throw new Error('Redis unavailable');
+            }
+        },
+        logger: { error() {} }
+    });
+    const firstSocket = createFakeSocket('socket-fallback-first');
+    const secondSocket = createFakeSocket('socket-fallback-second');
+    const thirdSocket = createFakeSocket('socket-fallback-third');
+
+    await limiter.wrap(firstSocket, 'submitGuess', () => {})();
+    await limiter.wrap(secondSocket, 'submitGuess', () => {})();
+    assert.equal(limiter._getBucketSize(), 2);
+
+    currentTime += 60_001;
+    await limiter.wrap(thirdSocket, 'submitGuess', () => {})();
+
+    assert.equal(limiter._getBucketSize(), 1);
+    assert.equal(limiter._getBucketCount(firstSocket, 'submitGuess'), 0);
+    assert.equal(limiter._getBucketCount(secondSocket, 'submitGuess'), 0);
+    assert.equal(limiter._getBucketCount(thirdSocket, 'submitGuess'), 1);
+});
+
+test('socket event limiter cleans expired fallback buckets after Redis recovers', async () => {
+    let currentTime = 1_000;
+    let redisUnavailable = true;
+    const limiter = createSocketEventRateLimiter({
+        clock: () => currentTime,
+        limits: { submitGuess: { maxEvents: 10, windowMs: 60_000 } },
+        memoryCleanupIntervalMs: 1_000,
+        store: {
+            provider: 'redis',
+            async consume() {
+                if (redisUnavailable) throw new Error('Redis unavailable');
+                return { allowed: true, remaining: 9, retryAfterMs: 0, resetAt: currentTime + 60_000 };
+            }
+        },
+        logger: { error() {} }
+    });
+    const fallbackSocket = createFakeSocket('socket-recovery-fallback');
+    const recoveredSocket = createFakeSocket('socket-recovery-success');
+
+    await limiter.wrap(fallbackSocket, 'submitGuess', () => {})();
+    assert.equal(limiter._getBucketSize(), 1);
+
+    currentTime += 60_001;
+    redisUnavailable = false;
+    await limiter.wrap(recoveredSocket, 'submitGuess', () => {})();
+
+    assert.equal(limiter._getBucketSize(), 0);
+    assert.equal(limiter._getBucketCount(fallbackSocket, 'submitGuess'), 0);
+});
+
+test('socket event limiter bounds fallback buckets during a high-cardinality Redis outage', async () => {
+    const limiter = createSocketEventRateLimiter({
+        clock: () => 1_000,
+        limits: { submitGuess: { maxEvents: 10, windowMs: 60_000 } },
+        maxMemoryBuckets: 2,
+        store: {
+            provider: 'redis',
+            async consume() {
+                throw new Error('Redis unavailable');
+            }
+        },
+        logger: { error() {} }
+    });
+    const firstSocket = createFakeSocket('socket-cap-first');
+    const secondSocket = createFakeSocket('socket-cap-second');
+    const thirdSocket = createFakeSocket('socket-cap-third');
+
+    await limiter.wrap(firstSocket, 'submitGuess', () => {})();
+    await limiter.wrap(secondSocket, 'submitGuess', () => {})();
+    await limiter.wrap(thirdSocket, 'submitGuess', () => {})();
+
+    assert.equal(limiter._getBucketSize(), 2);
+    assert.equal(limiter._getBucketCount(firstSocket, 'submitGuess'), 0);
+    assert.equal(limiter._getBucketCount(secondSocket, 'submitGuess'), 1);
+    assert.equal(limiter._getBucketCount(thirdSocket, 'submitGuess'), 1);
+});
+
+test('socket event limiter rejects invalid fallback memory settings', () => {
+    assert.throws(
+        () => createSocketEventRateLimiter({ memoryCleanupIntervalMs: 0 }),
+        /memoryCleanupIntervalMs must be a positive number/
+    );
+    assert.throws(
+        () => createSocketEventRateLimiter({ maxMemoryBuckets: 0 }),
+        /maxMemoryBuckets must be a positive integer/
+    );
+});

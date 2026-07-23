@@ -84,12 +84,23 @@ function createSocketEventRateLimiter({
     store = null,
     identityResolver = getSocketId,
     failOpen = true,
+    memoryCleanupIntervalMs = null,
+    maxMemoryBuckets = 10_000,
     logger = console,
     metrics = null
 } = {}) {
     const normalizedLimits = normalizeLimits(limits, windowMs);
+    const cleanupIntervalMs = memoryCleanupIntervalMs ?? windowMs;
+    if (!Number.isFinite(cleanupIntervalMs) || cleanupIntervalMs <= 0) {
+        throw new Error('Socket rate limiter memoryCleanupIntervalMs must be a positive number.');
+    }
+    if (!Number.isInteger(maxMemoryBuckets) || maxMemoryBuckets <= 0) {
+        throw new Error('Socket rate limiter maxMemoryBuckets must be a positive integer.');
+    }
+
     const buckets = new Map();
     let lastStoreErrorLogAt = Number.NEGATIVE_INFINITY;
+    let nextCleanupAt = Number.NEGATIVE_INFINITY;
 
     function getLimit(eventName) {
         return normalizedLimits.get(eventName) || null;
@@ -99,6 +110,13 @@ function createSocketEventRateLimiter({
         const existingBucket = buckets.get(key);
         if (existingBucket && existingBucket.resetAt > currentTime) {
             return existingBucket;
+        }
+
+        if (!existingBucket && buckets.size >= maxMemoryBuckets) {
+            const oldestKey = buckets.keys().next().value;
+            if (oldestKey !== undefined) {
+                buckets.delete(oldestKey);
+            }
         }
 
         const nextBucket = {
@@ -115,6 +133,13 @@ function createSocketEventRateLimiter({
                 buckets.delete(key);
             }
         }
+    }
+
+    function maybeCleanup(currentTime) {
+        if (currentTime < nextCleanupAt || buckets.size === 0) return;
+
+        cleanup(currentTime);
+        nextCleanupAt = currentTime + cleanupIntervalMs;
     }
 
     function consumeFromMemory(socket, eventName, limit, currentTime = clock()) {
@@ -150,6 +175,7 @@ function createSocketEventRateLimiter({
         }
 
         const currentTime = clock();
+        maybeCleanup(currentTime);
         const key = `${identityResolver(socket)}:${eventName}`;
 
         if (store?.consume) {
@@ -251,8 +277,11 @@ function createSocketEventRateLimiter({
         cleanup,
         clearSocket,
         _getBucketCount(socket, eventName) {
-            const bucket = buckets.get(`${getSocketId(socket)}:${eventName}`);
+            const bucket = buckets.get(`${identityResolver(socket)}:${eventName}`);
             return bucket ? bucket.count : 0;
+        },
+        _getBucketSize() {
+            return buckets.size;
         }
     };
 }
