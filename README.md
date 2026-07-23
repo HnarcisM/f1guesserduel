@@ -48,7 +48,7 @@ Aplicația rulează cu **Node.js**, **Express** și **Socket.IO**, iar interfaț
 - Teme vizuale multiple.
 - Layout responsive pentru desktop și telefon.
 - Asset-uri locale pentru steaguri și logo-uri de echipe.
-- Daily Challenge disponibil numai după autentificare, cu o încercare atomică per cont, dificultate și zi UTC calculată de server.
+- Daily Challenge separat per cont, dificultate și zi locală a browserului.
 
 ---
 
@@ -57,7 +57,7 @@ Aplicația rulează cu **Node.js**, **Express** și **Socket.IO**, iar interfaț
 1. Utilizatorul alege modul de joc: `Single Play`, `Duel` sau `Daily Challenge`.
 2. În `Single Play`, jocul pornește fără cameră și fără adversar.
 3. În `Duel`, aplicația creează sau folosește un room din URL, apoi sincronizează playerii/spectatorii prin Socket.IO.
-4. În `Daily Challenge`, utilizatorul autentificat pornește provocarea zilei, separată de duel; încercarea este rezervată atomic în baza de date.
+4. În `Daily Challenge`, aplicația pornește provocarea zilei, separată de duel.
 5. În `Duel`, hostul configurează dificultatea și timerul doar din lobby; Single/Daily folosesc overlay-ul lor dedicat.
 6. Serverul selectează pilotul țintă din `data/drivers.json`.
 7. Utilizatorul introduce un pilot și trimite ghicirea.
@@ -87,7 +87,6 @@ Răspunsul corect este ținut pe server până la finalul jocului, pentru a evit
 - **esbuild** – bundle-uri CSS/JavaScript minificate și versionate prin hash.
 - **Playwright, axe-core și sharp** – E2E, accesibilitate și regresie vizuală.
 - **Node test runner și c8** – teste unitare, integrare și coverage cu praguri CI.
-- **prom-client** – metrici operaționale Prometheus/OpenMetrics protejate cu Bearer token.
 
 ---
 
@@ -332,9 +331,6 @@ Aplicația poate fi configurată prin variabile de mediu. Pentru rulare locală 
 | `SOCKET_RATE_LIMIT_WINDOW_MS` | `60000` | Fereastra de timp pentru limitele Socket.IO, în milisecunde. |
 | `LOG_LEVEL` | `debug` local, `info` production | Nivelul minim de log: `silent`, `error`, `warn`, `info`, `debug`. |
 | `REQUEST_LOGGING_ENABLED` | `false` local, `true` production | Activează logurile HTTP pe request-uri, fără body/query string. |
-| `METRICS_ENABLED` | `false` | Activează endpoint-ul operațional protejat `GET /metrics`. |
-| `METRICS_TOKEN` | none | Bearer token separat, de minimum 32 de caractere, obligatoriu când metricile sunt active. |
-| `METRICS_INCLUDE_PROCESS` | `true` | Include metricile standard Node.js pentru CPU, memorie și event loop. |
 
 Validarea configului este strictă: dacă o variabilă este setată cu o valoare invalidă, serverul se oprește cu un mesaj clar. Reguli importante:
 
@@ -356,7 +352,6 @@ Validarea configului este strictă: dacă o variabilă este setată cu o valoare
 - `SOCKET_RATE_LIMIT_WINDOW_MS` trebuie să fie între `1000` și `3600000`;
 - `REDIS_URL`, dacă este setat, trebuie să fie un URL `redis://` sau `rediss://`, iar prefixul Redis acceptă numai litere, cifre, `.`, `_`, `-` și `:`;
 - `LOG_LEVEL` trebuie să fie `silent`, `error`, `warn`, `info` sau `debug`.
-- `METRICS_ENABLED=true` cere un `METRICS_TOKEN` separat de minimum 32 de caractere.
 
 Există și un fișier `.env.example` cu un exemplu de configurare. Aplicația nu încarcă automat `.env`, ca să nu adăugăm dependințe noi; setează variabilele direct în mediul de rulare sau folosește un loader extern dacă ai nevoie.
 
@@ -423,7 +418,6 @@ La primul deploy peste baza existentă, migrarea `001` folosește operații `IF 
 - Panoul afișează ultimele 10 jocuri cu modul, rezultatul, dificultatea, numărul de încercări și data locală a browserului.
 - Rezultatele sunt înregistrate numai din fluxurile validate de server; browserul nu are endpoint pentru a declara direct o victorie.
 - `user_game_results` păstrează chei unice de rezultat pentru a preveni dublarea, inclusiv la reluarea aceleiași provocări Daily.
-- `user_daily_attempts` rezervă provocarea la pornire și împiedică reluarea ei din alt tab, alt socket sau după ștergerea datelor locale.
 - `user_game_stats` păstrează contoare agregate pentru încărcarea rapidă a panoului.
 - Actualizarea registrului și a contoarelor este tranzacțională în PostgreSQL. Dacă actualizarea statisticilor eșuează temporar, jocul continuă, iar eroarea este logată fără identificatorul utilizatorului.
 - `GET /api/account/summary` folosește exclusiv utilizatorul sesiunii curente și răspunde cu `Cache-Control: no-store`.
@@ -438,7 +432,7 @@ DATABASE_PROVIDER=sqlite
 
 ### Protecție Socket.IO anti-spam
 
-Serverul limitează event-urile Socket.IO sensibile per socket, ca să reducă spam-ul din consolă sau scripturi automate. Sunt protejate acțiuni precum `joinRoom`, `setDifficulty`, `submitGuess`, `startSingleGame`, `submitSingleGuess`, `requestDailyChallengeStatus`, `startDailyChallenge`, `submitDailyGuess`, `restartGame`, `refreshAuthUser` și `abortDuelRound`.
+Serverul limitează event-urile Socket.IO sensibile per socket, ca să reducă spam-ul din consolă sau scripturi automate. Sunt protejate acțiuni precum `joinRoom`, `setDifficulty`, `submitGuess`, `startSingleGame`, `submitSingleGuess`, `startDailyChallenge`, `submitDailyGuess`, `restartGame`, `refreshAuthUser` și `abortDuelRound`.
 
 Dacă limita este depășită, serverul emite `socketRateLimited` și un `errorMessage` generic, fără să execute handlerul original. `leaveRoom`, `disconnecting` și `disconnect` nu sunt limitate, ca jucătorul să poată părăsi camera sau să se deconecteze normal.
 
@@ -463,31 +457,6 @@ Protecții incluse:
 - erorile 500 sunt logate cu requestId/metodă/path/status, dar răspunsul public rămâne generic în production;
 - `uncaughtException` și `unhandledRejection` sunt logate și serverul încearcă un shutdown controlat.
 ```
-
-### Metrici operaționale Prometheus/OpenMetrics
-
-Metricile sunt independente de platforma de monitorizare și sunt dezactivate implicit.
-Pentru o verificare locală sau pentru conectarea ulterioară a unui scraper:
-
-```env
-METRICS_ENABLED=true
-METRICS_TOKEN=<token-random-de-minimum-32-caractere>
-METRICS_INCLUDE_PROCESS=true
-```
-
-Endpoint-ul nu este public și nu folosește sesiunea utilizatorului. Trimite token-ul
-dedicat exclusiv în headerul `Authorization`:
-
-```bash
-curl -H "Authorization: Bearer <metrics-token>" http://localhost:3000/metrics
-```
-
-Sunt agregate numărul și starea camerelor, membrii conectați/deconectați, lifecycle-ul
-camerelor, reconectările și expirarea grace period-ului, operațiile și duratele Redis/
-PostgreSQL, conexiunile pool-ului PostgreSQL și deciziile de rate limiting HTTP/Socket.IO.
-Etichetele au valori fixe și nu includ ID-uri de cameră, socket, utilizator, IP sau alte
-date cu cardinalitate mare. Când `METRICS_ENABLED=false`, ruta răspunde cu `404`, iar
-colectarea custom nu adaugă lucru suplimentar fluxurilor aplicației.
 
 ---
 
@@ -784,7 +753,6 @@ Valorile `?v=` nu trebuie modificate manual. Hash-urile normalizează terminatoa
 - Rate limiting-ul funcționează local sau distribuit prin Redis pentru HTTP și Socket.IO.
 - Helmet configurează CSP fără `unsafe-inline`, blochează atributele inline de script/stil și activează protecție anti-clickjacking, `Referrer-Policy` și HSTS în production.
 - Health checks, logging structurat, redactarea datelor sensibile și graceful shutdown sunt active.
-- Metricile operaționale agregate sunt disponibile în format Prometheus/OpenMetrics printr-un endpoint opt-in protejat.
 
 ### Asset-uri
 
@@ -864,12 +832,17 @@ Aplicația este stabilă pentru deployment pe o singură instanță Node.js și 
 - CSP strict fără `unsafe-inline`, cu procente dinamice limitate la clase CSS predefinite;
 - health checks, logging structurat și graceful shutdown.
 
-Lista consolidată de optimizări este finalizată pentru deployment-ul actual pe o
-singură instanță. A rămas un singur punct tehnic condiționat de arhitectura de deploy.
+Lista consolidată de optimizări este finalizată cu excepția celor două puncte
+tehnice de mai jos.
 
 ### Optimizări tehnice rămase
 
-1. **Scalare Socket.IO multi-instance**
+1. **Metrici operaționale agregate**
+
+   Contoare și durate pentru camere, reconnect, Redis, PostgreSQL și rate limiting,
+   expuse într-un format potrivit pentru platforma de monitorizare aleasă.
+
+2. **Scalare Socket.IO multi-instance**
 
    Redis adapter pentru distribuirea evenimentelor, ownership/concurență pentru
    camere și teste cu minimum două instanțe. Această etapă devine necesară doar
