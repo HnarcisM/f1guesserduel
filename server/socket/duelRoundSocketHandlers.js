@@ -2,6 +2,9 @@ const { MAX_ATTEMPTS } = require('../config/constants');
 const { compareGuess } = require('../game/compareDriver');
 const {
     updateDuelLobbySettings,
+    getDuelLobbySettings,
+    resetDuelReadyState,
+    areDuelPlayersReady,
     getPlayer,
     isHost,
     isSpectator,
@@ -15,8 +18,7 @@ const {
 } = require('../rooms/roomService');
 const {
     normalizeDriverId,
-    normalizeRoundOptions,
-    normalizeRestartOptions
+    normalizeRoundOptions
 } = require('./socketPayloadValidators');
 const {
     buildAccountStatsSocketPayload,
@@ -114,7 +116,19 @@ function registerDuelRoundSocketHandlers(context) {
             return;
         }
 
-        updateDuelLobbySettings(room, roundOptions);
+        const settingsResult = updateDuelLobbySettings(room, roundOptions);
+        if (settingsResult.changed) {
+            resetDuelReadyState(room);
+            roomStore.markDirty?.(roomId);
+            socket.emit('errorMessage', 'Setările s-au schimbat. Ambii jucători trebuie să confirme din nou Ready.');
+            await emitRoomStateUpdate(roomId, 'ready-reset-settings-changed');
+            return;
+        }
+        if (!areDuelPlayersReady(room)) {
+            socket.emit('errorMessage', 'Ambii jucători conectați trebuie să confirme Ready înainte de start.');
+            return;
+        }
+
         const initPayload = gameService.startNewRound(room, roundOptions);
         if (!initPayload) {
             socket.emit('errorMessage', 'Nu am putut porni runda pentru dificultatea selectată.');
@@ -262,9 +276,14 @@ function registerDuelRoundSocketHandlers(context) {
             return;
         }
 
-        const restartPayload = gameService.restartRound(room, normalizeRestartOptions(payload));
+        if (!areDuelPlayersReady(room)) {
+            socket.emit('errorMessage', 'Ambii jucători trebuie să confirme Ready în lobby înainte de rematch.');
+            return;
+        }
+
+        const restartPayload = gameService.restartRound(room, getDuelLobbySettings(room));
         if (!restartPayload) {
-            socket.emit('errorMessage', 'Nu am putut reporni runda. Alege mai întâi o dificultate.');
+            socket.emit('errorMessage', 'Nu am putut reporni runda. Verifică setările din lobby.');
             return;
         }
 

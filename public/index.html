@@ -6,6 +6,7 @@
     <title>F1 Guesser</title>
     <script src="/js/themeBootstrap.js?v=6afc6a3773845bb4"></script>
 <link rel="stylesheet" href="/style.bundle.css?v=9b31ae015af3c57e">
+<link rel="stylesheet" href="/css/16-duel-ready.css?v=325c0498b808b8c1">
 </head>
 <body>
 
@@ -175,6 +176,14 @@
         </div>
 
         <div id="duelLobbyMembers" class="duel-lobby-members" role="group" aria-label="Jucători în lobby"></div>
+
+        <div class="duel-lobby-ready-panel" role="group" aria-label="Confirmare pregătire jucători">
+            <div>
+                <strong>Ready check</strong>
+                <p id="duelLobbyReadyHint" class="duel-lobby-ready-hint">Ambii jucători trebuie să confirme înainte de start.</p>
+            </div>
+            <button type="button" id="duelLobbyReadyBtn" class="duel-lobby-ready-btn" aria-pressed="false">Confirmă Ready</button>
+        </div>
 
         <div class="duel-lobby-settings" role="group" aria-label="Setări lobby duel">
             <div class="duel-lobby-settings-header">
@@ -572,6 +581,8 @@
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="/js/socketBridgeBootstrap.js?v=fd76646cd8126930"></script>
 <script defer src="/game.bundle.min.js?v=b219bfb3479ec0dc"></script>
+<script type="module" src="/js/duelReadyController.js?v=96b30c49ace86444"></script>
 </body>
 </html>

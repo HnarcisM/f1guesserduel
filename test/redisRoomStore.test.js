@@ -120,7 +120,10 @@ test('Redis room store restores separate keys and persists only the changed room
         buildRedisRoomKey('f1:test', 'new-room')
     ]);
     assert.deepEqual(redisClient.transactions[0][0].options, { EX: 7200 });
-    assert.deepEqual(JSON.parse(redisClient.transactions[0][0].value).room.players, {});
+    const persistedRoom = JSON.parse(redisClient.transactions[0][0].value).room;
+    assert.equal(persistedRoom.hostId, 'socket-1');
+    assert.equal(persistedRoom.players['socket-1'].username, 'Guest 1');
+    assert.equal(persistedRoom.players['socket-1'].ready, false);
 
     store.get('restored-room').roundState = 'waiting';
     store.markDirty('restored-room');

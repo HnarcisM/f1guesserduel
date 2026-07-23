@@ -79,6 +79,60 @@ function getDuelLobbySettings(room) {
     });
 }
 
+function resetDuelReadyState(room) {
+    if (!room) return false;
+
+    let changed = false;
+    for (const player of Object.values(room.players || {})) {
+        if (player.ready !== false) changed = true;
+        player.ready = false;
+    }
+    return changed;
+}
+
+function areDuelPlayersReady(room) {
+    const players = Object.values(room?.players || {});
+    return players.length === MAX_PLAYERS_PER_ROOM
+        && players.every(player => player.connected !== false && player.ready === true);
+}
+
+function getDuelReadyStatus(room) {
+    const players = Object.values(room?.players || {});
+    const connectedPlayers = players.filter(player => player.connected !== false);
+    const readyPlayers = connectedPlayers.filter(player => player.ready === true);
+
+    return {
+        playerCount: players.length,
+        connectedPlayerCount: connectedPlayers.length,
+        readyPlayerCount: readyPlayers.length,
+        allReady: areDuelPlayersReady(room)
+    };
+}
+
+function setDuelPlayerReady(room, socketId, ready) {
+    if (!room || room.roundState === 'playing') {
+        return { changed: false, reason: 'round-active', ready: false, allReady: false };
+    }
+
+    const player = getPlayer(room, socketId);
+    if (!player) {
+        return { changed: false, reason: 'not-player', ready: false, allReady: false };
+    }
+    if (player.connected === false) {
+        return { changed: false, reason: 'player-disconnected', ready: false, allReady: false };
+    }
+
+    const nextReady = ready === true;
+    const changed = player.ready !== nextReady;
+    player.ready = nextReady;
+
+    return {
+        changed,
+        ready: nextReady,
+        allReady: areDuelPlayersReady(room)
+    };
+}
+
 function createRoom(roomId, hostSocketId, authUser = null, options = {}) {
     const room = {
         roomId,
@@ -173,6 +227,7 @@ function resetMemberRoundProgress(member) {
     member.correctGuess = false;
     member.completedAt = null;
     member.guesses = [];
+    member.ready = false;
 }
 
 function addPlayerToRoom(room, socketId, authUser = null, options = {}) {
@@ -196,7 +251,10 @@ function addPlayerToRoom(room, socketId, authUser = null, options = {}) {
     if (existingMember) {
         const disconnectedAt = existingMember.member.disconnectedAt;
         const member = moveRoomMemberSocket(room, existingMember, socketId, authUser, options);
-        if (member.role === 'player') ensureMemberScoreEntry(room, member);
+        if (member.role === 'player') {
+            ensureMemberScoreEntry(room, member);
+            resetDuelReadyState(room);
+        }
         syncHostFlags(room);
         options.onReconnect?.({
             role: member.role,
@@ -215,6 +273,7 @@ function addPlayerToRoom(room, socketId, authUser = null, options = {}) {
 
     room.players[socketId] = createPlayer(room, socketId, authUser, options);
     ensureMemberScoreEntry(room, room.players[socketId]);
+    resetDuelReadyState(room);
     if (!room.hostId) {
         room.hostId = socketId;
     }
@@ -236,6 +295,7 @@ function promoteNextSpectatorToPlayer(room) {
     spectator.finished = false;
     spectator.timedOut = false;
     spectator.guesses = [];
+    spectator.ready = false;
     room.players[nextSpectatorId] = spectator;
     ensureMemberScoreEntry(room, spectator);
 
@@ -315,6 +375,7 @@ function removePlayerFromRoom(room, socketId) {
 
     if (wasPlayer) {
         promoteNextSpectatorToPlayer(room);
+        resetDuelReadyState(room);
     }
 
     if (!room.hostId) {
@@ -402,6 +463,7 @@ function markRoomMemberDisconnectedBySocketId(room, socketId) {
     const member = getRoomMember(room, socketId);
     if (!member) return null;
     markRoomMemberDisconnected(member);
+    if (member.role === 'player') resetDuelReadyState(room);
     syncHostFlags(room);
     return member;
 }
@@ -489,6 +551,10 @@ module.exports = {
     selectSpectatorAsPlayer,
     updateDuelLobbySettings,
     getDuelLobbySettings,
+    resetDuelReadyState,
+    areDuelPlayersReady,
+    getDuelReadyStatus,
+    setDuelPlayerReady,
     removePlayerFromRoom,
     removeInactiveRoomMembers,
     refreshRoomMemberAuth,

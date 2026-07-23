@@ -77,7 +77,8 @@ function createRoomMember(room, socketId, authUser = null, role = 'player', opti
         completedAt: null,
         guesses: [],
         connected: true,
-        disconnectedAt: null
+        disconnectedAt: null,
+        ready: false
     };
 }
 
@@ -114,6 +115,7 @@ function updateRoomMemberAuth(member, authUser = null, room = null) {
 function markRoomMemberDisconnected(member, now = Date.now()) {
     if (!member) return null;
     member.connected = false;
+    member.ready = false;
     if (!Number.isFinite(member.disconnectedAt)) member.disconnectedAt = now;
     return member;
 }
@@ -127,6 +129,7 @@ function reconnectRoomMember(member, socketId, authUser = null, room = null, opt
     }
     updateRoomMemberAuth(member, authUser, room);
     member.connected = true;
+    member.ready = false;
     member.disconnectedAt = null;
     return member;
 }
@@ -151,6 +154,7 @@ function resetPlayersForNewRound(room) {
         player.correctGuess = false;
         player.completedAt = null;
         player.guesses = [];
+        player.ready = false;
     }
 }
 

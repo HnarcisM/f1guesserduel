@@ -11,6 +11,21 @@ const DEFAULT_ASSETS = Object.freeze([
     },
     {
         attribute: 'href',
+        publicPath: '/css/16-duel-ready.css',
+        sourceFile: path.join('public', 'css', '16-duel-ready.css')
+    },
+    {
+        attribute: 'src',
+        publicPath: '/js/socketBridgeBootstrap.js',
+        sourceFile: path.join('public', 'js', 'socketBridgeBootstrap.js')
+    },
+    {
+        attribute: 'src',
+        publicPath: '/js/duelReadyController.js',
+        sourceFile: path.join('public', 'js', 'duelReadyController.js')
+    },
+    {
+        attribute: 'href',
         publicPath: '/style.bundle.css',
         sourceFile: path.join('public', 'style.bundle.css')
     },

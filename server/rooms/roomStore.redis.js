@@ -49,6 +49,43 @@ function buildRedisRoomLockKey(keyPrefix, roomId) {
     return `${keyPrefix}:rooms:lock:${encodeURIComponent(roomId)}`;
 }
 
+function cloneRedisSerializable(value, fallback) {
+    if (value === undefined || value === null) return fallback;
+    return JSON.parse(JSON.stringify(value));
+}
+
+function restoreRedisRoomMembers(rawMembers, role, hostId) {
+    if (!rawMembers || typeof rawMembers !== 'object' || Array.isArray(rawMembers)) return {};
+
+    return Object.fromEntries(Object.entries(rawMembers)
+        .filter(([socketId, member]) => typeof socketId === 'string' && member && typeof member === 'object')
+        .map(([socketId, member]) => [socketId, {
+            ...cloneRedisSerializable(member, {}),
+            socketId,
+            role,
+            isHost: role === 'player' && socketId === hostId,
+            connected: member.connected !== false,
+            ready: role === 'player' && member.ready === true
+        }]));
+}
+
+function hydrateRedisRoom(rawRoom, options = {}) {
+    const room = deserializeRoom(rawRoom, options);
+    if (!room) return null;
+
+    const hostId = typeof rawRoom?.hostId === 'string' ? rawRoom.hostId : null;
+    room.hostId = hostId;
+    room.players = restoreRedisRoomMembers(rawRoom?.players, 'player', hostId);
+    room.spectators = restoreRedisRoomMembers(rawRoom?.spectators, 'spectator', hostId);
+    if (!room.hostId || !room.players[room.hostId]) {
+        room.hostId = Object.keys(room.players)[0] || null;
+    }
+    for (const [socketId, player] of Object.entries(room.players)) {
+        player.isHost = socketId === room.hostId;
+    }
+    return room;
+}
+
 function deserializeRedisRooms(rawPayload, options = {}) {
     if (!rawPayload) return [];
 
@@ -59,7 +96,7 @@ function deserializeRedisRooms(rawPayload, options = {}) {
     }
 
     return rawRooms
-        .map(room => deserializeRoom(room, options))
+        .map(room => hydrateRedisRoom(room, options))
         .filter(Boolean);
 }
 
@@ -68,6 +105,10 @@ function serializeRedisRoom(room) {
     if (!serializedRoom) {
         throw new Error('Cannot persist an invalid Redis room.');
     }
+
+    serializedRoom.hostId = typeof room.hostId === 'string' ? room.hostId : null;
+    serializedRoom.players = cloneRedisSerializable(room.players || {}, {});
+    serializedRoom.spectators = cloneRedisSerializable(room.spectators || {}, {});
 
     return {
         version: ROOM_PERSISTENCE_VERSION,
@@ -81,7 +122,7 @@ function deserializeRedisRoom(rawPayload, options = {}) {
 
     const parsed = JSON.parse(rawPayload);
     const rawRoom = parsed?.room || parsed;
-    const room = deserializeRoom(rawRoom, options);
+    const room = hydrateRedisRoom(rawRoom, options);
     if (!room) {
         throw new Error('Redis room entry has an invalid format.');
     }

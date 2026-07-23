@@ -20,7 +20,8 @@ function serializeRoomMember(member, options = {}) {
         isHost: member.isHost,
         attempts: typeof member.attempts === 'number' ? member.attempts : 0,
         finished: Boolean(member.finished),
-        timedOut: Boolean(member.timedOut)
+        timedOut: Boolean(member.timedOut),
+        ready: member.role === 'player' && member.ready === true
     };
 
     if (options.includeGuesses) {
@@ -40,7 +41,8 @@ function serializeRoomMemberSummary(member, options = {}) {
         attempts: typeof member.attempts === 'number' ? member.attempts : 0,
         finished: Boolean(member.finished),
         timedOut: Boolean(member.timedOut),
-        connected: member.connected !== false
+        connected: member.connected !== false,
+        ready: member.role === 'player' && member.ready === true
     };
 }
 

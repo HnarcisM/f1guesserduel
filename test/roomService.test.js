@@ -9,6 +9,10 @@ const {
     markRoomMemberDisconnectedBySocketId,
     selectSpectatorAsPlayer,
     refreshRoomMemberAuth,
+    resetDuelReadyState,
+    areDuelPlayersReady,
+    getDuelReadyStatus,
+    setDuelPlayerReady,
     getPlayer,
     getSpectator,
     getPlayerCount,
@@ -551,4 +555,62 @@ test('public room state exposes opponent progress without guesses for finished p
     assert.equal(state.players[1].attempts, 2);
     assert.equal(state.players[1].finished, false);
     assert.equal(Object.prototype.hasOwnProperty.call(state.players[1], 'guesses'), false);
+});
+
+
+test('both connected Duel players must confirm Ready before start', () => {
+    const room = createRoom('ready-room', 'socket-host');
+    addPlayerToRoom(room, 'socket-player');
+
+    assert.equal(areDuelPlayersReady(room), false);
+    assert.deepEqual(getDuelReadyStatus(room), {
+        playerCount: 2,
+        connectedPlayerCount: 2,
+        readyPlayerCount: 0,
+        allReady: false
+    });
+
+    const hostReady = setDuelPlayerReady(room, 'socket-host', true);
+    assert.equal(hostReady.changed, true);
+    assert.equal(hostReady.allReady, false);
+
+    const playerReady = setDuelPlayerReady(room, 'socket-player', true);
+    assert.equal(playerReady.changed, true);
+    assert.equal(playerReady.allReady, true);
+    assert.equal(areDuelPlayersReady(room), true);
+    assert.equal(buildPublicRoomState(room, { recipientSocketId: 'socket-host' }).you.ready, true);
+});
+
+test('Ready confirmations reset when settings or active players change', () => {
+    const room = createRoom('ready-room', 'socket-host');
+    addPlayerToRoom(room, 'socket-player');
+    setDuelPlayerReady(room, 'socket-host', true);
+    setDuelPlayerReady(room, 'socket-player', true);
+
+    assert.equal(resetDuelReadyState(room), true);
+    assert.equal(getPlayer(room, 'socket-host').ready, false);
+    assert.equal(getPlayer(room, 'socket-player').ready, false);
+
+    setDuelPlayerReady(room, 'socket-host', true);
+    setDuelPlayerReady(room, 'socket-player', true);
+    addPlayerToRoom(room, 'socket-spectator');
+    const selected = selectSpectatorAsPlayer(room, getSpectator(room, 'socket-spectator').lobbyId);
+
+    assert.equal(selected.changed, true);
+    assert.equal(areDuelPlayersReady(room), false);
+    assert.equal(Object.values(room.players).every(player => player.ready === false), true);
+});
+
+test('disconnecting an active player resets Ready for the whole lobby', () => {
+    const room = createRoom('ready-room', 'socket-host', null, { clientId: 'host-client' });
+    addPlayerToRoom(room, 'socket-player', null, { clientId: 'player-client' });
+    setDuelPlayerReady(room, 'socket-host', true);
+    setDuelPlayerReady(room, 'socket-player', true);
+
+    markRoomMemberDisconnectedBySocketId(room, 'socket-player');
+
+    assert.equal(getPlayer(room, 'socket-player').connected, false);
+    assert.equal(getPlayer(room, 'socket-host').ready, false);
+    assert.equal(getPlayer(room, 'socket-player').ready, false);
+    assert.equal(areDuelPlayersReady(room), false);
 });

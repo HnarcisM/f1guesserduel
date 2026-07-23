@@ -7,6 +7,8 @@ const {
     addPlayerToRoom,
     selectSpectatorAsPlayer,
     updateDuelLobbySettings,
+    resetDuelReadyState,
+    setDuelPlayerReady,
     getPlayer,
     isHost,
     isSpectator,
@@ -116,10 +118,39 @@ function registerDuelLobbySocketHandlers(context) {
             return;
         }
 
-        updateDuelLobbySettings(room, roundOptions);
+        const settingsResult = updateDuelLobbySettings(room, roundOptions);
+        if (settingsResult.changed) resetDuelReadyState(room);
         roomStore.markDirty?.(roomId);
         await emitRoomStateUpdate(roomId, 'lobby-settings-updated');
         await emitRoomListUpdate();
+    });
+
+    onSocketEvent('setDuelReady', async (payload = {}) => {
+        const roomId = state.currentRoom;
+        if (!roomId) return;
+        const room = roomStore.get(roomId);
+        if (!room) return;
+
+        if (isSpectator(room, socket.id)) {
+            socket.emit('errorMessage', 'Spectatorii nu pot confirma Ready pentru rundă.');
+            return;
+        }
+
+        const ready = payload && typeof payload === 'object'
+            ? payload.ready === true
+            : payload === true;
+        const result = setDuelPlayerReady(room, socket.id, ready);
+        if (result.reason === 'round-active') {
+            socket.emit('errorMessage', 'Ready poate fi schimbat doar în lobby.');
+            return;
+        }
+        if (result.reason) {
+            socket.emit('errorMessage', 'Nu am putut actualiza starea Ready. Reîncearcă după reconectare.');
+            return;
+        }
+
+        roomStore.markDirty?.(roomId);
+        await emitRoomStateUpdate(roomId, ready ? 'player-ready' : 'player-not-ready');
     });
 
     onSocketEvent('selectDuelPlayer', async (payload = {}) => {

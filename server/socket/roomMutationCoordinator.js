@@ -3,6 +3,7 @@ const { isValidRoomId } = require('../config/constants');
 const DISTRIBUTED_ROOM_MUTATION_EVENTS = new Set([
     'joinRoom',
     'updateDuelLobbySettings',
+    'setDuelReady',
     'selectDuelPlayer',
     'refreshAuthUser',
     'setDifficulty',
