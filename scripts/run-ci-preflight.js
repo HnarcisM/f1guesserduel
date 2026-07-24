@@ -10,8 +10,15 @@ const GENERATED_FILES = Object.freeze([
     'public/service-worker.js'
 ]);
 
-function executable(name) {
-    return process.platform === 'win32' ? `${name}.cmd` : name;
+function executable(name, platform = process.platform) {
+    return platform === 'win32' ? `${name}.cmd` : name;
+}
+
+function resolvePythonCommand({ platform = process.platform, env = process.env } = {}) {
+    const configuredPython = String(env.PYTHON || '').trim();
+    if (configuredPython) return { command: configuredPython, args: [] };
+    if (platform === 'win32') return { command: 'py', args: ['-3'] };
+    return { command: 'python', args: [] };
 }
 
 function runStep({ name, command, args = [], env = process.env }) {
@@ -33,14 +40,29 @@ function runStep({ name, command, args = [], env = process.env }) {
     return { name, exitCode };
 }
 
-function buildSteps({ withServices = false } = {}) {
-    const npm = executable('npm');
+function buildSteps({
+    withServices = false,
+    platform = process.platform,
+    env = process.env
+} = {}) {
+    const npm = executable('npm', platform);
+    const python = resolvePythonCommand({ platform, env });
     const steps = [
+        {
+            name: 'Validate CI Python helpers',
+            command: python.command,
+            args: [...python.args, 'test/ci_backend_tests_test.py']
+        },
         { name: 'Build production', command: npm, args: ['run', 'build'] },
         { name: 'Backend tests and coverage', command: npm, args: ['run', 'test:coverage'] },
         { name: 'Responsive and visual E2E', command: npm, args: ['run', 'test:e2e:responsive'] },
         { name: 'Profile and reconnection E2E', command: npm, args: ['run', 'test:e2e:flows'] },
         { name: 'Accessibility E2E', command: npm, args: ['run', 'test:e2e:accessibility'] },
+        {
+            name: 'Whitespace validation',
+            command: 'git',
+            args: ['diff', '--check']
+        },
         {
             name: 'Generated frontend files are committed',
             command: 'git',
@@ -49,7 +71,7 @@ function buildSteps({ withServices = false } = {}) {
     ];
 
     if (withServices) {
-        steps.splice(2, 0, {
+        steps.splice(3, 0, {
             name: 'Redis and PostgreSQL integration tests',
             command: npm,
             args: ['run', 'test:integration:services']
@@ -90,5 +112,6 @@ module.exports = {
     buildSteps,
     executable,
     parseArguments,
+    resolvePythonCommand,
     runStep
 };

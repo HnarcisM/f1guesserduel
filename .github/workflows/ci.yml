@@ -2,6 +2,7 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
     inputs:
@@ -249,5 +250,49 @@ jobs:
           done
           if [[ "$failed" == "1" ]]; then
             echo "::error title=Browser quality tests failed::See the job summary and browser-quality artifact for every failing suite."
+          fi
+          exit "$failed"
+
+
+  ci-gate:
+    name: CI Gate
+    if: always()
+    needs: [verify, integration-services, responsive-visual]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+
+    steps:
+      - name: Publish final CI summary
+        shell: bash
+        env:
+          VERIFY_RESULT: ${{ needs.verify.result }}
+          INTEGRATION_RESULT: ${{ needs.integration-services.result }}
+          BROWSER_RESULT: ${{ needs.responsive-visual.result }}
+        run: |
+          {
+            echo "## Final CI gate"
+            echo
+            echo "| Required job | Result |"
+            echo "| --- | --- |"
+            echo "| Test and build | ${VERIFY_RESULT} |"
+            echo "| Redis and PostgreSQL integration | ${INTEGRATION_RESULT} |"
+            echo "| Browser quality | ${BROWSER_RESULT} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce required CI jobs
+        shell: bash
+        env:
+          VERIFY_RESULT: ${{ needs.verify.result }}
+          INTEGRATION_RESULT: ${{ needs.integration-services.result }}
+          BROWSER_RESULT: ${{ needs.responsive-visual.result }}
+        run: |
+          failed=0
+          for result in "$VERIFY_RESULT" "$INTEGRATION_RESULT" "$BROWSER_RESULT"; do
+            if [[ "$result" != "success" ]]; then
+              failed=1
+            fi
+          done
+          if [[ "$failed" == "1" ]]; then
+            echo "::error title=CI gate failed::One or more required CI jobs did not finish successfully."
           fi
           exit "$failed"

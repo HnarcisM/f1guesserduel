@@ -16,12 +16,12 @@ test('GitHub Actions CI runs for pushes and pull requests with minimal permissio
     const source = readWorkflow();
 
     assert.match(source, /^name:\s*CI$/m);
-    assert.match(source, /^on:\s*\n\s+push:\s*\n\s+pull_request:\s*\n\s+workflow_dispatch:/m);
+    assert.match(source, /^on:\s*\n\s+push:\s*\n\s+branches:\s*\[main\]\s*\n\s+pull_request:\s*\n\s+workflow_dispatch:/m);
     assert.match(source, /^permissions:\s*\n\s+contents:\s*read$/m);
     assert.match(source, /cancel-in-progress:\s*true/);
     assert.match(source, /timeout-minutes:\s*15/);
     assert.doesNotMatch(source, /runs-on:\s*ubuntu-latest/);
-    assert.equal((source.match(/runs-on:\s*ubuntu-24\.04/g) || []).length, 3);
+    assert.equal((source.match(/runs-on:\s*ubuntu-24\.04/g) || []).length, 4);
 });
 
 test('GitHub Actions CI uses locked Node dependencies and an explicit Python runtime', () => {
@@ -149,4 +149,21 @@ test('GitHub Actions CI rejects a stale committed service worker cache manifest'
         source,
         /git diff --exit-code -- public\/index\.html public\/style\.bundle\.css public\/game\.bundle\.min\.js public\/service-worker\.js/
     );
+});
+
+
+test('GitHub Actions exposes one stable final CI gate for branch protection', () => {
+    const source = readWorkflow();
+    const gate = source.split(/^  ci-gate:$/m)[1] || '';
+
+    assert.match(source, /^  ci-gate:$/m);
+    assert.match(gate, /name:\s*CI Gate/);
+    assert.match(gate, /if:\s*always\(\)/);
+    assert.match(gate, /needs:\s*\[verify, integration-services, responsive-visual\]/);
+    assert.match(gate, /VERIFY_RESULT:\s*\$\{\{ needs\.verify\.result \}\}/);
+    assert.match(gate, /INTEGRATION_RESULT:\s*\$\{\{ needs\.integration-services\.result \}\}/);
+    assert.match(gate, /BROWSER_RESULT:\s*\$\{\{ needs\.responsive-visual\.result \}\}/);
+    assert.match(gate, /name:\s*Publish final CI summary/);
+    assert.match(gate, /name:\s*Enforce required CI jobs/);
+    assert.match(gate, /CI gate failed/);
 });
