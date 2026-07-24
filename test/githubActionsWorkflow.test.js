@@ -3,7 +3,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 
-const workflowPath = path.join(__dirname, '..', '.github', 'workflows', 'ci.yml');
+const root = path.join(__dirname, '..');
+const workflowPath = path.join(root, '.github', 'workflows', 'ci.yml');
+const pythonHelperPath = path.join(root, 'scripts', 'ci_backend_tests.py');
+const pythonTestPath = path.join(root, 'test', 'ci_backend_tests_test.py');
 
 function readWorkflow() {
     return fs.readFileSync(workflowPath, 'utf8');
@@ -21,19 +24,21 @@ test('GitHub Actions CI runs for pushes and pull requests with minimal permissio
     assert.equal((source.match(/runs-on:\s*ubuntu-24\.04/g) || []).length, 3);
 });
 
-test('GitHub Actions CI uses Node 22 and the locked npm dependencies', () => {
+test('GitHub Actions CI uses locked Node dependencies and an explicit Python runtime', () => {
     const source = readWorkflow();
 
     assert.match(source, /uses:\s*actions\/checkout@v7/);
     assert.match(source, /uses:\s*actions\/setup-node@v7/);
     assert.match(source, /node-version:\s*['"]22\.x['"]/);
     assert.match(source, /cache:\s*npm/);
+    assert.match(source, /uses:\s*actions\/setup-python@v6/);
+    assert.match(source, /python-version:\s*['"]3\.13['"]/);
     assert.match(source, /run:\s*npm ci/);
 });
 
 test('GitHub Actions CI enforces coverage, builds and rejects stale generated frontend files', () => {
     const source = readWorkflow();
-    const coveragePosition = source.indexOf('npm run test:coverage 2>&1 | tee');
+    const coveragePosition = source.indexOf('python scripts/ci_backend_tests.py run');
     const enforcementPosition = source.indexOf('name: Enforce backend test result');
     const buildPosition = source.indexOf('run: npm run build');
     const generatedCheckPosition = source.indexOf(
@@ -55,21 +60,35 @@ test('GitHub Actions CI retains the machine-readable coverage summary', () => {
     assert.match(source, /retention-days:\s*14/);
 });
 
-test('GitHub Actions CI preserves backend test logs and publishes failed tests in the job summary', () => {
+test('GitHub Actions CI uses Python for backend logs, summaries and exit-code enforcement', () => {
     const source = readWorkflow();
 
     assert.match(source, /id:\s*backend_tests/);
-    assert.match(source, /npm run test:coverage 2>&1 \| tee test-results\/ci\/backend-tests\.log/);
-    assert.match(source, /test_exit_code=\$\{PIPESTATUS\[0\]\}/);
-    assert.match(source, /GITHUB_STEP_SUMMARY/);
-    assert.ok(source.includes("grep -q '^✖ failing tests:'"));
-    assert.ok(source.includes("awk '/^✖ failing tests:/{show=1} show{print}'"));
-    assert.ok(source.includes('tail -n 100 "$log_file"'));
+    assert.match(source, /python scripts\/ci_backend_tests\.py run/);
+    assert.match(source, /-- npm run test:coverage/);
+    assert.match(source, /python scripts\/ci_backend_tests\.py summary/);
+    assert.match(source, /python scripts\/ci_backend_tests\.py enforce/);
+    assert.match(source, /python test\/ci_backend_tests_test\.py/);
+    assert.doesNotMatch(source, /shell:\s*bash/);
+    assert.doesNotMatch(source, /PIPESTATUS|grep -q|awk '\/\^✖ failing tests|tail -n/);
     assert.match(source, /name:\s*backend-test-log-\$\{\{ github\.run_attempt \}\}/);
     assert.match(source, /path:\s*test-results\/ci\/backend-tests\.log/);
     assert.match(source, /TEST_EXIT_CODE:\s*\$\{\{ steps\.backend_tests\.outputs\.exit_code \}\}/);
-    assert.match(source, /Backend tests failed/);
-    assert.ok(source.includes('exit "${TEST_EXIT_CODE:-1}"'));
+});
+
+test('Python CI helper is dependency-free and has focused unit tests', () => {
+    const helperSource = fs.readFileSync(pythonHelperPath, 'utf8');
+    const testSource = fs.readFileSync(pythonTestPath, 'utf8');
+
+    assert.match(helperSource, /subprocess\.Popen/);
+    assert.match(helperSource, /GITHUB_OUTPUT/);
+    assert.match(helperSource, /GITHUB_STEP_SUMMARY/);
+    assert.match(helperSource, /FAILURE_MARKER = "✖ failing tests:"/);
+    assert.match(helperSource, /::error title=Backend tests failed::/);
+    assert.doesNotMatch(helperSource, /import (requests|yaml|click|pytest)/);
+    assert.match(testSource, /class CiBackendTestsScriptTest\(unittest\.TestCase\)/);
+    assert.match(testSource, /test_run_command_streams_output_and_records_original_exit_code/);
+    assert.match(testSource, /test_failure_summary_keeps_totals_and_failed_test_section/);
 });
 
 test('GitHub Actions CI provisions healthy Redis and PostgreSQL services', () => {
