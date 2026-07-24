@@ -300,7 +300,7 @@ test('service worker removes only obsolete app caches and surfaces missing offli
             async keys() {
                 return [
                     'f1-guesser-static-old',
-                    'f1-guesser-static-608ef1f05f56370c9ed3',
+                    serviceWorker.STATIC_CACHE_NAME,
                     'another-app-cache'
                 ];
             },

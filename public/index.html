@@ -19,6 +19,7 @@
 <link rel="stylesheet" href="/css/20-duel-identity.css?v=884e3a5bec345dbb">
 <link rel="stylesheet" href="/css/21-feedback-settings.css?v=be4013981c050ad8">
 <link rel="stylesheet" href="/css/22-connection-status.css?v=a05172cdad41910e">
+<link rel="stylesheet" href="/css/23-game-hub.css?v=4c7171efe6f454c3">
 </head>
 <body>
 
@@ -94,25 +95,26 @@
 <main id="mainContent">
 <!-- Overlay inițial: se ascunde când este aleasă dificultatea. -->
 <div id="difficulty-overlay" class="overlay">
-    <div class="menu-container">
+    <div class="menu-container game-hub-menu">
         <h2>F1 Guesser</h2>
         <p class="subtitle">Alege modul de joc, apoi selectează dificultatea.</p>
 
-        <div class="game-mode-selection" role="group" aria-label="Selectare mod de joc">
+        <div id="gameModeHub" class="game-mode-selection game-hub" aria-label="Moduri de joc" data-game-hub-root>
+            <!-- Fallback fără JavaScript; Game Hub înlocuiește aceste carduri din registry. -->
             <button type="button" class="game-mode-card active" data-game-mode-choice="single" aria-pressed="true">
                 <span class="mode-icon">🎯</span>
-                <strong>Single Play</strong>
-                <small>Joacă solo, fără cameră și fără adversar.</small>
-            </button>
-            <button type="button" class="game-mode-card" data-game-mode-choice="duel" aria-pressed="false">
-                <span class="mode-icon">⚔️</span>
-                <strong>Duel</strong>
-                <small>Creează sau intră într-o cameră cu prietenii.</small>
+                <strong>Classic</strong>
+                <small>Experiența originală F1 Guesser.</small>
             </button>
             <button type="button" class="game-mode-card" data-game-mode-choice="daily" aria-pressed="false">
                 <span class="mode-icon">🌅</span>
                 <strong>Daily Challenge</strong>
                 <small>Provocarea zilei, separată de duel.</small>
+            </button>
+            <button type="button" class="game-mode-card" data-game-mode-choice="duel" aria-pressed="false">
+                <span class="mode-icon">⚔️</span>
+                <strong>Duel</strong>
+                <small>Creează sau intră într-o cameră cu prietenii.</small>
             </button>
         </div>
 
@@ -684,6 +686,8 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="/js/socketBridgeBootstrap.js?v=fd76646cd8126930"></script>
+<script src="/js/gameVariantRegistry.js?v=369ab4921cf9e05c"></script>
+<script src="/js/gameHubController.js?v=4b4e4dbd892aef9f"></script>
 <script defer src="/game.bundle.min.js?v=b219bfb3479ec0dc"></script>
 <script type="module" src="/js/feedbackController.js?v=5cd6b13e762a05bd"></script>
 <script type="module" src="/js/connectionStatusController.js?v=6df8af4e1cbae20a"></script>

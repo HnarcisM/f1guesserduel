@@ -182,3 +182,20 @@ test('PWA cache policy stays isolated and never caches API or Socket.IO traffic'
     assertFileBudget('public/js/pwaController.js', 5_000);
     assertFileBudget('public/service-worker.js', 9_000);
 });
+
+test('Game Hub keeps planned modes in a safe standalone registry', () => {
+    const registry = readProjectFile('public/js/gameVariantRegistry.js');
+    const controller = readProjectFile('public/js/gameHubController.js');
+    const game = readProjectFile('public/game.js');
+
+    assert.match(registry, /key: 'speed-run'/);
+    assert.match(registry, /key: 'pilot-sudoku'/);
+    assert.match(registry, /key: 'track'/);
+    assert.match(controller, /dataGameModeChoice|gameModeChoice/);
+    assert.match(controller, /replaceChildren/);
+    assert.doesNotMatch(controller, /innerHTML/);
+    assert.doesNotMatch(game, /GAME_VARIANTS|createGameHubController/);
+    assertFileBudget('public/js/gameVariantRegistry.js', 9_000);
+    assertFileBudget('public/js/gameHubController.js', 8_000);
+    assertFileBudget('public/css/23-game-hub.css', 9_000);
+});

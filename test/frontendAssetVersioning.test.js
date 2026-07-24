@@ -31,7 +31,10 @@ function createFixture() {
     writeFile(rootDir, 'public/css/20-duel-identity.css', '.duel-identity { color: white; }\n');
     writeFile(rootDir, 'public/css/21-feedback-settings.css', '.feedback-settings { color: white; }\n');
     writeFile(rootDir, 'public/css/22-connection-status.css', '.connection-status { color: green; }\n');
+    writeFile(rootDir, 'public/css/23-game-hub.css', '.game-hub { display: grid; }\n');
     writeFile(rootDir, 'public/js/socketBridgeBootstrap.js', 'bridgeSocket();\n');
+    writeFile(rootDir, 'public/js/gameVariantRegistry.js', 'installRegistry();\n');
+    writeFile(rootDir, 'public/js/gameHubController.js', 'installGameHub();\n');
     writeFile(rootDir, 'public/js/duelReadyController.js', 'installReady();\n');
     writeFile(rootDir, 'public/js/duelSeriesController.js', 'installSeries();\n');
     writeFile(rootDir, 'public/js/duelRoundHistoryController.js', 'installHistory();\n');
@@ -61,7 +64,10 @@ function createFixture() {
         '<link rel="stylesheet" href="/css/20-duel-identity.css?v=manual-version">',
         '<link rel="stylesheet" href="/css/21-feedback-settings.css?v=manual-version">',
         '<link rel="stylesheet" href="/css/22-connection-status.css?v=manual-version">',
+        '<link rel="stylesheet" href="/css/23-game-hub.css?v=manual-version">',
         '<script src="/js/socketBridgeBootstrap.js?v=manual-version"></script>',
+        '<script src="/js/gameVariantRegistry.js?v=manual-version"></script>',
+        '<script src="/js/gameHubController.js?v=manual-version"></script>',
         '<script src="/other.js?v=keep-this"></script>',
         '<script defer src="/game.bundle.min.js?v=manual-version"></script>',
         '<script type="module" src="/js/duelReadyController.js?v=manual-version"></script>',
@@ -83,13 +89,13 @@ test('frontend asset versioning replaces manual values with deterministic conten
     const firstHtml = fs.readFileSync(path.join(rootDir, 'public', 'index.html'), 'utf8');
 
     assert.equal(firstResult.changed, true);
-    assert.equal(firstResult.assets.length, 21);
+    assert.equal(firstResult.assets.length, 24);
     for (const asset of firstResult.assets) {
         assert.match(asset.version, /^[a-f0-9]{16}$/);
         assert.ok(firstHtml.includes(`${asset.publicPath}?v=${asset.version}`));
     }
     assert.match(firstHtml, /\/other\.js\?v=keep-this/);
-    assert.equal(firstResult.serviceWorker.precacheUrls.length, 24);
+    assert.equal(firstResult.serviceWorker.precacheUrls.length, 27);
     const serviceWorker = fs.readFileSync(path.join(rootDir, 'public', 'service-worker.js'), 'utf8');
     assert.match(serviceWorker, /f1-guesser-static-[a-f0-9]{20}/);
     for (const url of firstResult.serviceWorker.precacheUrls) {

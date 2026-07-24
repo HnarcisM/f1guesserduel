@@ -227,6 +227,42 @@ async function assertNoVisibleOverlap(page, firstSelector, secondSelector, label
     assert.equal(overlap, false, `${label}: ${firstSelector} se suprapune cu ${secondSelector}`);
 }
 
+
+async function assertGameHubCatalog(page, viewportLabel) {
+    const catalog = await page.evaluate(() => {
+        const root = document.getElementById('gameModeHub');
+        const cards = Array.from(document.querySelectorAll('[data-game-variant]'));
+        return {
+            ready: root?.dataset.gameHubReady === 'true',
+            keys: cards.map(card => card.dataset.gameVariant),
+            available: cards
+                .filter(card => !card.disabled)
+                .map(card => card.dataset.gameModeChoice),
+            comingSoon: cards
+                .filter(card => card.disabled)
+                .map(card => card.dataset.gameVariant),
+            horizontalOverflow: root ? root.scrollWidth > root.clientWidth + 2 : true
+        };
+    });
+
+    assert.equal(catalog.ready, true, `${viewportLabel}/home: Game Hub nu este inițializat`);
+    assert.deepEqual(catalog.keys, [
+        'classic',
+        'daily',
+        'duel',
+        'speed-run',
+        'era',
+        'streak',
+        'weekly',
+        'constructor',
+        'pilot-sudoku',
+        'track'
+    ]);
+    assert.deepEqual(catalog.available, ['single', 'daily', 'duel']);
+    assert.equal(catalog.comingSoon.length, 7);
+    assert.equal(catalog.horizontalOverflow, false, `${viewportLabel}/home: Game Hub are overflow orizontal`);
+}
+
 async function assertMainMenuShowsOnlyLoginFromHeader(page, label) {
     const presentation = await page.evaluate(() => {
         const isVisible = selector => {
@@ -271,7 +307,7 @@ async function assertMainMenuShowsOnlyLoginFromHeader(page, label) {
     );
 }
 
-async function captureState(page, viewport, stateLabel, selectors) {
+async function captureState(page, viewport, stateLabel, selectors, { compareVisual = true } = {}) {
     const fileName = `${viewport.label}-${stateLabel}.png`;
     const screenshotPath = path.join(OUTPUT_DIR, fileName);
     const screenshot = await page.screenshot({
@@ -280,7 +316,14 @@ async function captureState(page, viewport, stateLabel, selectors) {
         animations: 'disabled'
     });
     assert.ok(screenshot.length > 10_000, `${fileName}: captura PNG pare incompletă`);
-    const visualRegression = await compareWithBaseline(fileName, screenshot);
+    const visualRegression = compareVisual
+        ? await compareWithBaseline(fileName, screenshot)
+        : {
+            status: 'captured',
+            baseline: null,
+            diffRatio: null,
+            differentPixels: null
+        };
 
     const layout = await collectLayout(page, selectors);
     assertLayoutFits(layout, viewport.label, stateLabel);
@@ -311,8 +354,11 @@ test('responsive layouts match committed visual baselines', { concurrency: false
             try {
                 const page = await openAppPage(context, app.baseUrl);
                 await page.locator('#difficulty-overlay').waitFor({ state: 'visible', timeout: 7000 });
-                const home = await captureState(page, viewport, 'home', HOME_SELECTORS);
+                // Game Hub-ul se schimbă la activarea fiecărui mod; îl verificăm semantic și responsive,
+                // iar baseline-ul pixel-perfect rămâne rezervat ecranului stabil de gameplay.
+                const home = await captureState(page, viewport, 'home', HOME_SELECTORS, { compareVisual: false });
                 if (home.visualRegression.failure) visualFailures.push(home.visualRegression.failure);
+                await assertGameHubCatalog(page, viewport.label);
                 await assertMainMenuShowsOnlyLoginFromHeader(page, `${viewport.label}/home`);
 
                 await page.locator('.btn-diff.easy').click();

@@ -58,9 +58,24 @@ const DEFAULT_ASSETS = Object.freeze([
         sourceFile: path.join('public', 'css', '22-connection-status.css')
     },
     {
+        attribute: 'href',
+        publicPath: '/css/23-game-hub.css',
+        sourceFile: path.join('public', 'css', '23-game-hub.css')
+    },
+    {
         attribute: 'src',
         publicPath: '/js/socketBridgeBootstrap.js',
         sourceFile: path.join('public', 'js', 'socketBridgeBootstrap.js')
+    },
+    {
+        attribute: 'src',
+        publicPath: '/js/gameVariantRegistry.js',
+        sourceFile: path.join('public', 'js', 'gameVariantRegistry.js')
+    },
+    {
+        attribute: 'src',
+        publicPath: '/js/gameHubController.js',
+        sourceFile: path.join('public', 'js', 'gameHubController.js')
     },
     {
         attribute: 'src',
