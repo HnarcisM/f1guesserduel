@@ -136,3 +136,17 @@ test('game history retention stays isolated from account statistics and server s
     assertFileBudget('server/account/gameHistoryCleanupService.js', 8_000);
     assertFileBudget('server/account/gameHistoryRetentionRepository.js', 9_000);
 });
+
+test('audio and haptic feedback stays centralized and uses no remote media', () => {
+    const controller = readProjectFile('public/js/feedbackController.js');
+    const game = readProjectFile('public/game.js');
+
+    assert.match(controller, /FEEDBACK_STORAGE_KEY/);
+    assert.match(controller, /createSynthSoundPlayer/);
+    assert.match(controller, /navigatorObject\?\.vibrate/);
+    assert.match(controller, /onAnyOutgoing/);
+    assert.match(controller, /f1:socket-created/);
+    assert.doesNotMatch(controller, /new Audio\(|\.mp3|\.wav|\.ogg/);
+    assert.doesNotMatch(game, /feedbackController|createFeedbackController/);
+    assertFileBudget('public/js/feedbackController.js', 22_000);
+});

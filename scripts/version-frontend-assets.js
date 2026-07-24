@@ -35,6 +35,11 @@ const DEFAULT_ASSETS = Object.freeze([
         sourceFile: path.join('public', 'css', '20-duel-identity.css')
     },
     {
+        attribute: 'href',
+        publicPath: '/css/21-feedback-settings.css',
+        sourceFile: path.join('public', 'css', '21-feedback-settings.css')
+    },
+    {
         attribute: 'src',
         publicPath: '/js/socketBridgeBootstrap.js',
         sourceFile: path.join('public', 'js', 'socketBridgeBootstrap.js')
@@ -68,6 +73,11 @@ const DEFAULT_ASSETS = Object.freeze([
         attribute: 'src',
         publicPath: '/js/duelIdentityController.js',
         sourceFile: path.join('public', 'js', 'duelIdentityController.js')
+    },
+    {
+        attribute: 'src',
+        publicPath: '/js/feedbackController.js',
+        sourceFile: path.join('public', 'js', 'feedbackController.js')
     },
     {
         attribute: 'href',

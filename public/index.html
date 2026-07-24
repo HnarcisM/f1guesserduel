@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="/css/18-duel-round-history.css?v=2d04b48dd080faa8">
 <link rel="stylesheet" href="/css/19-account-game-history.css?v=cc05ef00b611d229">
 <link rel="stylesheet" href="/css/20-duel-identity.css?v=884e3a5bec345dbb">
+<link rel="stylesheet" href="/css/21-feedback-settings.css?v=79c47cf5671a732e">
 </head>
 <body>
 
@@ -67,6 +68,9 @@
     <!-- Butonul nou de partajare unificat în header -->
 	<div class="header-actions">
         <button type="button" id="authOpenBtn" class="auth-open-btn">👤 Login</button>
+        <button type="button" id="feedbackSettingsBtn" class="feedback-settings-btn" title="Setări sunet și vibrații" aria-label="Deschide setările pentru sunet și vibrații">
+            <span aria-hidden="true">⚙️</span><span class="feedback-settings-label">Setări</span>
+        </button>
         <button type="button" id="shareRoomBtn" class="share-btn" title="Copiază link-ul camerei" aria-label="Copiază link-ul camerei">
 			<span id="roomBtnText">🏁 Room: --</span>
 			<span class="share-tooltip" id="shareTooltip">Copiat!</span>
@@ -507,6 +511,14 @@
         </section>
 
         <section id="authPanelSettings" class="auth-tab-panel" role="tabpanel" aria-labelledby="authTabSettings" hidden>
+            <div class="auth-settings-card auth-feedback-settings-card">
+                <div>
+                    <strong>Sunete și vibrații</strong>
+                    <span id="authFeedbackSettingsSummary">Sunete: pornite · Vibrații: pornite</span>
+                </div>
+                <button type="button" id="authFeedbackSettingsBtn" class="auth-feedback-settings-btn">Configurează</button>
+            </div>
+
             <details class="auth-settings-card auth-settings-disclosure auth-avatar-settings">
                 <summary>
                     <span><strong>Alege avatarul</strong><small>Selectează una dintre cele 8 căști F1.</small></span>
@@ -615,9 +627,41 @@
     </div>
 </div>
 
+
+<!-- Un singur panou pentru feedback audio și haptic, disponibil atât pentru Guest, cât și din profil. -->
+<div class="feedback-backdrop" id="feedbackSettingsBackdrop" aria-hidden="true"></div>
+<section class="feedback-panel" id="feedbackSettingsPanel" role="dialog" aria-modal="true" aria-labelledby="feedbackSettingsTitle" aria-describedby="feedbackSettingsSubtitle" aria-hidden="true" tabindex="-1" inert>
+    <button type="button" class="feedback-settings-close" id="feedbackSettingsCloseBtn" aria-label="Închide setările de feedback">×</button>
+    <h2 id="feedbackSettingsTitle">Sunete și vibrații</h2>
+    <p id="feedbackSettingsSubtitle" class="feedback-panel-subtitle">Aceleași preferințe se aplică interacțiunilor, încercărilor și rezultatelor jocului.</p>
+
+    <div class="feedback-options">
+        <label class="feedback-option" for="feedbackSoundToggle">
+            <span class="feedback-option-copy"><strong>Sunete</strong><small>Confirmări scurte pentru butoane, guess și rezultatul rundei.</small></span>
+            <span class="feedback-switch">
+                <input type="checkbox" id="feedbackSoundToggle" role="switch" checked>
+                <span class="feedback-switch-track" aria-hidden="true"></span>
+            </span>
+        </label>
+
+        <label class="feedback-option" for="feedbackHapticsToggle">
+            <span class="feedback-option-copy"><strong>Efecte haptice</strong><small>Vibrații discrete pe dispozitivele compatibile.</small></span>
+            <span class="feedback-switch">
+                <input type="checkbox" id="feedbackHapticsToggle" role="switch" checked>
+                <span class="feedback-switch-track" aria-hidden="true"></span>
+            </span>
+        </label>
+    </div>
+
+    <p id="feedbackHapticsSupport" class="feedback-support-note"></p>
+    <button type="button" id="feedbackPreviewBtn" class="feedback-preview-btn" data-feedback-silent="true">Testează feedback-ul</button>
+    <p id="feedbackSettingsStatus" class="feedback-settings-status" aria-live="polite"></p>
+</section>
+
 <script src="/socket.io/socket.io.js"></script>
 <script src="/js/socketBridgeBootstrap.js?v=fd76646cd8126930"></script>
 <script defer src="/game.bundle.min.js?v=b219bfb3479ec0dc"></script>
+<script type="module" src="/js/feedbackController.js?v=2247ded45ff96e97"></script>
 <script type="module" src="/js/duelReadyController.js?v=29b02568a275c131"></script>
 <script type="module" src="/js/duelSeriesController.js?v=14bfad7705c45b6d"></script>
 <script type="module" src="/js/duelRoundHistoryController.js?v=77fa53fbfa13103a"></script>
