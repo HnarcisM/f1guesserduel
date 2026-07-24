@@ -7,6 +7,7 @@ const {
     buildLiveBoardState,
     buildPublicRoomState
 } = require('../rooms/roomService');
+const { buildPublicMemberIdentity } = require('../rooms/memberIdentity');
 
 function createRoomStateEmitter(io, roomStore, metrics = null) {
     function getLocalSockets() {
@@ -114,15 +115,16 @@ function createRoomStateEmitter(io, roomStore, metrics = null) {
 
     function emitHostStatus(socket, room) {
         const member = getRoomMember(room, socket.id);
-        const authUser = socket.user || socket.data?.authUser || null;
+        const authUser = socket.data?.duelIdentity || socket.user || socket.data?.authUser || null;
         const role = member?.role || (isSpectator(room, socket.id) ? 'spectator' : 'player');
+        const identity = buildPublicMemberIdentity(member || authUser || {});
 
         socket.emit('hostStatus', {
             isHost: isHost(room, socket.id),
             isSpectator: role === 'spectator',
             role,
-            username: member?.username || authUser?.username || 'Guest',
-            user: authUser
+            ...identity,
+            user: authUser ? identity : null
         });
     }
 

@@ -1,0 +1,98 @@
+/* Public Duel identity: avatar and account level only. */
+.duel-identity-profile {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.duel-identity-copy {
+    min-width: 0;
+    display: grid;
+    gap: 3px;
+}
+
+.duel-identity-avatar.auth-avatar-visual {
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 7px 16px rgba(0, 0, 0, 0.24);
+}
+
+.duel-identity-level {
+    display: inline-flex;
+    align-items: center;
+    width: max-content;
+    max-width: 100%;
+    border: 1px solid color-mix(in srgb, var(--accent-f1) 38%, var(--border-soft));
+    border-radius: 999px;
+    padding: 3px 7px;
+    background: color-mix(in srgb, var(--accent-f1) 13%, rgba(255, 255, 255, 0.06));
+    color: var(--text-secondary);
+    font-size: 0.7rem;
+    font-weight: 950;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.duel-identity-profile-lobby {
+    align-items: flex-start;
+}
+
+.duel-identity-profile-lobby .duel-identity-meta {
+    min-width: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+.duel-identity-profile-lobby .duel-lobby-member-status {
+    min-width: 0;
+}
+
+.duel-identity-profile-score {
+    flex: 1 1 auto;
+}
+
+.duel-identity-profile-score .duel-identity-avatar {
+    flex-basis: 34px;
+    width: 34px;
+    height: 34px;
+}
+
+.duel-identity-level-score {
+    font-size: 0.66rem;
+}
+
+.duel-identity-profile-live {
+    align-items: flex-start;
+}
+
+.duel-identity-profile-live .duel-identity-avatar {
+    flex-basis: 38px;
+    width: 38px;
+    height: 38px;
+}
+
+.duel-identity-level-live {
+    margin-top: 4px;
+}
+
+@media (max-width: 520px) {
+    .duel-identity-avatar.auth-avatar-visual {
+        flex-basis: 36px;
+        width: 36px;
+        height: 36px;
+    }
+
+    .duel-identity-profile-score .duel-identity-avatar {
+        flex-basis: 32px;
+        width: 32px;
+        height: 32px;
+    }
+
+    .duel-identity-level {
+        font-size: 0.66rem;
+    }
+}

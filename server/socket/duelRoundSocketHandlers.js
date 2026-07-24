@@ -17,7 +17,8 @@ const {
     buildPublicDuelMatch,
     isDuelMatchFinished,
     resolveRoundWinner,
-    abortDuelRound
+    abortDuelRound,
+    applyMemberIdentity
 } = require('../rooms/roomService');
 const {
     normalizeDriverId,
@@ -51,20 +52,37 @@ function registerDuelRoundSocketHandlers(context) {
         if (!room || !roundResult) return;
         roomStore.markDirty?.(roomId);
 
-        for (const accountResult of buildDuelAccountResults(roomId, room, roundResult)) {
-            recordAccountGameResultSafely({
-                accountStatsService,
-                logger,
-                ...accountResult
-            }).then(result => {
-                if (result?.stats) {
-                    io.to(accountResult.socketId).emit(
-                        'accountStatsUpdated',
-                        buildAccountStatsSocketPayload(accountResult.userId, result)
-                    );
+        const accountUpdatePromises = buildDuelAccountResults(roomId, room, roundResult)
+            .map(async accountResult => {
+                try {
+                    const result = await recordAccountGameResultSafely({
+                        accountStatsService,
+                        logger,
+                        ...accountResult
+                    });
+                    if (result?.stats) {
+                        io.to(accountResult.socketId).emit(
+                            'accountStatsUpdated',
+                            buildAccountStatsSocketPayload(accountResult.userId, result)
+                        );
+                    }
+
+                    const member = room.players?.[accountResult.socketId] || null;
+                    if (!member || !result?.progress) return false;
+                    return applyMemberIdentity(member, {
+                        username: member.username,
+                        avatarKey: member.avatarKey,
+                        level: result.progress.level
+                    });
+                } catch (error) {
+                    logger?.error?.('Duel identity refresh failed after XP update.', {
+                        error,
+                        roomId,
+                        userId: accountResult.userId
+                    });
+                    return false;
                 }
             });
-        }
 
         for (const memberSocket of await getActiveRoomSockets(roomId, room)) {
             const member = room.players?.[memberSocket.id] || room.spectators?.[memberSocket.id] || null;
@@ -78,6 +96,12 @@ function registerDuelRoundSocketHandlers(context) {
 
         await emitRoomStateUpdate(roomId, 'round-resolved');
         await emitRoomListUpdate();
+
+        const identityUpdates = await Promise.all(accountUpdatePromises);
+        if (identityUpdates.some(Boolean)) {
+            roomStore.markDirty?.(roomId);
+            await emitRoomStateUpdate(roomId, 'account-progress-updated');
+        }
     }
 
     onSocketEvent('setDifficulty', async (payload) => {

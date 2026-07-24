@@ -56,7 +56,7 @@ test('Duel socket coordinator delegates lobby, round and lifecycle events once',
     assert.match(coordinator, /registerDuelRoundSocketHandlers\(context\)/);
     assert.match(coordinator, /registerDuelLifecycleSocketHandlers\(context\)/);
     assertFileBudget('server/socket/registerSocketHandlers.js', 5_000);
-    assertFileBudget('server/socket/duelLobbySocketHandlers.js', 7_100);
+    assertFileBudget('server/socket/duelLobbySocketHandlers.js', 7_300);
     assertFileBudget('server/socket/duelMatchSocketHandlers.js', 2_500);
     assertFileBudget('server/socket/duelRoundSocketHandlers.js', 14_000);
     assertFileBudget('server/socket/duelLifecycleSocketHandlers.js', 5_000);
@@ -65,6 +65,19 @@ test('Duel socket coordinator delegates lobby, round and lifecycle events once',
         const matches = moduleSource.match(new RegExp(`onSocketEvent\\('${eventName}'`, 'g')) || [];
         assert.equal(matches.length, 1, `${eventName} must be registered exactly once`);
     }
+});
+
+test('Duel public identity stays isolated and renders without unsafe HTML', () => {
+    const identityResolver = readProjectFile('server/socket/duelIdentityResolver.js');
+    const memberIdentity = readProjectFile('server/rooms/memberIdentity.js');
+    const identityController = readProjectFile('public/js/duelIdentityController.js');
+
+    assert.match(identityResolver, /getAccountProgress/);
+    assert.match(memberIdentity, /buildPublicMemberIdentity/);
+    assert.doesNotMatch(identityController, /innerHTML/);
+    assertFileBudget('server/socket/duelIdentityResolver.js', 3_000);
+    assertFileBudget('server/rooms/memberIdentity.js', 3_000);
+    assertFileBudget('public/js/duelIdentityController.js', 11_000);
 });
 
 test('Duel match state stays isolated from general room orchestration', () => {

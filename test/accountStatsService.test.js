@@ -121,6 +121,30 @@ function createMemoryStatsRepository() {
     };
 }
 
+
+test('account progress can be fetched without loading stats or game history', async () => {
+    const repository = createMemoryStatsRepository();
+    const service = createAccountStatsService(repository);
+
+    const initial = await service.getAccountProgress(7);
+    assert.equal(initial.level, 1);
+    assert.equal(initial.totalXp, 0);
+
+    await service.recordGameResult({
+        userId: 7,
+        mode: 'single',
+        resultKey: 'single:progress-only',
+        outcome: 'win',
+        attempts: 1,
+        difficulty: 'easy'
+    });
+
+    const updated = await service.getAccountProgress(7);
+    assert.equal(updated.totalXp, 50);
+    assert.equal(updated.level, 1);
+    await assert.rejects(service.getAccountProgress('invalid'), /Invalid account user id/);
+});
+
 test('account stats aggregate modes and ignore duplicate server result keys', async () => {
     const service = createAccountStatsService(createMemoryStatsRepository());
 

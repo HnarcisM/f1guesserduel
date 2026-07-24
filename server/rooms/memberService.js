@@ -1,4 +1,8 @@
 const crypto = require('crypto');
+const {
+    buildPublicMemberIdentity,
+    applyMemberIdentity
+} = require('./memberIdentity');
 
 const DISCONNECTED_MEMBER_GRACE_MS = 2 * 60 * 1000;
 
@@ -59,13 +63,17 @@ function createRoomMember(room, socketId, authUser = null, role = 'player', opti
     const clientId = normalizeClientId(options.clientId);
     const participantKey = buildParticipantKey(authUser, clientId);
 
+    const identity = buildPublicMemberIdentity(authUser || {}, guestUsername);
+
     return {
         socketId,
         lobbyId: options.lobbyId || createLobbyMemberId(),
         clientId,
         participantKey,
         userId: authUser ? authUser.id : null,
-        username: authUser ? authUser.username : guestUsername,
+        username: identity.username,
+        avatarKey: identity.avatarKey,
+        level: identity.level,
         guestUsername,
         scoreKey: authUser ? `user:${authUser.id}` : `guest:${guestUsername}`,
         role,
@@ -98,7 +106,7 @@ function updateRoomMemberAuth(member, authUser = null, room = null) {
 
     if (authUser) {
         member.userId = authUser.id;
-        member.username = authUser.username;
+        applyMemberIdentity(member, authUser, member.guestUsername || 'Guest');
         if (!member.participantKey) {
             member.participantKey = buildParticipantKey(authUser, member.clientId);
         }
@@ -109,7 +117,7 @@ function updateRoomMemberAuth(member, authUser = null, room = null) {
     if (!member.guestUsername) {
         member.guestUsername = room ? buildGuestUsername(room) : 'Guest';
     }
-    member.username = member.guestUsername;
+    applyMemberIdentity(member, {}, member.guestUsername);
 }
 
 function markRoomMemberDisconnected(member, now = Date.now()) {
@@ -206,6 +214,7 @@ module.exports = {
     buildGuestUsername,
     normalizeClientId,
     buildParticipantKey,
+    applyMemberIdentity,
     createLobbyMemberId,
     createPlayer,
     createSpectator,

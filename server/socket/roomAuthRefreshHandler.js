@@ -1,10 +1,13 @@
 const { refreshRoomMemberAuth } = require('../rooms/roomService');
+const { resolveDuelAuthUser } = require('./duelIdentityResolver');
 
 function createRoomAuthRefreshHandler({
     socket,
     state,
     roomStore,
     sessionService,
+    accountStatsService,
+    logger,
     emitHostStatus,
     emitRoomStateUpdate,
     emitRoomRoleStatuses,
@@ -20,16 +23,23 @@ function createRoomAuthRefreshHandler({
             ? await sessionService.getUserBySocketAuthToken(socketAuthToken)
             : null;
 
+        const duelAuthUser = await resolveDuelAuthUser({
+            authUser,
+            accountStatsService,
+            logger
+        });
+
         socket.user = authUser;
         socket.data = socket.data || {};
         socket.data.authUser = authUser || null;
+        socket.data.duelIdentity = duelAuthUser;
         if (socketAuthToken && !authUser) socket.emit('authRefreshFailed');
         if (!room) {
             acknowledge?.({ authenticated: Boolean(authUser) });
             return;
         }
 
-        const member = refreshRoomMemberAuth(room, socket.id, authUser);
+        const member = refreshRoomMemberAuth(room, socket.id, duelAuthUser);
         if (!member) {
             acknowledge?.({ authenticated: Boolean(authUser) });
             return;

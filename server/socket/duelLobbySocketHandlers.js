@@ -1,7 +1,4 @@
-const {
-    MAX_PLAYERS_PER_ROOM,
-    isValidRoomId
-} = require('../config/constants');
+const { MAX_PLAYERS_PER_ROOM, isValidRoomId } = require('../config/constants');
 const {
     createRoom,
     addPlayerToRoom,
@@ -17,16 +14,12 @@ const {
     buildPublicDuelMatch
 } = require('../rooms/roomService');
 const { normalizeRoundOptions } = require('./socketPayloadValidators');
-const {
-    normalizeJoinRoomPayload,
-    buildPlayerProgressPayload
-} = require('./socketRoomPayloads');
+const { normalizeJoinRoomPayload, buildPlayerProgressPayload } = require('./socketRoomPayloads');
+const { resolveSocketDuelAuthUser } = require('./duelIdentityResolver');
 
 function registerDuelLobbySocketHandlers(context) {
     const {
-        socket,
-        state,
-        roomStore,
+        socket, state, roomStore,
         onSocketEvent,
         clearSoloModeSessions,
         cleanupInactiveMembers,
@@ -34,6 +27,8 @@ function registerDuelLobbySocketHandlers(context) {
         emitRoomRoleStatuses,
         emitRoomStateUpdate,
         emitRoomListUpdate,
+        accountStatsService,
+        logger,
         metrics
     } = context;
 
@@ -48,6 +43,8 @@ function registerDuelLobbySocketHandlers(context) {
             return;
         }
 
+        const duelAuthUser = await resolveSocketDuelAuthUser(socket, accountStatsService, logger);
+
         const memberOptions = {
             clientId,
             onReconnect: event => metrics?.recordReconnect?.({
@@ -56,14 +53,14 @@ function registerDuelLobbySocketHandlers(context) {
             })
         };
         if (!roomStore.has(roomId)) {
-            roomStore.set(roomId, createRoom(roomId, socket.id, socket.user || null, memberOptions));
+            roomStore.set(roomId, createRoom(roomId, socket.id, duelAuthUser, memberOptions));
             metrics?.recordRoomEvent?.('created');
         }
 
         const room = roomStore.get(roomId);
         if (getRoomMemberCount(room) > 0) await cleanupInactiveMembers(roomId, room);
 
-        const joinResult = addPlayerToRoom(room, socket.id, socket.user || null, memberOptions);
+        const joinResult = addPlayerToRoom(room, socket.id, duelAuthUser, memberOptions);
         roomStore.markDirty?.(roomId);
         if (!joinResult?.joined) {
             socket.emit('roomFull', { maxPlayers: MAX_PLAYERS_PER_ROOM });

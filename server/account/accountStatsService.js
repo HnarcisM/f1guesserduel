@@ -376,6 +376,15 @@ function createAccountStatsService(databaseOrRepository) {
         return buildAccountStats(await repository.getStatsRows(normalizedUserId));
     }
 
+    async function getAccountProgress(userId) {
+        const normalizedUserId = normalizeUserId(userId);
+        if (!normalizedUserId) throw new Error('Invalid account user id.');
+        const progressRow = typeof repository.getProgressRow === 'function'
+            ? await repository.getProgressRow(normalizedUserId)
+            : null;
+        return buildAccountProgress(progressRow);
+    }
+
     async function getAccountDashboard(userId, { historyLimit = DEFAULT_ACCOUNT_HISTORY_LIMIT } = {}) {
         const normalizedUserId = normalizeUserId(userId);
         if (!normalizedUserId) throw new Error('Invalid account user id.');
@@ -455,6 +464,7 @@ function createAccountStatsService(databaseOrRepository) {
 
     return {
         getAccountStats,
+        getAccountProgress,
         getAccountDashboard,
         getDailyChallengeStatus,
         claimDailyChallenge,

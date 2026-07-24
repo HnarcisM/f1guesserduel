@@ -1,4 +1,5 @@
 const { applyRoundToDuelMatch } = require('./duelMatchService');
+const { buildPublicMemberIdentity } = require('./memberIdentity');
 function buildScoreKey(member) {
     if (!member) return null;
     if (member.scoreKey) return member.scoreKey;
@@ -89,7 +90,7 @@ function buildPublicScoreboard(room) {
             const scoreKey = ensureMemberScoreKey(player);
             const entry = scoreKey ? room.scoreboard?.[scoreKey] : null;
             return {
-                username: player.username,
+                ...buildPublicMemberIdentity(player),
                 wins: typeof entry?.wins === 'number' ? entry.wins : 0
             };
         });

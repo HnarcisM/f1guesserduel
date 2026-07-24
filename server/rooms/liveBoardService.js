@@ -3,6 +3,7 @@ const { buildPublicRoundResult } = require('./roundResultService');
 const { buildPublicScoreboard } = require('./scoreboardService');
 const { buildPublicDuelMatch } = require('./duelMatchService');
 const { buildPublicRoundHistory } = require('./roundHistoryService');
+const { buildPublicMemberIdentity } = require('./memberIdentity');
 
 function serializeGuessEntry(entry) {
     return {
@@ -15,9 +16,10 @@ function serializeGuessEntry(entry) {
 }
 
 function serializeRoomMember(member, options = {}) {
+    const identity = buildPublicMemberIdentity(member || {});
     const serialized = {
         lobbyId: member.lobbyId || null,
-        username: member.username,
+        ...identity,
         role: member.role,
         isHost: member.isHost,
         attempts: typeof member.attempts === 'number' ? member.attempts : 0,
@@ -36,7 +38,7 @@ function serializeRoomMember(member, options = {}) {
 function serializeRoomMemberSummary(member, options = {}) {
     return {
         lobbyId: member.lobbyId || null,
-        username: member.username,
+        ...buildPublicMemberIdentity(member || {}),
         role: member.role,
         isHost: member.isHost,
         isYou: Boolean(options.isYou),
