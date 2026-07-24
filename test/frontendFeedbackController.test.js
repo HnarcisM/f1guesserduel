@@ -29,6 +29,10 @@ function createElement(id, tagName = 'button') {
         textContent: '',
         dataset: {},
         attributes: {},
+        styleValues: {},
+        style: {
+            setProperty(name, value) { element.styleValues[name] = String(value); }
+        },
         classList: createClassList(),
         focusCalls: 0,
         setAttribute(name, value) { this.attributes[name] = String(value); },
@@ -162,8 +166,10 @@ test('one feedback controller powers both header and profile triggers', async ()
         assert.match(elements.get('authFeedbackSettingsSummary').textContent, /Sunete: oprite/);
         assert.equal(elements.get('feedbackSoundVolume').value, '70');
         assert.equal(elements.get('feedbackSoundVolume').disabled, true);
+        assert.equal(elements.get('feedbackSoundVolume').styleValues['--feedback-range-progress'], '70%');
         assert.equal(elements.get('feedbackHapticIntensity').value, '70');
         assert.equal(elements.get('feedbackHapticIntensity').disabled, false);
+        assert.equal(elements.get('feedbackHapticIntensity').styleValues['--feedback-range-progress'], '70%');
         assert.match(elements.get('feedbackHapticsSupport').textContent, /durata și ritmul/);
 
         elements.get('feedbackSettingsBtn').dispatch('click');
@@ -189,6 +195,7 @@ test('one feedback controller powers both header and profile triggers', async ()
         elements.get('feedbackSoundVolume').dispatch('change');
         assert.equal(controller.getSettings().soundVolume, 35);
         assert.equal(elements.get('feedbackSoundVolumeValue').textContent, '35%');
+        assert.equal(elements.get('feedbackSoundVolume').styleValues['--feedback-range-progress'], '35%');
         assert.equal(sounds.at(-1), 'preview');
         assert.equal(soundVolumes.at(-1), 35);
 
@@ -196,15 +203,21 @@ test('one feedback controller powers both header and profile triggers', async ()
         elements.get('feedbackHapticIntensity').dispatch('input');
         elements.get('feedbackHapticIntensity').dispatch('change');
         assert.equal(controller.getSettings().hapticIntensity, 40);
+        assert.equal(elements.get('feedbackHapticIntensity').styleValues['--feedback-range-progress'], '40%');
         assert.equal(haptics.at(-1), 'preview');
         assert.equal(hapticIntensities.at(-1), 40);
+
+        controller.updateSettings({ soundVolume: 100, hapticIntensity: 100 });
+        assert.equal(elements.get('feedbackSoundVolume').styleValues['--feedback-range-progress'], '100%');
+        assert.equal(elements.get('feedbackHapticIntensity').styleValues['--feedback-range-progress'], '100%');
+        controller.updateSettings({ soundVolume: 35, hapticIntensity: 40 });
 
         elements.get('feedbackHapticsToggle').checked = false;
         elements.get('feedbackHapticsToggle').dispatch('change');
         assert.deepEqual(controller.getSettings(), {
             soundEnabled: true, soundVolume: 35, hapticsEnabled: false, hapticIntensity: 40
         });
-        assert.equal(writes.length, 4);
+        assert.equal(writes.length, 6);
         assert.deepEqual(JSON.parse(writes.at(-1).value), controller.getSettings());
 
         assert.equal(controller.triggerGuessResult({ results: { name: 'green' } }), 'partial');

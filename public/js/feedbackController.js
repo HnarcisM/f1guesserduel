@@ -81,6 +81,12 @@ function normalizePercent(value, fallback) {
     return Math.round(Math.min(MAX_PERCENT, Math.max(MIN_PERCENT, parsed)));
 }
 
+function renderRangeProgress(rangeElement, value) {
+    if (!rangeElement) return;
+    const normalizedValue = normalizePercent(value, MIN_PERCENT);
+    rangeElement.style?.setProperty?.('--feedback-range-progress', `${normalizedValue}%`);
+}
+
 export function normalizeFeedbackSettings(value = {}) {
     const source = value && typeof value === 'object' ? value : {};
     return {
@@ -258,6 +264,7 @@ export function createFeedbackController({
         if (els.soundVolume) {
             els.soundVolume.value = String(settings.soundVolume);
             els.soundVolume.disabled = !settings.soundEnabled;
+            renderRangeProgress(els.soundVolume, settings.soundVolume);
         }
         if (els.soundVolumeValue) els.soundVolumeValue.textContent = `${settings.soundVolume}%`;
         if (els.hapticsToggle) {
@@ -267,6 +274,7 @@ export function createFeedbackController({
         if (els.hapticIntensity) {
             els.hapticIntensity.value = String(settings.hapticIntensity);
             els.hapticIntensity.disabled = !settings.hapticsEnabled;
+            renderRangeProgress(els.hapticIntensity, settings.hapticIntensity);
         }
         if (els.hapticIntensityValue) els.hapticIntensityValue.textContent = `${settings.hapticIntensity}%`;
         if (els.summary) {

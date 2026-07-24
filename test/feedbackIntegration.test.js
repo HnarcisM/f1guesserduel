@@ -45,6 +45,9 @@ test('feedback implementation does not ship remote audio assets or unsafe markup
 
     assert.doesNotMatch(controller, /innerHTML|new Audio\(|fetch\(|\.mp3|\.wav|\.ogg/);
     assert.doesNotMatch(css, /url\(/);
+    assert.match(css, /--feedback-range-progress/);
+    assert.match(css, /::-webkit-slider-thumb/);
+    assert.match(controller, /renderRangeProgress/);
     assert.match(controller, /AudioContext/);
     assert.match(controller, /vibrate/);
 });
