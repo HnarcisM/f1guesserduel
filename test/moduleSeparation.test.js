@@ -150,3 +150,17 @@ test('audio and haptic feedback stays centralized and uses no remote media', () 
     assert.doesNotMatch(game, /feedbackController|createFeedbackController/);
     assertFileBudget('public/js/feedbackController.js', 24_000);
 });
+
+
+test('global connection status stays isolated and uses the shared socket bridge', () => {
+    const controller = readProjectFile('public/js/connectionStatusController.js');
+    const game = readProjectFile('public/game.js');
+
+    assert.match(controller, /f1:socket-created/);
+    assert.match(controller, /reconnect_attempt/);
+    assert.match(controller, /reconnect_failed/);
+    assert.match(controller, /addEventListener\?\.\('offline'/);
+    assert.doesNotMatch(controller, /innerHTML/);
+    assert.doesNotMatch(game, /connectionStatusController|createConnectionStatusController/);
+    assertFileBudget('public/js/connectionStatusController.js', 12_000);
+});

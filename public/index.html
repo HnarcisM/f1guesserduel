@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="/css/19-account-game-history.css?v=cc05ef00b611d229">
 <link rel="stylesheet" href="/css/20-duel-identity.css?v=884e3a5bec345dbb">
 <link rel="stylesheet" href="/css/21-feedback-settings.css?v=be4013981c050ad8">
+<link rel="stylesheet" href="/css/22-connection-status.css?v=a05172cdad41910e">
 </head>
 <body>
 
@@ -78,6 +79,11 @@
 		<div class="player-badge" id="duelStatus">Online: 0</div>
 	</div>
 </header>
+
+<div id="connectionStatus" class="connection-status" role="status" aria-live="polite" aria-atomic="true" aria-label="Se încearcă conectarea la server." title="Se încearcă conectarea la server." data-connection-state="reconnecting">
+    <span class="connection-status-dot" aria-hidden="true"></span>
+    <span id="connectionStatusLabel" class="connection-status-label">Conectare…</span>
+</div>
 
 <main id="mainContent">
 <!-- Overlay inițial: se ascunde când este aleasă dificultatea. -->
@@ -674,6 +680,7 @@
 <script src="/js/socketBridgeBootstrap.js?v=fd76646cd8126930"></script>
 <script defer src="/game.bundle.min.js?v=b219bfb3479ec0dc"></script>
 <script type="module" src="/js/feedbackController.js?v=5cd6b13e762a05bd"></script>
+<script type="module" src="/js/connectionStatusController.js?v=6df8af4e1cbae20a"></script>
 <script type="module" src="/js/duelReadyController.js?v=29b02568a275c131"></script>
 <script type="module" src="/js/duelSeriesController.js?v=14bfad7705c45b6d"></script>
 <script type="module" src="/js/duelRoundHistoryController.js?v=77fa53fbfa13103a"></script>

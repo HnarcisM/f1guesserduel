@@ -40,6 +40,11 @@ const DEFAULT_ASSETS = Object.freeze([
         sourceFile: path.join('public', 'css', '21-feedback-settings.css')
     },
     {
+        attribute: 'href',
+        publicPath: '/css/22-connection-status.css',
+        sourceFile: path.join('public', 'css', '22-connection-status.css')
+    },
+    {
         attribute: 'src',
         publicPath: '/js/socketBridgeBootstrap.js',
         sourceFile: path.join('public', 'js', 'socketBridgeBootstrap.js')
@@ -78,6 +83,11 @@ const DEFAULT_ASSETS = Object.freeze([
         attribute: 'src',
         publicPath: '/js/feedbackController.js',
         sourceFile: path.join('public', 'js', 'feedbackController.js')
+    },
+    {
+        attribute: 'src',
+        publicPath: '/js/connectionStatusController.js',
+        sourceFile: path.join('public', 'js', 'connectionStatusController.js')
     },
     {
         attribute: 'href',

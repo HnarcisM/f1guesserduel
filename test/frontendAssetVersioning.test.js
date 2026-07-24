@@ -25,6 +25,7 @@ function createFixture() {
     writeFile(rootDir, 'public/css/19-account-game-history.css', '.account-history { color: white; }\n');
     writeFile(rootDir, 'public/css/20-duel-identity.css', '.duel-identity { color: white; }\n');
     writeFile(rootDir, 'public/css/21-feedback-settings.css', '.feedback-settings { color: white; }\n');
+    writeFile(rootDir, 'public/css/22-connection-status.css', '.connection-status { color: green; }\n');
     writeFile(rootDir, 'public/js/socketBridgeBootstrap.js', 'bridgeSocket();\n');
     writeFile(rootDir, 'public/js/duelReadyController.js', 'installReady();\n');
     writeFile(rootDir, 'public/js/duelSeriesController.js', 'installSeries();\n');
@@ -33,6 +34,7 @@ function createFixture() {
     writeFile(rootDir, 'public/js/duelRoomBrowserSeriesController.js', 'installRoomSeries();\n');
     writeFile(rootDir, 'public/js/duelIdentityController.js', 'installDuelIdentity();\n');
     writeFile(rootDir, 'public/js/feedbackController.js', 'installFeedback();\n');
+    writeFile(rootDir, 'public/js/connectionStatusController.js', 'installConnectionStatus();\n');
     writeFile(rootDir, 'public/style.bundle.css', '.app { color: red; }\n');
     writeFile(rootDir, 'public/game.bundle.min.js', 'startGame();\n');
     writeFile(rootDir, 'public/index.html', [
@@ -44,6 +46,7 @@ function createFixture() {
         '<link rel="stylesheet" href="/css/19-account-game-history.css?v=manual-version">',
         '<link rel="stylesheet" href="/css/20-duel-identity.css?v=manual-version">',
         '<link rel="stylesheet" href="/css/21-feedback-settings.css?v=manual-version">',
+        '<link rel="stylesheet" href="/css/22-connection-status.css?v=manual-version">',
         '<script src="/js/socketBridgeBootstrap.js?v=manual-version"></script>',
         '<script src="/other.js?v=keep-this"></script>',
         '<script defer src="/game.bundle.min.js?v=manual-version"></script>',
@@ -53,7 +56,8 @@ function createFixture() {
         '<script type="module" src="/js/accountGameHistoryController.js?v=manual-version"></script>',
         '<script type="module" src="/js/duelRoomBrowserSeriesController.js?v=manual-version"></script>',
         '<script type="module" src="/js/duelIdentityController.js?v=manual-version"></script>',
-        '<script type="module" src="/js/feedbackController.js?v=manual-version"></script>'
+        '<script type="module" src="/js/feedbackController.js?v=manual-version"></script>',
+        '<script type="module" src="/js/connectionStatusController.js?v=manual-version"></script>'
     ].join('\n'));
     return rootDir;
 }
@@ -64,7 +68,7 @@ test('frontend asset versioning replaces manual values with deterministic conten
     const firstHtml = fs.readFileSync(path.join(rootDir, 'public', 'index.html'), 'utf8');
 
     assert.equal(firstResult.changed, true);
-    assert.equal(firstResult.assets.length, 17);
+    assert.equal(firstResult.assets.length, 19);
     for (const asset of firstResult.assets) {
         assert.match(asset.version, /^[a-f0-9]{16}$/);
         assert.ok(firstHtml.includes(`${asset.publicPath}?v=${asset.version}`));

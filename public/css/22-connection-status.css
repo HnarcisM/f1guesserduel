@@ -1,0 +1,110 @@
+/* Indicator global pentru lifecycle-ul conexiunii Socket.IO. */
+.connection-status {
+    --connection-status-color: var(--warning);
+    position: fixed;
+    left: max(14px, env(safe-area-inset-left));
+    bottom: max(14px, env(safe-area-inset-bottom));
+    z-index: 1900;
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-sizing: border-box;
+    padding: 7px 12px;
+    border: 1px solid color-mix(in srgb, var(--connection-status-color) 46%, var(--border-soft));
+    border-radius: var(--radius-pill);
+    background: color-mix(in srgb, var(--surface-elevated) 94%, transparent);
+    color: var(--text-primary);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    font-size: 0.78rem;
+    font-weight: 850;
+    letter-spacing: 0.2px;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.connection-status-dot {
+    position: relative;
+    flex: 0 0 9px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--connection-status-color);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--connection-status-color) 72%, transparent);
+}
+
+.connection-status[data-connection-state="connected"] {
+    --connection-status-color: var(--success);
+}
+
+.connection-status[data-connection-state="reconnecting"] {
+    --connection-status-color: var(--warning);
+}
+
+.connection-status[data-connection-state="restored"] {
+    --connection-status-color: var(--accent-f1);
+}
+
+.connection-status[data-connection-state="offline"] {
+    --connection-status-color: var(--danger);
+}
+
+.connection-status[data-connection-state="reconnecting"] .connection-status-dot::after {
+    content: "";
+    position: absolute;
+    inset: -4px;
+    border: 1px solid var(--connection-status-color);
+    border-radius: inherit;
+    animation: connection-status-pulse 1.25s ease-out infinite;
+}
+
+.connection-status[data-connection-state="restored"] {
+    animation: connection-status-restored 420ms ease-out;
+}
+
+@keyframes connection-status-pulse {
+    from {
+        opacity: 0.7;
+        transform: scale(0.55);
+    }
+    to {
+        opacity: 0;
+        transform: scale(1.45);
+    }
+}
+
+@keyframes connection-status-restored {
+    from {
+        transform: translateY(5px);
+        opacity: 0.45;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@media (max-width: 520px) {
+    .connection-status {
+        left: max(10px, env(safe-area-inset-left));
+        bottom: max(10px, env(safe-area-inset-bottom));
+        min-height: 32px;
+        padding: 6px 10px;
+        font-size: 0.72rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .connection-status,
+    .connection-status-dot::after {
+        animation: none !important;
+    }
+}
+
+@media print {
+    .connection-status {
+        display: none;
+    }
+}
