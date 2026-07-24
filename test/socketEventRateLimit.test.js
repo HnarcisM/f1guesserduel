@@ -243,7 +243,7 @@ test('registerSocketHandlers rate limits protected game events before executing 
     assert.equal(socket.emitted('socketRateLimited')[0].payload.eventName, 'startSingleGame');
 });
 
-test('registerSocketHandlers rate limits room joins without creating extra rooms', () => {
+test('registerSocketHandlers rate limits room joins without creating extra rooms', async () => {
     const io = createFakeIo();
     const socket = createFakeSocket('socket-room');
     socket.user = { id: 'user-room', username: 'Room User' };
@@ -262,8 +262,8 @@ test('registerSocketHandlers rate limits room joins without creating extra rooms
     registerSocketHandlers(io, dependencies);
     io.connectionHandler(socket);
 
-    socket.trigger('joinRoom', { roomId: 'room-one', clientId: 'browser-one' });
-    socket.trigger('joinRoom', { roomId: 'room-two', clientId: 'browser-one' });
+    await socket.trigger('joinRoom', { roomId: 'room-one', clientId: 'browser-one' });
+    await socket.trigger('joinRoom', { roomId: 'room-two', clientId: 'browser-one' });
 
     assert.equal(roomStore.has('room-one'), true);
     assert.equal(roomStore.has('room-two'), false);
