@@ -164,15 +164,53 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run responsive and visual tests
-        run: npm run test:e2e:responsive
+        id: responsive_tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          mkdir -p test-results/browser-logs
+          set -o pipefail
+          npm run test:e2e:responsive 2>&1 | tee test-results/browser-logs/responsive-visual.log
         env:
           UPDATE_VISUAL_BASELINES: ${{ github.event_name == 'workflow_dispatch' && inputs.update_visual_baselines && '1' || '0' }}
 
       - name: Run profile and reconnection flows
-        run: npm run test:e2e:flows
+        id: flow_tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          mkdir -p test-results/browser-logs
+          set -o pipefail
+          npm run test:e2e:flows 2>&1 | tee test-results/browser-logs/profile-reconnection.log
 
       - name: Run automated accessibility audit
-        run: npm run test:e2e:accessibility
+        id: accessibility_tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          mkdir -p test-results/browser-logs
+          set -o pipefail
+          npm run test:e2e:accessibility 2>&1 | tee test-results/browser-logs/accessibility.log
+
+      - name: Publish browser test summary
+        if: always()
+        shell: bash
+        env:
+          RESPONSIVE_OUTCOME: ${{ steps.responsive_tests.outcome }}
+          FLOW_OUTCOME: ${{ steps.flow_tests.outcome }}
+          ACCESSIBILITY_OUTCOME: ${{ steps.accessibility_tests.outcome }}
+        run: |
+          {
+            echo "## Browser quality results"
+            echo
+            echo "| Suite | Result |"
+            echo "| --- | --- |"
+            echo "| Responsive and visual | ${RESPONSIVE_OUTCOME} |"
+            echo "| Profile and reconnection | ${FLOW_OUTCOME} |"
+            echo "| Accessibility | ${ACCESSIBILITY_OUTCOME} |"
+            echo
+            echo "Full logs are available in the browser-quality artifact."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload browser quality reports
         if: always()
@@ -180,6 +218,7 @@ jobs:
         with:
           name: browser-quality-${{ github.run_attempt }}
           path: |
+            test-results/browser-logs/
             test-results/responsive-visual/
             test-results/accessibility/
           if-no-files-found: warn
@@ -193,3 +232,22 @@ jobs:
           path: test/e2e/baselines/responsive-visual/
           if-no-files-found: error
           retention-days: 14
+
+      - name: Enforce browser test results
+        if: always()
+        shell: bash
+        env:
+          RESPONSIVE_OUTCOME: ${{ steps.responsive_tests.outcome }}
+          FLOW_OUTCOME: ${{ steps.flow_tests.outcome }}
+          ACCESSIBILITY_OUTCOME: ${{ steps.accessibility_tests.outcome }}
+        run: |
+          failed=0
+          for result in "$RESPONSIVE_OUTCOME" "$FLOW_OUTCOME" "$ACCESSIBILITY_OUTCOME"; do
+            if [[ "$result" != "success" ]]; then
+              failed=1
+            fi
+          done
+          if [[ "$failed" == "1" ]]; then
+            echo "::error title=Browser quality tests failed::See the job summary and browser-quality artifact for every failing suite."
+          fi
+          exit "$failed"

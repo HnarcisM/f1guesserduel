@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const os = require('node:os');
 const {
+    createE2EContext,
     logE2E,
     openAppPage,
     openRoomPage,
@@ -201,7 +202,7 @@ test('2 players can play while a third browser tab watches live as spectator', {
     logE2E('Browserul Chromium a pornit.');
 
     try {
-        const context = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+        const context = await createE2EContext(browser, { viewport: { width: 1366, height: 900 } });
         const roomId = `e2e-${Date.now()}`;
 
         logE2E('Deschid 3 taburi: Player 1, Player 2 și Spectator...');
@@ -260,7 +261,7 @@ test('non-host correct guess is marked correct and spectator sees the live resul
     });
 
     try {
-        const context = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+        const context = await createE2EContext(browser, { viewport: { width: 1366, height: 900 } });
         const roomId = `nh${Date.now().toString(36)}`;
         const host = await openRoomPage(context, app.baseUrl, roomId);
         const playerTwo = await openRoomPage(context, app.baseUrl, roomId);
@@ -352,7 +353,7 @@ test('room round is restored after server restart', { concurrency: false }, asyn
 
     try {
         app = await startAppServer({ dataDir });
-        const firstContext = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+        const firstContext = await createE2EContext(browser, { viewport: { width: 1366, height: 900 } });
         const host = await openRoomPage(firstContext, app.baseUrl, roomId);
         const playerTwo = await openRoomPage(firstContext, app.baseUrl, roomId);
 
@@ -366,7 +367,7 @@ test('room round is restored after server restart', { concurrency: false }, asyn
 
         logE2E('Repornesc serverul cu același DATA_DIR...');
         app = await startAppServer({ dataDir });
-        const secondContext = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+        const secondContext = await createE2EContext(browser, { viewport: { width: 1366, height: 900 } });
         const rejoined = await openRoomPage(secondContext, app.baseUrl, roomId);
 
         logE2E('Verific dacă runda camerei a fost restaurată după restart...');
@@ -391,7 +392,7 @@ test('auth register login logout refreshes room member name while staying in the
     });
 
     try {
-        const context = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+        const context = await createE2EContext(browser, { viewport: { width: 1366, height: 900 } });
         const roomId = `a${Date.now().toString(36)}`;
         const username = `E2E_${Date.now().toString(36).slice(-6)}`;
         const credentials = {
@@ -438,7 +439,7 @@ test('host can start a rematch after a round ends', { concurrency: false }, asyn
     });
 
     try {
-        const context = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+        const context = await createE2EContext(browser, { viewport: { width: 1366, height: 900 } });
         const roomId = `r${Date.now().toString(36)}`;
         const host = await openRoomPage(context, app.baseUrl, roomId);
         const playerTwo = await openRoomPage(context, app.baseUrl, roomId);
@@ -479,7 +480,7 @@ test('single play starts without room state and rematch stays in single mode', {
     });
 
     try {
-        const context = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+        const context = await createE2EContext(browser, { viewport: { width: 1366, height: 900 } });
         const page = await openAppPage(context, app.baseUrl);
 
         await page.locator('body.mode-single').waitFor({ timeout: 7000 });
@@ -522,7 +523,7 @@ test('daily challenge panel is isolated from single and duel modes', { concurren
     });
 
     try {
-        const context = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+        const context = await createE2EContext(browser, { viewport: { width: 1366, height: 900 } });
         const page = await openAppPage(context, app.baseUrl);
 
         await page.locator('body.mode-single').waitFor({ timeout: 7000 });

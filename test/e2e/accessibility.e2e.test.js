@@ -4,6 +4,7 @@ const path = require('node:path');
 const test = require('node:test');
 
 const {
+    createE2EContext,
     logE2E,
     openAppPage,
     openRoomPage,
@@ -126,7 +127,7 @@ test('axe finds no accessibility violations across application screens and state
             headless: process.env.E2E_HEADED !== '1',
             executablePath: process.env.E2E_CHROMIUM_EXECUTABLE_PATH || undefined
         });
-        const context = await browser.newContext({
+        const context = await createE2EContext(browser, {
             viewport: { width: 1366, height: 900 },
             colorScheme: 'dark',
             reducedMotion: 'reduce'

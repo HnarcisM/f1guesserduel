@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const test = require('node:test');
 
 const {
+    createE2EContext,
     logE2E,
     openAppPage,
     requirePlaywright,
@@ -148,7 +149,7 @@ test('authenticated profile settings persist username and avatar after reload', 
             headless: process.env.E2E_HEADED !== '1',
             executablePath: process.env.E2E_CHROMIUM_EXECUTABLE_PATH || undefined
         });
-        const context = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+        const context = await createE2EContext(browser, { viewport: { width: 1366, height: 900 } });
         const page = await openAppPage(context, app.baseUrl);
         await page.locator('.btn-diff.easy').click();
         await page.locator('#gameZone:not(.game-zone-hidden)').waitFor({ state: 'visible', timeout: 7000 });
@@ -217,7 +218,7 @@ test('profile modal stays inside responsive viewports and keeps close control re
             executablePath: process.env.E2E_CHROMIUM_EXECUTABLE_PATH || undefined
         });
         const initialViewport = PROFILE_VIEWPORTS[0];
-        const context = await browser.newContext({
+        const context = await createE2EContext(browser, {
             viewport: { width: initialViewport.width, height: initialViewport.height }
         });
         const page = await openAppPage(context, app.baseUrl);

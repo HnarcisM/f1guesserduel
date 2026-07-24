@@ -56,6 +56,23 @@ function logE2E(message) {
     console.log(`[E2E ${now}] ${message}`);
 }
 
+
+async function createE2EContext(browser, options = {}) {
+    if (!browser || typeof browser.newContext !== 'function') {
+        throw new TypeError('A Playwright browser instance is required.');
+    }
+
+    const {
+        allowServiceWorkers = false,
+        ...contextOptions
+    } = options || {};
+
+    return browser.newContext({
+        serviceWorkers: allowServiceWorkers ? 'allow' : 'block',
+        ...contextOptions
+    });
+}
+
 async function startAppServer(options = {}) {
     logE2E('Caut port liber pentru serverul de test...');
     const port = await getFreePort();
@@ -150,6 +167,7 @@ async function openAppPage(context, baseUrl) {
 }
 
 module.exports = {
+    createE2EContext,
     logE2E,
     openAppPage,
     openRoomPage,

@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const test = require('node:test');
 
 const {
+    createE2EContext,
     logE2E,
     openRoomPage,
     requirePlaywright,
@@ -37,7 +38,7 @@ test('duel refresh preserves participant identity, role and previous guesses', {
             headless: process.env.E2E_HEADED !== '1',
             executablePath: process.env.E2E_CHROMIUM_EXECUTABLE_PATH || undefined
         });
-        const context = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+        const context = await createE2EContext(browser, { viewport: { width: 1366, height: 900 } });
         const roomId = `re${Date.now().toString(36)}`;
         const host = await openRoomPage(context, app.baseUrl, roomId);
         const playerTwo = await openRoomPage(context, app.baseUrl, roomId);

@@ -69,7 +69,8 @@ test('GitHub Actions CI uses Python for backend logs, summaries and exit-code en
     assert.match(source, /python scripts\/ci_backend_tests\.py summary/);
     assert.match(source, /python scripts\/ci_backend_tests\.py enforce/);
     assert.match(source, /python test\/ci_backend_tests_test\.py/);
-    assert.doesNotMatch(source, /shell:\s*bash/);
+    const verifyJob = source.split(/^  integration-services:$/m)[0];
+    assert.doesNotMatch(verifyJob, /shell:\s*bash/);
     assert.doesNotMatch(source, /PIPESTATUS|grep -q|awk '\/\^✖ failing tests|tail -n/);
     assert.match(source, /name:\s*backend-test-log-\$\{\{ github\.run_attempt \}\}/);
     assert.match(source, /path:\s*test-results\/ci\/backend-tests\.log/);
@@ -104,17 +105,25 @@ test('GitHub Actions CI provisions healthy Redis and PostgreSQL services', () =>
     assert.match(source, /run:\s*npm run test:integration:services/);
 });
 
-test('GitHub Actions CI runs responsive and accessibility browser tests and retains reports', () => {
+test('GitHub Actions CI runs every browser suite, retains logs and enforces failures at the end', () => {
     const source = readWorkflow();
 
     assert.match(source, /^\s{2}responsive-visual:$/m);
     assert.match(source, /needs:\s*\[verify, integration-services\]/);
     assert.match(source, /npx playwright install --with-deps chromium/);
-    assert.match(source, /run:\s*npm run test:e2e:responsive/);
-    assert.match(source, /run:\s*npm run test:e2e:flows/);
-    assert.match(source, /run:\s*npm run test:e2e:accessibility/);
-    assert.match(source, /uses:\s*actions\/upload-artifact@v7/);
-    assert.match(source, /if:\s*always\(\)/);
+    assert.equal((source.match(/continue-on-error:\s*true/g) || []).length, 3);
+    assert.match(source, /id:\s*responsive_tests/);
+    assert.match(source, /id:\s*flow_tests/);
+    assert.match(source, /id:\s*accessibility_tests/);
+    assert.match(source, /npm run test:e2e:responsive 2>&1 \| tee test-results\/browser-logs\/responsive-visual\.log/);
+    assert.match(source, /npm run test:e2e:flows 2>&1 \| tee test-results\/browser-logs\/profile-reconnection\.log/);
+    assert.match(source, /npm run test:e2e:accessibility 2>&1 \| tee test-results\/browser-logs\/accessibility\.log/);
+    assert.match(source, /name:\s*Publish browser test summary/);
+    assert.match(source, /name:\s*Enforce browser test results/);
+    assert.match(source, /steps\.responsive_tests\.outcome/);
+    assert.match(source, /steps\.flow_tests\.outcome/);
+    assert.match(source, /steps\.accessibility_tests\.outcome/);
+    assert.match(source, /test-results\/browser-logs\//);
     assert.match(source, /test-results\/responsive-visual\//);
     assert.match(source, /test-results\/accessibility\//);
 });

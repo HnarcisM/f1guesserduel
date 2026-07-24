@@ -4,6 +4,7 @@ const path = require('node:path');
 const test = require('node:test');
 
 const {
+    createE2EContext,
     logE2E,
     openAppPage,
     requirePlaywright,
@@ -301,7 +302,7 @@ test('responsive layouts match committed visual baselines', { concurrency: false
             executablePath: process.env.E2E_CHROMIUM_EXECUTABLE_PATH || undefined
         });
         for (const viewport of VIEWPORTS) {
-            const context = await browser.newContext({
+            const context = await createE2EContext(browser, {
                 viewport: { width: viewport.width, height: viewport.height },
                 colorScheme: 'dark',
                 reducedMotion: 'reduce'
