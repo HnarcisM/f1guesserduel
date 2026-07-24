@@ -11,7 +11,7 @@
 <link rel="stylesheet" href="/css/18-duel-round-history.css?v=2d04b48dd080faa8">
 <link rel="stylesheet" href="/css/19-account-game-history.css?v=cc05ef00b611d229">
 <link rel="stylesheet" href="/css/20-duel-identity.css?v=884e3a5bec345dbb">
-<link rel="stylesheet" href="/css/21-feedback-settings.css?v=79c47cf5671a732e">
+<link rel="stylesheet" href="/css/21-feedback-settings.css?v=6fad592582d675e3">
 </head>
 <body>
 
@@ -514,7 +514,7 @@
             <div class="auth-settings-card auth-feedback-settings-card">
                 <div>
                     <strong>Sunete și vibrații</strong>
-                    <span id="authFeedbackSettingsSummary">Sunete: pornite · Vibrații: pornite</span>
+                    <span id="authFeedbackSettingsSummary">Sunete: 70% · Vibrații: 70%</span>
                 </div>
                 <button type="button" id="authFeedbackSettingsBtn" class="auth-feedback-settings-btn">Configurează</button>
             </div>
@@ -636,21 +636,33 @@
     <p id="feedbackSettingsSubtitle" class="feedback-panel-subtitle">Aceleași preferințe se aplică interacțiunilor, încercărilor și rezultatelor jocului.</p>
 
     <div class="feedback-options">
-        <label class="feedback-option" for="feedbackSoundToggle">
-            <span class="feedback-option-copy"><strong>Sunete</strong><small>Confirmări scurte pentru butoane, guess și rezultatul rundei.</small></span>
-            <span class="feedback-switch">
-                <input type="checkbox" id="feedbackSoundToggle" role="switch" checked>
-                <span class="feedback-switch-track" aria-hidden="true"></span>
-            </span>
-        </label>
+        <div class="feedback-option">
+            <div class="feedback-option-row">
+                <label class="feedback-option-copy" for="feedbackSoundToggle"><strong>Sunete</strong><small>Confirmări pentru butoane, guess și rezultatul rundei.</small></label>
+                <label class="feedback-switch" for="feedbackSoundToggle">
+                    <input type="checkbox" id="feedbackSoundToggle" role="switch" checked>
+                    <span class="feedback-switch-track" aria-hidden="true"></span>
+                </label>
+            </div>
+            <label class="feedback-level-control" for="feedbackSoundVolume">
+                <span class="feedback-level-header"><span>Volum</span><output id="feedbackSoundVolumeValue" for="feedbackSoundVolume">70%</output></span>
+                <input type="range" id="feedbackSoundVolume" min="0" max="100" step="5" value="70" aria-label="Volumul sunetelor">
+            </label>
+        </div>
 
-        <label class="feedback-option" for="feedbackHapticsToggle">
-            <span class="feedback-option-copy"><strong>Efecte haptice</strong><small>Vibrații discrete pe dispozitivele compatibile.</small></span>
-            <span class="feedback-switch">
-                <input type="checkbox" id="feedbackHapticsToggle" role="switch" checked>
-                <span class="feedback-switch-track" aria-hidden="true"></span>
-            </span>
-        </label>
+        <div class="feedback-option">
+            <div class="feedback-option-row">
+                <label class="feedback-option-copy" for="feedbackHapticsToggle"><strong>Efecte haptice</strong><small>Vibrații pe dispozitivele compatibile.</small></label>
+                <label class="feedback-switch" for="feedbackHapticsToggle">
+                    <input type="checkbox" id="feedbackHapticsToggle" role="switch" checked>
+                    <span class="feedback-switch-track" aria-hidden="true"></span>
+                </label>
+            </div>
+            <label class="feedback-level-control" for="feedbackHapticIntensity">
+                <span class="feedback-level-header"><span>Intensitate</span><output id="feedbackHapticIntensityValue" for="feedbackHapticIntensity">70%</output></span>
+                <input type="range" id="feedbackHapticIntensity" min="0" max="100" step="5" value="70" aria-label="Intensitatea efectelor haptice">
+            </label>
+        </div>
     </div>
 
     <p id="feedbackHapticsSupport" class="feedback-support-note"></p>
@@ -661,7 +673,7 @@
 <script src="/socket.io/socket.io.js"></script>
 <script src="/js/socketBridgeBootstrap.js?v=fd76646cd8126930"></script>
 <script defer src="/game.bundle.min.js?v=b219bfb3479ec0dc"></script>
-<script type="module" src="/js/feedbackController.js?v=2247ded45ff96e97"></script>
+<script type="module" src="/js/feedbackController.js?v=8f2bb7a0819e91b3"></script>
 <script type="module" src="/js/duelReadyController.js?v=29b02568a275c131"></script>
 <script type="module" src="/js/duelSeriesController.js?v=14bfad7705c45b6d"></script>
 <script type="module" src="/js/duelRoundHistoryController.js?v=77fa53fbfa13103a"></script>

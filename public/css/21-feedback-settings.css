@@ -92,15 +92,19 @@
 }
 
 .feedback-option {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
+    display: grid;
+    gap: 14px;
     padding: 14px;
     border: 1px solid var(--border-soft);
     border-radius: 15px;
     background: rgba(255, 255, 255, 0.05);
-    cursor: pointer;
+}
+
+.feedback-option-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
 }
 
 .feedback-option-copy {
@@ -118,6 +122,45 @@
 .feedback-settings-status {
     color: var(--text-secondary);
     line-height: 1.4;
+}
+
+.feedback-level-control {
+    display: grid;
+    gap: 8px;
+}
+
+.feedback-level-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--text-secondary);
+    font-size: 0.84rem;
+    font-weight: 800;
+}
+
+.feedback-level-header output {
+    min-width: 3.2em;
+    color: var(--text-primary);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.feedback-level-control input[type="range"] {
+    width: 100%;
+    margin: 0;
+    accent-color: var(--accent-f1);
+    cursor: pointer;
+}
+
+.feedback-level-control input[type="range"]:disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+}
+
+.feedback-level-control input[type="range"]:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--accent-f1) 72%, white);
+    outline-offset: 4px;
 }
 
 .feedback-switch {

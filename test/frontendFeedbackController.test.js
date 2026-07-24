@@ -22,6 +22,7 @@ function createElement(id, tagName = 'button') {
         id,
         tagName: tagName.toUpperCase(),
         checked: false,
+        value: '',
         disabled: false,
         hidden: false,
         inert: true,
@@ -59,13 +60,20 @@ function createDocument() {
         'feedbackSettingsBtn',
         'authFeedbackSettingsBtn',
         'feedbackSoundToggle',
+        'feedbackSoundVolume',
+        'feedbackSoundVolumeValue',
         'feedbackHapticsToggle',
+        'feedbackHapticIntensity',
+        'feedbackHapticIntensityValue',
         'feedbackPreviewBtn',
         'authFeedbackSettingsSummary',
         'feedbackHapticsSupport',
         'feedbackSettingsStatus'
     ];
-    const elements = new Map(ids.map(id => [id, createElement(id, id.includes('Panel') ? 'section' : 'button')]));
+    const elements = new Map(ids.map(id => {
+        const tagName = id.includes('Panel') ? 'section' : id.endsWith('Value') ? 'output' : (id.includes('Volume') || id.includes('Intensity') || id.includes('Toggle')) ? 'input' : 'button';
+        return [id, createElement(id, tagName)];
+    }));
     const documentListeners = new Map();
     const documentObject = {
         activeElement: null,
@@ -103,12 +111,22 @@ test('feedback settings normalize malformed storage and classify guesses', async
     assert.deepEqual(normalizeFeedbackSettings(null), DEFAULT_FEEDBACK_SETTINGS);
     assert.deepEqual(normalizeFeedbackSettings({ soundEnabled: false }), {
         soundEnabled: false,
-        hapticsEnabled: true
+        soundVolume: 70,
+        hapticsEnabled: true,
+        hapticIntensity: 70
+    });
+    assert.deepEqual(normalizeFeedbackSettings({ soundVolume: 140, hapticIntensity: -5 }), {
+        soundEnabled: true,
+        soundVolume: 100,
+        hapticsEnabled: true,
+        hapticIntensity: 0
     });
     assert.deepEqual(parseFeedbackSettings('{invalid'), DEFAULT_FEEDBACK_SETTINGS);
     assert.deepEqual(parseFeedbackSettings(JSON.stringify({ hapticsEnabled: false })), {
         soundEnabled: true,
-        hapticsEnabled: false
+        soundVolume: 70,
+        hapticsEnabled: false,
+        hapticIntensity: 70
     });
     assert.equal(classifyGuessFeedback({ isCorrect: true }), 'correct');
     assert.equal(classifyGuessFeedback({ results: { name: 'red', age: 'green' } }), 'partial');
@@ -121,6 +139,8 @@ test('one feedback controller powers both header and profile triggers', async ()
     const { documentObject, elements } = createDocument();
     const sounds = [];
     const haptics = [];
+    const soundVolumes = [];
+    const hapticIntensities = [];
     const writes = [];
     const controller = createFeedbackController({
         documentObject,
@@ -131,8 +151,8 @@ test('one feedback controller powers both header and profile triggers', async ()
             return JSON.stringify({ soundEnabled: false, hapticsEnabled: true });
         },
         writeStorage(key, value) { writes.push({ key, value }); return true; },
-        playSoundEffect(effect) { sounds.push(effect); return true; },
-        playHapticEffect(effect) { haptics.push(effect); return true; }
+        playSoundEffect(effect, volume) { sounds.push(effect); soundVolumes.push(volume); return true; },
+        playHapticEffect(effect, intensity) { haptics.push(effect); hapticIntensities.push(intensity); return true; }
     });
 
     await withGlobalDocument(documentObject, () => {
@@ -140,7 +160,11 @@ test('one feedback controller powers both header and profile triggers', async ()
         assert.equal(elements.get('feedbackSoundToggle').checked, false);
         assert.equal(elements.get('feedbackHapticsToggle').checked, true);
         assert.match(elements.get('authFeedbackSettingsSummary').textContent, /Sunete: oprite/);
-        assert.match(elements.get('feedbackHapticsSupport').textContent, /disponibile/);
+        assert.equal(elements.get('feedbackSoundVolume').value, '70');
+        assert.equal(elements.get('feedbackSoundVolume').disabled, true);
+        assert.equal(elements.get('feedbackHapticIntensity').value, '70');
+        assert.equal(elements.get('feedbackHapticIntensity').disabled, false);
+        assert.match(elements.get('feedbackHapticsSupport').textContent, /durata și ritmul/);
 
         elements.get('feedbackSettingsBtn').dispatch('click');
         assert.equal(elements.get('feedbackSettingsPanel').classList.contains('show'), true);
@@ -154,13 +178,33 @@ test('one feedback controller powers both header and profile triggers', async ()
 
         elements.get('feedbackSoundToggle').checked = true;
         elements.get('feedbackSoundToggle').dispatch('change');
-        assert.deepEqual(controller.getSettings(), { soundEnabled: true, hapticsEnabled: true });
+        assert.deepEqual(controller.getSettings(), {
+            soundEnabled: true, soundVolume: 70, hapticsEnabled: true, hapticIntensity: 70
+        });
         assert.equal(sounds.at(-1), 'tap');
+        assert.equal(soundVolumes.at(-1), 70);
+
+        elements.get('feedbackSoundVolume').value = '35';
+        elements.get('feedbackSoundVolume').dispatch('input');
+        elements.get('feedbackSoundVolume').dispatch('change');
+        assert.equal(controller.getSettings().soundVolume, 35);
+        assert.equal(elements.get('feedbackSoundVolumeValue').textContent, '35%');
+        assert.equal(sounds.at(-1), 'preview');
+        assert.equal(soundVolumes.at(-1), 35);
+
+        elements.get('feedbackHapticIntensity').value = '40';
+        elements.get('feedbackHapticIntensity').dispatch('input');
+        elements.get('feedbackHapticIntensity').dispatch('change');
+        assert.equal(controller.getSettings().hapticIntensity, 40);
+        assert.equal(haptics.at(-1), 'preview');
+        assert.equal(hapticIntensities.at(-1), 40);
 
         elements.get('feedbackHapticsToggle').checked = false;
         elements.get('feedbackHapticsToggle').dispatch('change');
-        assert.deepEqual(controller.getSettings(), { soundEnabled: true, hapticsEnabled: false });
-        assert.equal(writes.length, 2);
+        assert.deepEqual(controller.getSettings(), {
+            soundEnabled: true, soundVolume: 35, hapticsEnabled: false, hapticIntensity: 40
+        });
+        assert.equal(writes.length, 4);
         assert.deepEqual(JSON.parse(writes.at(-1).value), controller.getSettings());
 
         assert.equal(controller.triggerGuessResult({ results: { name: 'green' } }), 'partial');
@@ -223,8 +267,8 @@ test('preview, interaction filtering and unsupported haptics remain defensive', 
 });
 
 test('synth sound and haptic players use browser capabilities lazily', async () => {
-    const { createSynthSoundPlayer, createHapticPlayer } = await importController();
-    const calls = { resume: 0, oscillator: 0, gain: 0, vibrate: [] };
+    const { createSynthSoundPlayer, createHapticPlayer, scaleHapticPattern } = await importController();
+    const calls = { resume: 0, oscillator: 0, gain: 0, ramps: [], vibrate: [] };
 
     class FakeAudioContext {
         constructor() {
@@ -248,7 +292,7 @@ test('synth sound and haptic players use browser capabilities lazily', async () 
             return {
                 gain: {
                     setValueAtTime() {},
-                    exponentialRampToValueAtTime() {}
+                    exponentialRampToValueAtTime(value) { calls.ramps.push(value); }
                 },
                 connect() {}
             };
@@ -256,10 +300,11 @@ test('synth sound and haptic players use browser capabilities lazily', async () 
     }
 
     const playSound = createSynthSoundPlayer({ windowObject: { AudioContext: FakeAudioContext } });
-    assert.equal(playSound('correct'), true);
+    assert.equal(playSound('correct', 100), true);
     assert.equal(calls.resume, 1);
     assert.equal(calls.oscillator, 3);
     assert.equal(calls.gain, 3);
+    assert.ok(calls.ramps.some(value => value >= 0.15));
     assert.equal(playSound('unknown-effect'), true);
     assert.equal(calls.oscillator, 4);
     assert.equal(createSynthSoundPlayer({ windowObject: {} })('tap'), false);
@@ -267,10 +312,30 @@ test('synth sound and haptic players use browser capabilities lazily', async () 
     const playHaptic = createHapticPlayer({
         navigatorObject: { vibrate(pattern) { calls.vibrate.push(pattern); return true; } }
     });
-    assert.equal(playHaptic('win'), true);
-    assert.deepEqual(calls.vibrate[0], [20, 35, 20, 35, 60]);
+    assert.equal(playHaptic('win', 70), true);
+    assert.deepEqual(calls.vibrate[0], scaleHapticPattern([20, 35, 20, 35, 60], 70));
+    assert.equal(playHaptic('win', 0), false);
+    assert.equal(calls.vibrate.length, 1);
     assert.equal(createHapticPlayer({ navigatorObject: {} })('tap'), false);
     assert.equal(createHapticPlayer({ navigatorObject: { vibrate() { throw new Error('blocked'); } } })('tap'), false);
+
+    let releaseResume;
+    class AsyncAudioContext extends FakeAudioContext {
+        resume() {
+            calls.resume += 1;
+            return new Promise(resolve => {
+                releaseResume = () => { this.state = 'running'; resolve(); };
+            });
+        }
+    }
+    const asyncCallsBefore = calls.oscillator;
+    const playAfterResume = createSynthSoundPlayer({ windowObject: { AudioContext: AsyncAudioContext } });
+    assert.equal(playAfterResume('tap', 70), true);
+    assert.equal(calls.oscillator, asyncCallsBefore);
+    releaseResume();
+    await Promise.resolve();
+    await Promise.resolve();
+    assert.equal(calls.oscillator, asyncCallsBefore + 1);
 });
 
 test('controller is inert when the shared settings panel is absent', async () => {

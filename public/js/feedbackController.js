@@ -4,7 +4,9 @@ import { safeGetItem, safeSetItem } from './safeStorage.js';
 export const FEEDBACK_STORAGE_KEY = 'f1-guesser-feedback-settings';
 export const DEFAULT_FEEDBACK_SETTINGS = Object.freeze({
     soundEnabled: true,
-    hapticsEnabled: true
+    soundVolume: 70,
+    hapticsEnabled: true,
+    hapticIntensity: 70
 });
 
 const SOUND_PATTERNS = Object.freeze({
@@ -65,16 +67,27 @@ const SILENT_BUTTON_IDS = new Set(['sendGuessBtn', 'feedbackPreviewBtn']);
 const OUTGOING_GUESS_EVENTS = new Set(['submitGuess', 'submitSingleGuess', 'submitDailyGuess']);
 const ROUND_OUTCOMES = new Set(['win', 'draw', 'loss']);
 const GUESS_FEEDBACK_DEDUPE_MS = 80;
+const SOUND_GAIN_BOOST = 4;
+const MIN_PERCENT = 0;
+const MAX_PERCENT = 100;
 
 function asBoolean(value, fallback) {
     return typeof value === 'boolean' ? value : fallback;
+}
+
+function normalizePercent(value, fallback) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.round(Math.min(MAX_PERCENT, Math.max(MIN_PERCENT, parsed)));
 }
 
 export function normalizeFeedbackSettings(value = {}) {
     const source = value && typeof value === 'object' ? value : {};
     return {
         soundEnabled: asBoolean(source.soundEnabled, DEFAULT_FEEDBACK_SETTINGS.soundEnabled),
-        hapticsEnabled: asBoolean(source.hapticsEnabled, DEFAULT_FEEDBACK_SETTINGS.hapticsEnabled)
+        soundVolume: normalizePercent(source.soundVolume, DEFAULT_FEEDBACK_SETTINGS.soundVolume),
+        hapticsEnabled: asBoolean(source.hapticsEnabled, DEFAULT_FEEDBACK_SETTINGS.hapticsEnabled),
+        hapticIntensity: normalizePercent(source.hapticIntensity, DEFAULT_FEEDBACK_SETTINGS.hapticIntensity)
     };
 }
 
@@ -102,27 +115,24 @@ export function createSynthSoundPlayer({ windowObject = globalThis.window } = {}
     function getContext() {
         if (!AudioContextConstructor) return null;
         if (!audioContext) audioContext = new AudioContextConstructor();
-        if (audioContext.state === 'suspended') {
-            Promise.resolve(audioContext.resume?.()).catch(() => {});
-        }
         return audioContext;
     }
 
-    return function playSynthSound(effectName) {
+    function schedulePattern(context, effectName, volume) {
         const pattern = SOUND_PATTERNS[effectName] || SOUND_PATTERNS.tap;
-        const context = getContext();
-        if (!context) return false;
-
-        const baseTime = context.currentTime || 0;
+        const volumeScale = normalizePercent(volume, DEFAULT_FEEDBACK_SETTINGS.soundVolume) / 100;
+        if (volumeScale <= 0 || context.state === 'closed') return false;
+        const baseTime = (context.currentTime || 0) + 0.005;
         for (const tone of pattern) {
             const oscillator = context.createOscillator();
             const gain = context.createGain();
             const startTime = baseTime + (Number(tone.delay) || 0);
             const endTime = startTime + tone.duration;
+            const peakGain = Math.min(0.25, Math.max(0.0002, tone.gain * SOUND_GAIN_BOOST * volumeScale));
             oscillator.type = tone.type;
             oscillator.frequency.setValueAtTime(tone.frequency, startTime);
             gain.gain.setValueAtTime(0.0001, startTime);
-            gain.gain.exponentialRampToValueAtTime(tone.gain, startTime + 0.01);
+            gain.gain.exponentialRampToValueAtTime(peakGain, startTime + 0.01);
             gain.gain.exponentialRampToValueAtTime(0.0001, endTime);
             oscillator.connect(gain);
             gain.connect(context.destination);
@@ -130,13 +140,55 @@ export function createSynthSoundPlayer({ windowObject = globalThis.window } = {}
             oscillator.stop(endTime + 0.01);
         }
         return true;
+    }
+
+    function resumeContext(context) {
+        if (context.state !== 'suspended' || typeof context.resume !== 'function') return null;
+        try {
+            return context.resume();
+        } catch {
+            return null;
+        }
+    }
+
+    function playSynthSound(effectName, volume = DEFAULT_FEEDBACK_SETTINGS.soundVolume) {
+        const context = getContext();
+        if (!context || normalizePercent(volume, 0) <= 0) return false;
+        const resumeResult = resumeContext(context);
+        if (resumeResult && typeof resumeResult.then === 'function') {
+            Promise.resolve(resumeResult)
+                .then(() => schedulePattern(context, effectName, volume))
+                .catch(() => {});
+            return true;
+        }
+        return schedulePattern(context, effectName, volume);
+    }
+
+    playSynthSound.unlock = function unlock() {
+        const context = getContext();
+        if (!context) return false;
+        const resumeResult = resumeContext(context);
+        if (resumeResult && typeof resumeResult.catch === 'function') resumeResult.catch(() => {});
+        return true;
     };
+
+    return playSynthSound;
+}
+
+export function scaleHapticPattern(pattern, intensity = DEFAULT_FEEDBACK_SETTINGS.hapticIntensity) {
+    const normalizedIntensity = normalizePercent(intensity, DEFAULT_FEEDBACK_SETTINGS.hapticIntensity);
+    if (!Array.isArray(pattern) || normalizedIntensity <= 0) return [];
+    const ratio = normalizedIntensity / 100;
+    const pulseScale = 0.4 + (ratio * 1.2);
+    const pauseScale = 0.75 + (ratio * 0.5);
+    return pattern.map((duration, index) => Math.max(1, Math.round(duration * (index % 2 === 0 ? pulseScale : pauseScale))));
 }
 
 export function createHapticPlayer({ navigatorObject = globalThis.navigator } = {}) {
-    return function playHaptic(effectName) {
+    return function playHaptic(effectName, intensity = DEFAULT_FEEDBACK_SETTINGS.hapticIntensity) {
         if (typeof navigatorObject?.vibrate !== 'function') return false;
-        const pattern = HAPTIC_PATTERNS[effectName] || HAPTIC_PATTERNS.tap;
+        const pattern = scaleHapticPattern(HAPTIC_PATTERNS[effectName] || HAPTIC_PATTERNS.tap, intensity);
+        if (pattern.length === 0) return false;
         try {
             return navigatorObject.vibrate(pattern) !== false;
         } catch {
@@ -181,7 +233,11 @@ export function createFeedbackController({
             headerBtn: documentObject?.getElementById?.('feedbackSettingsBtn') || null,
             profileBtn: documentObject?.getElementById?.('authFeedbackSettingsBtn') || null,
             soundToggle: documentObject?.getElementById?.('feedbackSoundToggle') || null,
+            soundVolume: documentObject?.getElementById?.('feedbackSoundVolume') || null,
+            soundVolumeValue: documentObject?.getElementById?.('feedbackSoundVolumeValue') || null,
             hapticsToggle: documentObject?.getElementById?.('feedbackHapticsToggle') || null,
+            hapticIntensity: documentObject?.getElementById?.('feedbackHapticIntensity') || null,
+            hapticIntensityValue: documentObject?.getElementById?.('feedbackHapticIntensityValue') || null,
             previewBtn: documentObject?.getElementById?.('feedbackPreviewBtn') || null,
             summary: documentObject?.getElementById?.('authFeedbackSettingsSummary') || null,
             hapticsSupport: documentObject?.getElementById?.('feedbackHapticsSupport') || null,
@@ -199,17 +255,29 @@ export function createFeedbackController({
             els.soundToggle.checked = settings.soundEnabled;
             els.soundToggle.setAttribute?.('aria-checked', String(settings.soundEnabled));
         }
+        if (els.soundVolume) {
+            els.soundVolume.value = String(settings.soundVolume);
+            els.soundVolume.disabled = !settings.soundEnabled;
+        }
+        if (els.soundVolumeValue) els.soundVolumeValue.textContent = `${settings.soundVolume}%`;
         if (els.hapticsToggle) {
             els.hapticsToggle.checked = settings.hapticsEnabled;
             els.hapticsToggle.setAttribute?.('aria-checked', String(settings.hapticsEnabled));
         }
+        if (els.hapticIntensity) {
+            els.hapticIntensity.value = String(settings.hapticIntensity);
+            els.hapticIntensity.disabled = !settings.hapticsEnabled;
+        }
+        if (els.hapticIntensityValue) els.hapticIntensityValue.textContent = `${settings.hapticIntensity}%`;
         if (els.summary) {
-            els.summary.textContent = `Sunete: ${settings.soundEnabled ? 'pornite' : 'oprite'} · Vibrații: ${settings.hapticsEnabled ? 'pornite' : 'oprite'}`;
+            const soundSummary = settings.soundEnabled ? `${settings.soundVolume}%` : 'oprite';
+            const hapticSummary = settings.hapticsEnabled ? `${settings.hapticIntensity}%` : 'oprite';
+            els.summary.textContent = `Sunete: ${soundSummary} · Vibrații: ${hapticSummary}`;
         }
         if (els.hapticsSupport) {
             const supported = typeof navigatorObject?.vibrate === 'function';
             els.hapticsSupport.textContent = supported
-                ? 'Vibrațiile sunt disponibile pe acest dispozitiv.'
+                ? 'Intensitatea haptică ajustează durata și ritmul vibrației; browserul nu permite controlul amplitudinii.'
                 : 'Browserul sau dispozitivul nu oferă vibrații; sunetele rămân disponibile.';
         }
     }
@@ -232,8 +300,12 @@ export function createFeedbackController({
     function trigger(effectName = 'tap', { sound = true, haptic = true } = {}) {
         lastTrigger = effectName;
         let played = false;
-        if (sound && settings.soundEnabled) played = playSoundEffect(effectName) || played;
-        if (haptic && settings.hapticsEnabled) played = playHapticEffect(effectName) || played;
+        if (sound && settings.soundEnabled && settings.soundVolume > 0) {
+            played = playSoundEffect(effectName, settings.soundVolume) || played;
+        }
+        if (haptic && settings.hapticsEnabled && settings.hapticIntensity > 0) {
+            played = playHapticEffect(effectName, settings.hapticIntensity) || played;
+        }
         return played;
     }
 
@@ -384,11 +456,26 @@ export function createFeedbackController({
         els.backdrop?.addEventListener?.('click', closePanel);
         els.soundToggle?.addEventListener?.('change', event => {
             updateSettings({ soundEnabled: Boolean(event.target?.checked) });
-            if (settings.soundEnabled) trigger('tap', { haptic: false });
+            if (settings.soundEnabled) {
+                playSoundEffect.unlock?.();
+                trigger('tap', { haptic: false });
+            }
+        });
+        els.soundVolume?.addEventListener?.('input', event => {
+            updateSettings({ soundVolume: event.target?.value });
+        });
+        els.soundVolume?.addEventListener?.('change', () => {
+            if (settings.soundEnabled) trigger('preview', { haptic: false });
         });
         els.hapticsToggle?.addEventListener?.('change', event => {
             updateSettings({ hapticsEnabled: Boolean(event.target?.checked) });
             if (settings.hapticsEnabled) trigger('tap', { sound: false });
+        });
+        els.hapticIntensity?.addEventListener?.('input', event => {
+            updateSettings({ hapticIntensity: event.target?.value });
+        });
+        els.hapticIntensity?.addEventListener?.('change', () => {
+            if (settings.hapticsEnabled) trigger('preview', { sound: false });
         });
         els.previewBtn?.addEventListener?.('click', () => {
             const played = trigger('preview');
@@ -398,6 +485,11 @@ export function createFeedbackController({
                     : 'Activează sunetul sau vibrațiile pentru a testa feedback-ul.';
             }
         });
+        const unlockAudio = () => {
+            if (settings.soundEnabled) playSoundEffect.unlock?.();
+        };
+        documentObject?.addEventListener?.('pointerdown', unlockAudio, { capture: true, once: true });
+        documentObject?.addEventListener?.('keydown', unlockAudio, { capture: true, once: true });
         documentObject?.addEventListener?.('click', handleGlobalInteraction);
         documentObject?.addEventListener?.('keydown', handleGuessKeyboardFallback);
         setupComplete = true;

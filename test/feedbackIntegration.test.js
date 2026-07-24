@@ -17,6 +17,8 @@ test('one shared feedback dialog is reachable from header and account settings',
     assert.equal((html.match(/id="authFeedbackSettingsBtn"/g) || []).length, 1);
     assert.match(html, /id="feedbackSoundToggle"[^>]*role="switch"/);
     assert.match(html, /id="feedbackHapticsToggle"[^>]*role="switch"/);
+    assert.match(html, /type="range"[^>]*id="feedbackSoundVolume"[^>]*max="100"/);
+    assert.match(html, /type="range"[^>]*id="feedbackHapticIntensity"[^>]*max="100"/);
     assert.match(html, /\/css\/21-feedback-settings\.css\?v=[a-f0-9]{16}/);
     assert.match(html, /\/js\/feedbackController\.js\?v=[a-f0-9]{16}/);
     assert.ok(html.indexOf('/game.bundle.min.js') < html.indexOf('/js/feedbackController.js'));

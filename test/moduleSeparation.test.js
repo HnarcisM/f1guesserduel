@@ -148,5 +148,5 @@ test('audio and haptic feedback stays centralized and uses no remote media', () 
     assert.match(controller, /f1:socket-created/);
     assert.doesNotMatch(controller, /new Audio\(|\.mp3|\.wav|\.ogg/);
     assert.doesNotMatch(game, /feedbackController|createFeedbackController/);
-    assertFileBudget('public/js/feedbackController.js', 22_000);
+    assertFileBudget('public/js/feedbackController.js', 24_000);
 });
