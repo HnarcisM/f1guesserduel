@@ -3,7 +3,20 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const DEFAULT_INDEX_FILE = path.join('public', 'index.html');
+const DEFAULT_SERVICE_WORKER_FILE = path.join('public', 'service-worker.js');
+const SERVICE_WORKER_PRECACHE_START = '/* GENERATED_PRECACHE_START */';
+const SERVICE_WORKER_PRECACHE_END = '/* GENERATED_PRECACHE_END */';
+const DEFAULT_PRECACHE_STATIC_URLS = Object.freeze([
+    '/index.html',
+    '/icons/pwa-192.png',
+    '/icons/pwa-512.png'
+]);
 const DEFAULT_ASSETS = Object.freeze([
+    {
+        attribute: 'href',
+        publicPath: '/manifest.webmanifest',
+        sourceFile: path.join('public', 'manifest.webmanifest')
+    },
     {
         attribute: 'src',
         publicPath: '/js/themeBootstrap.js',
@@ -90,6 +103,11 @@ const DEFAULT_ASSETS = Object.freeze([
         sourceFile: path.join('public', 'js', 'connectionStatusController.js')
     },
     {
+        attribute: 'src',
+        publicPath: '/js/pwaController.js',
+        sourceFile: path.join('public', 'js', 'pwaController.js')
+    },
+    {
         attribute: 'href',
         publicPath: '/style.bundle.css',
         sourceFile: path.join('public', 'style.bundle.css')
@@ -113,6 +131,18 @@ function createContentVersion(content, length = 16) {
     return crypto
         .createHash('sha256')
         .update(normalizeTextForHash(content), 'utf8')
+        .digest('hex')
+        .slice(0, length);
+}
+
+function createBinaryVersion(content, length = 16) {
+    if (!Number.isInteger(length) || length < 8 || length > 64) {
+        throw new Error('Binary version length must be an integer between 8 and 64.');
+    }
+
+    return crypto
+        .createHash('sha256')
+        .update(content)
         .digest('hex')
         .slice(0, length);
 }
@@ -146,6 +176,80 @@ function updateAssetReference(htmlContent, asset, version) {
     return updatedHtml;
 }
 
+
+function createPrecacheUrls(versionedAssets, additionalUrls = DEFAULT_PRECACHE_STATIC_URLS) {
+    const urls = [];
+    for (const url of additionalUrls) {
+        if (typeof url === 'string' && url.startsWith('/') && !urls.includes(url)) urls.push(url);
+    }
+    for (const asset of versionedAssets) {
+        const publicPath = asset?.publicPath;
+        const version = asset?.version;
+        if (typeof publicPath !== 'string' || typeof version !== 'string') continue;
+        const url = `${publicPath}?v=${version}`;
+        if (!urls.includes(url)) urls.push(url);
+    }
+    return urls;
+}
+
+function updateServiceWorkerPrecache(serviceWorkerContent, precacheUrls, cacheSeed = null) {
+    const startIndex = serviceWorkerContent.indexOf(SERVICE_WORKER_PRECACHE_START);
+    const endIndex = serviceWorkerContent.indexOf(SERVICE_WORKER_PRECACHE_END);
+    if (startIndex < 0 || endIndex <= startIndex) {
+        throw new Error('Service worker precache markers are missing or invalid.');
+    }
+
+    const normalizedUrls = [...new Set(precacheUrls)].sort();
+    const cacheVersion = createContentVersion(cacheSeed || JSON.stringify(normalizedUrls), 20);
+    const generatedBlock = [
+        SERVICE_WORKER_PRECACHE_START,
+        `const STATIC_CACHE_NAME = 'f1-guesser-static-${cacheVersion}';`,
+        'const PRECACHE_URLS = Object.freeze([',
+        ...normalizedUrls.map(url => `    ${JSON.stringify(url)},`),
+        ']);',
+        SERVICE_WORKER_PRECACHE_END
+    ].join('\n');
+
+    return `${serviceWorkerContent.slice(0, startIndex)}${generatedBlock}${serviceWorkerContent.slice(
+        endIndex + SERVICE_WORKER_PRECACHE_END.length
+    )}`;
+}
+
+function versionServiceWorker(rootDir, versionedAssets, options = {}) {
+    const serviceWorkerFile = options.serviceWorkerFile || DEFAULT_SERVICE_WORKER_FILE;
+    const serviceWorkerPath = path.join(rootDir, serviceWorkerFile);
+    if (!fs.existsSync(serviceWorkerPath)) {
+        throw new Error(`Service worker file not found: ${serviceWorkerFile}`);
+    }
+
+    const precacheStaticUrls = options.precacheStaticUrls || DEFAULT_PRECACHE_STATIC_URLS;
+    const staticAssetVersions = [];
+    for (const staticUrl of precacheStaticUrls) {
+        const pathname = new URL(staticUrl, 'http://localhost').pathname;
+        const staticFile = path.join(rootDir, 'public', pathname.replace(/^\/+/, ''));
+        if (!fs.existsSync(staticFile)) {
+            throw new Error(`Precache static asset not found: ${staticUrl}`);
+        }
+        staticAssetVersions.push(`${staticUrl}:${createBinaryVersion(fs.readFileSync(staticFile))}`);
+    }
+
+    const originalContent = fs.readFileSync(serviceWorkerPath, 'utf8');
+    const precacheUrls = createPrecacheUrls(versionedAssets, precacheStaticUrls);
+    const cacheSeed = JSON.stringify({
+        precacheUrls: [...precacheUrls].sort(),
+        staticAssetVersions: staticAssetVersions.sort()
+    });
+    const updatedContent = updateServiceWorkerPrecache(originalContent, precacheUrls, cacheSeed);
+    const changed = updatedContent !== originalContent;
+    if (changed) fs.writeFileSync(serviceWorkerPath, updatedContent, 'utf8');
+
+    return {
+        serviceWorkerFile,
+        changed,
+        precacheUrls
+    };
+}
+
 function versionFrontendAssets(rootDir = process.cwd(), options = {}) {
     const indexFile = options.indexFile || DEFAULT_INDEX_FILE;
     const assets = options.assets || DEFAULT_ASSETS;
@@ -170,14 +274,18 @@ function versionFrontendAssets(rootDir = process.cwd(), options = {}) {
         versionedAssets.push({ ...asset, version });
     }
 
-    const changed = updatedHtml !== originalHtml;
-    if (changed) {
+    const indexChanged = updatedHtml !== originalHtml;
+    if (indexChanged) {
         fs.writeFileSync(indexPath, updatedHtml, 'utf8');
     }
 
+    const serviceWorker = versionServiceWorker(rootDir, versionedAssets, options);
+
     return {
         indexFile,
-        changed,
+        changed: indexChanged || serviceWorker.changed,
+        indexChanged,
+        serviceWorker,
         assets: versionedAssets
     };
 }
@@ -190,6 +298,7 @@ function runCli() {
     for (const asset of result.assets) {
         console.log(`${asset.publicPath}?v=${asset.version}`);
     }
+    console.log(`${result.serviceWorker.serviceWorkerFile}: ${result.serviceWorker.precacheUrls.length} asset-uri precache.`);
 }
 
 if (require.main === module) {
@@ -204,8 +313,16 @@ if (require.main === module) {
 module.exports = {
     DEFAULT_ASSETS,
     DEFAULT_INDEX_FILE,
+    DEFAULT_PRECACHE_STATIC_URLS,
+    DEFAULT_SERVICE_WORKER_FILE,
+    SERVICE_WORKER_PRECACHE_END,
+    SERVICE_WORKER_PRECACHE_START,
+    createBinaryVersion,
     createContentVersion,
+    createPrecacheUrls,
     normalizeTextForHash,
     updateAssetReference,
-    versionFrontendAssets
+    updateServiceWorkerPrecache,
+    versionFrontendAssets,
+    versionServiceWorker
 };

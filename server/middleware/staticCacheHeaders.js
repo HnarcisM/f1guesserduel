@@ -3,7 +3,7 @@ const path = require('path');
 const ONE_YEAR_SECONDS = 365 * 24 * 60 * 60;
 const ONE_WEEK_SECONDS = 7 * 24 * 60 * 60;
 const VERSION_VALUE_PATTERN = /^[a-z0-9][a-z0-9._-]{0,127}$/i;
-const VERSIONED_EXTENSIONS = new Set(['.js', '.css']);
+const VERSIONED_EXTENSIONS = new Set(['.js', '.css', '.webmanifest']);
 const STATIC_ASSET_EXTENSIONS = new Set([
     '.svg',
     '.png',

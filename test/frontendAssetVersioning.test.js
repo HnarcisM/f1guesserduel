@@ -7,6 +7,8 @@ const test = require('node:test');
 const {
     DEFAULT_ASSETS,
     createContentVersion,
+    createPrecacheUrls,
+    updateServiceWorkerPrecache,
     versionFrontendAssets
 } = require('../scripts/version-frontend-assets');
 
@@ -18,6 +20,9 @@ function writeFile(rootDir, relativePath, content) {
 
 function createFixture() {
     const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'f1-asset-versioning-'));
+    writeFile(rootDir, 'public/manifest.webmanifest', '{"name":"F1 Guesser"}\n');
+    writeFile(rootDir, 'public/icons/pwa-192.png', 'icon-192');
+    writeFile(rootDir, 'public/icons/pwa-512.png', 'icon-512');
     writeFile(rootDir, 'public/js/themeBootstrap.js', 'bootstrap();\r\n');
     writeFile(rootDir, 'public/css/16-duel-ready.css', '.ready { color: green; }\n');
     writeFile(rootDir, 'public/css/17-duel-series.css', '.series { color: gold; }\n');
@@ -35,9 +40,18 @@ function createFixture() {
     writeFile(rootDir, 'public/js/duelIdentityController.js', 'installDuelIdentity();\n');
     writeFile(rootDir, 'public/js/feedbackController.js', 'installFeedback();\n');
     writeFile(rootDir, 'public/js/connectionStatusController.js', 'installConnectionStatus();\n');
+    writeFile(rootDir, 'public/js/pwaController.js', 'installPwa();\n');
     writeFile(rootDir, 'public/style.bundle.css', '.app { color: red; }\n');
     writeFile(rootDir, 'public/game.bundle.min.js', 'startGame();\n');
+    writeFile(rootDir, 'public/service-worker.js', [
+        'const CACHE_PREFIX = \'f1-guesser-static-\';',
+        '/* GENERATED_PRECACHE_START */',
+        'const STATIC_CACHE_NAME = \'f1-guesser-static-development\';',
+        'const PRECACHE_URLS = Object.freeze([]);',
+        '/* GENERATED_PRECACHE_END */'
+    ].join('\n'));
     writeFile(rootDir, 'public/index.html', [
+        '<link rel="manifest" href="/manifest.webmanifest?v=manual-version">',
         '<script src="/js/themeBootstrap.js?v=manual-version"></script>',
         '<link rel="stylesheet" href="/style.bundle.css?v=manual-version">',
         '<link rel="stylesheet" href="/css/16-duel-ready.css?v=manual-version">',
@@ -57,7 +71,8 @@ function createFixture() {
         '<script type="module" src="/js/duelRoomBrowserSeriesController.js?v=manual-version"></script>',
         '<script type="module" src="/js/duelIdentityController.js?v=manual-version"></script>',
         '<script type="module" src="/js/feedbackController.js?v=manual-version"></script>',
-        '<script type="module" src="/js/connectionStatusController.js?v=manual-version"></script>'
+        '<script type="module" src="/js/connectionStatusController.js?v=manual-version"></script>',
+        '<script type="module" src="/js/pwaController.js?v=manual-version"></script>'
     ].join('\n'));
     return rootDir;
 }
@@ -68,12 +83,18 @@ test('frontend asset versioning replaces manual values with deterministic conten
     const firstHtml = fs.readFileSync(path.join(rootDir, 'public', 'index.html'), 'utf8');
 
     assert.equal(firstResult.changed, true);
-    assert.equal(firstResult.assets.length, 19);
+    assert.equal(firstResult.assets.length, 21);
     for (const asset of firstResult.assets) {
         assert.match(asset.version, /^[a-f0-9]{16}$/);
         assert.ok(firstHtml.includes(`${asset.publicPath}?v=${asset.version}`));
     }
     assert.match(firstHtml, /\/other\.js\?v=keep-this/);
+    assert.equal(firstResult.serviceWorker.precacheUrls.length, 24);
+    const serviceWorker = fs.readFileSync(path.join(rootDir, 'public', 'service-worker.js'), 'utf8');
+    assert.match(serviceWorker, /f1-guesser-static-[a-f0-9]{20}/);
+    for (const url of firstResult.serviceWorker.precacheUrls) {
+        assert.ok(serviceWorker.includes(JSON.stringify(url)), `${url} must be precached`);
+    }
 
     const secondResult = versionFrontendAssets(rootDir);
     assert.equal(secondResult.changed, false);
@@ -109,12 +130,30 @@ test('changing one asset updates only that asset version', () => {
     assert.notEqual(secondVersions['/game.bundle.min.js'], firstVersions['/game.bundle.min.js']);
 });
 
+test('changing an unversioned precache icon rotates the service worker cache', () => {
+    const rootDir = createFixture();
+    versionFrontendAssets(rootDir);
+    const serviceWorkerPath = path.join(rootDir, 'public', 'service-worker.js');
+    const firstWorker = fs.readFileSync(serviceWorkerPath, 'utf8');
+    const firstCache = firstWorker.match(/f1-guesser-static-[a-f0-9]{20}/)?.[0];
+
+    writeFile(rootDir, 'public/icons/pwa-192.png', 'updated-icon-192');
+    const result = versionFrontendAssets(rootDir);
+    const secondWorker = fs.readFileSync(serviceWorkerPath, 'utf8');
+    const secondCache = secondWorker.match(/f1-guesser-static-[a-f0-9]{20}/)?.[0];
+
+    assert.equal(result.changed, true);
+    assert.ok(firstCache);
+    assert.ok(secondCache);
+    assert.notEqual(secondCache, firstCache);
+});
+
 test('frontend asset versioning fails when a required reference is missing or duplicated', () => {
     const missingRoot = createFixture();
     writeFile(missingRoot, 'public/index.html', '<script src="/game.bundle.min.js"></script>');
     assert.throws(
         () => versionFrontendAssets(missingRoot),
-        /Expected exactly one \/js\/themeBootstrap\.js reference/
+        /Expected exactly one \/manifest\.webmanifest reference/
     );
 
     const duplicateRoot = createFixture();
@@ -123,6 +162,45 @@ test('frontend asset versioning fails when a required reference is missing or du
     assert.throws(
         () => versionFrontendAssets(duplicateRoot),
         /found 2/
+    );
+});
+
+test('precache generation is deterministic, unique and excludes dynamic endpoints', () => {
+    const urls = createPrecacheUrls([
+        { publicPath: '/game.bundle.min.js', version: 'abc123' },
+        { publicPath: '/style.bundle.css', version: 'def456' },
+        { publicPath: '/game.bundle.min.js', version: 'abc123' }
+    ], ['/index.html', '/index.html', '/icons/pwa-192.png']);
+
+    assert.deepEqual(urls, [
+        '/index.html',
+        '/icons/pwa-192.png',
+        '/game.bundle.min.js?v=abc123',
+        '/style.bundle.css?v=def456'
+    ]);
+    assert.equal(urls.some(url => url.startsWith('/api')), false);
+    assert.equal(urls.some(url => url.startsWith('/socket.io')), false);
+});
+
+test('service worker precache updater replaces only the generated block', () => {
+    const source = [
+        'before();',
+        '/* GENERATED_PRECACHE_START */',
+        'old generated content',
+        '/* GENERATED_PRECACHE_END */',
+        'after();'
+    ].join('\n');
+    const updated = updateServiceWorkerPrecache(source, ['/style.css?v=123', '/index.html']);
+
+    assert.match(updated, /before\(\);/);
+    assert.match(updated, /after\(\);/);
+    assert.match(updated, /f1-guesser-static-[a-f0-9]{20}/);
+    assert.match(updated, /"\/index\.html"/);
+    assert.match(updated, /"\/style\.css\?v=123"/);
+    assert.doesNotMatch(updated, /old generated content/);
+    assert.throws(
+        () => updateServiceWorkerPrecache('missing markers', []),
+        /precache markers/
     );
 });
 

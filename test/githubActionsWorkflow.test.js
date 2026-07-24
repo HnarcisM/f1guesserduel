@@ -42,7 +42,7 @@ test('GitHub Actions CI enforces coverage, builds and rejects stale generated fr
     const enforcementPosition = source.indexOf('name: Enforce backend test result');
     const buildPosition = source.indexOf('run: npm run build');
     const generatedCheckPosition = source.indexOf(
-        'git diff --exit-code -- public/index.html public/style.bundle.css public/game.bundle.min.js'
+        'git diff --exit-code -- public/index.html public/style.bundle.css public/game.bundle.min.js public/service-worker.js'
     );
 
     assert.ok(coveragePosition >= 0);
@@ -130,4 +130,14 @@ test('GitHub Actions CI regenerates visual baselines only through an explicit ma
     );
     assert.match(source, /name:\s*visual-baselines-\$\{\{ github\.run_attempt \}\}/);
     assert.match(source, /path:\s*test\/e2e\/baselines\/responsive-visual\//);
+});
+
+
+test('GitHub Actions CI rejects a stale committed service worker cache manifest', () => {
+    const source = readWorkflow();
+
+    assert.match(
+        source,
+        /git diff --exit-code -- public\/index\.html public\/style\.bundle\.css public\/game\.bundle\.min\.js public\/service-worker\.js/
+    );
 });

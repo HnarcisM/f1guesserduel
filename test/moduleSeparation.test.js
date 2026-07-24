@@ -164,3 +164,21 @@ test('global connection status stays isolated and uses the shared socket bridge'
     assert.doesNotMatch(game, /connectionStatusController|createConnectionStatusController/);
     assertFileBudget('public/js/connectionStatusController.js', 12_000);
 });
+
+
+test('PWA cache policy stays isolated and never caches API or Socket.IO traffic', () => {
+    const controller = readProjectFile('public/js/pwaController.js');
+    const serviceWorker = readProjectFile('public/service-worker.js');
+    const game = readProjectFile('public/game.js');
+
+    assert.match(controller, /serviceWorker\.register/);
+    assert.match(controller, /updateViaCache:\s*'none'/);
+    assert.match(serviceWorker, /NETWORK_ONLY_PREFIXES/);
+    assert.match(serviceWorker, /'\/api'/);
+    assert.match(serviceWorker, /'\/socket\.io'/);
+    assert.match(serviceWorker, /request\.method !== 'GET'/);
+    assert.match(serviceWorker, /request\.mode === 'navigate'/);
+    assert.doesNotMatch(game, /serviceWorker|installPwaController/);
+    assertFileBudget('public/js/pwaController.js', 5_000);
+    assertFileBudget('public/service-worker.js', 9_000);
+});

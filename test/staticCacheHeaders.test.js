@@ -18,16 +18,19 @@ function createResponse(originalUrl) {
     };
 }
 
-test('versioned JavaScript and CSS receive immutable long-term caching', () => {
+test('versioned JavaScript, CSS and manifests receive immutable long-term caching', () => {
     const scriptResponse = createResponse('/game.bundle.min.js?v=4c89bcaa6d84679f');
     const styleResponse = createResponse('/style.bundle.css?v=cf0218c6886c165d');
+    const manifestResponse = createResponse('/manifest.webmanifest?v=2bb2f90631f2b505');
 
     setStaticCacheHeaders(scriptResponse, '/public/game.bundle.min.js');
     setStaticCacheHeaders(styleResponse, '/public/style.bundle.css');
+    setStaticCacheHeaders(manifestResponse, '/public/manifest.webmanifest');
 
     const expectedHeader = `public, max-age=${ONE_YEAR_SECONDS}, immutable`;
     assert.equal(scriptResponse.headers['cache-control'], expectedHeader);
     assert.equal(styleResponse.headers['cache-control'], expectedHeader);
+    assert.equal(manifestResponse.headers['cache-control'], expectedHeader);
     assert.equal(isVersionedAssetRequest(scriptResponse), true);
 });
 

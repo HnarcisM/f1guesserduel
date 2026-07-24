@@ -88,7 +88,7 @@ jobs:
         run: npm run build
 
       - name: Verify generated frontend files are committed
-        run: git diff --exit-code -- public/index.html public/style.bundle.css public/game.bundle.min.js
+        run: git diff --exit-code -- public/index.html public/style.bundle.css public/game.bundle.min.js public/service-worker.js
 
   integration-services:
     name: Redis and PostgreSQL integration tests
