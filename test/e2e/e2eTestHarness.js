@@ -82,6 +82,7 @@ async function startAppServer(options = {}) {
         cwd: path.join(__dirname, '..', '..'),
         env: {
             ...process.env,
+            ...(options.env && typeof options.env === 'object' ? options.env : {}),
             PORT: String(port),
             DATA_DIR: dataDir,
             NODE_ENV: 'test',

@@ -184,6 +184,15 @@ jobs:
           set -o pipefail
           npm run test:e2e:flows 2>&1 | tee test-results/browser-logs/profile-reconnection.log
 
+      - name: Run admin console flows
+        id: admin_tests
+        continue-on-error: true
+        shell: bash
+        run: |
+          mkdir -p test-results/browser-logs
+          set -o pipefail
+          npm run test:e2e:admin 2>&1 | tee test-results/browser-logs/admin-console.log
+
       - name: Run automated accessibility audit
         id: accessibility_tests
         continue-on-error: true
@@ -199,6 +208,7 @@ jobs:
         env:
           RESPONSIVE_OUTCOME: ${{ steps.responsive_tests.outcome }}
           FLOW_OUTCOME: ${{ steps.flow_tests.outcome }}
+          ADMIN_OUTCOME: ${{ steps.admin_tests.outcome }}
           ACCESSIBILITY_OUTCOME: ${{ steps.accessibility_tests.outcome }}
         run: |
           {
@@ -208,6 +218,7 @@ jobs:
             echo "| --- | --- |"
             echo "| Responsive and visual | ${RESPONSIVE_OUTCOME} |"
             echo "| Profile and reconnection | ${FLOW_OUTCOME} |"
+            echo "| Admin console | ${ADMIN_OUTCOME} |"
             echo "| Accessibility | ${ACCESSIBILITY_OUTCOME} |"
             echo
             echo "Full logs are available in the browser-quality artifact."
@@ -240,10 +251,11 @@ jobs:
         env:
           RESPONSIVE_OUTCOME: ${{ steps.responsive_tests.outcome }}
           FLOW_OUTCOME: ${{ steps.flow_tests.outcome }}
+          ADMIN_OUTCOME: ${{ steps.admin_tests.outcome }}
           ACCESSIBILITY_OUTCOME: ${{ steps.accessibility_tests.outcome }}
         run: |
           failed=0
-          for result in "$RESPONSIVE_OUTCOME" "$FLOW_OUTCOME" "$ACCESSIBILITY_OUTCOME"; do
+          for result in "$RESPONSIVE_OUTCOME" "$FLOW_OUTCOME" "$ADMIN_OUTCOME" "$ACCESSIBILITY_OUTCOME"; do
             if [[ "$result" != "success" ]]; then
               failed=1
             fi

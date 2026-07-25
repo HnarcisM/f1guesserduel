@@ -119,3 +119,17 @@ Daily Challenge se resetează la miezul nopții local al browserului și este bl
 ## Test launcher progress
 
 `F1GuesserDuel_Tests.bat` și `F1GuesserDuel_Tests_cachyos.sh` afișează mesaje `[progress]` pentru comenzile lungi, inclusiv `npm install`, instalarea Chromium Playwright și testele E2E.
+
+## Admin console
+
+Rulează scenariile dedicate panoului owner-only cu:
+
+```bash
+npm run test:e2e:admin
+```
+
+Suita pornește o bază SQLite temporară și verifică accesul 404 pentru un utilizator normal,
+încărcarea panoului pentru administrator, căutarea și detaliile utilizatorilor,
+reconfirmarea parolei la suspendare, filtrele de audit și layout-ul pentru viewport-uri mobile.
+Datele sunt eliminate automat după test și nu folosesc baza configurată pentru dezvoltare sau producție.
+

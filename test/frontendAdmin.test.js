@@ -54,3 +54,23 @@ test('admin UI surfaces UUID authorization and legacy migration guidance', () =>
     assert.match(source, /ADMIN_ACCOUNT_UUIDS/);
     assert.match(source, /legacyMigrationRequired/);
 });
+
+test('admin E2E suite is wired into package scripts and the browser CI gate', () => {
+    const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+    const workflow = fs.readFileSync(path.join(__dirname, '..', '.github', 'workflows', 'ci.yml'), 'utf8');
+    const source = fs.readFileSync(path.join(__dirname, 'e2e', 'admin.e2e.test.js'), 'utf8');
+
+    assert.equal(
+        packageJson.scripts['test:e2e:admin'],
+        'node --test --test-timeout=90000 test/e2e/admin.e2e.test.js'
+    );
+    assert.match(workflow, /name: Run admin console flows/);
+    assert.match(workflow, /npm run test:e2e:admin/);
+    assert.match(workflow, /ADMIN_OUTCOME: \$\{\{ steps\.admin_tests\.outcome \}\}/);
+    assert.match(workflow, /"\$ADMIN_OUTCOME"/);
+    assert.match(source, /utilizatorul normal primește 404 pentru \/admin/);
+    assert.match(source, /suspendarea cu parolă greșită este refuzată/);
+    assert.match(source, /auditul poate fi filtrat după categorie și text/);
+    assert.match(source, /panoul rămâne utilizabil pe ecrane mobile/);
+});
+
