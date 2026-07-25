@@ -2,28 +2,74 @@
 
 const { createAdminRepository } = require('./adminRepository');
 const { buildPublicRoomListPayload } = require('../socket/roomListPayloads');
-const { getIsoWeekInfo } = require('../game/extendedModesService');
+const { getDailyDateKey } = require('../game/dailyChallenge');
+const { getIsoWeekInfo } = require('../game/weeklyChallenge');
 const { isValidRoomId } = require('../config/constants');
 
-function createAdminService({ database, roomStore, io, sessionService, repository = null, now = () => new Date() }) {
+const SUSPENSION_DURATIONS_MS = Object.freeze({
+    '1h': 60 * 60 * 1000,
+    '24h': 24 * 60 * 60 * 1000,
+    '7d': 7 * 24 * 60 * 60 * 1000,
+    permanent: null
+});
+
+function normalizeUserId(value) {
+    const parsed = Number(value);
+    return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function normalizeReason(value) {
+    const reason = String(value || '').trim().replace(/\s+/g, ' ');
+    return reason.length >= 5 && reason.length <= 250 ? reason : null;
+}
+
+function createAdminService({
+    database,
+    roomStore,
+    io,
+    sessionService,
+    repository = null,
+    now = () => new Date(),
+    isAdminUser = () => false
+}) {
     const adminRepository = repository || createAdminRepository(database);
+
+    function getChallengeKeys() {
+        const current = new Date(now());
+        return {
+            dailyDate: getDailyDateKey(current),
+            weekKey: getIsoWeekInfo(current).key
+        };
+    }
 
     async function getOverview() {
         await roomStore.refreshAll?.();
+        const keys = getChallengeKeys();
         const databaseOverview = await adminRepository.getOverview({
-            weekKey: getIsoWeekInfo(now()).key
+            weekKey: keys.weekKey,
+            todayKey: keys.dailyDate
         });
         const roomPayload = buildPublicRoomListPayload(roomStore, { limit: 100 });
         return {
             ...databaseOverview,
             activeRooms: roomPayload.totalRooms,
             connectedSockets: Number(io?.engine?.clientsCount) || 0,
+            dailyDate: keys.dailyDate,
+            weekKey: keys.weekKey,
             generatedAt: new Date(now()).toISOString()
         };
     }
 
     async function listUsers(options) {
         return adminRepository.listUsers(options || {});
+    }
+
+    async function getUserDetails(userId) {
+        const normalizedUserId = normalizeUserId(userId);
+        if (!normalizedUserId) return { ok: false, status: 400, message: 'Utilizatorul selectat nu este valid.' };
+        const details = await adminRepository.getUserDetails(normalizedUserId);
+        if (!details) return { ok: false, status: 404, message: 'Utilizatorul nu a fost găsit.' };
+        return { ok: true, ...details, challengeKeys: getChallengeKeys() };
     }
 
     async function listRooms() {
@@ -40,10 +86,8 @@ function createAdminService({ database, roomStore, io, sessionService, repositor
     }
 
     async function revokeUserSessions({ adminUserId, targetUserId, requestId }) {
-        const normalizedTargetId = Number(targetUserId);
-        if (!Number.isSafeInteger(normalizedTargetId) || normalizedTargetId <= 0) {
-            return { ok: false, status: 400, message: 'Utilizatorul selectat nu este valid.' };
-        }
+        const normalizedTargetId = normalizeUserId(targetUserId);
+        if (!normalizedTargetId) return { ok: false, status: 400, message: 'Utilizatorul selectat nu este valid.' };
         if (normalizedTargetId === Number(adminUserId)) {
             return { ok: false, status: 400, message: 'Nu îți poți revoca propria sesiune din acest panou.' };
         }
@@ -61,23 +105,108 @@ function createAdminService({ database, roomStore, io, sessionService, repositor
         return { ok: true, revokedSessions };
     }
 
+    async function disconnectUserSockets(userId, payload) {
+        if (typeof io?.fetchSockets !== 'function') return 0;
+        const sockets = await io.fetchSockets();
+        const matches = sockets.filter(socket => Number(socket?.data?.authUser?.id || socket?.user?.id) === Number(userId));
+        for (const socket of matches) {
+            socket.emit?.('accountSuspended', payload);
+            socket.disconnect?.(true);
+        }
+        return matches.length;
+    }
+
+    async function suspendUser({ adminUserId, targetUserId, duration, reason, requestId }) {
+        const normalizedTargetId = normalizeUserId(targetUserId);
+        const cleanReason = normalizeReason(reason);
+        if (!normalizedTargetId) return { ok: false, status: 400, message: 'Utilizatorul selectat nu este valid.' };
+        if (normalizedTargetId === Number(adminUserId)) return { ok: false, status: 400, message: 'Nu îți poți suspenda propriul cont.' };
+        const targetDetails = await adminRepository.getUserDetails(normalizedTargetId);
+        if (!targetDetails) return { ok: false, status: 404, message: 'Utilizatorul nu a fost găsit.' };
+        if (isAdminUser(targetDetails.user)) return { ok: false, status: 403, message: 'Un cont de administrator nu poate fi suspendat din panou.' };
+        if (!Object.hasOwn(SUSPENSION_DURATIONS_MS, duration)) return { ok: false, status: 400, message: 'Durata suspendării nu este validă.' };
+        if (!cleanReason) return { ok: false, status: 400, message: 'Motivul trebuie să aibă între 5 și 250 de caractere.' };
+
+        const durationMs = SUSPENSION_DURATIONS_MS[duration];
+        const suspendedUntil = durationMs === null ? null : new Date(new Date(now()).getTime() + durationMs).toISOString();
+        const updated = await adminRepository.setUserSuspension({ userId: normalizedTargetId, reason: cleanReason, suspendedUntil });
+        if (!updated) return { ok: false, status: 404, message: 'Utilizatorul nu a fost găsit.' };
+        const revoked = await sessionService.destroyAllSessionsForUser(normalizedTargetId);
+        const disconnectedSockets = await disconnectUserSockets(normalizedTargetId, {
+            message: 'Contul tău a fost suspendat de administrator.',
+            suspendedUntil
+        });
+        const revokedSessions = Number(revoked?.changes ?? revoked?.rowCount) || 0;
+        await adminRepository.recordAudit({
+            adminUserId,
+            action: 'user.suspended',
+            targetType: 'user',
+            targetId: String(normalizedTargetId),
+            details: { duration, suspendedUntil, reason: cleanReason, revokedSessions, disconnectedSockets },
+            requestId
+        });
+        return { ok: true, userId: normalizedTargetId, suspendedUntil, revokedSessions, disconnectedSockets };
+    }
+
+    async function reactivateUser({ adminUserId, targetUserId, requestId }) {
+        const normalizedTargetId = normalizeUserId(targetUserId);
+        if (!normalizedTargetId) return { ok: false, status: 400, message: 'Utilizatorul selectat nu este valid.' };
+        const updated = await adminRepository.clearUserSuspension(normalizedTargetId);
+        if (!updated) return { ok: false, status: 404, message: 'Utilizatorul nu a fost găsit.' };
+        await adminRepository.recordAudit({
+            adminUserId,
+            action: 'user.reactivated',
+            targetType: 'user',
+            targetId: String(normalizedTargetId),
+            details: {},
+            requestId
+        });
+        return { ok: true, userId: normalizedTargetId };
+    }
+
+    async function resetDailyAttempt({ adminUserId, targetUserId, requestId }) {
+        const normalizedTargetId = normalizeUserId(targetUserId);
+        if (!normalizedTargetId) return { ok: false, status: 400, message: 'Utilizatorul selectat nu este valid.' };
+        const { dailyDate } = getChallengeKeys();
+        const deletedAttempts = await adminRepository.resetDailyAttempts({ userId: normalizedTargetId, dailyDate });
+        await adminRepository.recordAudit({
+            adminUserId,
+            action: 'challenge.daily.reset',
+            targetType: 'user',
+            targetId: String(normalizedTargetId),
+            details: { dailyDate, deletedAttempts, historyPreserved: true },
+            requestId
+        });
+        return { ok: true, dailyDate, deletedAttempts };
+    }
+
+    async function resetWeeklyAttempt({ adminUserId, targetUserId, requestId }) {
+        const normalizedTargetId = normalizeUserId(targetUserId);
+        if (!normalizedTargetId) return { ok: false, status: 400, message: 'Utilizatorul selectat nu este valid.' };
+        const { weekKey } = getChallengeKeys();
+        const deletedAttempts = await adminRepository.resetWeeklyAttempt({ userId: normalizedTargetId, weekKey });
+        await adminRepository.recordAudit({
+            adminUserId,
+            action: 'challenge.weekly.reset',
+            targetType: 'user',
+            targetId: String(normalizedTargetId),
+            details: { weekKey, deletedAttempts, historyPreserved: true },
+            requestId
+        });
+        return { ok: true, weekKey, deletedAttempts };
+    }
+
     async function closeRoom({ adminUserId, roomId, requestId }) {
         const cleanRoomId = String(roomId || '').trim();
-        if (!isValidRoomId(cleanRoomId)) {
-            return { ok: false, status: 400, message: 'Camera selectată nu este validă.' };
-        }
+        if (!isValidRoomId(cleanRoomId)) return { ok: false, status: 400, message: 'Camera selectată nu este validă.' };
 
         await roomStore.refreshRoom?.(cleanRoomId);
         const room = roomStore.get?.(cleanRoomId);
-        if (!room) {
-            return { ok: false, status: 404, message: 'Camera nu mai există.' };
-        }
+        if (!room) return { ok: false, status: 404, message: 'Camera nu mai există.' };
 
         const playerCount = Object.keys(room.players || {}).length;
         const spectatorCount = Object.keys(room.spectators || {}).length;
-        io?.to?.(cleanRoomId)?.emit?.('duelAborted', {
-            message: 'Camera a fost închisă de administrator.'
-        });
+        io?.to?.(cleanRoomId)?.emit?.('duelAborted', { message: 'Camera a fost închisă de administrator.' });
         roomStore.remove(cleanRoomId);
         await roomStore.saveNow?.();
         await io?.in?.(cleanRoomId)?.socketsLeave?.(cleanRoomId);
@@ -97,12 +226,21 @@ function createAdminService({ database, roomStore, io, sessionService, repositor
     return {
         getOverview,
         listUsers,
+        getUserDetails,
         listRooms,
         listAudit,
         recordAuditEvent,
         revokeUserSessions,
+        suspendUser,
+        reactivateUser,
+        resetDailyAttempt,
+        resetWeeklyAttempt,
         closeRoom
     };
 }
 
-module.exports = { createAdminService };
+module.exports = {
+    createAdminService,
+    SUSPENSION_DURATIONS_MS,
+    normalizeReason
+};

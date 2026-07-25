@@ -73,3 +73,50 @@ test('admin routes audit a failed password reconfirmation without executing the 
         assert.equal(audits[0].details.method, 'POST');
     });
 });
+
+test('admin suspension route requires password and forwards validated moderation data', async () => {
+    const calls = [];
+    const adminService = {
+        async suspendUser(payload) { calls.push(payload); return { ok: true, userId: 2 }; },
+        async recordAuditEvent() {}
+    };
+    await withServer({
+        user: { id: 1, username: 'Admin', email: 'admin@example.com' },
+        adminAccess: { requireAdminApi: passThrough },
+        adminService,
+        authService: { async verifyPasswordForUser() { return true; } }
+    }, async baseUrl => {
+        const response = await fetch(`${baseUrl}/users/2/suspend`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ currentPassword: 'secret', duration: '24h', reason: 'Abuz repetat în camere' })
+        });
+        assert.equal(response.status, 200);
+        assert.equal(calls.length, 1);
+        assert.equal(calls[0].adminUserId, 1);
+        assert.equal(calls[0].targetUserId, '2');
+        assert.equal(calls[0].duration, '24h');
+        assert.equal(calls[0].reason, 'Abuz repetat în camere');
+    });
+});
+
+test('admin user details and filtered audit routes return service payloads', async () => {
+    const adminService = {
+        async getUserDetails() { return { ok: true, user: { id: 2 } }; },
+        async listAudit(options) { return { entries: [], total: 0, options }; }
+    };
+    await withServer({
+        user: { id: 1, username: 'Admin', email: 'admin@example.com' },
+        adminAccess: { requireAdminApi: passThrough },
+        adminService,
+        authService: {}
+    }, async baseUrl => {
+        const details = await fetch(`${baseUrl}/users/2`);
+        assert.equal(details.status, 200);
+        assert.equal((await details.json()).user.id, 2);
+        const audit = await fetch(`${baseUrl}/audit?action=user.&search=Pilot`);
+        const payload = await audit.json();
+        assert.equal(payload.options.action, 'user.');
+        assert.equal(payload.options.search, 'Pilot');
+    });
+});

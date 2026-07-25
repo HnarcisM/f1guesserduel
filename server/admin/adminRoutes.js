@@ -93,9 +93,78 @@ function createAdminRoutes({
         }
     });
 
+    router.get('/users/:userId', readLimiter, async (req, res, next) => {
+        try {
+            const result = await adminService.getUserDetails(req.params.userId);
+            if (!result.ok) return res.status(result.status || 400).json({ message: result.message });
+            return res.json(result);
+        } catch (error) {
+            return next(error);
+        }
+    });
+
     router.post('/users/:userId/revoke-sessions', writeLimiter, requireAdminPassword, async (req, res, next) => {
         try {
             const result = await adminService.revokeUserSessions({
+                adminUserId: req.user.id,
+                targetUserId: req.params.userId,
+                requestId: req.requestId
+            });
+            if (!result.ok) return res.status(result.status || 400).json({ message: result.message });
+            return res.json(result);
+        } catch (error) {
+            return next(error);
+        }
+    });
+
+
+    router.post('/users/:userId/suspend', writeLimiter, requireAdminPassword, async (req, res, next) => {
+        try {
+            const result = await adminService.suspendUser({
+                adminUserId: req.user.id,
+                targetUserId: req.params.userId,
+                duration: req.body?.duration,
+                reason: req.body?.reason,
+                requestId: req.requestId
+            });
+            if (!result.ok) return res.status(result.status || 400).json({ message: result.message });
+            return res.json(result);
+        } catch (error) {
+            return next(error);
+        }
+    });
+
+    router.post('/users/:userId/reactivate', writeLimiter, requireAdminPassword, async (req, res, next) => {
+        try {
+            const result = await adminService.reactivateUser({
+                adminUserId: req.user.id,
+                targetUserId: req.params.userId,
+                requestId: req.requestId
+            });
+            if (!result.ok) return res.status(result.status || 400).json({ message: result.message });
+            return res.json(result);
+        } catch (error) {
+            return next(error);
+        }
+    });
+
+    router.post('/users/:userId/reset-daily', writeLimiter, requireAdminPassword, async (req, res, next) => {
+        try {
+            const result = await adminService.resetDailyAttempt({
+                adminUserId: req.user.id,
+                targetUserId: req.params.userId,
+                requestId: req.requestId
+            });
+            if (!result.ok) return res.status(result.status || 400).json({ message: result.message });
+            return res.json(result);
+        } catch (error) {
+            return next(error);
+        }
+    });
+
+    router.post('/users/:userId/reset-weekly', writeLimiter, requireAdminPassword, async (req, res, next) => {
+        try {
+            const result = await adminService.resetWeeklyAttempt({
                 adminUserId: req.user.id,
                 targetUserId: req.params.userId,
                 requestId: req.requestId
@@ -131,7 +200,12 @@ function createAdminRoutes({
 
     router.get('/audit', readLimiter, async (req, res, next) => {
         try {
-            return res.json({ entries: await adminService.listAudit({ limit: req.query?.limit }) });
+            return res.json(await adminService.listAudit({
+                limit: req.query?.limit,
+                offset: req.query?.offset,
+                action: req.query?.action,
+                search: req.query?.search
+            }));
         } catch (error) {
             return next(error);
         }

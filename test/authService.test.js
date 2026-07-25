@@ -400,3 +400,25 @@ test('auth service can reauthenticate an admin action without exposing credentia
     assert.equal(await authService.verifyPasswordForUser(registered.user.id, 'wrong-password'), false);
     assert.equal(await authService.verifyPasswordForUser(999, 'StrongPassword123!'), false);
 });
+
+test('auth service blocks a suspended account even when the password is correct', async () => {
+    const repository = createFakeAuthRepository();
+    const authService = createAuthService(repository, createFakeSessionService());
+    const registered = await authService.register({
+        username: 'SuspendedUser',
+        email: 'suspended@example.com',
+        password: 'StrongPassword123!'
+    });
+    const storedUser = repository.users.get(registered.user.id);
+    storedUser.accountStatus = 'suspended';
+    storedUser.suspendedUntil = new Date(Date.now() + 60_000).toISOString();
+
+    const result = await authService.login({
+        email: 'suspended@example.com',
+        password: 'StrongPassword123!'
+    });
+
+    assert.equal(result.ok, false);
+    assert.equal(result.status, 423);
+    assert.match(result.message, /suspendat/i);
+});

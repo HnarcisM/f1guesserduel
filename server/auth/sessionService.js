@@ -6,6 +6,7 @@ const {
     DEFAULT_SESSION_CLEANUP_INTERVAL_MS
 } = require('../config/appConfig');
 const { createAuthRepository } = require('./authRepository');
+const { isAccountSuspended } = require('./accountStatus');
 
 const SESSION_COOKIE_NAME = DEFAULT_SESSION_COOKIE_NAME;
 const SESSION_MAX_AGE_DAYS = DEFAULT_SESSION_MAX_AGE_DAYS;
@@ -81,7 +82,8 @@ function createSessionService(databaseOrRepository, options = {}) {
 
     async function getUserBySessionHash(sessionHash) {
         if (!sessionHash || typeof sessionHash !== 'string') return null;
-        return repository.getSessionUserByHash(sessionHash);
+        const user = await repository.getSessionUserByHash(sessionHash);
+        return isAccountSuspended(user) ? null : user;
     }
 
     async function resolveSessionToken(token) {

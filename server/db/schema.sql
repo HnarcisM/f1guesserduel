@@ -4,8 +4,15 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT NOT NULL UNIQUE COLLATE NOCASE,
     password_hash TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    last_seen_at TEXT
+    last_seen_at TEXT,
+    account_status TEXT NOT NULL DEFAULT 'active' CHECK (account_status IN ('active', 'suspended')),
+    suspended_until TEXT,
+    suspension_reason TEXT,
+    suspended_at TEXT
 );
+
+CREATE INDEX IF NOT EXISTS idx_users_account_status
+    ON users(account_status, suspended_until);
 
 CREATE TABLE IF NOT EXISTS user_profiles (
     user_id INTEGER PRIMARY KEY,

@@ -4,6 +4,7 @@ const {
     verifyPassword
 } = require('./passwordService');
 const { createAuthRepository } = require('./authRepository');
+const { buildSuspensionMessage, isAccountSuspended } = require('./accountStatus');
 
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -142,6 +143,14 @@ function createAuthService(databaseOrRepository, sessionService) {
         const passwordMatches = await verifyPassword(password, passwordHash);
         if (!userRow || !passwordMatches) {
             return { ok: false, status: 401, message: 'Email sau parolă greșită.' };
+        }
+        if (isAccountSuspended(userRow)) {
+            return {
+                ok: false,
+                status: 423,
+                message: buildSuspensionMessage(userRow),
+                suspendedUntil: userRow.suspendedUntil || null
+            };
         }
 
         await repository.updateLastSeen(userRow.id);

@@ -1,7 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 const { runPostgresMigrations } = require('./postgresMigrator');
-const { ensureSqliteAccountGameHistoryColumns } = require('./sqliteSchemaUpgrade');
+const {
+    ensureSqliteAccountGameHistoryColumns,
+    ensureSqliteUserModerationColumns
+} = require('./sqliteSchemaUpgrade');
 
 const TRANSIENT_POSTGRES_ERROR_CODES = new Set([
     'ETIMEDOUT',
@@ -130,6 +133,7 @@ function createSqliteDatabase({ dbFilePath, schemaFilePath }) {
     const schema = fs.readFileSync(schemaFilePath, 'utf8');
     db.exec(schema);
     ensureSqliteAccountGameHistoryColumns(db);
+    ensureSqliteUserModerationColumns(db);
 
     db.provider = 'sqlite';
     db.check = () => {

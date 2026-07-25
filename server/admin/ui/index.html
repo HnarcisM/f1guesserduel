@@ -9,111 +9,46 @@
     <link rel="stylesheet" href="/admin/admin.css">
 </head>
 <body>
-    <div class="admin-shell">
-        <aside class="admin-sidebar" aria-label="Meniu administrare">
-            <a class="admin-brand" href="/">
-                <span aria-hidden="true">🏎️</span>
-                <span><strong>F1 Guesser</strong><small>Admin Console</small></span>
-            </a>
-            <nav class="admin-nav">
-                <button type="button" class="admin-nav-item is-active" data-admin-view="dashboard">📊 Dashboard</button>
-                <button type="button" class="admin-nav-item" data-admin-view="users">👥 Utilizatori</button>
-                <button type="button" class="admin-nav-item" data-admin-view="rooms">🏁 Camere active</button>
-                <button type="button" class="admin-nav-item" data-admin-view="audit">🛡️ Audit</button>
-            </nav>
-            <div class="admin-sidebar-footer">
-                <span id="adminIdentity">Se verifică accesul…</span>
-                <a href="/">Înapoi în joc</a>
-            </div>
-        </aside>
+<div class="admin-shell">
+    <aside class="admin-sidebar" aria-label="Meniu administrare">
+        <a class="admin-brand" href="/"><span aria-hidden="true">🏎️</span><span><strong>F1 Guesser</strong><small>Admin Console</small></span></a>
+        <nav class="admin-nav">
+            <button type="button" class="admin-nav-item is-active" data-admin-view="dashboard">📊 Dashboard</button>
+            <button type="button" class="admin-nav-item" data-admin-view="users">👥 Utilizatori</button>
+            <button type="button" class="admin-nav-item" data-admin-view="rooms">🏁 Camere active</button>
+            <button type="button" class="admin-nav-item" data-admin-view="audit">🛡️ Audit</button>
+        </nav>
+        <div class="admin-sidebar-footer"><span id="adminIdentity">Se verifică accesul…</span><a href="/">Înapoi în joc</a></div>
+    </aside>
+    <main class="admin-main">
+        <header class="admin-topbar"><div><p class="admin-eyebrow">Owner-only</p><h1 id="adminPageTitle">Dashboard</h1></div><button type="button" id="adminRefreshBtn" class="admin-secondary-btn">Actualizează</button></header>
+        <p id="adminStatus" class="admin-status" role="status" aria-live="polite"></p>
 
-        <main class="admin-main">
-            <header class="admin-topbar">
-                <div>
-                    <p class="admin-eyebrow">Owner-only</p>
-                    <h1 id="adminPageTitle">Dashboard</h1>
-                </div>
-                <button type="button" id="adminRefreshBtn" class="admin-secondary-btn">Actualizează</button>
-            </header>
+        <section id="adminViewDashboard" class="admin-view">
+            <div id="adminMetricGrid" class="admin-metric-grid" aria-label="Metrici aplicație"></div>
+            <article class="admin-panel"><div class="admin-panel-header"><div><p class="admin-eyebrow">Ultimele 7 zile</p><h2>Activitate</h2></div></div><div id="adminActivityTrend" class="admin-trend"></div></article>
+            <article class="admin-panel"><div class="admin-panel-header"><div><p class="admin-eyebrow">Stare sistem</p><h2>Rezumat operațional</h2></div></div><dl id="adminSystemSummary" class="admin-summary-list"></dl></article>
+        </section>
 
-            <p id="adminStatus" class="admin-status" role="status" aria-live="polite"></p>
+        <section id="adminViewUsers" class="admin-view is-hidden" aria-hidden="true">
+            <article class="admin-panel">
+                <div class="admin-panel-header admin-panel-header-wrap"><div><p class="admin-eyebrow">Conturi și moderare</p><h2>Utilizatori înregistrați</h2></div><form id="adminUserSearchForm" class="admin-search-form" role="search"><label class="sr-only" for="adminUserSearch">Caută utilizatori</label><input id="adminUserSearch" type="search" maxlength="100" placeholder="Username, email sau ID"><button type="submit" class="admin-primary-btn">Caută</button></form></div>
+                <div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Cont</th><th>Status</th><th>Activitate</th><th>Jocuri</th><th>XP</th><th>Sesiuni</th><th>Acțiuni</th></tr></thead><tbody id="adminUsersBody"></tbody></table></div>
+                <p id="adminUsersMeta" class="admin-panel-note"></p>
+            </article>
+        </section>
 
-            <section id="adminViewDashboard" class="admin-view">
-                <div id="adminMetricGrid" class="admin-metric-grid" aria-label="Metrici aplicație"></div>
-                <article class="admin-panel">
-                    <div class="admin-panel-header">
-                        <div><p class="admin-eyebrow">Stare sistem</p><h2>Rezumat operațional</h2></div>
-                    </div>
-                    <dl id="adminSystemSummary" class="admin-summary-list"></dl>
-                </article>
-            </section>
+        <section id="adminViewRooms" class="admin-view is-hidden" aria-hidden="true"><article class="admin-panel"><div class="admin-panel-header"><div><p class="admin-eyebrow">Duel</p><h2>Camere active</h2></div></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Cameră</th><th>Host</th><th>Participanți</th><th>Stare</th><th>Setări</th><th>Acțiuni</th></tr></thead><tbody id="adminRoomsBody"></tbody></table></div><p id="adminRoomsMeta" class="admin-panel-note"></p></article></section>
 
-            <section id="adminViewUsers" class="admin-view is-hidden" aria-hidden="true">
-                <article class="admin-panel">
-                    <div class="admin-panel-header admin-panel-header-wrap">
-                        <div><p class="admin-eyebrow">Conturi</p><h2>Utilizatori înregistrați</h2></div>
-                        <form id="adminUserSearchForm" class="admin-search-form" role="search">
-                            <label class="sr-only" for="adminUserSearch">Caută utilizatori</label>
-                            <input id="adminUserSearch" type="search" maxlength="100" placeholder="Username, email sau ID">
-                            <button type="submit" class="admin-primary-btn">Caută</button>
-                        </form>
-                    </div>
-                    <div class="admin-table-wrap">
-                        <table class="admin-table">
-                            <thead><tr><th>Cont</th><th>Activitate</th><th>Jocuri</th><th>XP</th><th>Sesiuni</th><th>Acțiuni</th></tr></thead>
-                            <tbody id="adminUsersBody"></tbody>
-                        </table>
-                    </div>
-                    <p id="adminUsersMeta" class="admin-panel-note"></p>
-                </article>
-            </section>
+        <section id="adminViewAudit" class="admin-view is-hidden" aria-hidden="true"><article class="admin-panel"><div class="admin-panel-header admin-panel-header-wrap"><div><p class="admin-eyebrow">Securitate</p><h2>Acțiuni administrative</h2></div><form id="adminAuditFilterForm" class="admin-search-form"><label class="sr-only" for="adminAuditSearch">Filtrează auditul</label><input id="adminAuditSearch" type="search" maxlength="100" placeholder="Acțiune, țintă sau detaliu"><select id="adminAuditAction"><option value="">Toate acțiunile</option><option value="user.">Utilizatori</option><option value="challenge.">Challenge</option><option value="room.">Camere</option><option value="admin.">Securitate</option></select><button type="submit" class="admin-primary-btn">Filtrează</button></form></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Data</th><th>Administrator</th><th>Acțiune</th><th>Țintă</th><th>Detalii</th></tr></thead><tbody id="adminAuditBody"></tbody></table></div><p id="adminAuditMeta" class="admin-panel-note"></p></article></section>
+    </main>
+</div>
 
-            <section id="adminViewRooms" class="admin-view is-hidden" aria-hidden="true">
-                <article class="admin-panel">
-                    <div class="admin-panel-header">
-                        <div><p class="admin-eyebrow">Duel</p><h2>Camere active</h2></div>
-                    </div>
-                    <div class="admin-table-wrap">
-                        <table class="admin-table">
-                            <thead><tr><th>Cameră</th><th>Host</th><th>Participanți</th><th>Stare</th><th>Setări</th><th>Acțiuni</th></tr></thead>
-                            <tbody id="adminRoomsBody"></tbody>
-                        </table>
-                    </div>
-                    <p id="adminRoomsMeta" class="admin-panel-note"></p>
-                </article>
-            </section>
+<dialog id="adminConfirmDialog" class="admin-dialog"><form id="adminConfirmForm"><p class="admin-eyebrow">Confirmare de securitate</p><h2 id="adminConfirmTitle">Confirmă acțiunea</h2><p id="adminConfirmMessage"></p><label for="adminConfirmPassword">Parola contului tău</label><input id="adminConfirmPassword" type="password" maxlength="64" autocomplete="current-password" required><p id="adminConfirmError" class="admin-dialog-error" role="alert"></p><div class="admin-dialog-actions"><button type="button" id="adminConfirmCancel" class="admin-secondary-btn">Renunță</button><button type="submit" id="adminConfirmSubmit" class="admin-danger-btn">Confirmă</button></div></form></dialog>
 
-            <section id="adminViewAudit" class="admin-view is-hidden" aria-hidden="true">
-                <article class="admin-panel">
-                    <div class="admin-panel-header">
-                        <div><p class="admin-eyebrow">Securitate</p><h2>Acțiuni administrative</h2></div>
-                    </div>
-                    <div class="admin-table-wrap">
-                        <table class="admin-table">
-                            <thead><tr><th>Data</th><th>Administrator</th><th>Acțiune</th><th>Țintă</th><th>Detalii</th></tr></thead>
-                            <tbody id="adminAuditBody"></tbody>
-                        </table>
-                    </div>
-                </article>
-            </section>
-        </main>
-    </div>
+<dialog id="adminUserDialog" class="admin-dialog admin-dialog-wide"><div class="admin-user-dialog-head"><div><p class="admin-eyebrow">Detalii cont</p><h2 id="adminUserDialogTitle">Utilizator</h2></div><button type="button" id="adminUserDialogClose" class="admin-secondary-btn">Închide</button></div><div id="adminUserDetails" class="admin-user-details"></div><div id="adminUserActions" class="admin-user-actions"></div></dialog>
 
-    <dialog id="adminConfirmDialog" class="admin-dialog">
-        <form id="adminConfirmForm" method="dialog">
-            <p class="admin-eyebrow">Confirmare de securitate</p>
-            <h2 id="adminConfirmTitle">Confirmă acțiunea</h2>
-            <p id="adminConfirmMessage"></p>
-            <label for="adminConfirmPassword">Parola contului tău</label>
-            <input id="adminConfirmPassword" name="currentPassword" type="password" minlength="1" maxlength="64" autocomplete="current-password" required>
-            <p id="adminConfirmError" class="admin-dialog-error" role="alert"></p>
-            <div class="admin-dialog-actions">
-                <button type="button" id="adminConfirmCancel" class="admin-secondary-btn">Renunță</button>
-                <button type="submit" id="adminConfirmSubmit" class="admin-danger-btn">Confirmă</button>
-            </div>
-        </form>
-    </dialog>
-
-    <script type="module" src="/admin/admin.js"></script>
+<dialog id="adminSuspendDialog" class="admin-dialog"><form id="adminSuspendForm"><p class="admin-eyebrow">Moderare</p><h2>Suspendă utilizatorul</h2><p id="adminSuspendTarget"></p><label for="adminSuspendDuration">Durată</label><select id="adminSuspendDuration" required><option value="1h">1 oră</option><option value="24h">24 de ore</option><option value="7d">7 zile</option><option value="permanent">Permanent</option></select><label for="adminSuspendReason">Motiv</label><textarea id="adminSuspendReason" minlength="5" maxlength="250" required></textarea><label for="adminSuspendPassword">Parola contului tău</label><input id="adminSuspendPassword" type="password" maxlength="64" autocomplete="current-password" required><p id="adminSuspendError" class="admin-dialog-error" role="alert"></p><div class="admin-dialog-actions"><button type="button" id="adminSuspendCancel" class="admin-secondary-btn">Renunță</button><button type="submit" id="adminSuspendSubmit" class="admin-danger-btn">Suspendă</button></div></form></dialog>
+<script src="/admin/admin.js" defer></script>
 </body>
 </html>

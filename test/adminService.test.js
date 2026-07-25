@@ -88,3 +88,83 @@ test('admin can close a room and the action is broadcast and audited', async () 
     assert.equal(f.emitted.some(entry => entry.event === 'roomListUpdate'), true);
     assert.equal(f.audits[0].action, 'room.closed');
 });
+
+test('admin suspension revokes sessions, disconnects sockets and writes audit metadata', async () => {
+    const audits = [];
+    const repository = {
+        async getUserDetails(userId) {
+            return { user: { id: Number(userId), username: 'Pilot', effectiveStatus: 'active' } };
+        },
+        async setUserSuspension({ userId, reason, suspendedUntil }) {
+            return { id: userId, username: 'Pilot', suspensionReason: reason, suspendedUntil };
+        },
+        async recordAudit(entry) { audits.push(entry); }
+    };
+    const disconnected = [];
+    const socket = {
+        data: { authUser: { id: 9 } },
+        emit(event, payload) { disconnected.push({ event, payload }); },
+        disconnect(force) { disconnected.push({ force }); }
+    };
+    const service = createAdminService({
+        database: {},
+        roomStore: { values() { return []; } },
+        io: { async fetchSockets() { return [socket]; } },
+        sessionService: { async destroyAllSessionsForUser() { return { changes: 2 }; } },
+        repository,
+        now: () => new Date('2026-07-25T12:00:00Z'),
+        isAdminUser: () => false
+    });
+
+    const result = await service.suspendUser({
+        adminUserId: 1,
+        targetUserId: 9,
+        duration: '24h',
+        reason: 'Comportament abuziv repetat',
+        requestId: 'req-suspend'
+    });
+
+    assert.equal(result.ok, true);
+    assert.equal(result.revokedSessions, 2);
+    assert.equal(result.disconnectedSockets, 1);
+    assert.equal(result.suspendedUntil, '2026-07-26T12:00:00.000Z');
+    assert.equal(disconnected.some(entry => entry.event === 'accountSuspended'), true);
+    assert.equal(disconnected.some(entry => entry.force === true), true);
+    assert.equal(audits[0].action, 'user.suspended');
+    assert.equal(audits[0].details.reason, 'Comportament abuziv repetat');
+});
+
+test('admin cannot suspend itself or another configured administrator', async () => {
+    const repository = {
+        async getUserDetails(userId) { return { user: { id: Number(userId), username: 'OtherAdmin' } }; }
+    };
+    const service = createAdminService({
+        database: {}, roomStore: { values() { return []; } }, io: {}, sessionService: {}, repository,
+        isAdminUser: user => Number(user.id) === 2
+    });
+
+    assert.equal((await service.suspendUser({ adminUserId: 1, targetUserId: 1, duration: '1h', reason: 'Motiv suficient' })).status, 400);
+    assert.equal((await service.suspendUser({ adminUserId: 1, targetUserId: 2, duration: '1h', reason: 'Motiv suficient' })).status, 403);
+});
+
+test('admin reset actions preserve history and audit only the current challenge claim', async () => {
+    const audits = [];
+    const repository = {
+        async resetDailyAttempts() { return 3; },
+        async resetWeeklyAttempt() { return 1; },
+        async recordAudit(entry) { audits.push(entry); }
+    };
+    const service = createAdminService({
+        database: {}, roomStore: { values() { return []; } }, io: {}, sessionService: {}, repository,
+        now: () => new Date('2026-07-25T12:00:00Z')
+    });
+
+    const daily = await service.resetDailyAttempt({ adminUserId: 1, targetUserId: 9, requestId: 'd' });
+    const weekly = await service.resetWeeklyAttempt({ adminUserId: 1, targetUserId: 9, requestId: 'w' });
+
+    assert.deepEqual(daily, { ok: true, dailyDate: '2026-07-25', deletedAttempts: 3 });
+    assert.equal(weekly.ok, true);
+    assert.match(weekly.weekKey, /^2026-W\d{2}$/);
+    assert.equal(audits[0].details.historyPreserved, true);
+    assert.equal(audits[1].details.historyPreserved, true);
+});

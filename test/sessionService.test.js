@@ -191,3 +191,13 @@ test('logout everywhere revokes the current session and all other user sessions'
     assert.equal(repository.sessions.has(hashToken(firstSession.token)), false);
     assert.equal(repository.sessions.has(hashToken(secondSession.token)), false);
 });
+
+test('session service rejects existing sessions after the account is suspended', async () => {
+    const { repository, sessionService } = createTestSessionService();
+    const session = await sessionService.createSession(1);
+    repository.users.get(1).accountStatus = 'suspended';
+    repository.users.get(1).suspendedUntil = null;
+
+    assert.equal(await sessionService.getUserByToken(session.token), null);
+    assert.equal(await sessionService.getUserBySocketAuthToken(session.socketAuthToken), null);
+});

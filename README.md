@@ -382,6 +382,19 @@ Prima versiune a panoului este disponibilă la `/admin` și nu este servită din
 
 Nu există endpoint pentru promovarea unui cont la admin. Acțiunile destructive cer din nou parola contului și sunt salvate în `admin_audit_log`. Nu adăuga în `ADMIN_USER_IDS` ID-uri care nu îți aparțin.
 
+Admin V2 adaugă:
+
+- activitate agregată pentru ultimele șapte zile;
+- detalii de cont, statistici pe mod și rezultate recente;
+- suspendări de 1 oră, 24 de ore, 7 zile sau permanente, cu motiv obligatoriu;
+- revocarea sesiunilor și deconectarea socket-urilor la suspendare;
+- reactivarea conturilor;
+- resetarea individuală a participării Daily sau Weekly curente, fără ștergerea istoricului ori a XP-ului;
+- filtrarea auditului după categorie și text.
+
+Suspendarea este verificată atât la login, cât și la rezolvarea sesiunilor HTTP și Socket.IO. Contul owner și celelalte ID-uri din `ADMIN_USER_IDS` nu pot fi suspendate din panou.
+
+
 ### Conturi persistente pe Render Free cu Neon Postgres
 
 Pentru a păstra conturile după redeploy pe Render Free, folosește un Postgres extern și setează în Render:

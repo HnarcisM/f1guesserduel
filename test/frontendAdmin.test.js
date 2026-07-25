@@ -35,3 +35,14 @@ test('admin routes are mounted before the public static directory', () => {
     assert.ok(apiRouteIndex < staticIndex);
     assert.match(server, /app\.use\('\/api\/admin', csrfProtection\)/);
 });
+
+test('admin V2 exposes user moderation, challenge resets, activity trend and audit filters', () => {
+    assert.match(html, /adminActivityTrend/);
+    assert.match(html, /adminSuspendDialog/);
+    assert.match(html, /adminAuditFilterForm/);
+    assert.match(script, /\/suspend/);
+    assert.match(script, /\/reactivate/);
+    assert.match(script, /reset-\$\{mode\}/);
+    assert.match(script, /historyPreserved|Istoricul și XP-ul nu sunt șterse/);
+    assert.doesNotMatch(script, /innerHTML\s*=/);
+});

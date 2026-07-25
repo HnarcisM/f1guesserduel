@@ -182,7 +182,8 @@ const adminService = createAdminService({
     database: db,
     roomStore,
     io,
-    sessionService
+    sessionService,
+    isAdminUser: adminAccess.isAdminUser
 });
 const gameHistoryCleanupService = createGameHistoryCleanupService({
     databaseOrRepository: db,

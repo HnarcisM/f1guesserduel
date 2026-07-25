@@ -49,3 +49,17 @@ test('Postgres admin audit stores details as a JSON parameter instead of SQL tex
     assert.equal(call.sql.includes(details.reason), false);
     assert.equal(call.params[4], JSON.stringify(details));
 });
+
+test('Postgres admin audit filters and moderation updates remain parameterized', async () => {
+    const database = createFakeDatabase();
+    const repository = createPostgresAdminRepository(database);
+    const hostile = "x%' OR pg_sleep(10) --";
+
+    await repository.listAudit({ action: 'user.', search: hostile, limit: 10, offset: 5 });
+    await repository.setUserSuspension({ userId: 7, reason: hostile, suspendedUntil: null });
+
+    assert.equal(database.calls.some(call => call.sql.includes(hostile)), false);
+    assert.equal(database.calls.some(call => call.params.includes(`%${hostile}%`)), true);
+    const moderationCall = database.calls.at(-1);
+    assert.deepEqual(moderationCall.params, [7, null, hostile]);
+});

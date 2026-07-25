@@ -1,366 +1,97 @@
 'use strict';
 
-const state = {
-    activeView: 'dashboard',
-    pendingAction: null,
-    userSearch: '',
-    adminUserId: null
-};
-
+const state = { activeView: 'dashboard', adminUserId: null, userSearch: '', pendingAction: null, selectedUser: null };
+const $ = id => document.getElementById(id);
 const els = {
-    identity: document.getElementById('adminIdentity'),
-    pageTitle: document.getElementById('adminPageTitle'),
-    refresh: document.getElementById('adminRefreshBtn'),
-    status: document.getElementById('adminStatus'),
-    metricGrid: document.getElementById('adminMetricGrid'),
-    systemSummary: document.getElementById('adminSystemSummary'),
-    userSearchForm: document.getElementById('adminUserSearchForm'),
-    userSearch: document.getElementById('adminUserSearch'),
-    usersBody: document.getElementById('adminUsersBody'),
-    usersMeta: document.getElementById('adminUsersMeta'),
-    roomsBody: document.getElementById('adminRoomsBody'),
-    roomsMeta: document.getElementById('adminRoomsMeta'),
-    auditBody: document.getElementById('adminAuditBody'),
-    dialog: document.getElementById('adminConfirmDialog'),
-    confirmForm: document.getElementById('adminConfirmForm'),
-    confirmTitle: document.getElementById('adminConfirmTitle'),
-    confirmMessage: document.getElementById('adminConfirmMessage'),
-    confirmPassword: document.getElementById('adminConfirmPassword'),
-    confirmError: document.getElementById('adminConfirmError'),
-    confirmCancel: document.getElementById('adminConfirmCancel'),
-    confirmSubmit: document.getElementById('adminConfirmSubmit')
+    pageTitle: $('adminPageTitle'), refresh: $('adminRefreshBtn'), status: $('adminStatus'), identity: $('adminIdentity'),
+    metricGrid: $('adminMetricGrid'), activityTrend: $('adminActivityTrend'), systemSummary: $('adminSystemSummary'),
+    usersBody: $('adminUsersBody'), usersMeta: $('adminUsersMeta'), userSearchForm: $('adminUserSearchForm'), userSearch: $('adminUserSearch'),
+    roomsBody: $('adminRoomsBody'), roomsMeta: $('adminRoomsMeta'), auditBody: $('adminAuditBody'), auditMeta: $('adminAuditMeta'),
+    auditFilterForm: $('adminAuditFilterForm'), auditSearch: $('adminAuditSearch'), auditAction: $('adminAuditAction'),
+    confirmDialog: $('adminConfirmDialog'), confirmForm: $('adminConfirmForm'), confirmTitle: $('adminConfirmTitle'), confirmMessage: $('adminConfirmMessage'), confirmPassword: $('adminConfirmPassword'), confirmError: $('adminConfirmError'), confirmCancel: $('adminConfirmCancel'), confirmSubmit: $('adminConfirmSubmit'),
+    userDialog: $('adminUserDialog'), userDialogTitle: $('adminUserDialogTitle'), userDialogClose: $('adminUserDialogClose'), userDetails: $('adminUserDetails'), userActions: $('adminUserActions'),
+    suspendDialog: $('adminSuspendDialog'), suspendForm: $('adminSuspendForm'), suspendTarget: $('adminSuspendTarget'), suspendDuration: $('adminSuspendDuration'), suspendReason: $('adminSuspendReason'), suspendPassword: $('adminSuspendPassword'), suspendError: $('adminSuspendError'), suspendCancel: $('adminSuspendCancel'), suspendSubmit: $('adminSuspendSubmit')
 };
+const viewTitles = { dashboard: 'Dashboard', users: 'Utilizatori', rooms: 'Camere active', audit: 'Audit' };
 
-const viewTitles = Object.freeze({
-    dashboard: 'Dashboard',
-    users: 'Utilizatori',
-    rooms: 'Camere active',
-    audit: 'Audit'
-});
-
-function setStatus(message = '', type = '') {
-    els.status.textContent = message;
-    els.status.className = `admin-status${type ? ` is-${type}` : ''}`;
-}
-
-async function api(path, options = {}) {
-    const response = await fetch(path, {
-        credentials: 'same-origin',
-        headers: {
-            Accept: 'application/json',
-            ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-            ...(options.headers || {})
-        },
-        ...options
-    });
+async function api(url, options = {}) {
+    const response = await fetch(url, { credentials: 'same-origin', headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-            setStatus(payload.message || 'Sesiunea administrativă nu mai este validă.', 'error');
-        }
-        throw new Error(payload.message || 'Cererea administrativă a eșuat.');
-    }
+    if (!response.ok) throw new Error(payload.message || 'Cererea administrativă a eșuat.');
     return payload;
 }
-
-function formatNumber(value) {
-    return new Intl.NumberFormat('ro-RO').format(Number(value) || 0);
-}
-
-function formatDate(value) {
-    if (!value) return 'Niciodată';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return 'Dată necunoscută';
-    return new Intl.DateTimeFormat('ro-RO', {
-        dateStyle: 'medium',
-        timeStyle: 'short',
-        timeZone: 'Europe/Bucharest'
-    }).format(date);
-}
-
-function createCell(text, secondary = null) {
-    const cell = document.createElement('td');
-    const strong = document.createElement('strong');
-    strong.textContent = text;
-    cell.appendChild(strong);
-    if (secondary) {
-        const small = document.createElement('small');
-        small.textContent = secondary;
-        cell.appendChild(small);
-    }
-    return cell;
-}
-
-function createEmptyRow(columnCount, message) {
-    const row = document.createElement('tr');
-    const cell = document.createElement('td');
-    cell.colSpan = columnCount;
-    cell.className = 'admin-empty-row';
-    cell.textContent = message;
-    row.appendChild(cell);
-    return row;
-}
+function setStatus(message = '', type = '') { els.status.textContent = message; els.status.className = `admin-status${type ? ` is-${type}` : ''}`; }
+function formatNumber(value) { return new Intl.NumberFormat('ro-RO').format(Number(value) || 0); }
+function formatDate(value) { return value ? new Intl.DateTimeFormat('ro-RO', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : '—'; }
+function createCell(primary, secondary = null) { const td = document.createElement('td'); const strong = document.createElement('strong'); strong.textContent = primary ?? '—'; td.appendChild(strong); if (secondary) { const small = document.createElement('small'); small.textContent = secondary; td.appendChild(small); } return td; }
+function createEmptyRow(columns, message) { const row = document.createElement('tr'); const cell = document.createElement('td'); cell.colSpan = columns; cell.className = 'admin-empty-row'; cell.textContent = message; row.appendChild(cell); return row; }
+function button(label, className, handler, disabled = false) { const el = document.createElement('button'); el.type = 'button'; el.className = className; el.textContent = label; el.disabled = disabled; el.addEventListener('click', handler); return el; }
 
 function renderMetrics(data) {
-    const metrics = [
-        ['Utilizatori', data.totalUsers],
-        ['Activi în 24h', data.activeUsers24h],
-        ['Sesiuni active', data.activeSessions],
-        ['Camere active', data.activeRooms],
-        ['Jocuri în 24h', data.gamesLast24h],
-        ['Socket-uri conectate', data.connectedSockets],
-        ['Daily astăzi', data.dailyAttemptsToday],
-        ['Weekly săptămâna curentă', data.weeklyAttemptsCurrent]
-    ];
-    els.metricGrid.replaceChildren(...metrics.map(([label, value]) => {
-        const card = document.createElement('article');
-        card.className = 'admin-metric';
-        const labelEl = document.createElement('span');
-        labelEl.textContent = label;
-        const valueEl = document.createElement('strong');
-        valueEl.textContent = formatNumber(value);
-        card.append(labelEl, valueEl);
-        return card;
-    }));
-
-    const summary = [
-        ['Ultima actualizare', formatDate(data.generatedAt)],
-        ['Acces', 'Doar ID-urile configurate în ADMIN_USER_IDS'],
-        ['Acțiuni destructive', 'Necesită reconfirmarea parolei'],
-        ['Audit', 'Persistat în baza de date']
-    ];
-    els.systemSummary.replaceChildren(...summary.map(([term, description]) => {
-        const wrapper = document.createElement('div');
-        const dt = document.createElement('dt');
-        const dd = document.createElement('dd');
-        dt.textContent = term;
-        dd.textContent = description;
-        wrapper.append(dt, dd);
-        return wrapper;
-    }));
+    const metrics = [['Utilizatori', data.totalUsers], ['Activi 24h', data.activeUsers24h], ['Suspendați', data.suspendedUsers], ['Sesiuni active', data.activeSessions], ['Socket-uri', data.connectedSockets], ['Camere', data.activeRooms], ['Jocuri 24h', data.gamesLast24h], ['Daily astăzi', data.dailyAttemptsToday], ['Weekly curent', data.weeklyAttemptsCurrent]];
+    els.metricGrid.replaceChildren(...metrics.map(([label, value]) => { const card = document.createElement('article'); card.className = 'admin-metric'; const span = document.createElement('span'); span.textContent = label; const strong = document.createElement('strong'); strong.textContent = formatNumber(value); card.append(span, strong); return card; }));
+    const trend = Array.isArray(data.activityTrend) ? data.activityTrend : [];
+    const max = Math.max(1, ...trend.map(day => Number(day.gamesCompleted) || 0));
+    els.activityTrend.replaceChildren(...trend.map(day => { const item = document.createElement('article'); item.className = 'admin-trend-day'; const bar = document.createElement('div'); bar.className = 'admin-trend-bar'; bar.style.setProperty('--trend-height', `${Math.max(5, Math.round(((Number(day.gamesCompleted) || 0) / max) * 100))}%`); const label = document.createElement('strong'); label.textContent = day.date.slice(5); const details = document.createElement('small'); details.textContent = `${formatNumber(day.gamesCompleted)} jocuri · ${formatNumber(day.usersCreated)} conturi`; item.append(bar, label, details); return item; }));
+    const summary = [['Ultima actualizare', formatDate(data.generatedAt)], ['Daily curent', data.dailyDate], ['Weekly curent', data.weekKey], ['Acces', 'ADMIN_USER_IDS + verificare server-side'], ['Acțiuni sensibile', 'Parolă + audit']];
+    els.systemSummary.replaceChildren(...summary.map(([term, description]) => { const wrap = document.createElement('div'); const dt = document.createElement('dt'); const dd = document.createElement('dd'); dt.textContent = term; dd.textContent = description; wrap.append(dt, dd); return wrap; }));
 }
+async function loadDashboard() { renderMetrics(await api('/api/admin/overview')); }
 
-async function loadDashboard() {
-    renderMetrics(await api('/api/admin/overview'));
-}
+function openConfirmation({ title, message, submitLabel, action }) { state.pendingAction = action; els.confirmTitle.textContent = title; els.confirmMessage.textContent = message; els.confirmSubmit.textContent = submitLabel; els.confirmPassword.value = ''; els.confirmError.textContent = ''; els.confirmDialog.showModal(); }
+async function confirmedRequest(config) { openConfirmation(config); }
 
-function openConfirmation({ title, message, submitLabel, action }) {
-    state.pendingAction = action;
-    els.confirmTitle.textContent = title;
-    els.confirmMessage.textContent = message;
-    els.confirmSubmit.textContent = submitLabel;
-    els.confirmPassword.value = '';
-    els.confirmError.textContent = '';
-    els.dialog.showModal();
-    requestAnimationFrame(() => els.confirmPassword.focus());
-}
-
-async function revokeSessions(user) {
-    openConfirmation({
-        title: 'Revocă toate sesiunile',
-        message: `Toate dispozitivele conectate la contul ${user.username} vor fi delogate.`,
-        submitLabel: 'Revocă sesiunile',
-        action: async currentPassword => {
-            const result = await api(`/api/admin/users/${encodeURIComponent(user.id)}/revoke-sessions`, {
-                method: 'POST',
-                body: JSON.stringify({ currentPassword })
-            });
-            setStatus(`${result.revokedSessions} sesiuni au fost revocate.`, 'success');
-            await Promise.all([loadUsers(), loadDashboard(), loadAudit()]);
-        }
-    });
-}
-
+function statusLabel(user) { return user.effectiveStatus === 'suspended' ? `Suspendat${user.suspendedUntil ? ` până la ${formatDate(user.suspendedUntil)}` : ' permanent'}` : 'Activ'; }
 function renderUsers(payload) {
     const users = Array.isArray(payload.users) ? payload.users : [];
-    if (users.length === 0) {
-        els.usersBody.replaceChildren(createEmptyRow(6, 'Nu există utilizatori pentru criteriul selectat.'));
-    } else {
-        els.usersBody.replaceChildren(...users.map(user => {
-            const row = document.createElement('tr');
-            row.append(
-                createCell(user.username, `${user.email} · ID ${user.id}`),
-                createCell(formatDate(user.lastSeenAt), `Creat: ${formatDate(user.createdAt)}`),
-                createCell(formatNumber(user.gamesPlayed), `${formatNumber(user.gamesWon)} victorii`),
-                createCell(`${formatNumber(user.totalXp)} XP`),
-                createCell(formatNumber(user.activeSessions))
-            );
-            const actionCell = document.createElement('td');
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'admin-danger-btn';
-            button.textContent = Number(user.id) === Number(state.adminUserId) ? 'Sesiunea ta' : 'Revocă sesiuni';
-            button.disabled = Number(user.id) === Number(state.adminUserId);
-            button.addEventListener('click', () => revokeSessions(user));
-            actionCell.appendChild(button);
-            row.appendChild(actionCell);
-            return row;
-        }));
-    }
+    els.usersBody.replaceChildren(...(users.length ? users.map(user => { const row = document.createElement('tr'); row.append(createCell(user.username, `${user.email} · ID ${user.id}`), createCell(statusLabel(user), user.suspensionReason || null), createCell(formatDate(user.lastSeenAt), `Creat: ${formatDate(user.createdAt)}`), createCell(formatNumber(user.gamesPlayed), `${formatNumber(user.gamesWon)} victorii`), createCell(`${formatNumber(user.totalXp)} XP`), createCell(formatNumber(user.activeSessions))); const actions = document.createElement('td'); actions.className = 'admin-inline-actions'; actions.append(button('Detalii', 'admin-secondary-btn', () => openUser(user.id)), button('Revocă sesiuni', 'admin-danger-btn', () => revokeSessions(user), Number(user.id) === Number(state.adminUserId))); row.append(actions); return row; }) : [createEmptyRow(7, 'Nu există utilizatori pentru criteriul selectat.')]));
     els.usersMeta.textContent = `${formatNumber(payload.total)} utilizatori găsiți.`;
 }
+async function loadUsers() { const params = new URLSearchParams({ limit: '50' }); if (state.userSearch) params.set('search', state.userSearch); renderUsers(await api(`/api/admin/users?${params}`)); }
+async function revokeSessions(user) { confirmedRequest({ title: 'Revocă toate sesiunile', message: `Contul ${user.username} va fi delogat de pe toate dispozitivele.`, submitLabel: 'Revocă', action: async currentPassword => { const result = await api(`/api/admin/users/${user.id}/revoke-sessions`, { method: 'POST', body: JSON.stringify({ currentPassword }) }); setStatus(`${result.revokedSessions} sesiuni revocate.`, 'success'); await Promise.all([loadUsers(), loadDashboard(), loadAudit()]); } }); }
 
-async function loadUsers() {
-    const params = new URLSearchParams({ limit: '50' });
-    if (state.userSearch) params.set('search', state.userSearch);
-    renderUsers(await api(`/api/admin/users?${params}`));
-}
-
-async function closeRoom(room) {
-    openConfirmation({
-        title: 'Închide camera',
-        message: `Camera ${room.roomId} va fi închisă, iar participanții vor primi mesajul de anulare.`,
-        submitLabel: 'Închide camera',
-        action: async currentPassword => {
-            await api(`/api/admin/rooms/${encodeURIComponent(room.roomId)}`, {
-                method: 'DELETE',
-                body: JSON.stringify({ currentPassword })
-            });
-            setStatus(`Camera ${room.roomId} a fost închisă.`, 'success');
-            await Promise.all([loadRooms(), loadDashboard(), loadAudit()]);
-        }
-    });
-}
-
-function renderRooms(payload) {
-    const rooms = Array.isArray(payload.rooms) ? payload.rooms : [];
-    if (rooms.length === 0) {
-        els.roomsBody.replaceChildren(createEmptyRow(6, 'Nu există camere Duel active.'));
-    } else {
-        els.roomsBody.replaceChildren(...rooms.map(room => {
-            const settings = room.lobbySettings || {};
-            const row = document.createElement('tr');
-            row.append(
-                createCell(room.roomId),
-                createCell(room.hostUsername),
-                createCell(`${room.playerCount}/${room.maxPlayers} jucători`, `${room.spectatorCount} spectatori`),
-                createCell(room.statusLabel),
-                createCell(settings.difficulty || 'easy', settings.timed ? `${settings.timeLimitSeconds}s · BO${room.bestOf}` : `Fără timp · BO${room.bestOf}`)
-            );
-            const actionCell = document.createElement('td');
-            const button = document.createElement('button');
-            button.type = 'button';
-            button.className = 'admin-danger-btn';
-            button.textContent = 'Închide';
-            button.addEventListener('click', () => closeRoom(room));
-            actionCell.appendChild(button);
-            row.appendChild(actionCell);
-            return row;
-        }));
-    }
-    els.roomsMeta.textContent = `${formatNumber(payload.totalRooms)} camere active.`;
-}
-
-async function loadRooms() {
-    renderRooms(await api('/api/admin/rooms'));
-}
-
-function formatAuditDetails(details) {
-    if (!details || typeof details !== 'object') return '—';
-    return Object.entries(details).map(([key, value]) => `${key}: ${value}`).join(' · ') || '—';
-}
-
-function renderAudit(payload) {
-    const entries = Array.isArray(payload.entries) ? payload.entries : [];
-    if (entries.length === 0) {
-        els.auditBody.replaceChildren(createEmptyRow(5, 'Nu există încă acțiuni administrative.'));
-        return;
-    }
-    els.auditBody.replaceChildren(...entries.map(entry => {
-        const row = document.createElement('tr');
-        row.append(
-            createCell(formatDate(entry.createdAt)),
-            createCell(entry.adminUsername || 'Admin'),
-            createCell(entry.action),
-            createCell(entry.targetId || '—', entry.targetType || null),
-            createCell(formatAuditDetails(entry.details))
-        );
-        return row;
-    }));
-}
-
-async function loadAudit() {
-    renderAudit(await api('/api/admin/audit?limit=100'));
-}
-
-async function loadActiveView() {
-    setStatus('Se actualizează datele…');
-    try {
-        if (state.activeView === 'dashboard') await loadDashboard();
-        if (state.activeView === 'users') await loadUsers();
-        if (state.activeView === 'rooms') await loadRooms();
-        if (state.activeView === 'audit') await loadAudit();
-        setStatus('');
-    } catch (error) {
-        setStatus(error.message, 'error');
+function appendSection(title, rows) { const section = document.createElement('section'); section.className = 'admin-detail-section'; const heading = document.createElement('h3'); heading.textContent = title; section.appendChild(heading); for (const [key, value] of rows) { const row = document.createElement('div'); const label = document.createElement('span'); const content = document.createElement('strong'); label.textContent = key; content.textContent = value ?? '—'; row.append(label, content); section.appendChild(row); } return section; }
+function renderUserDetails(payload) {
+    const user = payload.user; state.selectedUser = user; els.userDialogTitle.textContent = `${user.username} · ID ${user.id}`; els.userDetails.replaceChildren(
+        appendSection('Cont', [['Email', user.email], ['Status', statusLabel(user)], ['Motiv', user.suspensionReason || '—'], ['Creat', formatDate(user.createdAt)], ['Ultima activitate', formatDate(user.lastSeenAt)], ['XP', `${formatNumber(user.totalXp)} XP`], ['Sesiuni', formatNumber(user.activeSessions)]]),
+        appendSection('Statistici', (payload.stats || []).map(stat => [stat.mode, `${formatNumber(stat.gamesPlayed)} jocuri · ${formatNumber(stat.gamesWon)} victorii · streak ${formatNumber(stat.bestStreak)}`])),
+        appendSection('Rezultate recente', (payload.recentResults || []).slice(0, 8).map(result => [formatDate(result.completedAt), `${result.mode} · ${result.outcome} · ${result.attempts} încercări`])),
+        appendSection('Challenge-uri', [['Daily curent', (payload.dailyAttempts || []).some(item => item.dailyDate === payload.challengeKeys.dailyDate) ? 'Folosit' : 'Disponibil'], ['Weekly curent', (payload.weeklyAttempts || []).some(item => item.weekKey === payload.challengeKeys.weekKey) ? 'Folosit' : 'Disponibil']])
+    );
+    els.userActions.replaceChildren();
+    if (Number(user.id) !== Number(state.adminUserId)) {
+        if (user.effectiveStatus === 'suspended') els.userActions.append(button('Reactivează', 'admin-primary-btn', () => reactivateUser(user)));
+        else els.userActions.append(button('Suspendă', 'admin-danger-btn', () => openSuspend(user)));
+        els.userActions.append(button('Reset Daily curent', 'admin-secondary-btn', () => resetChallenge(user, 'daily')), button('Reset Weekly curent', 'admin-secondary-btn', () => resetChallenge(user, 'weekly')));
     }
 }
+async function openUser(userId) { setStatus('Se încarcă utilizatorul…'); try { renderUserDetails(await api(`/api/admin/users/${userId}`)); els.userDialog.showModal(); setStatus(''); } catch (error) { setStatus(error.message, 'error'); } }
+function openSuspend(user) { state.selectedUser = user; els.suspendTarget.textContent = `${user.username} · ID ${user.id}`; els.suspendReason.value = ''; els.suspendPassword.value = ''; els.suspendError.textContent = ''; els.suspendDialog.showModal(); }
+async function reactivateUser(user) { confirmedRequest({ title: 'Reactivează contul', message: `Contul ${user.username} va putea să se autentifice din nou.`, submitLabel: 'Reactivează', action: async currentPassword => { await api(`/api/admin/users/${user.id}/reactivate`, { method: 'POST', body: JSON.stringify({ currentPassword }) }); els.userDialog.close(); setStatus('Cont reactivat.', 'success'); await Promise.all([loadUsers(), loadDashboard(), loadAudit()]); } }); }
+async function resetChallenge(user, mode) { const label = mode === 'daily' ? 'Daily' : 'Weekly'; confirmedRequest({ title: `Reset ${label}`, message: `Încercarea curentă ${label} pentru ${user.username} va fi disponibilă din nou. Istoricul și XP-ul nu sunt șterse.`, submitLabel: 'Resetează', action: async currentPassword => { const result = await api(`/api/admin/users/${user.id}/reset-${mode}`, { method: 'POST', body: JSON.stringify({ currentPassword }) }); els.userDialog.close(); setStatus(`${label} resetat (${result.deletedAttempts} înregistrări).`, 'success'); await Promise.all([loadUsers(), loadDashboard(), loadAudit()]); } }); }
 
-function selectView(view) {
-    if (!viewTitles[view]) return;
-    state.activeView = view;
-    els.pageTitle.textContent = viewTitles[view];
-    document.querySelectorAll('[data-admin-view]').forEach(button => {
-        const active = button.dataset.adminView === view;
-        button.classList.toggle('is-active', active);
-        button.setAttribute('aria-current', active ? 'page' : 'false');
-    });
-    document.querySelectorAll('.admin-view').forEach(section => {
-        const active = section.id === `adminView${view[0].toUpperCase()}${view.slice(1)}`;
-        section.classList.toggle('is-hidden', !active);
-        section.setAttribute('aria-hidden', String(!active));
-    });
-    loadActiveView();
-}
+function renderRooms(payload) { const rooms = Array.isArray(payload.rooms) ? payload.rooms : []; els.roomsBody.replaceChildren(...(rooms.length ? rooms.map(room => { const settings = room.lobbySettings || {}; const row = document.createElement('tr'); row.append(createCell(room.roomId), createCell(room.hostUsername), createCell(`${room.playerCount}/${room.maxPlayers} jucători`, `${room.spectatorCount} spectatori`), createCell(room.statusLabel), createCell(settings.difficulty || 'easy', settings.timed ? `${settings.timeLimitSeconds}s · BO${room.bestOf}` : `Fără timp · BO${room.bestOf}`)); const cell = document.createElement('td'); cell.append(button('Închide', 'admin-danger-btn', () => closeRoom(room))); row.append(cell); return row; }) : [createEmptyRow(6, 'Nu există camere Duel active.')])); els.roomsMeta.textContent = `${formatNumber(payload.totalRooms)} camere active.`; }
+async function loadRooms() { renderRooms(await api('/api/admin/rooms')); }
+async function closeRoom(room) { confirmedRequest({ title: 'Închide camera', message: `Camera ${room.roomId} va fi închisă.`, submitLabel: 'Închide', action: async currentPassword => { await api(`/api/admin/rooms/${room.roomId}`, { method: 'DELETE', body: JSON.stringify({ currentPassword }) }); setStatus('Camera a fost închisă.', 'success'); await Promise.all([loadRooms(), loadDashboard(), loadAudit()]); } }); }
 
-async function initialize() {
-    try {
-        const session = await api('/api/admin/session');
-        state.adminUserId = session.user.id;
-        els.identity.textContent = `${session.user.username} · ID ${session.user.id}`;
-        await loadDashboard();
-        setStatus('');
-    } catch (error) {
-        setStatus(error.message, 'error');
-    }
-}
+function formatAuditDetails(details) { return details && typeof details === 'object' ? Object.entries(details).map(([key, value]) => `${key}: ${value}`).join(' · ') || '—' : '—'; }
+function renderAudit(payload) { const entries = Array.isArray(payload.entries) ? payload.entries : []; els.auditBody.replaceChildren(...(entries.length ? entries.map(entry => { const row = document.createElement('tr'); row.append(createCell(formatDate(entry.createdAt)), createCell(entry.adminUsername || 'Admin'), createCell(entry.action), createCell(entry.targetId || '—', entry.targetType || null), createCell(formatAuditDetails(entry.details))); return row; }) : [createEmptyRow(5, 'Nu există acțiuni pentru filtrul selectat.')])); els.auditMeta.textContent = `${formatNumber(payload.total)} înregistrări.`; }
+async function loadAudit() { const params = new URLSearchParams({ limit: '100' }); if (els.auditSearch.value.trim()) params.set('search', els.auditSearch.value.trim()); if (els.auditAction.value) params.set('action', els.auditAction.value); renderAudit(await api(`/api/admin/audit?${params}`)); }
 
-document.querySelectorAll('[data-admin-view]').forEach(button => {
-    button.addEventListener('click', () => selectView(button.dataset.adminView));
-});
+async function loadActiveView() { setStatus('Se actualizează datele…'); try { if (state.activeView === 'dashboard') await loadDashboard(); if (state.activeView === 'users') await loadUsers(); if (state.activeView === 'rooms') await loadRooms(); if (state.activeView === 'audit') await loadAudit(); setStatus(''); } catch (error) { setStatus(error.message, 'error'); } }
+function selectView(view) { if (!viewTitles[view]) return; state.activeView = view; els.pageTitle.textContent = viewTitles[view]; document.querySelectorAll('[data-admin-view]').forEach(el => { const active = el.dataset.adminView === view; el.classList.toggle('is-active', active); el.setAttribute('aria-current', active ? 'page' : 'false'); }); document.querySelectorAll('.admin-view').forEach(section => { const active = section.id === `adminView${view[0].toUpperCase()}${view.slice(1)}`; section.classList.toggle('is-hidden', !active); section.setAttribute('aria-hidden', String(!active)); }); loadActiveView(); }
+
 els.refresh.addEventListener('click', loadActiveView);
-els.userSearchForm.addEventListener('submit', event => {
-    event.preventDefault();
-    state.userSearch = els.userSearch.value.trim();
-    loadUsers().catch(error => setStatus(error.message, 'error'));
-});
-els.confirmCancel.addEventListener('click', () => {
-    state.pendingAction = null;
-    els.dialog.close();
-});
-els.confirmForm.addEventListener('submit', async event => {
-    event.preventDefault();
-    const action = state.pendingAction;
-    if (!action) return els.dialog.close();
-    els.confirmSubmit.disabled = true;
-    els.confirmCancel.disabled = true;
-    els.confirmError.textContent = '';
-    try {
-        await action(els.confirmPassword.value);
-        state.pendingAction = null;
-        els.confirmPassword.value = '';
-        els.dialog.close();
-    } catch (error) {
-        els.confirmError.textContent = error.message;
-        els.confirmPassword.select();
-    } finally {
-        els.confirmSubmit.disabled = false;
-        els.confirmCancel.disabled = false;
-    }
-});
-els.dialog.addEventListener('close', () => {
-    els.confirmPassword.value = '';
-    els.confirmError.textContent = '';
-});
+document.querySelectorAll('[data-admin-view]').forEach(el => el.addEventListener('click', () => selectView(el.dataset.adminView)));
+els.userSearchForm.addEventListener('submit', event => { event.preventDefault(); state.userSearch = els.userSearch.value.trim(); loadUsers().catch(error => setStatus(error.message, 'error')); });
+els.auditFilterForm.addEventListener('submit', event => { event.preventDefault(); loadAudit().catch(error => setStatus(error.message, 'error')); });
+els.confirmCancel.addEventListener('click', () => els.confirmDialog.close());
+els.confirmDialog.addEventListener('close', () => { state.pendingAction = null; els.confirmPassword.value = ''; els.confirmError.textContent = ''; });
+els.confirmForm.addEventListener('submit', async event => { event.preventDefault(); if (!state.pendingAction) return; els.confirmSubmit.disabled = true; try { await state.pendingAction(els.confirmPassword.value); state.pendingAction = null; els.confirmDialog.close(); } catch (error) { els.confirmError.textContent = error.message; } finally { els.confirmSubmit.disabled = false; } });
+els.userDialogClose.addEventListener('click', () => els.userDialog.close());
+els.userDialog.addEventListener('close', () => { state.selectedUser = null; els.userDetails.replaceChildren(); els.userActions.replaceChildren(); });
+els.suspendCancel.addEventListener('click', () => els.suspendDialog.close());
+els.suspendDialog.addEventListener('close', () => { els.suspendPassword.value = ''; els.suspendReason.value = ''; els.suspendError.textContent = ''; });
+els.suspendForm.addEventListener('submit', async event => { event.preventDefault(); const user = state.selectedUser; if (!user) return; els.suspendSubmit.disabled = true; els.suspendCancel.disabled = true; try { await api(`/api/admin/users/${user.id}/suspend`, { method: 'POST', body: JSON.stringify({ duration: els.suspendDuration.value, reason: els.suspendReason.value, currentPassword: els.suspendPassword.value }) }); els.suspendDialog.close(); els.userDialog.close(); setStatus('Cont suspendat și sesiuni revocate.', 'success'); await Promise.all([loadUsers(), loadDashboard(), loadAudit()]); } catch (error) { els.suspendError.textContent = error.message; els.suspendPassword.select(); } finally { els.suspendSubmit.disabled = false; els.suspendCancel.disabled = false; } });
 
-initialize();
+(async function initialize() { try { const session = await api('/api/admin/session'); state.adminUserId = session.user.id; els.identity.textContent = `${session.user.username} · ID ${session.user.id}`; await loadDashboard(); } catch (error) { setStatus(error.message, 'error'); } })();
