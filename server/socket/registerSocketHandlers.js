@@ -2,6 +2,7 @@ const { attachSocketAuth } = require('./socketAuth');
 const { createRoomStateEmitter } = require('./roomStateEmitter');
 const { registerSoloGameSocketHandlers } = require('./soloGameSocketHandlers');
 const { registerDailyChallengeSocketHandlers } = require('./dailyChallengeSocketHandlers');
+const { registerExtendedModesSocketHandlers } = require('./extendedModesSocketHandlers');
 const { createSocketEventRateLimiter } = require('./socketEventRateLimit');
 const { buildPublicRoomListPayload } = require('./roomListPayloads');
 const { createRoomMutationCoordinator } = require('./roomMutationCoordinator');
@@ -23,6 +24,7 @@ function registerSocketHandlers(io, dependencies) {
     } = dependencies;
     const dailySessions = new Map();
     const singleSessions = new Map();
+    const extendedSessions = new Map();
     const socketEventRateLimiter = createSocketEventRateLimiter(dependencies.socketRateLimit);
 
     attachSocketAuth(io, sessionService);
@@ -84,6 +86,7 @@ function registerSocketHandlers(io, dependencies) {
             metrics,
             dailySessions,
             singleSessions,
+            extendedSessions,
             socketEventRateLimiter,
             onSocketEvent,
             clearSoloModeSessions,
@@ -113,6 +116,15 @@ function registerSocketHandlers(io, dependencies) {
             leaveCurrentRoom,
             accountStatsService,
             now: dailyChallengeNow,
+            logger,
+            onSocketEvent
+        });
+        registerExtendedModesSocketHandlers({
+            socket,
+            extendedSessions,
+            gameService,
+            leaveCurrentRoom,
+            clearSoloModeSessions,
             logger,
             onSocketEvent
         });

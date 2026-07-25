@@ -9,7 +9,9 @@ const SERVICE_WORKER_PRECACHE_END = '/* GENERATED_PRECACHE_END */';
 const DEFAULT_PRECACHE_STATIC_URLS = Object.freeze([
     '/index.html',
     '/icons/pwa-192.png',
-    '/icons/pwa-512.png'
+    '/icons/pwa-512.png',
+    '/css/24-extended-modes.css',
+    '/js/extendedModesController.js'
 ]);
 const DEFAULT_ASSETS = Object.freeze([
     {

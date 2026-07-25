@@ -1,6 +1,9 @@
 (function installGameHubModule(globalObject) {
     'use strict';
 
+    const EXTENDED_MODES_MODULE_URL = '/js/extendedModesController.js';
+    let extendedModesModulePromise = null;
+
     function createElement(documentObject, tagName, className = '', text = '') {
         const element = documentObject.createElement(tagName);
         if (className) element.className = className;
@@ -19,10 +22,11 @@
         card.dataset.gameVariant = variant.key;
         card.dataset.gameContext = variant.context;
 
-        if (available && variant.modeChoice) {
-            card.dataset.gameModeChoice = variant.modeChoice;
+        if (available) {
             card.setAttribute('aria-pressed', String(Boolean(variant.defaultSelected)));
             card.classList.toggle('active', Boolean(variant.defaultSelected));
+            if (variant.modeChoice) card.dataset.gameModeChoice = variant.modeChoice;
+            if (variant.launchType === 'extended') card.dataset.extendedModeChoice = variant.key;
         } else {
             card.disabled = true;
             card.classList.add('is-coming-soon');
@@ -74,37 +78,81 @@
         return section;
     }
 
+    async function ensureExtendedModesController(windowObject = globalObject) {
+        if (windowObject?.__f1ExtendedModesController) return windowObject.__f1ExtendedModesController;
+        if (!extendedModesModulePromise) {
+            extendedModesModulePromise = import(EXTENDED_MODES_MODULE_URL).then(module => (
+                module.installExtendedModesController?.(windowObject)
+                || windowObject?.__f1ExtendedModesController
+                || null
+            ));
+        }
+        return extendedModesModulePromise;
+    }
+
     function createGameHubController({
         documentObject = globalObject?.document,
         registry = globalObject?.F1GameVariantRegistry,
-        rootId = 'gameModeHub'
+        rootId = 'gameModeHub',
+        windowObject = globalObject,
+        loadExtendedController = ensureExtendedModesController
     } = {}) {
+        let clickInstalled = false;
+
+        async function handleClick(event) {
+            const target = event?.target;
+            const card = target?.closest?.('[data-extended-mode-choice]')
+                || (target?.dataset?.extendedModeChoice ? target : null);
+            if (!card || card.disabled) return;
+            const variantKey = card.dataset.extendedModeChoice;
+            if (!registry?.isGameVariantAvailable?.(variantKey)) return;
+
+            try {
+                const controller = await loadExtendedController(windowObject);
+                if (!controller?.open) throw new Error('Extended modes controller is unavailable.');
+                await controller.open(variantKey, { trigger: card });
+            } catch {
+                const status = documentObject?.getElementById?.('status');
+                if (status) status.textContent = 'Modul nu a putut fi încărcat. Reîncarcă pagina.';
+            }
+        }
+
+        function installClickHandler(root) {
+            if (clickInstalled || typeof root?.addEventListener !== 'function') return;
+            root.addEventListener('click', handleClick);
+            clickInstalled = true;
+        }
+
         function render() {
             const root = documentObject?.getElementById?.(rootId);
             if (!root || !registry) return false;
 
             const available = registry.listGameVariantsByState(registry.GAME_VARIANT_STATES.AVAILABLE);
             const comingSoon = registry.listGameVariantsByState(registry.GAME_VARIANT_STATES.COMING_SOON);
-
-            root.replaceChildren(
+            const sections = [
                 createSection(documentObject, {
                     title: 'Joacă acum',
                     description: 'Alege experiența pe care vrei să o pornești.',
                     variants: available,
                     modifier: 'game-hub-section--available'
-                }),
-                createSection(documentObject, {
+                })
+            ];
+            if (comingSoon.length > 0) {
+                sections.push(createSection(documentObject, {
                     title: 'În dezvoltare',
                     description: 'Următoarele moduri vor fi activate treptat în update-urile viitoare.',
                     variants: comingSoon,
                     modifier: 'game-hub-section--upcoming'
-                })
-            );
+                }));
+            }
+
+            root.replaceChildren(...sections);
             root.dataset.gameHubReady = 'true';
+            installClickHandler(root);
             return true;
         }
 
-        return { render };
+        return { handleClick, render };
     }
 
     function installGameHubController(windowObject = globalObject) {
@@ -113,7 +161,8 @@
 
         const controller = createGameHubController({
             documentObject: windowObject.document,
-            registry: windowObject.F1GameVariantRegistry
+            registry: windowObject.F1GameVariantRegistry,
+            windowObject
         });
         const render = () => controller.render();
 
@@ -125,8 +174,10 @@
     }
 
     const api = Object.freeze({
+        EXTENDED_MODES_MODULE_URL,
         createGameHubController,
         createModeCard,
+        ensureExtendedModesController,
         installGameHubController
     });
 

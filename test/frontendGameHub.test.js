@@ -40,6 +40,7 @@ function createClassList(element, classes) {
 
 function createFakeElement(tagName = 'div') {
     const attributes = new Map();
+    const listeners = new Map();
     const element = {
         tagName: tagName.toUpperCase(),
         children: [],
@@ -60,6 +61,12 @@ function createFakeElement(tagName = 'div') {
         },
         getAttribute(name) {
             return attributes.get(name) ?? null;
+        },
+        addEventListener(name, handler) {
+            listeners.set(name, handler);
+        },
+        async trigger(name, event) {
+            return listeners.get(name)?.(event);
         }
     };
     const classes = new Set();
@@ -96,7 +103,7 @@ function flatten(element) {
     return [element, ...element.children.flatMap(flatten)];
 }
 
-test('game variant registry exposes all planned modes in release order', async () => {
+test('game variant registry exposes every planned mode as playable in release order', async () => {
     const { registry } = await loadGameHubModules();
     const variants = registry.listGameVariants();
 
@@ -107,41 +114,43 @@ test('game variant registry exposes all planned modes in release order', async (
     );
     assert.deepEqual(
         registry.listGameVariantsByState(registry.GAME_VARIANT_STATES.AVAILABLE).map(variant => variant.key),
-        ['classic', 'daily', 'duel']
+        variants.map(variant => variant.key)
     );
-    assert.equal(registry.isGameVariantAvailable('speed-run'), false);
+    assert.equal(registry.listGameVariantsByState(registry.GAME_VARIANT_STATES.COMING_SOON).length, 0);
+    assert.equal(registry.isGameVariantAvailable('speed-run'), true);
+    assert.equal(registry.isGameVariantAvailable('track'), true);
     assert.equal(registry.getGameVariant('missing'), null);
     assert.equal(Object.isFrozen(registry.GAME_VARIANTS), true);
 });
 
-test('game hub renders available and coming-soon modes without unsafe HTML', async () => {
+test('game hub renders all ten modes as enabled cards without unsafe HTML', async () => {
     const { registry, createGameHubController } = await loadGameHubModules();
     const documentObject = createFakeDocument();
     const controller = createGameHubController({ documentObject, registry });
 
     assert.equal(controller.render(), true);
     assert.equal(documentObject.root.dataset.gameHubReady, 'true');
-    assert.equal(documentObject.root.children.length, 2);
+    assert.equal(documentObject.root.children.length, 1);
 
     const elements = flatten(documentObject.root);
     const cards = elements.filter(element => element.dataset?.gameVariant);
     assert.equal(cards.length, 10);
 
-    const availableCards = cards.filter(card => card.dataset.gameModeChoice);
-    assert.deepEqual(availableCards.map(card => card.dataset.gameModeChoice), ['single', 'daily', 'duel']);
-    assert.equal(availableCards.find(card => card.dataset.gameVariant === 'classic').classList.contains('active'), true);
-    assert.equal(availableCards.find(card => card.dataset.gameVariant === 'classic').getAttribute('aria-pressed'), 'true');
+    const classicCards = cards.filter(card => card.dataset.gameModeChoice);
+    assert.deepEqual(classicCards.map(card => card.dataset.gameModeChoice), ['single', 'daily', 'duel']);
+    assert.equal(classicCards.find(card => card.dataset.gameVariant === 'classic').classList.contains('active'), true);
+    assert.equal(classicCards.find(card => card.dataset.gameVariant === 'classic').getAttribute('aria-pressed'), 'true');
 
-    const lockedCards = cards.filter(card => card.disabled);
-    assert.equal(lockedCards.length, 7);
-    for (const card of lockedCards) {
-        assert.equal(card.getAttribute('aria-disabled'), 'true');
-        assert.equal(card.dataset.gameModeChoice, undefined);
-        assert.equal(card.classList.contains('is-coming-soon'), true);
-    }
+    const extendedCards = cards.filter(card => card.dataset.extendedModeChoice);
+    assert.deepEqual(
+        extendedCards.map(card => card.dataset.extendedModeChoice),
+        ['speed-run', 'era', 'streak', 'weekly', 'constructor', 'pilot-sudoku', 'track']
+    );
+    assert.equal(cards.filter(card => card.disabled).length, 0);
+    assert.equal(cards.every(card => flatten(card).some(element => element.textContent === 'Disponibil')), true);
 });
 
-test('mode card uses text nodes and exposes variant metadata', async () => {
+test('extended mode card exposes launch metadata and remains keyboard enabled', async () => {
     const { registry, createModeCard } = await loadGameHubModules();
     const documentObject = createFakeDocument();
     const speedRun = registry.getGameVariant('speed-run');
@@ -149,10 +158,37 @@ test('mode card uses text nodes and exposes variant metadata', async () => {
 
     assert.equal(card.dataset.gameVariant, 'speed-run');
     assert.equal(card.dataset.gameContext, 'single');
-    assert.equal(card.disabled, true);
-    assert.match(card.title, /update viitor/i);
+    assert.equal(card.dataset.extendedModeChoice, 'speed-run');
+    assert.equal(card.dataset.gameModeChoice, undefined);
+    assert.equal(card.disabled, false);
+    assert.equal(card.getAttribute('aria-pressed'), 'false');
     assert.equal(flatten(card).some(element => element.textContent === 'Speed Run'), true);
-    assert.equal(flatten(card).some(element => element.textContent === 'În curând'), true);
+    assert.equal(flatten(card).some(element => element.textContent === 'Disponibil'), true);
+});
+
+test('delegated Game Hub click loads and opens the requested extended mode', async () => {
+    const { registry, createGameHubController } = await loadGameHubModules();
+    const documentObject = createFakeDocument();
+    const opened = [];
+    const controller = createGameHubController({
+        documentObject,
+        registry,
+        windowObject: {},
+        loadExtendedController: async () => ({
+            open: async key => opened.push(key)
+        })
+    });
+    controller.render();
+
+    const card = flatten(documentObject.root).find(element => element.dataset?.extendedModeChoice === 'track');
+    await documentObject.root.trigger('click', {
+        target: {
+            closest(selector) {
+                return selector === '[data-extended-mode-choice]' ? card : null;
+            }
+        }
+    });
+    assert.deepEqual(opened, ['track']);
 });
 
 test('game hub installer is idempotent', async () => {
@@ -185,14 +221,14 @@ test('production HTML loads the Game Hub before the existing game bundle', () =>
     assert.ok(bundleIndex > controllerIndex);
 });
 
-test('responsive E2E keeps pixel baselines for gameplay and semantic checks for the evolving hub', () => {
+test('responsive E2E expects all planned modes to be enabled', () => {
     const source = fs.readFileSync(
         path.join(__dirname, 'e2e', 'responsiveVisual.e2e.test.js'),
         'utf8'
     );
 
     assert.match(source, /assertGameHubCatalog/);
-    assert.match(source, /'home', HOME_SELECTORS, \{ compareVisual: false \}/);
-    assert.match(source, /'game', GAME_SELECTORS\)/);
-    assert.match(source, /catalog\.comingSoon\.length, 7/);
+    assert.match(source, /catalog\.available\.length, 10/);
+    assert.match(source, /catalog\.comingSoon\.length, 0/);
+    assert.match(source, /assertExtendedModesLaunch/);
 });

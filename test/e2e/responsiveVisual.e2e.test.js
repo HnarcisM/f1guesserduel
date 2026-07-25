@@ -237,7 +237,7 @@ async function assertGameHubCatalog(page, viewportLabel) {
             keys: cards.map(card => card.dataset.gameVariant),
             available: cards
                 .filter(card => !card.disabled)
-                .map(card => card.dataset.gameModeChoice),
+                .map(card => card.dataset.gameModeChoice || card.dataset.extendedModeChoice),
             comingSoon: cards
                 .filter(card => card.disabled)
                 .map(card => card.dataset.gameVariant),
@@ -258,9 +258,55 @@ async function assertGameHubCatalog(page, viewportLabel) {
         'pilot-sudoku',
         'track'
     ]);
-    assert.deepEqual(catalog.available, ['single', 'daily', 'duel']);
-    assert.equal(catalog.comingSoon.length, 7);
+    assert.deepEqual(catalog.available, [
+        'single', 'daily', 'duel', 'speed-run', 'era', 'streak', 'weekly',
+        'constructor', 'pilot-sudoku', 'track'
+    ]);
+    assert.equal(catalog.comingSoon.length, 0);
+    assert.equal(catalog.available.length, 10);
     assert.equal(catalog.horizontalOverflow, false, `${viewportLabel}/home: Game Hub are overflow orizontal`);
+}
+
+async function assertExtendedModesLaunch(page, viewportLabel) {
+    const variants = [
+        ['speed-run', 'Speed Run'],
+        ['era', 'Era Challenge'],
+        ['streak', 'Streak'],
+        ['weekly', 'Weekly Challenge'],
+        ['constructor', 'Constructor Guesser'],
+        ['pilot-sudoku', 'Pilot Sudoku'],
+        ['track', 'Track Guesser']
+    ];
+
+    for (const [variantKey, title] of variants) {
+        await page.locator(`[data-extended-mode-choice="${variantKey}"]`).click();
+        await page.locator('#extendedModePanel').waitFor({ state: 'visible', timeout: 7000 });
+        await page.locator('#extendedModeTitle').waitFor({ state: 'visible', timeout: 7000 });
+        assert.equal(await page.locator('#extendedModeTitle').textContent(), title, `${viewportLabel}: titlu incorect pentru ${variantKey}`);
+
+        if (variantKey === 'era') {
+            await page.locator('[data-era-key="current"]').click();
+        }
+        await page.locator('#extendedModeGame').waitFor({ state: 'visible', timeout: 7000 });
+        const panelLayout = await collectLayout(page, [
+            '#extendedModePanel',
+            '#extendedModeTitle',
+            '#extendedModeGame',
+            '#extendedModeClose'
+        ]);
+        assertLayoutFits(panelLayout, viewportLabel, variantKey);
+
+        if (variantKey === 'pilot-sudoku') {
+            await page.locator('.extended-sudoku-grid').waitFor({ state: 'visible', timeout: 7000 });
+        }
+        if (variantKey === 'track') {
+            await page.locator('#extendedModeClue svg').waitFor({ state: 'visible', timeout: 7000 });
+        }
+
+        await page.locator('#extendedModeClose').click();
+        await page.locator('#extendedModePanel').waitFor({ state: 'hidden', timeout: 7000 });
+        await page.locator('#difficulty-overlay').waitFor({ state: 'visible', timeout: 7000 });
+    }
 }
 
 async function assertMainMenuShowsOnlyLoginFromHeader(page, label) {
@@ -360,6 +406,9 @@ test('responsive layouts match committed visual baselines', { concurrency: false
                 if (home.visualRegression.failure) visualFailures.push(home.visualRegression.failure);
                 await assertGameHubCatalog(page, viewport.label);
                 await assertMainMenuShowsOnlyLoginFromHeader(page, `${viewport.label}/home`);
+                if (viewport.label === VIEWPORTS[0].label) {
+                    await assertExtendedModesLaunch(page, viewport.label);
+                }
 
                 await page.locator('.btn-diff.easy').click();
                 await page.locator('#gameZone:not(.game-zone-hidden)').waitFor({ state: 'visible', timeout: 7000 });

@@ -43,10 +43,11 @@
             key: 'speed-run',
             title: 'Speed Run',
             icon: '⏱️',
-            description: 'Ghicește mai mulți piloți înainte ca timpul total să expire.',
+            description: 'Ghicește cinci piloți înainte ca timpul total să expire.',
             context: 'single',
-            state: GAME_VARIANT_STATES.COMING_SOON,
-            tags: Object.freeze(['Scor', 'Contra cronometru'])
+            launchType: 'extended',
+            state: GAME_VARIANT_STATES.AVAILABLE,
+            tags: Object.freeze(['5 runde', '90 secunde', 'Scor'])
         }),
         Object.freeze({
             key: 'era',
@@ -54,54 +55,59 @@
             icon: '🏛️',
             description: 'Alege o perioadă din istoria Formulei 1 și joacă doar cu acei piloți.',
             context: 'single',
-            state: GAME_VARIANT_STATES.COMING_SOON,
-            tags: Object.freeze(['Filtre istorice', 'Solo'])
+            launchType: 'extended',
+            state: GAME_VARIANT_STATES.AVAILABLE,
+            tags: Object.freeze(['5 ere', 'Solo'])
         }),
         Object.freeze({
             key: 'streak',
             title: 'Streak',
             icon: '🔥',
-            description: 'Continuă seria cât timp ghicești corect și depășește-ți recordul.',
+            description: 'Continuă seria cât timp ghicești pilotul în maximum trei încercări.',
             context: 'single',
-            state: GAME_VARIANT_STATES.COMING_SOON,
-            tags: Object.freeze(['Serii', 'Record personal'])
+            launchType: 'extended',
+            state: GAME_VARIANT_STATES.AVAILABLE,
+            tags: Object.freeze(['3 încercări', 'Record personal'])
         }),
         Object.freeze({
             key: 'weekly',
             title: 'Weekly Challenge',
             icon: '📅',
-            description: 'O provocare specială comună tuturor jucătorilor în fiecare săptămână.',
+            description: 'O secvență deterministă comună tuturor jucătorilor în fiecare săptămână.',
             context: 'daily',
-            state: GAME_VARIANT_STATES.COMING_SOON,
-            requiresAccount: true,
-            tags: Object.freeze(['Săptămânal', 'Necesită cont'])
+            launchType: 'extended',
+            state: GAME_VARIANT_STATES.AVAILABLE,
+            tags: Object.freeze(['5 runde', '120 secunde', 'Seed săptămânal'])
         }),
         Object.freeze({
             key: 'constructor',
             title: 'Constructor Guesser',
             icon: '🏎️',
-            description: 'Identifică echipa pe baza istoriei, țării și performanțelor sale.',
+            description: 'Identifică echipa pe baza țării, debutului, titlurilor și erei.',
             context: 'single',
-            state: GAME_VARIANT_STATES.COMING_SOON,
-            tags: Object.freeze(['Constructori', 'Date noi'])
+            launchType: 'extended',
+            state: GAME_VARIANT_STATES.AVAILABLE,
+            tags: Object.freeze(['Constructori', '6 încercări'])
         }),
         Object.freeze({
             key: 'pilot-sudoku',
             title: 'Pilot Sudoku',
             icon: '🧩',
-            description: 'Completează grila cu piloți care respectă simultan două criterii.',
+            description: 'Completează grila 3×3 cu nouă piloți diferiți care respectă două criterii.',
             context: 'single',
-            state: GAME_VARIANT_STATES.COMING_SOON,
+            launchType: 'extended',
+            state: GAME_VARIANT_STATES.AVAILABLE,
             tags: Object.freeze(['Puzzle', 'Grilă 3×3'])
         }),
         Object.freeze({
             key: 'track',
             title: 'Track Guesser',
             icon: '🗺️',
-            description: 'Recunoaște circuitele după configurație și caracteristici.',
+            description: 'Recunoaște circuitul după siluetă și compară datele tehnice.',
             context: 'single',
-            state: GAME_VARIANT_STATES.COMING_SOON,
-            tags: Object.freeze(['Circuite', 'Siluete'])
+            launchType: 'extended',
+            state: GAME_VARIANT_STATES.AVAILABLE,
+            tags: Object.freeze(['Circuite', 'Siluete', '6 încercări'])
         })
     ]);
 

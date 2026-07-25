@@ -8,6 +8,13 @@ const {
 const { pickDailyDriver } = require('./dailyChallenge');
 
 function createGameService(driversRepository) {
+    function getAllDrivers() {
+        if (typeof driversRepository.getAllDrivers === 'function') {
+            return driversRepository.getAllDrivers();
+        }
+        return driversRepository.getDriversByDifficulty?.('all') || [];
+    }
+
     function getForcedDuelTarget(drivers) {
         if (process.env.NODE_ENV !== 'test') return null;
 
@@ -160,6 +167,7 @@ function createGameService(driversRepository) {
     }
 
     return {
+        getAllDrivers,
         startNewRound,
         restartRound,
         startDailyChallenge,
