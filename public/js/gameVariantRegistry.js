@@ -44,7 +44,7 @@
             icon: '⏱️',
             description: 'Ghicește cinci piloți înainte ca timpul total să expire.',
             context: 'single',
-            launchType: 'extended',
+            pagePath: '/modes/speed-run/',
             state: GAME_VARIANT_STATES.AVAILABLE,
             tags: Object.freeze(['5 runde', '90 secunde', 'Scor'])
         }),
@@ -54,7 +54,7 @@
             icon: '🏛️',
             description: 'Alege o perioadă din istoria Formulei 1 și joacă doar cu acei piloți.',
             context: 'single',
-            launchType: 'extended',
+            pagePath: '/modes/era/',
             state: GAME_VARIANT_STATES.AVAILABLE,
             tags: Object.freeze(['5 ere', 'Solo'])
         }),
@@ -64,7 +64,7 @@
             icon: '🔥',
             description: 'Continuă seria cât timp ghicești pilotul în maximum trei încercări.',
             context: 'single',
-            launchType: 'extended',
+            pagePath: '/modes/streak/',
             state: GAME_VARIANT_STATES.AVAILABLE,
             tags: Object.freeze(['3 încercări', 'Record personal'])
         }),
@@ -74,7 +74,7 @@
             icon: '📅',
             description: 'O singură încercare oficială pe săptămână, cu aceeași secvență pentru fiecare dificultate.',
             context: 'daily',
-            launchType: 'extended',
+            pagePath: '/modes/weekly/',
             state: GAME_VARIANT_STATES.AVAILABLE,
             requiresAccount: true,
             tags: Object.freeze(['5 runde', 'Necesită cont', '1× pe săptămână'])
@@ -85,7 +85,7 @@
             icon: '🏎️',
             description: 'Identifică echipa pe baza țării, debutului, titlurilor și erei.',
             context: 'single',
-            launchType: 'extended',
+            pagePath: '/modes/constructor/',
             state: GAME_VARIANT_STATES.AVAILABLE,
             tags: Object.freeze(['Constructori', '6 încercări'])
         }),
@@ -95,7 +95,7 @@
             icon: '🧩',
             description: 'Completează grila 3×3 cu nouă piloți diferiți care respectă două criterii.',
             context: 'single',
-            launchType: 'extended',
+            pagePath: '/modes/pilot-sudoku/',
             state: GAME_VARIANT_STATES.AVAILABLE,
             tags: Object.freeze(['Puzzle', 'Grilă 3×3'])
         }),
@@ -105,7 +105,7 @@
             icon: '🗺️',
             description: 'Recunoaște circuitul după siluetă și compară datele tehnice.',
             context: 'single',
-            launchType: 'extended',
+            pagePath: '/modes/track/',
             state: GAME_VARIANT_STATES.AVAILABLE,
             tags: Object.freeze(['Circuite', 'Siluete', '6 încercări'])
         })

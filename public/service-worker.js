@@ -2,7 +2,7 @@
 
 const CACHE_PREFIX = 'f1-guesser-static-';
 /* GENERATED_PRECACHE_START */
-const STATIC_CACHE_NAME = 'f1-guesser-static-daf58131732510cf680c';
+const STATIC_CACHE_NAME = 'f1-guesser-static-e57cf18ec5721f0398b2';
 const PRECACHE_URLS = Object.freeze([
     "/css/16-duel-ready.css?v=325c0498b808b8c1",
     "/css/17-duel-series.css?v=519233effd931ef4",
@@ -13,27 +13,44 @@ const PRECACHE_URLS = Object.freeze([
     "/css/22-connection-status.css?v=a05172cdad41910e",
     "/css/23-game-hub.css?v=7ecca81778fc1131",
     "/css/24-extended-modes.css",
+    "/css/25-mode-pages.css",
     "/game.bundle.min.js?v=58124a83dd554db3",
     "/icons/pwa-192.png",
     "/icons/pwa-512.png",
     "/index.html",
     "/js/accountGameHistoryController.js?v=0bdff1b6f186805c",
+    "/js/apiClient.js",
     "/js/connectionStatusController.js?v=6df8af4e1cbae20a",
     "/js/duelIdentityController.js?v=1345c7e6d7940860",
     "/js/duelReadyController.js?v=29b02568a275c131",
     "/js/duelRoomBrowserSeriesController.js?v=ebbf9dd31662abb2",
     "/js/duelRoundHistoryController.js?v=77fa53fbfa13103a",
     "/js/duelSeriesController.js?v=14bfad7705c45b6d",
+    "/js/extendedModePage.js",
     "/js/extendedModesConfig.js",
     "/js/extendedModesController.js",
     "/js/feedbackController.js?v=5cd6b13e762a05bd",
-    "/js/gameHubController.js?v=ff25f0635f4ba829",
-    "/js/gameVariantRegistry.js?v=c481640550e18726",
+    "/js/gameHubController.js?v=a2a1e672c5b3fecd",
+    "/js/gameVariantRegistry.js?v=ad37d1ad96dccbd0",
+    "/js/modes/constructorPage.js",
+    "/js/modes/eraPage.js",
+    "/js/modes/pilotSudokuPage.js",
+    "/js/modes/speedRunPage.js",
+    "/js/modes/streakPage.js",
+    "/js/modes/trackPage.js",
+    "/js/modes/weeklyPage.js",
     "/js/pwaController.js?v=a28eba69df98be12",
     "/js/socketBridgeBootstrap.js?v=fd76646cd8126930",
     "/js/themeBootstrap.js?v=6afc6a3773845bb4",
     "/js/weeklyChallengeView.js",
     "/manifest.webmanifest?v=e0da31a997a94e9f",
+    "/modes/constructor/",
+    "/modes/era/",
+    "/modes/pilot-sudoku/",
+    "/modes/speed-run/",
+    "/modes/streak/",
+    "/modes/track/",
+    "/modes/weekly/",
     "/style.bundle.css?v=9b31ae015af3c57e",
 ]);
 /* GENERATED_PRECACHE_END */
@@ -82,8 +99,11 @@ async function networkFirstNavigation(request, { cachesObject = caches, fetchFn 
         return await fetchFn(request);
     } catch (error) {
         const cache = await cachesObject.open(STATIC_CACHE_NAME);
-        const fallback = await cache.match('/index.html');
-        if (fallback) return fallback;
+        const requestUrl = new URL(request.url);
+        const pageFallback = await cache.match(requestUrl.pathname);
+        if (pageFallback) return pageFallback;
+        const appFallback = await cache.match('/index.html');
+        if (appFallback) return appFallback;
         throw error;
     }
 }

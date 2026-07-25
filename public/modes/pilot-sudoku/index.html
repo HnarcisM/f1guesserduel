@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ro">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="description" content="Completează grila 3×3 cu piloți care respectă criteriile rândului și coloanei.">
+    <meta name="theme-color" content="#0f1116">
+    <title>Pilot Sudoku · F1 Guesser Duel</title>
+    <link rel="icon" href="/logos/F1.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/css/24-extended-modes.css">
+    <link rel="stylesheet" href="/css/25-mode-pages.css">
+</head>
+<body class="extended-mode-page" data-extended-mode="pilot-sudoku">
+    <header class="mode-page-nav">
+        <a class="mode-page-brand" href="/" aria-label="F1 Guesser Duel · Game Hub">
+            <span aria-hidden="true">🏁</span>
+            <span>F1 Guesser Duel</span>
+        </a>
+        <nav class="mode-page-nav-actions" aria-label="Navigare mod">
+            <span id="modePageAccount" class="mode-page-account">👤 Se verifică...</span>
+            <a id="modePageHome" class="mode-page-home" href="/">Game Hub</a>
+        </nav>
+    </header>
+    <main id="modePageContent" class="mode-page-content">
+        <p id="modePageLoading" class="mode-page-loading" role="status">Se încarcă Pilot Sudoku...</p>
+    </main>
+    <button id="authOpenBtn" type="button" hidden aria-hidden="true" tabindex="-1"></button>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/socketBridgeBootstrap.js"></script>
+    <script type="module" src="/js/modes/pilotSudokuPage.js"></script>
+</body>
+</html>

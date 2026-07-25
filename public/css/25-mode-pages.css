@@ -1,0 +1,223 @@
+:root {
+    color-scheme: dark;
+    --accent-f1: #d61220;
+    --surface-main: #0f1116;
+    --surface-elevated: #1b1f27;
+    --border-soft: #39404d;
+    --text-primary: #f8f9fb;
+    --text-secondary: #c0c6d0;
+    --text-muted: #8f98a8;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html {
+    min-width: 320px;
+    background: #090b10;
+}
+
+body.extended-mode-page {
+    min-height: 100vh;
+    margin: 0;
+    overflow-x: hidden;
+    background:
+        radial-gradient(circle at 14% 0%, rgba(214, 18, 32, 0.16), transparent 34rem),
+        linear-gradient(180deg, #11141b 0%, #090b10 100%);
+    color: var(--text-primary);
+}
+
+body.extended-mode-page.extended-mode-open {
+    overflow-y: auto;
+}
+
+.mode-page-nav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 64px;
+    padding: 10px max(18px, env(safe-area-inset-right)) 10px max(18px, env(safe-area-inset-left));
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(9, 11, 16, 0.9);
+    backdrop-filter: blur(16px);
+}
+
+.mode-page-brand,
+.mode-page-home,
+.mode-page-account {
+    color: inherit;
+    text-decoration: none;
+}
+
+.mode-page-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+}
+
+.mode-page-brand span:first-child {
+    font-size: 1.35rem;
+}
+
+.mode-page-nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mode-page-home,
+.mode-page-account {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding: 8px 12px;
+    border: 1px solid var(--border-soft);
+    border-radius: 11px;
+    background: rgba(27, 31, 39, 0.82);
+    font-size: 0.84rem;
+    font-weight: 800;
+}
+
+.mode-page-account {
+    color: var(--text-secondary);
+}
+
+.mode-page-home:hover,
+.mode-page-home:focus-visible {
+    border-color: var(--accent-f1);
+    outline: none;
+}
+
+.mode-page-content {
+    width: min(1180px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: clamp(22px, 4vw, 48px) 0 max(42px, env(safe-area-inset-bottom));
+}
+
+.mode-page-loading {
+    display: grid;
+    place-items: center;
+    min-height: 48vh;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.extended-mode-page .extended-mode-backdrop {
+    display: none !important;
+}
+
+.extended-mode-page .extended-mode-panel {
+    position: relative;
+    inset: auto;
+    z-index: 1;
+    width: 100%;
+    max-height: none;
+    margin: 0;
+    overflow: visible;
+    padding: clamp(20px, 3.5vw, 38px);
+    border-radius: clamp(18px, 2.5vw, 28px);
+}
+
+.extended-mode-page .extended-mode-close {
+    width: auto;
+    min-width: 44px;
+    padding: 0 14px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+.extended-mode-page .extended-mode-close::before {
+    content: "← ";
+}
+
+.extended-mode-page .extended-mode-game,
+.extended-mode-page .extended-mode-setup {
+    scroll-margin-top: 84px;
+}
+
+.extended-mode-page .extended-mode-result {
+    scroll-margin-top: 84px;
+}
+
+.mode-page-error {
+    max-width: 720px;
+    margin: 48px auto;
+    padding: 24px;
+    border: 1px solid rgba(255, 108, 120, 0.55);
+    border-radius: 18px;
+    background: rgba(161, 35, 47, 0.16);
+    text-align: center;
+}
+
+.mode-page-error h1,
+.mode-page-error p {
+    margin: 0;
+}
+
+.mode-page-error p {
+    margin-top: 10px;
+    color: var(--text-secondary);
+}
+
+@media (max-width: 680px) {
+    .mode-page-nav {
+        align-items: flex-start;
+    }
+
+    .mode-page-brand {
+        padding-top: 8px;
+    }
+
+    .mode-page-nav-actions {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .mode-page-home,
+    .mode-page-account {
+        min-height: 34px;
+        padding: 6px 9px;
+        font-size: 0.74rem;
+    }
+
+    .mode-page-content {
+        width: min(100% - 16px, 1180px);
+        padding-top: 12px;
+    }
+
+    .extended-mode-page .extended-mode-panel {
+        inset: auto;
+        width: 100%;
+        max-height: none;
+        padding: 16px;
+    }
+
+    .extended-mode-page .extended-mode-header {
+        align-items: flex-start;
+        flex-direction: column-reverse;
+    }
+
+    .extended-mode-page .extended-mode-close {
+        align-self: flex-start;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+    }
+}

@@ -840,7 +840,7 @@ function createExtendedModesController({ windowObject, documentObject, storage }
     }
 
     function handleKeyDown(event) {
-        if (!state.isOpen) return;
+        if (!state.isOpen || panel.getAttribute('aria-modal') !== 'true') return;
         if (event.key === 'Escape') {
             event.preventDefault();
             close();

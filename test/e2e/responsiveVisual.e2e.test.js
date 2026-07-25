@@ -267,7 +267,7 @@ async function assertGameHubCatalog(page, viewportLabel) {
     assert.equal(catalog.horizontalOverflow, false, `${viewportLabel}/home: Game Hub are overflow orizontal`);
 }
 
-async function assertExtendedModesLaunch(page, viewportLabel) {
+async function assertExtendedModesLaunch(page, viewportLabel, baseUrl) {
     const variants = [
         ['speed-run', 'Speed Run'],
         ['era', 'Era Challenge'],
@@ -279,19 +279,29 @@ async function assertExtendedModesLaunch(page, viewportLabel) {
     ];
 
     for (const [variantKey, title] of variants) {
-        await page.locator(`[data-extended-mode-choice="${variantKey}"]`).click();
+        await page.locator(`[data-game-variant="${variantKey}"]`).click();
+        await page.waitForURL(url => url.pathname === `/modes/${variantKey}/`, { timeout: 7000 });
         await page.locator('#extendedModePanel').waitFor({ state: 'visible', timeout: 7000 });
         await page.locator('#extendedModeTitle').waitFor({ state: 'visible', timeout: 7000 });
         assert.equal(await page.locator('#extendedModeTitle').textContent(), title, `${viewportLabel}: titlu incorect pentru ${variantKey}`);
+        assert.equal(
+            await page.locator('body').getAttribute('data-extended-mode'),
+            variantKey,
+            `${viewportLabel}: pagina dedicată nu corespunde modului ${variantKey}`
+        );
 
         if (variantKey === 'era') {
             await page.locator('[data-era-key="current"]').click();
         }
-        await page.locator('#extendedModeGame').waitFor({ state: 'visible', timeout: 7000 });
+        if (variantKey === 'weekly') {
+            await page.locator('#extendedModeSetup').waitFor({ state: 'visible', timeout: 7000 });
+        } else {
+            await page.locator('#extendedModeGame').waitFor({ state: 'visible', timeout: 7000 });
+        }
+
         const panelLayout = await collectLayout(page, [
             '#extendedModePanel',
             '#extendedModeTitle',
-            '#extendedModeGame',
             '#extendedModeClose'
         ]);
         assertLayoutFits(panelLayout, viewportLabel, variantKey);
@@ -304,8 +314,8 @@ async function assertExtendedModesLaunch(page, viewportLabel) {
         }
 
         await page.locator('#extendedModeClose').click();
-        await page.locator('#extendedModePanel').waitFor({ state: 'hidden', timeout: 7000 });
-        await page.locator('#difficulty-overlay').waitFor({ state: 'visible', timeout: 7000 });
+        await page.waitForURL(url => url.pathname === '/', { timeout: 7000 });
+        await page.locator('#gameHubCatalogView').waitFor({ state: 'visible', timeout: 7000 });
     }
 }
 
@@ -407,7 +417,7 @@ test('responsive layouts match committed visual baselines', { concurrency: false
                 await assertGameHubCatalog(page, viewport.label);
                 await assertMainMenuShowsOnlyLoginFromHeader(page, `${viewport.label}/home`);
                 if (viewport.label === VIEWPORTS[0].label) {
-                    await assertExtendedModesLaunch(page, viewport.label);
+                    await assertExtendedModesLaunch(page, viewport.label, app.baseUrl);
                 }
 
                 await page.locator('[data-game-mode-choice="single"]').click();

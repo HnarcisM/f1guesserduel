@@ -141,11 +141,12 @@ test('game hub renders all ten modes as enabled cards without unsafe HTML', asyn
     assert.equal(classicCards.every(card => card.classList.contains('active') === false), true);
     assert.equal(classicCards.every(card => card.getAttribute('aria-pressed') === 'false'), true);
 
-    const extendedCards = cards.filter(card => card.dataset.extendedModeChoice);
+    const extendedCards = cards.filter(card => card.dataset.gameModePage);
     assert.deepEqual(
-        extendedCards.map(card => card.dataset.extendedModeChoice),
+        extendedCards.map(card => card.dataset.gameVariant),
         ['speed-run', 'era', 'streak', 'weekly', 'constructor', 'pilot-sudoku', 'track']
     );
+    assert.equal(extendedCards.every(card => card.tagName === 'BUTTON'), true);
     assert.equal(cards.filter(card => card.disabled).length, 0);
     assert.equal(cards.every(card => flatten(card).some(element => element.textContent === 'Disponibil')), true);
 });
@@ -158,7 +159,8 @@ test('extended mode card exposes launch metadata and remains keyboard enabled', 
 
     assert.equal(card.dataset.gameVariant, 'speed-run');
     assert.equal(card.dataset.gameContext, 'single');
-    assert.equal(card.dataset.extendedModeChoice, 'speed-run');
+    assert.equal(card.dataset.gameModePage, '/modes/speed-run/');
+    assert.equal(card.tagName, 'BUTTON');
     assert.equal(card.dataset.gameModeChoice, undefined);
     assert.equal(card.disabled, false);
     assert.equal(card.getAttribute('aria-pressed'), null);
@@ -166,29 +168,29 @@ test('extended mode card exposes launch metadata and remains keyboard enabled', 
     assert.equal(flatten(card).some(element => element.textContent === 'Disponibil'), true);
 });
 
-test('delegated Game Hub click loads and opens the requested extended mode', async () => {
+test('extended mode cards navigate to dedicated pages without loading the game controller', async () => {
     const { registry, createGameHubController } = await loadGameHubModules();
     const documentObject = createFakeDocument();
-    const opened = [];
+    const navigations = [];
     const controller = createGameHubController({
         documentObject,
         registry,
-        windowObject: {},
-        loadExtendedController: async () => ({
-            open: async key => opened.push(key)
-        })
+        windowObject: { location: { assign: path => navigations.push(path) } }
     });
     controller.render();
 
-    const card = flatten(documentObject.root).find(element => element.dataset?.extendedModeChoice === 'track');
+    const trackCard = flatten(documentObject.root)
+        .find(element => element.dataset?.gameVariant === 'track');
+    assert.equal(trackCard.tagName, 'BUTTON');
+    assert.equal(trackCard.dataset.gameModePage, '/modes/track/');
     await documentObject.root.trigger('click', {
         target: {
             closest(selector) {
-                return selector === '[data-extended-mode-choice]' ? card : null;
+                return selector === '[data-game-mode-page]' ? trackCard : null;
             }
         }
     });
-    assert.deepEqual(opened, ['track']);
+    assert.deepEqual(navigations, ['/modes/track/']);
 });
 
 test('game hub installer is idempotent', async () => {

@@ -11,9 +11,26 @@ const DEFAULT_PRECACHE_STATIC_URLS = Object.freeze([
     '/icons/pwa-192.png',
     '/icons/pwa-512.png',
     '/css/24-extended-modes.css',
+    '/css/25-mode-pages.css',
+    '/js/apiClient.js',
     '/js/extendedModesConfig.js',
     '/js/extendedModesController.js',
-    '/js/weeklyChallengeView.js'
+    '/js/extendedModePage.js',
+    '/js/weeklyChallengeView.js',
+    '/js/modes/speedRunPage.js',
+    '/js/modes/eraPage.js',
+    '/js/modes/streakPage.js',
+    '/js/modes/weeklyPage.js',
+    '/js/modes/constructorPage.js',
+    '/js/modes/pilotSudokuPage.js',
+    '/js/modes/trackPage.js',
+    '/modes/speed-run/',
+    '/modes/era/',
+    '/modes/streak/',
+    '/modes/weekly/',
+    '/modes/constructor/',
+    '/modes/pilot-sudoku/',
+    '/modes/track/'
 ]);
 const DEFAULT_ASSETS = Object.freeze([
     {
@@ -245,8 +262,11 @@ function versionServiceWorker(rootDir, versionedAssets, options = {}) {
     const staticAssetVersions = [];
     for (const staticUrl of precacheStaticUrls) {
         const pathname = new URL(staticUrl, 'http://localhost').pathname;
-        const staticFile = path.join(rootDir, 'public', pathname.replace(/^\/+/, ''));
-        if (!fs.existsSync(staticFile)) {
+        let staticFile = path.join(rootDir, 'public', pathname.replace(/^\/+/, ''));
+        if (fs.existsSync(staticFile) && fs.statSync(staticFile).isDirectory()) {
+            staticFile = path.join(staticFile, 'index.html');
+        }
+        if (!fs.existsSync(staticFile) || !fs.statSync(staticFile).isFile()) {
             throw new Error(`Precache static asset not found: ${staticUrl}`);
         }
         staticAssetVersions.push(`${staticUrl}:${createBinaryVersion(fs.readFileSync(staticFile))}`);

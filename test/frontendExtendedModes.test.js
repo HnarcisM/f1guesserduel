@@ -11,12 +11,13 @@ const weeklyView = read('public/js/weeklyChallengeView.js');
 const extendedConfig = read('public/js/extendedModesConfig.js');
 const styles = read('public/css/24-extended-modes.css');
 const hub = read('public/js/gameHubController.js');
+const pageController = read('public/js/extendedModePage.js');
 const registry = read('public/js/gameVariantRegistry.js');
 const socketHandlers = read('server/socket/extendedModesSocketHandlers.js');
 const weeklyCoordinator = read('server/socket/weeklyChallengeCoordinator.js');
 const coordinator = read('server/socket/registerSocketHandlers.js');
 
-test('every extended mode is enabled and launches through the isolated controller', () => {
+test('every extended mode is enabled and launches through an isolated page route', () => {
     for (const variantKey of [
         'speed-run',
         'era',
@@ -28,9 +29,10 @@ test('every extended mode is enabled and launches through the isolated controlle
     ]) {
         assert.match(registry, new RegExp(`key: '${variantKey}'`));
     }
-    assert.equal((registry.match(/launchType: 'extended'/g) || []).length, 7);
-    assert.match(hub, /data\.extendedModeChoice|dataset\.extendedModeChoice/);
-    assert.match(hub, /import\(EXTENDED_MODES_MODULE_URL\)/);
+    assert.equal((registry.match(/pagePath: '\/modes\//g) || []).length, 7);
+    assert.match(hub, /dataset\.gameModePage/);
+    assert.doesNotMatch(hub, /extendedModesController|startExtendedMode|dynamic import|import\(/);
+    assert.match(pageController, /createExtendedModesController/);
     assert.match(controller, /startExtendedMode/);
     assert.match(registry, /key: 'weekly'[\s\S]*requiresAccount: true/);
     assert.match(extendedConfig, /O încercare oficială pe săptămână/);
@@ -69,6 +71,8 @@ ${weeklyCoordinator}`, new RegExp(`'${eventName}'`));
 test('new modes remain isolated from classic game orchestration', () => {
     const game = read('public/game.js');
     assert.doesNotMatch(game, /extendedModesController|startExtendedMode|Pilot Sudoku|Speed Run/);
+    assert.doesNotMatch(pageController, /game\.bundle\.min\.js|gameModeSelectionController|startSingleGame/);
+    assert.match(pageController, /refreshAuthUser/);
     assert.match(coordinator, /registerExtendedModesSocketHandlers/);
     assert.match(coordinator, /extendedSessions/);
 });
@@ -77,6 +81,7 @@ test('track, Sudoku and responsive layouts have dedicated accessible UI', () => 
     assert.match(controller, /createElementNS\('http:\/\/www\.w3\.org\/2000\/svg'/);
     assert.match(controller, /role', 'grid'/);
     assert.match(controller, /aria-modal/);
+    assert.match(pageController, /removeAttribute\('aria-modal'\)/);
     assert.match(controller, /aria-live/);
     assert.match(styles, /\.extended-sudoku-grid/);
     assert.match(styles, /\.extended-mode-hud/);
@@ -98,6 +103,8 @@ test('extended mode modules stay within maintainable size budgets', () => {
         'public/css/24-extended-modes.css': 16_000,
         'public/js/weeklyChallengeView.js': 6_000,
         'public/js/extendedModesConfig.js': 3_000,
+        'public/js/extendedModePage.js': 9_000,
+        'public/css/25-mode-pages.css': 8_000,
         'server/game/extendedModesService.js': 40_000,
         'server/game/extendedModesCatalogs.js': 12_000,
         'server/socket/extendedModesSocketHandlers.js': 13_000,

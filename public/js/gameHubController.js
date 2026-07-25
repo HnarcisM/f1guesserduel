@@ -1,9 +1,6 @@
 (function installGameHubModule(globalObject) {
     'use strict';
 
-    const EXTENDED_MODES_MODULE_URL = '/js/extendedModesController.js';
-    let extendedModesModulePromise = null;
-
     function createElement(documentObject, tagName, className = '', text = '') {
         const element = documentObject.createElement(tagName);
         if (className) element.className = className;
@@ -17,6 +14,7 @@
 
     function createModeCard(documentObject, variant) {
         const available = variant.state === 'available';
+        const isPageLink = available && typeof variant.pagePath === 'string';
         const card = createElement(documentObject, 'button', 'game-mode-card game-hub-card');
         card.type = 'button';
         card.dataset.gameVariant = variant.key;
@@ -27,7 +25,10 @@
                 card.dataset.gameModeChoice = variant.modeChoice;
                 card.setAttribute('aria-pressed', 'false');
             }
-            if (variant.launchType === 'extended') card.dataset.extendedModeChoice = variant.key;
+            if (isPageLink) {
+                card.dataset.gameModePage = variant.pagePath;
+                card.setAttribute('aria-label', `${variant.title} · deschide pagina modului`);
+            }
         } else {
             card.disabled = true;
             card.classList.add('is-coming-soon');
@@ -79,43 +80,21 @@
         return section;
     }
 
-    async function ensureExtendedModesController(windowObject = globalObject) {
-        if (windowObject?.__f1ExtendedModesController) return windowObject.__f1ExtendedModesController;
-        if (!extendedModesModulePromise) {
-            extendedModesModulePromise = import(EXTENDED_MODES_MODULE_URL).then(module => (
-                module.installExtendedModesController?.(windowObject)
-                || windowObject?.__f1ExtendedModesController
-                || null
-            ));
-        }
-        return extendedModesModulePromise;
-    }
-
     function createGameHubController({
         documentObject = globalObject?.document,
         registry = globalObject?.F1GameVariantRegistry,
         rootId = 'gameModeHub',
-        windowObject = globalObject,
-        loadExtendedController = ensureExtendedModesController
+        windowObject = globalObject
     } = {}) {
         let clickInstalled = false;
 
-        async function handleClick(event) {
-            const target = event?.target;
-            const card = target?.closest?.('[data-extended-mode-choice]')
-                || (target?.dataset?.extendedModeChoice ? target : null);
+        function handleClick(event) {
+            const card = event?.target?.closest?.('[data-game-mode-page]')
+                || (event?.target?.dataset?.gameModePage ? event.target : null);
             if (!card || card.disabled) return;
-            const variantKey = card.dataset.extendedModeChoice;
-            if (!registry?.isGameVariantAvailable?.(variantKey)) return;
-
-            try {
-                const controller = await loadExtendedController(windowObject);
-                if (!controller?.open) throw new Error('Extended modes controller is unavailable.');
-                await controller.open(variantKey, { trigger: card });
-            } catch {
-                const status = documentObject?.getElementById?.('status');
-                if (status) status.textContent = 'Modul nu a putut fi încărcat. Reîncarcă pagina.';
-            }
+            const pagePath = card.dataset.gameModePage;
+            if (typeof pagePath !== 'string' || !pagePath.startsWith('/modes/')) return;
+            windowObject?.location?.assign?.(pagePath);
         }
 
         function installClickHandler(root) {
@@ -175,10 +154,8 @@
     }
 
     const api = Object.freeze({
-        EXTENDED_MODES_MODULE_URL,
         createGameHubController,
         createModeCard,
-        ensureExtendedModesController,
         installGameHubController
     });
 
@@ -187,4 +164,4 @@
         globalObject.F1GameHub = api;
         if (globalObject.document) installGameHubController(globalObject);
     }
-})(typeof globalThis !== 'undefined' ? globalThis : null);
+}(typeof globalThis !== 'undefined' ? globalThis : null));

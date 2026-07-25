@@ -169,15 +169,16 @@ test('service worker precache bypasses stale HTTP cache entries', async () => {
     assert.equal(fetched.some(entry => entry.url.startsWith('/socket.io')), false);
 });
 
-test('navigation uses network first with cached app shell fallback', async () => {
+test('navigation uses network first with route-specific and app shell fallbacks', async () => {
     const cachedResponse = new Response('offline shell');
+    const matchedKeys = [];
     const cachesObject = {
         async open(name) {
             assert.match(name, /^f1-guesser-static-/);
             return {
                 async match(key) {
-                    assert.equal(key, '/index.html');
-                    return cachedResponse;
+                    matchedKeys.push(key);
+                    return key === '/index.html' ? cachedResponse : null;
                 }
             };
         }
@@ -190,7 +191,30 @@ test('navigation uses network first with cached app shell fallback', async () =>
             fetchFn: async () => { throw new Error('offline'); }
         }
     );
+    assert.deepEqual(matchedKeys, ['/room/ABC', '/index.html']);
     assert.equal(await response.text(), 'offline shell');
+});
+
+test('standalone mode navigation uses its own cached page before the app shell', async () => {
+    const matchedKeys = [];
+    const response = await serviceWorker.networkFirstNavigation(
+        new Request('https://app.test/modes/track/'),
+        {
+            cachesObject: {
+                async open() {
+                    return {
+                        async match(key) {
+                            matchedKeys.push(key);
+                            return key === '/modes/track/' ? new Response('track page') : null;
+                        }
+                    };
+                }
+            },
+            fetchFn: async () => { throw new Error('offline'); }
+        }
+    );
+    assert.deepEqual(matchedKeys, ['/modes/track/']);
+    assert.equal(await response.text(), 'track page');
 });
 
 test('PWA controller registers only in supported secure contexts', async () => {
