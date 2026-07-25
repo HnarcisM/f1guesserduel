@@ -94,3 +94,10 @@ test('admin audit UI exposes filtered JSON and CSV exports with retention metada
     assert.match(script, /retenție \$\{formatNumber\(payload\.retentionDays\)\} zile/);
     assert.doesNotMatch(script, /innerHTML\s*=/);
 });
+
+
+test('admin mobile topbar wraps without widening fold viewports', () => {
+    const css = fs.readFileSync(path.join(root, 'server', 'admin', 'ui', 'admin.css'), 'utf8');
+    assert.match(css, /@media \(max-width: 560px\)[\s\S]*\.admin-topbar \{ align-items: flex-end; flex-wrap: wrap; gap: 12px; \}/);
+    assert.match(css, /@media \(max-width: 560px\)[\s\S]*\.admin-topbar > div \{ min-width: 0; \}/);
+});
