@@ -1,51 +1,11 @@
 import { setProgressPercent } from './progressStyle.js';
+import {
+    formatWeeklyCountdown,
+    renderWeeklySetupView,
+    updateWeeklyResetInfo
+} from './weeklyChallengeView.js';
 
-const STYLE_URL = '/css/24-extended-modes.css';
-const RECORDS_KEY = 'f1-guesser-extended-records-v1';
-const VARIANT_COPY = Object.freeze({
-    'speed-run': {
-        title: 'Speed Run',
-        eyebrow: '5 piloți · 90 secunde',
-        description: 'Ghicește cât mai repede. Poți sări o rundă cu o penalizare de 250 puncte.'
-    },
-    era: {
-        title: 'Era Challenge',
-        eyebrow: 'Filtru istoric',
-        description: 'Alege era, apoi identifică pilotul în maximum șase încercări.'
-    },
-    streak: {
-        title: 'Streak',
-        eyebrow: 'Serie nelimitată',
-        description: 'Ai doar trei încercări pentru fiecare pilot. Prima rundă pierdută încheie seria.'
-    },
-    weekly: {
-        title: 'Weekly Challenge',
-        eyebrow: 'Aceeași provocare pentru toți',
-        description: 'Cinci piloți determinați de săptămâna ISO și 120 de secunde în total.'
-    },
-    constructor: {
-        title: 'Constructor Guesser',
-        eyebrow: 'Istoria echipelor',
-        description: 'Compară țara, debutul, titlurile, statutul și era constructorului.'
-    },
-    'pilot-sudoku': {
-        title: 'Pilot Sudoku',
-        eyebrow: 'Puzzle 3×3',
-        description: 'Fiecare pilot trebuie să respecte criteriul rândului și al coloanei și nu poate fi reutilizat.'
-    },
-    track: {
-        title: 'Track Guesser',
-        eyebrow: 'Siluete de circuit',
-        description: 'Recunoaște circuitul și folosește comparațiile tehnice ca indicii.'
-    }
-});
-const ERA_OPTIONS = Object.freeze([
-    { key: 'pioneers', title: 'Pioneers', description: 'Debut înainte de 1970' },
-    { key: 'classic', title: 'Classic', description: 'Debut 1970–1989' },
-    { key: 'modern', title: 'Modern', description: 'Debut 1990–2009' },
-    { key: 'hybrid', title: 'Hybrid', description: 'Debut 2010–2019' },
-    { key: 'current', title: 'Current', description: 'Debut din 2020' }
-]);
+import { ERA_OPTIONS, RECORDS_KEY, STYLE_URL, VARIANT_COPY } from './extendedModesConfig.js';
 
 function createElement(documentObject, tagName, className = '', text = '') {
     const element = documentObject.createElement(tagName);
@@ -170,6 +130,7 @@ function installSocketListeners(socket, controller) {
         extendedSudokuUpdate: payload => controller.handleSudokuUpdate(payload),
         extendedModeFinished: payload => controller.handleFinished(payload),
         extendedModeError: message => controller.handleError(message),
+        weeklyChallengeStatus: payload => controller.handleWeeklyStatus(payload),
         extendedModeLeft: () => controller.handleServerLeft()
     };
     for (const [eventName, handler] of Object.entries(handlers)) {
@@ -231,6 +192,11 @@ function createExtendedModesController({ windowObject, documentObject, storage }
         selectedId: null,
         timerInterval: null,
         timeoutSent: false,
+        weeklyCountdownInterval: null,
+        weeklyResetInfo: null,
+        weeklyStatus: null,
+        weeklyStartPending: false,
+        hasStarted: false,
         trigger: null,
         isOpen: false,
         records: readRecords(storage || win?.localStorage)
@@ -315,6 +281,27 @@ function createExtendedModesController({ windowObject, documentObject, storage }
         if (state.timerInterval) win.clearInterval(state.timerInterval);
         state.timerInterval = null;
         state.timeoutSent = false;
+    }
+
+    function clearWeeklyCountdown() {
+        if (state.weeklyCountdownInterval) win.clearInterval(state.weeklyCountdownInterval);
+        state.weeklyCountdownInterval = null;
+        state.weeklyResetInfo = null;
+    }
+
+    function getWeeklyCountdownText() {
+        return formatWeeklyCountdown(state.weeklyStatus);
+    }
+
+    function updateWeeklyCountdown() {
+        updateWeeklyResetInfo(state.weeklyResetInfo, state.weeklyStatus);
+    }
+
+    function startWeeklyCountdown(infoElement) {
+        clearWeeklyCountdown();
+        state.weeklyResetInfo = infoElement;
+        updateWeeklyCountdown();
+        state.weeklyCountdownInterval = win.setInterval(updateWeeklyCountdown, 1000);
     }
 
     function updateTimer() {
@@ -568,12 +555,41 @@ function createExtendedModesController({ windowObject, documentObject, storage }
         setVisible(elements.game, false);
     }
 
+    function renderWeeklySetup() {
+        clearWeeklyCountdown();
+        const view = renderWeeklySetupView({
+            documentObject: doc,
+            setupElement: elements.setup,
+            status: state.weeklyStatus || {},
+            pending: state.weeklyStartPending,
+            onSelectDifficulty(option) {
+                state.weeklyStartPending = true;
+                renderWeeklySetup();
+                setStatus(`Se rezervă Weekly Challenge ${option.title}...`);
+                emit('startExtendedMode', {
+                    variantKey: 'weekly',
+                    options: { difficulty: option.key }
+                });
+            },
+            onLogin() {
+                close({ notifyServer: false });
+                doc.getElementById('authOpenBtn')?.click?.();
+            }
+        });
+        setVisible(elements.setup, true);
+        setVisible(elements.game, false);
+        setStatus(view.statusMessage, view.statusKind);
+        startWeeklyCountdown(view.resetInfo);
+    }
+
     function resetGameSurface() {
         clearTimer();
         state.catalog = [];
         state.serverState = null;
         state.activeSudokuCell = null;
         state.selectedId = null;
+        state.weeklyStartPending = false;
+        state.hasStarted = false;
         elements.comparison.replaceChildren();
         elements.resultStats.replaceChildren();
         setVisible(elements.result, false);
@@ -581,6 +597,7 @@ function createExtendedModesController({ windowObject, documentObject, storage }
         setVisible(elements.game, true);
         elements.continueButton.hidden = true;
         elements.skip.hidden = true;
+        elements.restart.hidden = false;
         elements.submit.disabled = false;
         elements.input.disabled = false;
         resetInput();
@@ -617,6 +634,9 @@ function createExtendedModesController({ windowObject, documentObject, storage }
 
     function handleStarted(payload = {}) {
         if (!state.isOpen || payload.variantKey !== state.variantKey) return;
+        clearWeeklyCountdown();
+        state.hasStarted = true;
+        state.weeklyStartPending = false;
         state.catalog = Array.isArray(payload.catalog) ? payload.catalog : [];
         state.serverState = payload.state || null;
         state.activeSudokuCell = null;
@@ -712,11 +732,13 @@ function createExtendedModesController({ windowObject, documentObject, storage }
                 : payload.reason === 'streak-ended'
                     ? '🔥 Seria s-a încheiat'
                     : 'Sesiune finalizată';
-        elements.resultMessage.textContent = payload.target?.name
-            ? `Ultimul răspuns era ${payload.target.name}.`
-            : state.variantKey === 'pilot-sudoku'
-                ? 'Ai completat toate cele nouă celule.'
-                : 'Rezultatul a fost salvat local.';
+        elements.resultMessage.textContent = state.variantKey === 'weekly'
+            ? `Scorul oficial a fost salvat pentru ${payload.difficulty || 'dificultatea aleasă'}. Următoarea încercare devine disponibilă în ${getWeeklyCountdownText()}.`
+            : payload.target?.name
+                ? `Ultimul răspuns era ${payload.target.name}.`
+                : state.variantKey === 'pilot-sudoku'
+                    ? 'Ai completat toate cele nouă celule.'
+                    : 'Rezultatul a fost salvat local.';
         elements.resultStats.replaceChildren(
             createStat('Scor', Number(payload.score || 0).toLocaleString('ro-RO')),
             createStat('Record', Number(record.bestScore || 0).toLocaleString('ro-RO')),
@@ -725,16 +747,29 @@ function createExtendedModesController({ windowObject, documentObject, storage }
                 : `${payload.roundsCompleted || 0}/${payload.totalRounds || payload.roundsPlayed || 1}`),
             createStat('Durată', formatDuration(payload.durationMs))
         );
+        elements.restart.hidden = state.variantKey === 'weekly';
         setVisible(elements.result, true);
-        setStatus('Poți relua același mod sau reveni la Game Hub.');
+        setStatus(state.variantKey === 'weekly'
+            ? 'Încercarea Weekly a fost consumată. Revino după resetul săptămânal.'
+            : 'Poți relua același mod sau reveni la Game Hub.');
         elements.result.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
-        elements.restart.focus();
+        (state.variantKey === 'weekly' ? elements.home : elements.restart).focus();
+    }
+
+    function handleWeeklyStatus(payload = {}) {
+        state.weeklyStatus = payload && typeof payload === 'object' ? payload : null;
+        state.weeklyStartPending = false;
+        if (state.isOpen && state.variantKey === 'weekly' && !state.hasStarted) {
+            renderWeeklySetup();
+        }
     }
 
     function handleError(message) {
         if (!state.isOpen) return;
         elements.submit.disabled = false;
         elements.input.disabled = false;
+        state.weeklyStartPending = false;
+        if (state.variantKey === 'weekly' && !state.hasStarted) renderWeeklySetup();
         setStatus(message || 'Acțiunea nu a putut fi efectuată.', 'error');
     }
 
@@ -770,6 +805,13 @@ function createExtendedModesController({ windowObject, documentObject, storage }
             setStatus('Alege perioada istorică.');
             return true;
         }
+        if (variantKey === 'weekly') {
+            state.weeklyStatus = null;
+            renderWeeklySetup();
+            setStatus('Se verifică disponibilitatea încercării Weekly...');
+            emit('requestWeeklyChallengeStatus');
+            return true;
+        }
 
         emit('startExtendedMode', { variantKey, options: {} });
         return true;
@@ -779,11 +821,15 @@ function createExtendedModesController({ windowObject, documentObject, storage }
         if (!state.isOpen) return;
         if (notifyServer) emit('leaveExtendedMode');
         clearTimer();
+        clearWeeklyCountdown();
         state.isOpen = false;
         state.variantKey = null;
         state.catalog = [];
         state.serverState = null;
         state.activeSudokuCell = null;
+        state.weeklyStatus = null;
+        state.weeklyStartPending = false;
+        state.hasStarted = false;
         hideSuggestions();
         panel.hidden = true;
         backdrop.hidden = true;
@@ -825,6 +871,7 @@ function createExtendedModesController({ windowObject, documentObject, storage }
         handleServerLeft,
         handleStarted,
         handleSudokuUpdate,
+        handleWeeklyStatus,
         open,
         _state: state,
         _elements: elements

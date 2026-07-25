@@ -53,13 +53,42 @@ function createFakeSocket(id = 'socket-1') {
     };
 }
 
-function createHarness() {
+function createHarness({ authenticated = true } = {}) {
     let now = Date.UTC(2026, 6, 25, 12, 0, 0);
     const timers = [];
     const socket = createFakeSocket();
+    socket.user = authenticated ? { id: 7, username: 'Narcis' } : null;
     const sessions = new Map();
+    const weeklyAttempts = new Map();
+    const weeklyCompletions = [];
     let leaveCalls = 0;
     let clearSoloCalls = 0;
+    const accountStatsService = {
+        async getWeeklyChallengeStatus(userId, weekKey) {
+            const attempt = weeklyAttempts.get(`${userId}:${weekKey}`) || null;
+            return {
+                weekKey,
+                claimed: Boolean(attempt),
+                challengeId: attempt?.challengeId || null,
+                difficulty: attempt?.difficulty || null,
+                result: attempt?.result || null
+            };
+        },
+        async claimWeeklyChallenge(attempt) {
+            const key = `${attempt.userId}:${attempt.weekKey}`;
+            if (weeklyAttempts.has(key)) return false;
+            weeklyAttempts.set(key, { ...attempt, result: null });
+            return true;
+        },
+        async completeWeeklyChallenge(result) {
+            const key = `${result.userId}:${result.weekKey}`;
+            const attempt = weeklyAttempts.get(key);
+            if (!attempt || attempt.challengeId !== result.challengeId || attempt.result) return false;
+            attempt.result = { ...result };
+            weeklyCompletions.push({ ...result });
+            return true;
+        }
+    };
 
     const controller = registerExtendedModesSocketHandlers({
         socket,
@@ -67,6 +96,8 @@ function createHarness() {
         gameService: { getAllDrivers: () => buildDrivers() },
         leaveCurrentRoom: async () => { leaveCalls += 1; },
         clearSoloModeSessions: () => { clearSoloCalls += 1; },
+        accountStatsService,
+        now: () => new Date(now),
         onSocketEvent: (eventName, handler) => socket.on(eventName, handler),
         clock: () => now,
         setTimeoutFn: (handler, delay) => {
@@ -83,6 +114,8 @@ function createHarness() {
         sessions,
         controller,
         timers,
+        weeklyAttempts,
+        weeklyCompletions,
         get leaveCalls() { return leaveCalls; },
         get clearSoloCalls() { return clearSoloCalls; },
         advance(ms) { now += ms; }
@@ -182,20 +215,55 @@ test('Pilot Sudoku uses a dedicated event and never exposes the generated soluti
     assert.equal(update.payload.driver.id, answer.id);
 });
 
-test('server timer finishes the current timed session and clears it on leave', async () => {
+test('Weekly requires an account and exposes authoritative availability status', async () => {
+    const harness = createHarness({ authenticated: false });
+    await harness.socket.trigger('requestWeeklyChallengeStatus');
+    assert.deepEqual(harness.socket.last('weeklyChallengeStatus').payload, {
+        authenticated: false,
+        weekKey: '2026-W30',
+        nextResetAt: '2026-07-27T00:00:00.000Z',
+        claimed: false,
+        difficulty: null,
+        challengeId: null,
+        result: null
+    });
+
+    await harness.socket.trigger('startExtendedMode', {
+        variantKey: 'weekly',
+        options: { difficulty: 'easy' }
+    });
+    assert.equal(harness.sessions.size, 0);
+    assert.match(harness.socket.last('extendedModeError').payload, /Autentifică-te/i);
+});
+
+test('Weekly claims one difficulty for the whole ISO week and persists the final score', async () => {
     const harness = createHarness();
-    await harness.socket.trigger('startExtendedMode', 'weekly');
+    await harness.socket.trigger('startExtendedMode', {
+        variantKey: 'weekly',
+        options: { difficulty: 'easy' }
+    });
+    const session = harness.controller.getSession();
+    assert.ok(session.catalog.every(driver => driver.difficulty === 'easy'));
+    assert.equal(session.weekKey, '2026-W30');
+    assert.match(session.challengeId, /^f1-weekly-v2:2026-W30:easy$/);
+    assert.equal(harness.weeklyAttempts.size, 1);
+
     const timer = harness.timers[0];
     harness.advance(timer.delay);
-    timer.handler();
-
+    await timer.handler();
     const finished = harness.socket.last('extendedModeFinished');
     assert.ok(finished);
     assert.equal(finished.payload.reason, 'time-expired');
+    assert.equal(harness.weeklyCompletions.length, 1);
+    assert.equal(harness.weeklyCompletions[0].challengeId, session.challengeId);
 
     await harness.socket.trigger('leaveExtendedMode');
+    await harness.socket.trigger('startExtendedMode', {
+        variantKey: 'weekly',
+        options: { difficulty: 'hard' }
+    });
     assert.equal(harness.sessions.size, 0);
-    assert.ok(harness.socket.last('extendedModeLeft'));
+    assert.match(harness.socket.last('extendedModeError').payload, /deja încercarea Weekly/i);
 });
 
 test('restart reuses the original variant and options', async () => {

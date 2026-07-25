@@ -74,6 +74,27 @@ CREATE TABLE IF NOT EXISTS user_daily_attempts (
 CREATE INDEX IF NOT EXISTS idx_user_daily_attempts_user_date
     ON user_daily_attempts(user_id, daily_date);
 
+CREATE TABLE IF NOT EXISTS user_weekly_attempts (
+    user_id INTEGER NOT NULL,
+    week_key TEXT NOT NULL CHECK (week_key GLOB '[0-9][0-9][0-9][0-9]-W[0-9][0-9]'),
+    challenge_id TEXT NOT NULL,
+    difficulty TEXT NOT NULL CHECK (difficulty IN ('easy', 'medium', 'hard')),
+    score INTEGER CHECK (score IS NULL OR score >= 0),
+    rounds_completed INTEGER CHECK (rounds_completed IS NULL OR rounds_completed BETWEEN 0 AND 5),
+    rounds_played INTEGER CHECK (rounds_played IS NULL OR rounds_played BETWEEN 0 AND 5),
+    duration_ms INTEGER CHECK (duration_ms IS NULL OR duration_ms >= 0),
+    finish_reason TEXT,
+    started_at TEXT NOT NULL DEFAULT (datetime('now')),
+    finished_at TEXT,
+    CHECK (rounds_completed IS NULL OR rounds_played IS NULL OR rounds_completed <= rounds_played),
+    PRIMARY KEY (user_id, week_key),
+    UNIQUE (user_id, challenge_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_weekly_attempts_user_started
+    ON user_weekly_attempts(user_id, started_at DESC);
+
 CREATE TABLE IF NOT EXISTS user_game_stats (
     user_id INTEGER NOT NULL,
     mode TEXT NOT NULL CHECK (mode IN ('single', 'daily', 'duel')),

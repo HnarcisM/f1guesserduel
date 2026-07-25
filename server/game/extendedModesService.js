@@ -2,6 +2,11 @@
 
 const { compareGuess } = require('./compareDriver');
 const { CONSTRUCTORS, TRACKS } = require('./extendedModesCatalogs');
+const {
+    getIsoWeekInfo,
+    getWeeklyChallengeId,
+    normalizeWeeklyDifficulty
+} = require('./weeklyChallenge');
 
 const EXTENDED_VARIANTS = Object.freeze({
     SPEED_RUN: 'speed-run',
@@ -233,22 +238,6 @@ function buildTrackFeedback(guess, target) {
     };
 }
 
-function getIsoWeekInfo(dateInput = new Date()) {
-    const date = new Date(dateInput);
-    if (Number.isNaN(date.getTime())) return getIsoWeekInfo(new Date());
-    const utcDate = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-    const dayNumber = utcDate.getUTCDay() || 7;
-    utcDate.setUTCDate(utcDate.getUTCDate() + 4 - dayNumber);
-    const yearStart = new Date(Date.UTC(utcDate.getUTCFullYear(), 0, 1));
-    const week = Math.ceil((((utcDate - yearStart) / 86400000) + 1) / 7);
-    const year = utcDate.getUTCFullYear();
-    return {
-        year,
-        week,
-        key: `${year}-W${String(week).padStart(2, '0')}`
-    };
-}
-
 function findEra(key) {
     return ERA_FILTERS.find(era => era.key === normalizeId(key)) || ERA_FILTERS.at(-1);
 }
@@ -408,6 +397,8 @@ function buildSessionState(session, clock = Date.now) {
         startedAt: session.startedAt,
         expiresAt: session.expiresAt || null,
         challengeId: session.challengeId || null,
+        weekKey: session.weekKey || null,
+        difficulty: session.difficulty || session.options?.difficulty || null,
         era: session.era ? clone(session.era) : null,
         bestMetric: session.variantKey === EXTENDED_VARIANTS.STREAK ? session.streak : session.score,
         round: buildRoundPublicState(session, clock),
@@ -501,16 +492,24 @@ function createExtendedModesService({
     }
 
     function createWeekly(options = {}) {
-        const weekInfo = getIsoWeekInfo(options.date || new Date(clock()));
-        const era = ERA_FILTERS[weekInfo.week % ERA_FILTERS.length];
-        const eraPool = filterDriversByEra(driverCatalog, era.key);
-        const pool = eraPool.length >= WEEKLY_ROUNDS ? eraPool : [...driverCatalog];
-        const seededRandom = createSeededRandom(`f1-weekly:${weekInfo.key}:${era.key}`);
+        const difficulty = normalizeWeeklyDifficulty(options.difficulty);
+        if (!difficulty) throw new Error('Weekly Challenge requires a valid difficulty.');
+
+        const challengeDate = options.date || new Date(clock());
+        const weekInfo = getIsoWeekInfo(challengeDate);
+        const pool = filterDriversByDifficulty(driverCatalog, difficulty);
+        if (pool.length < WEEKLY_ROUNDS) {
+            throw new Error(`Weekly Challenge requires at least ${WEEKLY_ROUNDS} drivers for ${difficulty}.`);
+        }
+
+        const challengeId = getWeeklyChallengeId(difficulty, challengeDate);
+        const seededRandom = createSeededRandom(challengeId);
         const session = baseSession(EXTENDED_VARIANTS.WEEKLY, 'driver', pool, options);
-        session.challengeId = `weekly-${weekInfo.key}`;
-        session.era = era;
-        session.totalRounds = Math.min(WEEKLY_ROUNDS, pool.length);
-        session.targets = sampleUnique(pool, session.totalRounds, seededRandom);
+        session.challengeId = challengeId;
+        session.weekKey = weekInfo.key;
+        session.difficulty = difficulty;
+        session.totalRounds = WEEKLY_ROUNDS;
+        session.targets = sampleUnique(pool, WEEKLY_ROUNDS, seededRandom);
         session.expiresAt = session.startedAt + WEEKLY_SECONDS * 1000;
         return session;
     }
@@ -630,6 +629,8 @@ function createExtendedModesService({
             totalRounds: session.totalRounds,
             durationMs: Math.max(0, (session.finishedAt || clock()) - session.startedAt),
             challengeId: session.challengeId || null,
+            weekKey: session.weekKey || null,
+            difficulty: session.difficulty || session.options?.difficulty || null,
             era: session.era ? clone(session.era) : null,
             target,
             sudoku: session.variantKey === EXTENDED_VARIANTS.PILOT_SUDOKU

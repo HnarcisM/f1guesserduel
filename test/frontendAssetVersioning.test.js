@@ -36,7 +36,9 @@ function createFixture() {
     writeFile(rootDir, 'public/js/socketBridgeBootstrap.js', 'bridgeSocket();\n');
     writeFile(rootDir, 'public/js/gameVariantRegistry.js', 'installRegistry();\n');
     writeFile(rootDir, 'public/js/gameHubController.js', 'installGameHub();\n');
+    writeFile(rootDir, 'public/js/extendedModesConfig.js', 'export const STYLE_URL = \'/extended.css\';\n');
     writeFile(rootDir, 'public/js/extendedModesController.js', 'installExtendedModes();\n');
+    writeFile(rootDir, 'public/js/weeklyChallengeView.js', 'export function renderWeekly() {}\n');
     writeFile(rootDir, 'public/js/duelReadyController.js', 'installReady();\n');
     writeFile(rootDir, 'public/js/duelSeriesController.js', 'installSeries();\n');
     writeFile(rootDir, 'public/js/duelRoundHistoryController.js', 'installHistory();\n');
@@ -97,7 +99,7 @@ test('frontend asset versioning replaces manual values with deterministic conten
         assert.ok(firstHtml.includes(`${asset.publicPath}?v=${asset.version}`));
     }
     assert.match(firstHtml, /\/other\.js\?v=keep-this/);
-    assert.equal(firstResult.serviceWorker.precacheUrls.length, 29);
+    assert.equal(firstResult.serviceWorker.precacheUrls.length, 31);
     const serviceWorker = fs.readFileSync(path.join(rootDir, 'public', 'service-worker.js'), 'utf8');
     assert.match(serviceWorker, /f1-guesser-static-[a-f0-9]{20}/);
     for (const url of firstResult.serviceWorker.precacheUrls) {

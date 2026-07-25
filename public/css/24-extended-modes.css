@@ -502,3 +502,110 @@ body.extended-mode-open {
         animation: none;
     }
 }
+
+.extended-weekly-copy h3,
+.extended-weekly-copy p,
+.extended-weekly-reset,
+.extended-weekly-result-summary {
+    margin: 0;
+}
+
+.extended-weekly-copy p,
+.extended-weekly-reset,
+.extended-weekly-result-summary {
+    color: var(--text-secondary, #c0c6d0);
+    line-height: 1.5;
+}
+
+.extended-weekly-copy p {
+    margin-top: 7px;
+}
+
+.extended-weekly-reset {
+    padding: 12px 14px;
+    border: 1px solid color-mix(in srgb, var(--border-soft, #39404d) 78%, transparent);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--surface-elevated, #1b1f27) 76%, transparent);
+    font-size: 0.85rem;
+    font-weight: 750;
+}
+
+.extended-weekly-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.extended-weekly-option {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 5px 10px;
+    min-height: 116px;
+    box-sizing: border-box;
+    padding: 16px;
+    border: 1px solid var(--border-soft, #39404d);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--surface-elevated, #1b1f27) 88%, transparent);
+    color: var(--text-primary, #fff);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.extended-weekly-option .extended-weekly-icon {
+    grid-row: 1 / span 2;
+    align-self: center;
+    font-size: 1.45rem;
+}
+
+.extended-weekly-option strong {
+    align-self: end;
+}
+
+.extended-weekly-option small {
+    color: var(--text-muted, #8f98a8);
+    line-height: 1.4;
+}
+
+.extended-weekly-option:hover:not(:disabled),
+.extended-weekly-option:focus-visible:not(:disabled) {
+    border-color: var(--accent-f1, #d61220);
+    outline: none;
+    transform: translateY(-2px);
+}
+
+.extended-weekly-option:disabled {
+    cursor: not-allowed;
+    opacity: 0.58;
+}
+
+.extended-weekly-option.is-claimed {
+    border-color: #55db86;
+    background: rgba(30, 154, 87, 0.18);
+    opacity: 1;
+}
+
+.extended-weekly-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.extended-weekly-result-summary {
+    padding: 11px 13px;
+    border-left: 3px solid #55db86;
+    background: rgba(30, 154, 87, 0.1);
+}
+
+@media (max-width: 760px) {
+    .extended-weekly-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .extended-weekly-option {
+        transition: none;
+    }
+}

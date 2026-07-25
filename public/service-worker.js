@@ -2,7 +2,7 @@
 
 const CACHE_PREFIX = 'f1-guesser-static-';
 /* GENERATED_PRECACHE_START */
-const STATIC_CACHE_NAME = 'f1-guesser-static-2334e752e3a7d252ee71';
+const STATIC_CACHE_NAME = 'f1-guesser-static-a20cd8ee538dab1da6f1';
 const PRECACHE_URLS = Object.freeze([
     "/css/16-duel-ready.css?v=325c0498b808b8c1",
     "/css/17-duel-series.css?v=519233effd931ef4",
@@ -24,13 +24,15 @@ const PRECACHE_URLS = Object.freeze([
     "/js/duelRoomBrowserSeriesController.js?v=ebbf9dd31662abb2",
     "/js/duelRoundHistoryController.js?v=77fa53fbfa13103a",
     "/js/duelSeriesController.js?v=14bfad7705c45b6d",
+    "/js/extendedModesConfig.js",
     "/js/extendedModesController.js",
     "/js/feedbackController.js?v=5cd6b13e762a05bd",
     "/js/gameHubController.js?v=ff25f0635f4ba829",
-    "/js/gameVariantRegistry.js?v=b9ebfff1b7b935a8",
+    "/js/gameVariantRegistry.js?v=c481640550e18726",
     "/js/pwaController.js?v=a28eba69df98be12",
     "/js/socketBridgeBootstrap.js?v=fd76646cd8126930",
     "/js/themeBootstrap.js?v=6afc6a3773845bb4",
+    "/js/weeklyChallengeView.js",
     "/manifest.webmanifest?v=e0da31a997a94e9f",
     "/style.bundle.css?v=9b31ae015af3c57e",
 ]);

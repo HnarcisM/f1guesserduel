@@ -72,11 +72,12 @@
             key: 'weekly',
             title: 'Weekly Challenge',
             icon: '📅',
-            description: 'O secvență deterministă comună tuturor jucătorilor în fiecare săptămână.',
+            description: 'O singură încercare oficială pe săptămână, cu aceeași secvență pentru fiecare dificultate.',
             context: 'daily',
             launchType: 'extended',
             state: GAME_VARIANT_STATES.AVAILABLE,
-            tags: Object.freeze(['5 runde', '120 secunde', 'Seed săptămânal'])
+            requiresAccount: true,
+            tags: Object.freeze(['5 runde', 'Necesită cont', '1× pe săptămână'])
         }),
         Object.freeze({
             key: 'constructor',

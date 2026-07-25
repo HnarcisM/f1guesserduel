@@ -7,10 +7,13 @@ const root = path.join(__dirname, '..');
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
 const controller = read('public/js/extendedModesController.js');
+const weeklyView = read('public/js/weeklyChallengeView.js');
+const extendedConfig = read('public/js/extendedModesConfig.js');
 const styles = read('public/css/24-extended-modes.css');
 const hub = read('public/js/gameHubController.js');
 const registry = read('public/js/gameVariantRegistry.js');
 const socketHandlers = read('server/socket/extendedModesSocketHandlers.js');
+const weeklyCoordinator = read('server/socket/weeklyChallengeCoordinator.js');
 const coordinator = read('server/socket/registerSocketHandlers.js');
 
 test('every extended mode is enabled and launches through the isolated controller', () => {
@@ -29,6 +32,8 @@ test('every extended mode is enabled and launches through the isolated controlle
     assert.match(hub, /data\.extendedModeChoice|dataset\.extendedModeChoice/);
     assert.match(hub, /import\(EXTENDED_MODES_MODULE_URL\)/);
     assert.match(controller, /startExtendedMode/);
+    assert.match(registry, /key: 'weekly'[\s\S]*requiresAccount: true/);
+    assert.match(extendedConfig, /O încercare oficială pe săptămână/);
 });
 
 test('frontend listens to the complete server-authoritative extended-mode protocol', () => {
@@ -39,7 +44,8 @@ test('frontend listens to the complete server-authoritative extended-mode protoc
         'extendedRoundReady',
         'extendedSudokuUpdate',
         'extendedModeFinished',
-        'extendedModeError'
+        'extendedModeError',
+        'weeklyChallengeStatus'
     ]) {
         assert.match(controller, new RegExp(eventName));
     }
@@ -49,11 +55,15 @@ test('frontend listens to the complete server-authoritative extended-mode protoc
         'skipExtendedRound',
         'submitExtendedSudokuGuess',
         'restartExtendedMode',
-        'leaveExtendedMode'
+        'leaveExtendedMode',
+        'requestWeeklyChallengeStatus'
     ]) {
         assert.match(controller, new RegExp(eventName));
-        assert.match(socketHandlers, new RegExp(`'${eventName}'`));
+        assert.match(`${socketHandlers}
+${weeklyCoordinator}`, new RegExp(`'${eventName}'`));
     }
+    assert.match(weeklyCoordinator, /claimWeeklyChallenge/);
+    assert.match(weeklyCoordinator, /completeWeeklyChallenge/);
 });
 
 test('new modes remain isolated from classic game orchestration', () => {
@@ -70,6 +80,9 @@ test('track, Sudoku and responsive layouts have dedicated accessible UI', () => 
     assert.match(controller, /aria-live/);
     assert.match(styles, /\.extended-sudoku-grid/);
     assert.match(styles, /\.extended-mode-hud/);
+    assert.match(styles, /\.extended-weekly-grid/);
+    assert.match(weeklyView, /WEEKLY_DIFFICULTY_OPTIONS/);
+    assert.match(weeklyView, /formatWeeklyCountdown/);
     assert.match(styles, /@media \(max-width: 680px\)/);
     assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
 });
@@ -82,10 +95,13 @@ test('non-timed modes do not interpret a null deadline as an expired timer', () 
 test('extended mode modules stay within maintainable size budgets', () => {
     const budgets = {
         'public/js/extendedModesController.js': 40_000,
-        'public/css/24-extended-modes.css': 15_000,
+        'public/css/24-extended-modes.css': 16_000,
+        'public/js/weeklyChallengeView.js': 6_000,
+        'public/js/extendedModesConfig.js': 3_000,
         'server/game/extendedModesService.js': 40_000,
         'server/game/extendedModesCatalogs.js': 12_000,
-        'server/socket/extendedModesSocketHandlers.js': 13_000
+        'server/socket/extendedModesSocketHandlers.js': 13_000,
+        'server/socket/weeklyChallengeCoordinator.js': 7_000
     };
     for (const [relativePath, maximumBytes] of Object.entries(budgets)) {
         const size = fs.statSync(path.join(root, relativePath)).size;

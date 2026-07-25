@@ -125,6 +125,8 @@ function registerSocketHandlers(io, dependencies) {
             gameService,
             leaveCurrentRoom,
             clearSoloModeSessions,
+            accountStatsService,
+            now: dailyChallengeNow,
             logger,
             onSocketEvent
         });

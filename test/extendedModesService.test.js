@@ -145,21 +145,34 @@ test('Streak grants a new target after success and ends after three failed attem
     assert.equal(loss.payload.streak, 1);
 });
 
-test('Weekly Challenge is deterministic for the same ISO week', () => {
+test('Weekly Challenge is deterministic per ISO week and difficulty', () => {
     const date = new Date('2026-07-25T12:00:00Z');
     const firstClock = createClock(date.getTime());
     const secondClock = createClock(date.getTime());
     const first = createExtendedModesService({ drivers: buildDrivers(), clock: firstClock.now, random: Math.random });
     const second = createExtendedModesService({ drivers: buildDrivers(), clock: secondClock.now, random: Math.random });
 
-    const firstSession = first.startSession(EXTENDED_VARIANTS.WEEKLY, { date });
-    const secondSession = second.startSession(EXTENDED_VARIANTS.WEEKLY, { date });
+    const firstSession = first.startSession(EXTENDED_VARIANTS.WEEKLY, { date, difficulty: 'medium' });
+    const secondSession = second.startSession(EXTENDED_VARIANTS.WEEKLY, { date, difficulty: 'medium' });
+    const hardSession = second.startSession(EXTENDED_VARIANTS.WEEKLY, { date, difficulty: 'hard' });
 
     assert.equal(firstSession.challengeId, secondSession.challengeId);
     assert.deepEqual(firstSession.targets.map(target => target.id), secondSession.targets.map(target => target.id));
-    assert.equal(firstSession.era.key, secondSession.era.key);
-    assert.match(firstSession.challengeId, /^weekly-2026-W\d{2}$/);
-    assert.equal(getIsoWeekInfo(date).key, firstSession.challengeId.replace('weekly-', ''));
+    assert.ok(firstSession.catalog.every(driver => driver.difficulty === 'medium'));
+    assert.ok(firstSession.targets.every(driver => driver.difficulty === 'medium'));
+    assert.notEqual(firstSession.challengeId, hardSession.challengeId);
+    assert.match(firstSession.challengeId, /^f1-weekly-v2:2026-W\d{2}:medium$/);
+    assert.equal(firstSession.weekKey, getIsoWeekInfo(date).key);
+    assert.equal(firstSession.expiresAt - firstSession.startedAt, 120_000);
+});
+
+test('Weekly Challenge rejects missing or unsupported difficulties', () => {
+    const { service } = createService();
+    assert.throws(() => service.startSession(EXTENDED_VARIANTS.WEEKLY), /valid difficulty/i);
+    assert.throws(
+        () => service.startSession(EXTENDED_VARIANTS.WEEKLY, { difficulty: 'all' }),
+        /valid difficulty/i
+    );
 });
 
 test('Constructor and Track modes expose catalogs but hide target identity until completion', () => {

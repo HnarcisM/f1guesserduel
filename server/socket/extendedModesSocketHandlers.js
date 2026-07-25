@@ -1,6 +1,7 @@
 'use strict';
 
 const { createExtendedModesService } = require('../game/extendedModesService');
+const { createWeeklyChallengeCoordinator } = require('./weeklyChallengeCoordinator');
 
 const MIN_ACTION_INTERVAL_MS = 60;
 const ACTION_WINDOW_MS = 60_000;
@@ -45,9 +46,11 @@ function registerExtendedModesSocketHandlers({
     gameService,
     leaveCurrentRoom,
     clearSoloModeSessions = null,
+    accountStatsService = null,
+    clock = Date.now,
+    now = () => new Date(clock()),
     onSocketEvent = socket.on.bind(socket),
     logger = console,
-    clock = Date.now,
     setTimeoutFn = setTimeout,
     clearTimeoutFn = clearTimeout,
     service = null
@@ -97,21 +100,32 @@ function registerExtendedModesSocketHandlers({
         socket.emit('extendedModeError', normalized);
     }
 
-    function emitFinished(payload, session = getSession()) {
+    const weeklyCoordinator = createWeeklyChallengeCoordinator({
+        socket,
+        accountStatsService,
+        logger,
+        now,
+        clearSession,
+        emitError
+    });
+
+    async function emitFinished(payload, session = getSession()) {
         if (!payload) return;
         clearTimer(session);
+        await weeklyCoordinator.persistResult(payload, session);
         socket.emit('extendedModeFinished', payload);
+        if (weeklyCoordinator.isWeeklySession(session)) await weeklyCoordinator.emitStatus();
     }
 
     function scheduleTimeout(session) {
         clearTimer(session);
         if (!Number.isFinite(session?.expiresAt)) return;
         const delay = Math.max(1, session.expiresAt - clock());
-        session.timeoutHandle = setTimeoutFn(() => {
+        session.timeoutHandle = setTimeoutFn(async () => {
             const current = getSession();
             if (!current || current.id !== session.id || current.phase !== 'playing') return;
             const finished = extendedModesService.expireSession(current);
-            if (finished) emitFinished(finished, current);
+            if (finished) await emitFinished(finished, current);
         }, delay);
         session.timeoutHandle?.unref?.();
     }
@@ -156,20 +170,29 @@ function registerExtendedModesSocketHandlers({
             return null;
         }
 
+        const weeklyStart = await weeklyCoordinator.prepareStart(normalized, {
+            reuseOptions,
+            service: extendedModesService
+        });
+        if (weeklyStart.blocked) return null;
+        const isWeekly = weeklyStart.isWeekly;
+        let session = weeklyStart.session;
+
         await leaveCurrentRoom?.();
         clearSoloModeSessions?.();
         clearSession();
 
-        let session;
-        try {
-            session = extendedModesService.startSession(normalized.variantKey, normalized.options);
-        } catch (error) {
-            logger?.error?.('Extended mode could not be started.', {
-                variantKey: normalized.variantKey,
-                error
-            });
-            emitError('Nu am putut genera provocarea. Verifică datele modului și încearcă din nou.');
-            return null;
+        if (!session) {
+            try {
+                session = extendedModesService.startSession(normalized.variantKey, normalized.options);
+            } catch (error) {
+                logger?.error?.('Extended mode could not be started.', {
+                    variantKey: normalized.variantKey,
+                    error
+                });
+                emitError('Nu am putut genera provocarea. Verifică datele modului și încearcă din nou.');
+                return null;
+            }
         }
 
         if (!session) {
@@ -177,22 +200,24 @@ function registerExtendedModesSocketHandlers({
             return null;
         }
 
-        session.startRequest = normalized;
+        if (!session.startRequest) session.startRequest = normalized;
         extendedSessions.set(socket.id, session);
         scheduleTimeout(session);
         socket.emit('extendedModeStarted', extendedModesService.buildStartedPayload(session));
+        if (isWeekly) await weeklyCoordinator.emitStatus();
         return session;
     }
 
+    onSocketEvent('requestWeeklyChallengeStatus', weeklyCoordinator.emitStatus);
     onSocketEvent('startExtendedMode', payload => start(payload));
 
-    onSocketEvent('submitExtendedGuess', payload => {
+    onSocketEvent('submitExtendedGuess', async payload => {
         const session = getSession();
         if (!session) {
             emitError('Pornește mai întâi modul de joc.');
             return;
         }
-        if (!consumeAction(session)) return;
+        if (!weeklyCoordinator.ensureSessionOwner(session) || !consumeAction(session)) return;
         const guessId = normalizeGuessId(payload);
         if (!guessId) {
             emitError('Selecția nu este validă.');
@@ -221,55 +246,55 @@ function registerExtendedModesSocketHandlers({
         }
 
         if (result.finished) {
-            emitFinished(result.payload, session);
+            await emitFinished(result.payload, session);
         }
     });
 
-    onSocketEvent('continueExtendedMode', () => {
+    onSocketEvent('continueExtendedMode', async () => {
         const session = getSession();
         if (!session) {
             emitError('Sesiunea nu mai este activă.');
             return;
         }
-        if (!consumeAction(session)) return;
+        if (!weeklyCoordinator.ensureSessionOwner(session) || !consumeAction(session)) return;
         const result = extendedModesService.continueSession(session);
         if (result.error) {
             emitError(result.error);
             return;
         }
         if (result.finished) {
-            emitFinished(result.payload, session);
+            await emitFinished(result.payload, session);
             return;
         }
         socket.emit('extendedRoundReady', result.payload);
     });
 
-    onSocketEvent('skipExtendedRound', () => {
+    onSocketEvent('skipExtendedRound', async () => {
         const session = getSession();
         if (!session) {
             emitError('Sesiunea nu mai este activă.');
             return;
         }
-        if (!consumeAction(session)) return;
+        if (!weeklyCoordinator.ensureSessionOwner(session) || !consumeAction(session)) return;
         const result = extendedModesService.skipRound(session);
         if (result.error) {
             emitError(result.error);
             return;
         }
         if (result.finished) {
-            emitFinished(result.payload, session);
+            await emitFinished(result.payload, session);
             return;
         }
         socket.emit('extendedRoundResult', result.payload);
     });
 
-    onSocketEvent('submitExtendedSudokuGuess', payload => {
+    onSocketEvent('submitExtendedSudokuGuess', async payload => {
         const session = getSession();
         if (!session) {
             emitError('Pilot Sudoku nu este activ.');
             return;
         }
-        if (!consumeAction(session)) return;
+        if (!weeklyCoordinator.ensureSessionOwner(session) || !consumeAction(session)) return;
         const normalized = normalizeSudokuPayload(payload);
         if (!normalized) {
             emitError('Celula sau pilotul selectat nu este valid.');
@@ -285,30 +310,35 @@ function registerExtendedModesSocketHandlers({
             return;
         }
         if (result.finished) {
-            emitFinished(result.payload, session);
+            await emitFinished(result.payload, session);
             return;
         }
         socket.emit('extendedSudokuUpdate', result.payload);
     });
 
-    onSocketEvent('extendedModeTimeout', () => {
+    onSocketEvent('extendedModeTimeout', async () => {
         const session = getSession();
-        if (!session) return;
+        if (!session || !weeklyCoordinator.ensureSessionOwner(session)) return;
         const finished = extendedModesService.expireSession(session);
-        if (finished) emitFinished(finished, session);
+        if (finished) await emitFinished(finished, session);
     });
 
-    onSocketEvent('restartExtendedMode', () => {
+    onSocketEvent('restartExtendedMode', async () => {
         const session = getSession();
         if (!session?.startRequest) {
             emitError('Nu există un mod care poate fi repornit.');
+            return;
+        }
+        if (weeklyCoordinator.isWeeklySession(session)) {
+            emitError('Weekly Challenge poate fi jucat o singură dată pe săptămână.');
+            await weeklyCoordinator.emitStatus();
             return;
         }
         const request = {
             variantKey: session.startRequest.variantKey,
             options: { ...session.startRequest.options }
         };
-        start(null, { reuseOptions: request });
+        await start(null, { reuseOptions: request });
     });
 
     onSocketEvent('leaveExtendedMode', () => {

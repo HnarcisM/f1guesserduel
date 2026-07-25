@@ -2,6 +2,11 @@ const crypto = require('node:crypto');
 const { MAX_ATTEMPTS } = require('../config/constants');
 const { createAccountStatsRepository } = require('./accountStatsRepository');
 
+const {
+    WEEKLY_DIFFICULTIES,
+    WEEKLY_KEY_PATTERN
+} = require('../game/weeklyChallenge');
+
 const ACCOUNT_GAME_MODES = Object.freeze(['single', 'daily', 'duel']);
 const ACCOUNT_GAME_OUTCOMES = Object.freeze(['win', 'loss', 'draw']);
 const DAILY_DIFFICULTIES = Object.freeze(['easy', 'medium', 'hard']);
@@ -367,6 +372,41 @@ function normalizeDailyAttemptInput(input = {}) {
     return { userId, challengeId, dailyDate, difficulty };
 }
 
+function normalizeWeeklyAttemptInput(input = {}) {
+    const userId = normalizeUserId(input.userId);
+    const challengeId = typeof input.challengeId === 'string' ? input.challengeId.trim() : '';
+    const weekKey = typeof input.weekKey === 'string' ? input.weekKey.trim() : '';
+    const difficulty = WEEKLY_DIFFICULTIES.includes(input.difficulty) ? input.difficulty : null;
+
+    if (!userId || !challengeId || challengeId.length > 200 || !WEEKLY_KEY_PATTERN.test(weekKey) || !difficulty) {
+        throw new Error('Invalid Weekly Challenge attempt.');
+    }
+
+    return { userId, challengeId, weekKey, difficulty };
+}
+
+function normalizeWeeklyCompletionInput(input = {}) {
+    const attempt = normalizeWeeklyAttemptInput(input);
+    const score = asNonNegativeInteger(input.score);
+    const roundsCompleted = asNonNegativeInteger(input.roundsCompleted);
+    const roundsPlayed = asNonNegativeInteger(input.roundsPlayed);
+    const durationMs = normalizeDurationMs(input.durationMs);
+    const finishReason = normalizeOptionalText(input.finishReason, 40);
+
+    if (roundsCompleted > 5 || roundsPlayed > 5 || roundsCompleted > roundsPlayed || durationMs === null || !finishReason) {
+        throw new Error('Invalid Weekly Challenge result.');
+    }
+
+    return {
+        ...attempt,
+        score,
+        roundsCompleted,
+        roundsPlayed,
+        durationMs,
+        finishReason
+    };
+}
+
 function createAccountStatsService(databaseOrRepository) {
     const repository = createAccountStatsRepository(databaseOrRepository);
 
@@ -462,12 +502,55 @@ function createAccountStatsService(databaseOrRepository) {
         };
     }
 
+    async function claimWeeklyChallenge(input) {
+        if (typeof repository.claimWeeklyAttempt !== 'function') {
+            throw new Error('Weekly Challenge persistence is unavailable.');
+        }
+        return repository.claimWeeklyAttempt(normalizeWeeklyAttemptInput(input));
+    }
+
+    async function getWeeklyChallengeStatus(userId, weekKey) {
+        const normalizedUserId = normalizeUserId(userId);
+        if (!normalizedUserId || typeof weekKey !== 'string' || !WEEKLY_KEY_PATTERN.test(weekKey)) {
+            throw new Error('Invalid Weekly Challenge status request.');
+        }
+        if (typeof repository.getWeeklyAttempt !== 'function') {
+            throw new Error('Weekly Challenge persistence is unavailable.');
+        }
+
+        const attempt = await repository.getWeeklyAttempt(normalizedUserId, weekKey);
+        return {
+            weekKey,
+            claimed: Boolean(attempt),
+            challengeId: attempt?.challengeId || null,
+            difficulty: WEEKLY_DIFFICULTIES.includes(attempt?.difficulty) ? attempt.difficulty : null,
+            result: attempt?.finishedAt ? {
+                score: asNonNegativeInteger(attempt.score),
+                roundsCompleted: asNonNegativeInteger(attempt.roundsCompleted),
+                roundsPlayed: asNonNegativeInteger(attempt.roundsPlayed),
+                durationMs: normalizeDurationMs(attempt.durationMs),
+                finishReason: normalizeOptionalText(attempt.finishReason, 40),
+                finishedAt: attempt.finishedAt
+            } : null
+        };
+    }
+
+    async function completeWeeklyChallenge(input) {
+        if (typeof repository.completeWeeklyAttempt !== 'function') {
+            throw new Error('Weekly Challenge persistence is unavailable.');
+        }
+        return repository.completeWeeklyAttempt(normalizeWeeklyCompletionInput(input));
+    }
+
     return {
         getAccountStats,
         getAccountProgress,
         getAccountDashboard,
         getDailyChallengeStatus,
         claimDailyChallenge,
+        getWeeklyChallengeStatus,
+        claimWeeklyChallenge,
+        completeWeeklyChallenge,
         recordGameResult
     };
 }
@@ -513,6 +596,8 @@ module.exports = {
     normalizeOptionalText,
     normalizeTargetDriver,
     normalizeDailyAttemptInput,
+    normalizeWeeklyAttemptInput,
+    normalizeWeeklyCompletionInput,
     normalizeHistoryLimit,
     recordAccountGameResultSafely
 };

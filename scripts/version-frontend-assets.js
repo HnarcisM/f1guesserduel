@@ -11,7 +11,9 @@ const DEFAULT_PRECACHE_STATIC_URLS = Object.freeze([
     '/icons/pwa-192.png',
     '/icons/pwa-512.png',
     '/css/24-extended-modes.css',
-    '/js/extendedModesController.js'
+    '/js/extendedModesConfig.js',
+    '/js/extendedModesController.js',
+    '/js/weeklyChallengeView.js'
 ]);
 const DEFAULT_ASSETS = Object.freeze([
     {

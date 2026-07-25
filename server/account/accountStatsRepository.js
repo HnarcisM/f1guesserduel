@@ -62,6 +62,45 @@ const POSTGRES_CLAIM_DAILY_ATTEMPT_SQL = `
     RETURNING challenge_id
 `;
 
+const SELECT_WEEKLY_ATTEMPT_SQL = `
+    SELECT
+        week_key AS "weekKey",
+        challenge_id AS "challengeId",
+        difficulty,
+        score,
+        rounds_completed AS "roundsCompleted",
+        rounds_played AS "roundsPlayed",
+        duration_ms AS "durationMs",
+        finish_reason AS "finishReason",
+        started_at AS "startedAt",
+        finished_at AS "finishedAt"
+    FROM user_weekly_attempts
+    WHERE user_id = $1 AND week_key = $2
+`;
+
+const POSTGRES_CLAIM_WEEKLY_ATTEMPT_SQL = `
+    INSERT INTO user_weekly_attempts (user_id, week_key, challenge_id, difficulty)
+    VALUES ($1, $2, $3, $4)
+    ON CONFLICT (user_id, week_key) DO NOTHING
+    RETURNING challenge_id
+`;
+
+const POSTGRES_COMPLETE_WEEKLY_ATTEMPT_SQL = `
+    UPDATE user_weekly_attempts
+    SET
+        score = $4,
+        rounds_completed = $5,
+        rounds_played = $6,
+        duration_ms = $7,
+        finish_reason = $8,
+        finished_at = now()
+    WHERE user_id = $1
+      AND week_key = $2
+      AND challenge_id = $3
+      AND finished_at IS NULL
+    RETURNING challenge_id
+`;
+
 const POSTGRES_LOCK_ACCOUNT_PROGRESS_SQL = 'SELECT pg_advisory_xact_lock($1)';
 
 const POSTGRES_UPSERT_STATS_SQL = `
@@ -167,6 +206,44 @@ function createPostgresAccountStatsRepository(database) {
         return result.rowCount === 1;
     }
 
+    async function getWeeklyAttempt(userId, weekKey, queryable = database) {
+        const result = await queryable.query(SELECT_WEEKLY_ATTEMPT_SQL, [userId, weekKey]);
+        return result.rows?.[0] || null;
+    }
+
+    async function claimWeeklyAttempt({ userId, weekKey, challengeId, difficulty }) {
+        const result = await database.query(POSTGRES_CLAIM_WEEKLY_ATTEMPT_SQL, [
+            userId,
+            weekKey,
+            challengeId,
+            difficulty
+        ]);
+        return result.rowCount === 1;
+    }
+
+    async function completeWeeklyAttempt({
+        userId,
+        weekKey,
+        challengeId,
+        score,
+        roundsCompleted,
+        roundsPlayed,
+        durationMs,
+        finishReason
+    }) {
+        const result = await database.query(POSTGRES_COMPLETE_WEEKLY_ATTEMPT_SQL, [
+            userId,
+            weekKey,
+            challengeId,
+            score,
+            roundsCompleted,
+            roundsPlayed,
+            durationMs,
+            finishReason
+        ]);
+        return result.rowCount === 1;
+    }
+
     async function recordGameResult(result) {
         const client = await database.pool.connect();
         const increments = buildResultIncrements(result.outcome, result.attempts);
@@ -252,6 +329,9 @@ function createPostgresAccountStatsRepository(database) {
         getProgressRow,
         getDailyAttempts,
         claimDailyAttempt,
+        getWeeklyAttempt,
+        claimWeeklyAttempt,
+        completeWeeklyAttempt,
         recordGameResult
     };
 }
@@ -288,6 +368,40 @@ function createSqliteAccountStatsRepository(database) {
         INSERT OR IGNORE INTO user_daily_attempts (
             user_id, challenge_id, daily_date, difficulty
         ) VALUES (@userId, @challengeId, @dailyDate, @difficulty)
+    `);
+    const selectWeeklyAttempt = database.prepare(`
+        SELECT
+            week_key AS weekKey,
+            challenge_id AS challengeId,
+            difficulty,
+            score,
+            rounds_completed AS roundsCompleted,
+            rounds_played AS roundsPlayed,
+            duration_ms AS durationMs,
+            finish_reason AS finishReason,
+            started_at AS startedAt,
+            finished_at AS finishedAt
+        FROM user_weekly_attempts
+        WHERE user_id = ? AND week_key = ?
+    `);
+    const claimWeeklyAttemptStatement = database.prepare(`
+        INSERT OR IGNORE INTO user_weekly_attempts (
+            user_id, week_key, challenge_id, difficulty
+        ) VALUES (@userId, @weekKey, @challengeId, @difficulty)
+    `);
+    const completeWeeklyAttemptStatement = database.prepare(`
+        UPDATE user_weekly_attempts
+        SET
+            score = @score,
+            rounds_completed = @roundsCompleted,
+            rounds_played = @roundsPlayed,
+            duration_ms = @durationMs,
+            finish_reason = @finishReason,
+            finished_at = datetime('now')
+        WHERE user_id = @userId
+          AND week_key = @weekKey
+          AND challenge_id = @challengeId
+          AND finished_at IS NULL
     `);
     const insertResult = database.prepare(`
         INSERT OR IGNORE INTO user_game_results (
@@ -383,6 +497,18 @@ function createSqliteAccountStatsRepository(database) {
         return claimDailyAttemptStatement.run(attempt).changes === 1;
     }
 
+    async function getWeeklyAttempt(userId, weekKey) {
+        return selectWeeklyAttempt.get(userId, weekKey) || null;
+    }
+
+    async function claimWeeklyAttempt(attempt) {
+        return claimWeeklyAttemptStatement.run(attempt).changes === 1;
+    }
+
+    async function completeWeeklyAttempt(result) {
+        return completeWeeklyAttemptStatement.run(result).changes === 1;
+    }
+
     async function recordGameResult(result) {
         const transactionResult = recordTransaction(result);
         return {
@@ -400,6 +526,9 @@ function createSqliteAccountStatsRepository(database) {
         getProgressRow,
         getDailyAttempts,
         claimDailyAttempt,
+        getWeeklyAttempt,
+        claimWeeklyAttempt,
+        completeWeeklyAttempt,
         recordGameResult
     };
 }
@@ -423,6 +552,9 @@ module.exports = {
     SELECT_PROGRESS_SQL,
     SELECT_DAILY_ATTEMPTS_SQL,
     POSTGRES_CLAIM_DAILY_ATTEMPT_SQL,
+    SELECT_WEEKLY_ATTEMPT_SQL,
+    POSTGRES_CLAIM_WEEKLY_ATTEMPT_SQL,
+    POSTGRES_COMPLETE_WEEKLY_ATTEMPT_SQL,
     buildResultIncrements,
     normalizeXpEarned,
     createAccountStatsRepository,

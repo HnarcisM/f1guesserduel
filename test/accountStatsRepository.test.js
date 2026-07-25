@@ -14,6 +14,7 @@ class FakePostgresClient {
         this.queries = [];
         this.resultKeys = new Set();
         this.dailyAttemptKeys = new Set();
+        this.weeklyAttempts = new Map();
         this.releaseCalls = 0;
     }
 
@@ -41,6 +42,43 @@ class FakePostgresClient {
                     dailyDate: '2026-07-23'
                 }]
             };
+        }
+        if (normalizedSql.startsWith('INSERT INTO user_weekly_attempts')) {
+            const key = `${params[0]}:${params[1]}`;
+            if (this.weeklyAttempts.has(key)) return { rowCount: 0, rows: [] };
+            this.weeklyAttempts.set(key, {
+                weekKey: params[1],
+                challengeId: params[2],
+                difficulty: params[3],
+                score: null,
+                roundsCompleted: null,
+                roundsPlayed: null,
+                durationMs: null,
+                finishReason: null,
+                startedAt: '2026-07-25T12:00:00.000Z',
+                finishedAt: null
+            });
+            return { rowCount: 1, rows: [{ challenge_id: params[2] }] };
+        }
+        if (normalizedSql.startsWith('UPDATE user_weekly_attempts')) {
+            const key = `${params[0]}:${params[1]}`;
+            const attempt = this.weeklyAttempts.get(key);
+            if (!attempt || attempt.challengeId !== params[2] || attempt.finishedAt) {
+                return { rowCount: 0, rows: [] };
+            }
+            Object.assign(attempt, {
+                score: params[3],
+                roundsCompleted: params[4],
+                roundsPlayed: params[5],
+                durationMs: params[6],
+                finishReason: params[7],
+                finishedAt: '2026-07-25T12:02:00.000Z'
+            });
+            return { rowCount: 1, rows: [{ challenge_id: params[2] }] };
+        }
+        if (normalizedSql.startsWith('SELECT') && normalizedSql.includes('FROM user_weekly_attempts')) {
+            const attempt = this.weeklyAttempts.get(`${params[0]}:${params[1]}`);
+            return { rows: attempt ? [{ ...attempt }] : [] };
         }
         if (normalizedSql.startsWith('SELECT') && normalizedSql.includes('FROM user_game_results')) {
             return {
@@ -176,6 +214,48 @@ test('Postgres Daily claims use parameterized ON CONFLICT protection', async () 
     assert.deepEqual(claimQuery.params, [7, attempt.challengeId, '2026-07-23', 'easy']);
     assert.match(selectQuery.sql, /to_char\(daily_date, 'YYYY-MM-DD'\) AS "dailyDate"/);
     assert.deepEqual(selectQuery.params, [7, '2026-07-23']);
+});
+
+test('Postgres Weekly claims are unique per ISO week and completion is idempotent', async () => {
+    const client = new FakePostgresClient();
+    const repository = createPostgresAccountStatsRepository({
+        pool: { async connect() { return client; } },
+        query: (...args) => client.query(...args)
+    });
+    const attempt = {
+        userId: 7,
+        weekKey: '2026-W30',
+        challengeId: 'f1-weekly-v2:2026-W30:medium',
+        difficulty: 'medium'
+    };
+
+    assert.equal(await repository.claimWeeklyAttempt(attempt), true);
+    assert.equal(await repository.claimWeeklyAttempt({
+        ...attempt,
+        challengeId: 'f1-weekly-v2:2026-W30:hard',
+        difficulty: 'hard'
+    }), false);
+    assert.equal((await repository.getWeeklyAttempt(7, '2026-W30')).difficulty, 'medium');
+
+    const result = {
+        ...attempt,
+        score: 4200,
+        roundsCompleted: 4,
+        roundsPlayed: 5,
+        durationMs: 120000,
+        finishReason: 'time-expired'
+    };
+    assert.equal(await repository.completeWeeklyAttempt(result), true);
+    assert.equal(await repository.completeWeeklyAttempt(result), false);
+    const saved = await repository.getWeeklyAttempt(7, '2026-W30');
+    assert.equal(saved.score, 4200);
+    assert.equal(saved.finishedAt, '2026-07-25T12:02:00.000Z');
+
+    const claimQuery = client.queries.find(query => query.sql.startsWith('INSERT INTO user_weekly_attempts'));
+    const completeQuery = client.queries.find(query => query.sql.startsWith('UPDATE user_weekly_attempts'));
+    assert.match(claimQuery.sql, /ON CONFLICT \(user_id, week_key\) DO NOTHING/);
+    assert.deepEqual(claimQuery.params, [7, '2026-W30', attempt.challengeId, 'medium']);
+    assert.match(completeQuery.sql, /finished_at IS NULL/);
 });
 
 test('SQLite captures the exact pre-round progress inside the result transaction', async t => {

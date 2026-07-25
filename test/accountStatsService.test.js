@@ -18,6 +18,7 @@ function createMemoryStatsRepository() {
     const recentResults = [];
     const progressByUser = new Map();
     const dailyAttempts = new Map();
+    const weeklyAttempts = new Map();
 
     function getRow(userId, mode) {
         const key = `${userId}:${mode}`;
@@ -71,12 +72,34 @@ function createMemoryStatsRepository() {
         return true;
     }
 
+    async function getWeeklyAttempt(userId, weekKey) {
+        return weeklyAttempts.get(`${userId}:${weekKey}`) || null;
+    }
+
+    async function claimWeeklyAttempt(attempt) {
+        const key = `${attempt.userId}:${attempt.weekKey}`;
+        if (weeklyAttempts.has(key)) return false;
+        weeklyAttempts.set(key, { ...attempt, finishedAt: null });
+        return true;
+    }
+
+    async function completeWeeklyAttempt(result) {
+        const key = `${result.userId}:${result.weekKey}`;
+        const attempt = weeklyAttempts.get(key);
+        if (!attempt || attempt.challengeId !== result.challengeId || attempt.finishedAt) return false;
+        Object.assign(attempt, result, { finishedAt: '2026-07-25T12:02:00.000Z' });
+        return true;
+    }
+
     return {
         getStatsRows,
         getRecentResults,
         getProgressRow,
         getDailyAttempts,
         claimDailyAttempt,
+        getWeeklyAttempt,
+        claimWeeklyAttempt,
+        completeWeeklyAttempt,
         async recordGameResult(result) {
             const uniqueKey = `${result.userId}:${result.mode}:${result.resultKey}`;
             if (resultKeys.has(uniqueKey)) {
@@ -344,6 +367,53 @@ test('Daily attempts are claimed atomically and exposed per account and UTC date
         dailyDate: '2026-07-23',
         claimedDifficulties: []
     });
+});
+
+test('Weekly attempts are unique per account and ISO week and persist the official result', async () => {
+    const service = createAccountStatsService(createMemoryStatsRepository());
+    const attempt = {
+        userId: 7,
+        challengeId: 'f1-weekly-v2:2026-W30:medium',
+        weekKey: '2026-W30',
+        difficulty: 'medium'
+    };
+
+    assert.equal(await service.claimWeeklyChallenge(attempt), true);
+    assert.equal(await service.claimWeeklyChallenge({
+        ...attempt,
+        challengeId: 'f1-weekly-v2:2026-W30:hard',
+        difficulty: 'hard'
+    }), false);
+    assert.deepEqual(await service.getWeeklyChallengeStatus(7, '2026-W30'), {
+        weekKey: '2026-W30',
+        claimed: true,
+        challengeId: attempt.challengeId,
+        difficulty: 'medium',
+        result: null
+    });
+
+    assert.equal(await service.completeWeeklyChallenge({
+        ...attempt,
+        score: 4250,
+        roundsCompleted: 4,
+        roundsPlayed: 5,
+        durationMs: 120000,
+        finishReason: 'time-expired'
+    }), true);
+    assert.equal(await service.completeWeeklyChallenge({
+        ...attempt,
+        score: 5000,
+        roundsCompleted: 5,
+        roundsPlayed: 5,
+        durationMs: 90000,
+        finishReason: 'completed'
+    }), false);
+
+    const status = await service.getWeeklyChallengeStatus(7, '2026-W30');
+    assert.equal(status.result.score, 4250);
+    assert.equal(status.result.roundsCompleted, 4);
+    assert.equal(status.result.finishReason, 'time-expired');
+    assert.equal(status.result.finishedAt, '2026-07-25T12:02:00.000Z');
 });
 
 test('XP rewards and nonlinear level progress are deterministic', () => {
