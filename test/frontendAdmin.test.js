@@ -74,3 +74,12 @@ test('admin E2E suite is wired into package scripts and the browser CI gate', ()
     assert.match(source, /panoul rămâne utilizabil pe ecrane mobile/);
 });
 
+
+
+test('admin responsive layout contains wide trend and table content inside the viewport', () => {
+    const css = fs.readFileSync(path.join(root, 'server', 'admin', 'ui', 'admin.css'), 'utf8');
+    assert.match(css, /\.admin-view, \.admin-panel, \.admin-trend \{ min-width: 0; max-width: 100%; \}/);
+    assert.match(css, /@media \(max-width: 920px\)[\s\S]*\.admin-shell \{ grid-template-columns: minmax\(0, 1fr\); \}/);
+    assert.match(css, /\.admin-trend \{[\s\S]*overflow-x: auto;/);
+    assert.match(css, /\.admin-table-wrap \{ overflow-x: auto; \}/);
+});
