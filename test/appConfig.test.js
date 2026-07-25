@@ -550,3 +550,15 @@ test('logging config defaults to info request logging in production', () => {
     });
     assert.equal(normalizeLogLevel('ERROR'), 'error');
 });
+
+test('admin access is disabled by default and accepts a deduplicated owner id allowlist', () => {
+    assert.deepEqual(createAppConfig({}).admin, { enabled: false, userIds: [] });
+    assert.deepEqual(createAppConfig({ ADMIN_USER_IDS: '7, 12,7' }).admin, {
+        enabled: true,
+        userIds: [7, 12]
+    });
+    assert.throws(
+        () => createAppConfig({ ADMIN_USER_IDS: '7,narcis' }),
+        /positive integer user ids/
+    );
+});

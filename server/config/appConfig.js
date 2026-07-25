@@ -71,6 +71,31 @@ function parseIntegerEnv(env, name, fallback, { min = 1, max = Number.MAX_SAFE_I
     return parsed;
 }
 
+
+function parsePositiveIntegerListEnv(env, name) {
+    const value = env[name];
+    if (value === undefined || value === null || value === '') return [];
+    if (typeof value !== 'string') {
+        throw new Error(`${name} must be a comma-separated list of positive integer user ids.`);
+    }
+
+    const ids = value.split(',').map(part => part.trim()).filter(Boolean);
+    if (ids.length === 0) return [];
+
+    const normalized = ids.map(id => {
+        if (!/^\d+$/.test(id)) {
+            throw new Error(`${name} must contain only positive integer user ids.`);
+        }
+        const parsed = Number(id);
+        if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+            throw new Error(`${name} must contain only positive integer user ids.`);
+        }
+        return parsed;
+    });
+
+    return [...new Set(normalized)];
+}
+
 function parsePositiveInteger(value, fallback) {
     const parsed = Number.parseInt(value, 10);
     return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
@@ -375,6 +400,7 @@ function createAppConfig(env = process.env, options = {}) {
     });
     const cookieSecure = parseBooleanEnv(env, 'COOKIE_SECURE', isProduction);
     const cookieSameSite = parseSameSiteEnv(env, 'COOKIE_SAMESITE', 'lax');
+    const adminUserIds = parsePositiveIntegerListEnv(env, 'ADMIN_USER_IDS');
 
     if (cookieSameSite === 'none' && !cookieSecure) {
         throw new Error('COOKIE_SAMESITE=none requires COOKIE_SECURE=true.');
@@ -543,6 +569,10 @@ function createAppConfig(env = process.env, options = {}) {
                 )
             }
         },
+        admin: {
+            enabled: adminUserIds.length > 0,
+            userIds: adminUserIds
+        },
         account: {
             gameHistory: {
                 retentionDays: parseIntegerEnv(
@@ -596,6 +626,7 @@ module.exports = {
     createAppConfig,
     parseBoolean,
     parsePositiveInteger,
+    parsePositiveIntegerListEnv,
     normalizeSameSite,
     normalizeAllowedOrigin,
     normalizePersistenceMode,

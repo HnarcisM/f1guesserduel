@@ -164,6 +164,10 @@ function createAuthService(databaseOrRepository, sessionService) {
         return userRow;
     }
 
+    async function verifyPasswordForUser(userId, currentPassword) {
+        return Boolean(await verifyCurrentPassword(userId, currentPassword));
+    }
+
     async function updateUsername({ userId, username, currentPassword }) {
         const cleanUsername = normalizeUsername(username);
         if (!USERNAME_REGEX.test(cleanUsername)) {
@@ -251,6 +255,7 @@ function createAuthService(databaseOrRepository, sessionService) {
         register,
         login,
         getUserById,
+        verifyPasswordForUser,
         updateUsername,
         updatePassword,
         updateAvatar

@@ -19,6 +19,10 @@ const { createAuthRoutes } = require('./auth/authRoutes');
 const { createAccountStatsService } = require('./account/accountStatsService');
 const { createGameHistoryCleanupService } = require('./account/gameHistoryCleanupService');
 const { createAccountRoutes } = require('./account/accountRoutes');
+const { createAdminAccess } = require('./admin/adminAccess');
+const { createAdminService } = require('./admin/adminService');
+const { createAdminRoutes } = require('./admin/adminRoutes');
+const { createAdminPageRoutes } = require('./admin/adminPageRoutes');
 const {
     createApiRequestContextMiddleware
 } = require('./middleware/apiRequestContext');
@@ -173,6 +177,13 @@ const sessionService = createSessionService(db, {
 });
 const authService = createAuthService(db, sessionService);
 const accountStatsService = createAccountStatsService(db);
+const adminAccess = createAdminAccess({ userIds: config.admin.userIds });
+const adminService = createAdminService({
+    database: db,
+    roomStore,
+    io,
+    sessionService
+});
 const gameHistoryCleanupService = createGameHistoryCleanupService({
     databaseOrRepository: db,
     retentionDays: config.account.gameHistory.retentionDays,
@@ -225,11 +236,12 @@ app.use(createMetricsRoutes({
     operationalMetrics
 }));
 app.use(
-    ['/api/auth', '/api/account'],
+    ['/api/auth', '/api/account', '/api/admin'],
     createApiRequestContextMiddleware(sessionService)
 );
 app.use('/api/auth', csrfProtection);
 app.use('/api/account', csrfProtection);
+app.use('/api/admin', csrfProtection);
 app.use('/api', createHealthRoutes({
     appVersion: packageJson.version,
     nodeEnv: config.nodeEnv,
@@ -259,6 +271,19 @@ app.use('/api/account', createAccountRoutes({
     logger,
     metrics: operationalMetrics,
     cookieOptions: config.auth.cookie
+}));
+app.use('/api/admin', createAdminRoutes({
+    adminAccess,
+    adminService,
+    authService,
+    rateLimitStore: redisRateLimitStore,
+    logger,
+    metrics: operationalMetrics
+}));
+app.use('/admin', createAdminPageRoutes({
+    sessionService,
+    adminAccess,
+    uiDirectoryPath: path.join(__dirname, 'admin', 'ui')
 }));
 app.use(express.static(config.publicDir, {
     etag: true,

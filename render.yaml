@@ -57,3 +57,5 @@ services:
         sync: false
       - key: SOCKET_AUTH_SECRET
         sync: false
+      - key: ADMIN_USER_IDS
+        sync: false

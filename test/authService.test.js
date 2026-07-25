@@ -386,3 +386,17 @@ test('account avatar accepts only server-approved helmet presets', async () => {
     assert.equal(updated.user.avatarKey, 'helmet-blue');
     assert.equal(repository.users.get(registered.user.id).avatarKey, 'helmet-blue');
 });
+
+test('auth service can reauthenticate an admin action without exposing credentials', async () => {
+    const repository = createFakeAuthRepository();
+    const authService = createAuthService(repository, createFakeSessionService());
+    const registered = await authService.register({
+        username: 'AdminUser',
+        email: 'admin@example.com',
+        password: 'StrongPassword123!'
+    });
+
+    assert.equal(await authService.verifyPasswordForUser(registered.user.id, 'StrongPassword123!'), true);
+    assert.equal(await authService.verifyPasswordForUser(registered.user.id, 'wrong-password'), false);
+    assert.equal(await authService.verifyPasswordForUser(999, 'StrongPassword123!'), false);
+});

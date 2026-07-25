@@ -311,6 +311,7 @@ Aplicația poate fi configurată prin variabile de mediu. Pentru rulare locală 
 | `GAME_HISTORY_RETENTION_DAYS` | `365` | Păstrează rezultatele detaliate pentru acest număr de zile; statisticile agregate și XP-ul rămân permanent. |
 | `GAME_HISTORY_CLEANUP_INTERVAL_MS` | `604800000` | Rulează cleanup-ul la pornire și apoi o dată la 7 zile; `0` dezactivează jobul automat. |
 | `GAME_HISTORY_CLEANUP_BATCH_SIZE` | `5000` | Numărul maxim de rezultate șterse într-o singură interogare de cleanup. |
+| `ADMIN_USER_IDS` | none | Lista ID-urilor de cont autorizate să acceseze `/admin`, separate prin virgulă. Dacă lipsește, panoul este dezactivat. |
 | `SESSION_SECRET` | dev fallback local | Secret pentru sesiuni; obligatoriu în production. |
 | `SOCKET_AUTH_SECRET` | `SESSION_SECRET` sau dev fallback | Secret pentru token-ul scurt folosit de socket auth refresh. |
 | `SESSION_COOKIE_NAME` | `f1_session` | Numele cookie-ului de sesiune. |
@@ -370,6 +371,16 @@ Pentru Render, repo-ul include și:
 - setări recomandate pentru `NODE_ENV=production`, cookie securizat, proxy, health check și `PUBLIC_ORIGIN` pentru Socket.IO.
 
 Pe Render Free, folosește `PERSISTENCE_MODE=ephemeral` și `DATA_DIR=/tmp/f1guesserduel` numai împreună cu Postgres pentru conturi și sesiuni. Aplicația refuză intenționat să pornească în production cu SQLite pe stocare efemeră, pentru a preveni pierderea silențioasă a conturilor. `/api/health` afișează `persistence.mode`, providerul bazei, versiunea, mediul, uptime-ul și check-uri non-sensibile pentru `database`, `drivers` și `rooms`. Pentru persistent disk plătit, setează `PERSISTENCE_MODE=persistent` și mută `DATA_DIR`, `DB_FILE_PATH` și `ROOMS_FILE_PATH` în `/var/data`.
+
+### Panou de administrare owner-only
+
+Prima versiune a panoului este disponibilă la `/admin` și nu este servită din directorul public. Accesul este verificat la fiecare pagină și cerere API folosind sesiunea curentă și lista `ADMIN_USER_IDS`.
+
+1. Autentifică-te în aplicație și deschide `/api/auth/me`; copiază valoarea numerică `user.id`.
+2. În Render, adaugă variabila `ADMIN_USER_IDS` cu acel ID, de exemplu `ADMIN_USER_IDS=1`.
+3. Redeploy și deschide `/admin`.
+
+Nu există endpoint pentru promovarea unui cont la admin. Acțiunile destructive cer din nou parola contului și sunt salvate în `admin_audit_log`. Nu adăuga în `ADMIN_USER_IDS` ID-uri care nu îți aparțin.
 
 ### Conturi persistente pe Render Free cu Neon Postgres
 
