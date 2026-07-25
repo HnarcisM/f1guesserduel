@@ -2,7 +2,7 @@
 
 const { createAdminRepository } = require('./adminRepository');
 const { buildPublicRoomListPayload } = require('../socket/roomListPayloads');
-const { getIsoWeekInfo } = require('../game/weeklyChallenge');
+const { getIsoWeekInfo } = require('../game/extendedModesService');
 const { isValidRoomId } = require('../config/constants');
 
 function createAdminService({ database, roomStore, io, sessionService, repository = null, now = () => new Date() }) {

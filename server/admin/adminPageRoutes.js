@@ -3,7 +3,7 @@
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const path = require('node:path');
-const { createAuthMiddleware } = require('../auth/authMiddleware');
+const { createAuthMiddleware } = require('../middleware/authMiddleware');
 
 function createAdminPageRoutes({ sessionService, adminAccess, uiDirectoryPath }) {
     const router = express.Router();
