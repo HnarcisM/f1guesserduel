@@ -27,7 +27,7 @@ const HOME_SELECTORS = Object.freeze([
     '#authOpenBtn',
     '.menu-container',
     '.game-mode-selection',
-    '#difficultySection'
+    '#gameHubCatalogView'
 ]);
 
 const GAME_SELECTORS = Object.freeze([
@@ -410,6 +410,8 @@ test('responsive layouts match committed visual baselines', { concurrency: false
                     await assertExtendedModesLaunch(page, viewport.label);
                 }
 
+                await page.locator('[data-game-mode-choice="single"]').click();
+                await page.locator('#difficultySection:not(.is-hidden)').waitFor({ state: 'visible', timeout: 7000 });
                 await page.locator('.btn-diff.easy').click();
                 await page.locator('#gameZone:not(.game-zone-hidden)').waitFor({ state: 'visible', timeout: 7000 });
                 await page.locator('body.mode-single').waitFor({ timeout: 7000 });

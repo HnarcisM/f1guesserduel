@@ -151,6 +151,8 @@ test('authenticated profile settings persist username and avatar after reload', 
         });
         const context = await createE2EContext(browser, { viewport: { width: 1366, height: 900 } });
         const page = await openAppPage(context, app.baseUrl);
+        await page.locator('[data-game-mode-choice="single"]').click();
+        await page.locator('#difficultySection:not(.is-hidden)').waitFor({ state: 'visible', timeout: 7000 });
         await page.locator('.btn-diff.easy').click();
         await page.locator('#gameZone:not(.game-zone-hidden)').waitFor({ state: 'visible', timeout: 7000 });
 
@@ -183,6 +185,8 @@ test('authenticated profile settings persist username and avatar after reload', 
 
         await page.reload({ waitUntil: 'domcontentloaded' });
         await expectText(page.locator('#authOpenBtn'), new RegExp(updatedUsername));
+        await page.locator('[data-game-mode-choice="single"]').click();
+        await page.locator('#difficultySection:not(.is-hidden)').waitFor({ state: 'visible', timeout: 7000 });
         await page.locator('.btn-diff.easy').click();
         await page.locator('#gameZone:not(.game-zone-hidden)').waitFor({ state: 'visible', timeout: 7000 });
         await openAuthPanel(page);
@@ -222,6 +226,8 @@ test('profile modal stays inside responsive viewports and keeps close control re
             viewport: { width: initialViewport.width, height: initialViewport.height }
         });
         const page = await openAppPage(context, app.baseUrl);
+        await page.locator('[data-game-mode-choice="single"]').click();
+        await page.locator('#difficultySection:not(.is-hidden)').waitFor({ state: 'visible', timeout: 7000 });
         await page.locator('.btn-diff.easy').click();
         await page.locator('#gameZone:not(.game-zone-hidden)').waitFor({ state: 'visible', timeout: 7000 });
 

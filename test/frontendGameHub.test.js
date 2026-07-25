@@ -138,8 +138,8 @@ test('game hub renders all ten modes as enabled cards without unsafe HTML', asyn
 
     const classicCards = cards.filter(card => card.dataset.gameModeChoice);
     assert.deepEqual(classicCards.map(card => card.dataset.gameModeChoice), ['single', 'daily', 'duel']);
-    assert.equal(classicCards.find(card => card.dataset.gameVariant === 'classic').classList.contains('active'), true);
-    assert.equal(classicCards.find(card => card.dataset.gameVariant === 'classic').getAttribute('aria-pressed'), 'true');
+    assert.equal(classicCards.every(card => card.classList.contains('active') === false), true);
+    assert.equal(classicCards.every(card => card.getAttribute('aria-pressed') === 'false'), true);
 
     const extendedCards = cards.filter(card => card.dataset.extendedModeChoice);
     assert.deepEqual(
@@ -161,7 +161,7 @@ test('extended mode card exposes launch metadata and remains keyboard enabled', 
     assert.equal(card.dataset.extendedModeChoice, 'speed-run');
     assert.equal(card.dataset.gameModeChoice, undefined);
     assert.equal(card.disabled, false);
-    assert.equal(card.getAttribute('aria-pressed'), 'false');
+    assert.equal(card.getAttribute('aria-pressed'), null);
     assert.equal(flatten(card).some(element => element.textContent === 'Speed Run'), true);
     assert.equal(flatten(card).some(element => element.textContent === 'Disponibil'), true);
 });
@@ -215,6 +215,10 @@ test('production HTML loads the Game Hub before the existing game bundle', () =>
     const bundleIndex = html.indexOf('/game.bundle.min.js');
 
     assert.ok(html.includes('id="gameModeHub"'));
+    assert.ok(html.includes('id="gameHubCatalogView"'));
+    assert.ok(html.includes('id="gameHubSetupView"'));
+    assert.ok(html.includes('id="gameHubBackBtn"'));
+    assert.match(html, /id="difficultySection" class="difficulty-section is-hidden"/);
     assert.ok(html.includes('/css/23-game-hub.css'));
     assert.ok(registryIndex > 0);
     assert.ok(controllerIndex > registryIndex);

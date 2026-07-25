@@ -185,6 +185,9 @@ function confirmDuelExit(targetMode = 'single') {
 	enterSingleMode(targetMode === 'daily'
 		? 'Ai părăsit camera de Duel. Poți porni Daily Challenge.'
 		: 'Ai părăsit camera de Duel.');
+	if (targetMode === 'home') {
+		gameModeSelectionController?.showHub?.();
+	}
 
 	return 'left-duel';
 }
@@ -532,6 +535,6 @@ document.addEventListener('DOMContentLoaded', () => {
 	if (roomIdFromUrl) {
 		gameModeSelectionController.selectDuel({ roomId: roomIdFromUrl });
 	} else {
-		gameModeSelectionController.selectSingle();
+		gameModeSelectionController.showHub();
 	}
 });

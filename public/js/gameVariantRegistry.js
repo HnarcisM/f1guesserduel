@@ -15,7 +15,6 @@
             context: 'single',
             modeChoice: 'single',
             state: GAME_VARIANT_STATES.AVAILABLE,
-            defaultSelected: true,
             tags: Object.freeze(['Solo', 'Timer opțional'])
         }),
         Object.freeze({

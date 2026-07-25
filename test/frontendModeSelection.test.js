@@ -33,6 +33,11 @@ function createElement({ id = '', dataset = {}, classes = [] } = {}) {
         classList: createClassList(classes),
         attributes: {},
         textContent: '',
+        inert: false,
+        focusCount: 0,
+        focus() {
+            this.focusCount += 1;
+        },
         addEventListener(eventName, handler) {
             listeners.set(eventName, handler);
         },
@@ -58,8 +63,17 @@ function setupModeSelectionDocument() {
         createElement({ dataset: { gameModeChoice: 'daily' } })
     ];
 
-    elementsById.set('difficultySection', createElement());
+    elementsById.set('difficultySection', createElement({ classes: ['is-hidden'] }));
     elementsById.set('dailyChallengePanel', createElement({ classes: ['is-hidden'] }));
+    elementsById.set('duelRoomBrowserPanel', createElement({ classes: ['is-hidden'] }));
+    elementsById.set('gameHubCatalogView', createElement());
+    elementsById.set('gameHubSetupView', createElement({ classes: ['is-hidden'] }));
+    elementsById.set('gameHubBackBtn', createElement());
+    elementsById.set('gameHubSelectedSummary', createElement());
+    elementsById.set('gameHubSelectedIcon', createElement());
+    elementsById.set('gameHubSelectedEyebrow', createElement());
+    elementsById.set('gameHubSelectedTitle', createElement());
+    elementsById.set('gameHubSelectedDescription', createElement());
     elementsById.set('status', createElement());
 
     global.document = {
@@ -67,6 +81,12 @@ function setupModeSelectionDocument() {
         querySelectorAll(selector) {
             if (selector === '[data-game-mode-choice]') return modeControls;
             return [];
+        },
+        querySelector(selector) {
+            if (selector === '[data-game-mode-choice="single"]') {
+                return modeControls.find(control => control.dataset.gameModeChoice === 'single');
+            }
+            return null;
         },
         getElementById(id) {
             return elementsById.get(id) || null;
@@ -76,11 +96,49 @@ function setupModeSelectionDocument() {
     return {
         body,
         modeControls,
+        catalogView: elementsById.get('gameHubCatalogView'),
+        setupView: elementsById.get('gameHubSetupView'),
+        backButton: elementsById.get('gameHubBackBtn'),
+        selectedSummary: elementsById.get('gameHubSelectedSummary'),
+        selectedTitle: elementsById.get('gameHubSelectedTitle'),
         difficultySection: elementsById.get('difficultySection'),
         dailyPanel: elementsById.get('dailyChallengePanel'),
+        duelPanel: elementsById.get('duelRoomBrowserPanel'),
         status: elementsById.get('status')
     };
 }
+
+test('mode selection starts in the catalog and back returns from Classic setup', async () => {
+    const { createGameModeController } = await import('../public/js/gameModeController.js');
+    const { createGameModeSelectionController } = await import('../public/js/gameModeSelectionController.js');
+    const dom = setupModeSelectionDocument();
+    const gameModeController = createGameModeController();
+    const controller = createGameModeSelectionController({
+        gameModeController,
+        startDuelMode: () => 'ROOM1',
+        startDailyChallenge: () => {},
+        onSingleSelected: () => {}
+    });
+
+    controller.setup();
+    controller.showHub();
+
+    assert.equal(dom.catalogView.classList.contains('is-hidden'), false);
+    assert.equal(dom.setupView.classList.contains('is-hidden'), true);
+    assert.equal(dom.difficultySection.classList.contains('is-hidden'), true);
+    assert.equal(dom.modeControls.every(control => control.getAttribute('aria-pressed') === 'false'), true);
+
+    dom.modeControls.find(control => control.dataset.gameModeChoice === 'single').click();
+    assert.equal(dom.catalogView.classList.contains('is-hidden'), true);
+    assert.equal(dom.setupView.classList.contains('is-hidden'), false);
+    assert.equal(dom.difficultySection.classList.contains('is-hidden'), false);
+    assert.equal(dom.selectedTitle.textContent, 'Classic');
+
+    dom.backButton.click();
+    assert.equal(dom.catalogView.classList.contains('is-hidden'), false);
+    assert.equal(dom.setupView.classList.contains('is-hidden'), true);
+    assert.equal(dom.difficultySection.classList.contains('is-hidden'), true);
+});
 
 test('mode selection shows Daily panel only after Daily is selected', async () => {
     const { createGameModeController } = await import('../public/js/gameModeController.js');
@@ -98,6 +156,9 @@ test('mode selection shows Daily panel only after Daily is selected', async () =
     dom.modeControls.find(control => control.dataset.gameModeChoice === 'daily').click();
 
     assert.equal(gameModeController.isDaily(), true);
+    assert.equal(dom.catalogView.classList.contains('is-hidden'), true);
+    assert.equal(dom.setupView.classList.contains('is-hidden'), false);
+    assert.equal(dom.selectedTitle.textContent, 'Daily Challenge');
     assert.equal(dom.dailyPanel.classList.contains('is-hidden'), false);
     assert.equal(dom.dailyPanel.getAttribute('aria-hidden'), 'false');
     assert.equal(dom.difficultySection.classList.contains('is-hidden'), true);
@@ -109,7 +170,8 @@ test('mode selection shows Daily panel only after Daily is selected', async () =
     assert.equal(dom.dailyPanel.classList.contains('is-hidden'), true);
     assert.equal(dom.dailyPanel.getAttribute('aria-hidden'), 'true');
     assert.equal(dom.difficultySection.classList.contains('is-hidden'), false);
-    assert.equal(dom.status.textContent, 'Single Play: selectează dificultatea pentru jocul solo.');
+    assert.equal(dom.selectedTitle.textContent, 'Classic');
+    assert.equal(dom.status.textContent, 'Classic: selectează timerul și dificultatea pentru jocul solo.');
 });
 
 test('mode selection blocks Daily when active duel leave confirmation is cancelled', async () => {

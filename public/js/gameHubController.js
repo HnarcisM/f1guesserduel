@@ -23,9 +23,10 @@
         card.dataset.gameContext = variant.context;
 
         if (available) {
-            card.setAttribute('aria-pressed', String(Boolean(variant.defaultSelected)));
-            card.classList.toggle('active', Boolean(variant.defaultSelected));
-            if (variant.modeChoice) card.dataset.gameModeChoice = variant.modeChoice;
+            if (variant.modeChoice) {
+                card.dataset.gameModeChoice = variant.modeChoice;
+                card.setAttribute('aria-pressed', 'false');
+            }
             if (variant.launchType === 'extended') card.dataset.extendedModeChoice = variant.key;
         } else {
             card.disabled = true;

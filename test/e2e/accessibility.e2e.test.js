@@ -192,6 +192,8 @@ test('axe finds no accessibility violations across application screens and state
         await playerTwo.close();
         await spectator.close();
         page = await openAppPage(context, app.baseUrl);
+        await page.locator('[data-game-mode-choice="single"]').click();
+        await page.locator('#difficultySection:not(.is-hidden)').waitFor({ state: 'visible', timeout: 7000 });
         await page.locator('.btn-diff.easy').click();
         await page.locator('#gameZone:not(.game-zone-hidden)').waitFor({ state: 'visible', timeout: 7000 });
         reports.push(...await auditPageThemes(page, 'single-game'));

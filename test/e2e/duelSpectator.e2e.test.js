@@ -489,6 +489,8 @@ test('single play starts without room state and rematch stays in single mode', {
         await assertElementHidden(page.locator('#dailyChallengePanel'));
         await assertElementHidden(page.locator('#liveDuelBoard'));
 
+        await page.locator('[data-game-mode-choice="single"]').click();
+        await page.locator('#difficultySection:not(.is-hidden)').waitFor({ state: 'visible', timeout: 7000 });
         await page.locator('.btn-diff.easy').click();
         await page.locator('#gameZone:not(.game-zone-hidden)').waitFor({ timeout: 7000 });
         await page.locator('body.mode-single').waitFor({ timeout: 7000 });
