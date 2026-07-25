@@ -7,7 +7,7 @@ const { createAccountStatsRepository } = require('../../server/account/accountSt
 const { createGameHistoryRetentionRepository } = require('../../server/account/gameHistoryRetentionRepository');
 const { createAuthRepository } = require('../../server/auth/authRepository');
 const { createPostgresDatabase } = require('../../server/db/database');
-const { runPostgresMigrations } = require('../../server/db/postgresMigrator');
+const { loadPostgresMigrations, runPostgresMigrations } = require('../../server/db/postgresMigrator');
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 const projectRoot = path.join(__dirname, '..', '..');
@@ -43,6 +43,13 @@ after(async () => {
 test('real PostgreSQL applies every migration and remains idempotent', async () => {
     assert.deepEqual(await database.check(), { ok: true });
 
+    const expectedMigrations = loadPostgresMigrations({
+        migrationsDirectoryPath,
+        fallbackSchemaFilePath: schemaFilePath
+    });
+    const expectedVersions = expectedMigrations.map(migration => migration.version);
+    const currentVersion = expectedVersions.at(-1);
+
     const migrationRows = await database.query(`
         SELECT version, name
         FROM schema_migrations
@@ -50,7 +57,7 @@ test('real PostgreSQL applies every migration and remains idempotent', async () 
     `);
     assert.deepEqual(
         migrationRows.rows.map(row => Number(row.version)),
-        [1, 2, 3, 4, 5, 6, 7, 8]
+        expectedVersions
     );
 
     const secondRun = await runPostgresMigrations({
@@ -59,7 +66,7 @@ test('real PostgreSQL applies every migration and remains idempotent', async () 
         fallbackSchemaFilePath: schemaFilePath,
         logger: silentLogger
     });
-    assert.deepEqual(secondRun, { appliedCount: 0, currentVersion: 8 });
+    assert.deepEqual(secondRun, { appliedCount: 0, currentVersion });
 });
 
 test('real PostgreSQL enforces auth constraints, sessions and account result idempotency', async () => {
