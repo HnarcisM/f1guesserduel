@@ -272,8 +272,13 @@ test('SQLite captures the exact pre-round progress inside the result transaction
     t.after(() => database.close());
     database.exec(fs.readFileSync(path.join(__dirname, '..', 'server', 'db', 'schema.sql'), 'utf8'));
     database.prepare(`
-        INSERT INTO users (username, email, password_hash)
-        VALUES ('Narcis', 'narcis@example.com', 'hash')
+        INSERT INTO users (account_uuid, username, email, password_hash)
+        VALUES (
+            '11111111-2222-4333-8444-555555555555',
+            'Narcis',
+            'narcis@example.com',
+            'hash'
+        )
     `).run();
     const repository = createSqliteAccountStatsRepository(database);
     const baseResult = {
