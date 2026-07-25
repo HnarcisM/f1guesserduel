@@ -1,6 +1,6 @@
 'use strict';
 
-const state = { activeView: 'dashboard', adminUserId: null, userSearch: '', pendingAction: null, selectedUser: null };
+const state = { activeView: 'dashboard', adminUserId: null, adminAuthorizationMode: 'disabled', userSearch: '', pendingAction: null, selectedUser: null };
 const $ = id => document.getElementById(id);
 const els = {
     pageTitle: $('adminPageTitle'), refresh: $('adminRefreshBtn'), status: $('adminStatus'), identity: $('adminIdentity'),
@@ -33,7 +33,7 @@ function renderMetrics(data) {
     const trend = Array.isArray(data.activityTrend) ? data.activityTrend : [];
     const max = Math.max(1, ...trend.map(day => Number(day.gamesCompleted) || 0));
     els.activityTrend.replaceChildren(...trend.map(day => { const item = document.createElement('article'); item.className = 'admin-trend-day'; const bar = document.createElement('div'); bar.className = 'admin-trend-bar'; bar.style.setProperty('--trend-height', `${Math.max(5, Math.round(((Number(day.gamesCompleted) || 0) / max) * 100))}%`); const label = document.createElement('strong'); label.textContent = day.date.slice(5); const details = document.createElement('small'); details.textContent = `${formatNumber(day.gamesCompleted)} jocuri · ${formatNumber(day.usersCreated)} conturi`; item.append(bar, label, details); return item; }));
-    const summary = [['Ultima actualizare', formatDate(data.generatedAt)], ['Daily curent', data.dailyDate], ['Weekly curent', data.weekKey], ['Acces', 'ADMIN_USER_IDS + verificare server-side'], ['Acțiuni sensibile', 'Parolă + audit']];
+    const summary = [['Ultima actualizare', formatDate(data.generatedAt)], ['Daily curent', data.dailyDate], ['Weekly curent', data.weekKey], ['Acces', state.adminAuthorizationMode === 'account-uuid' ? 'UUID permanent + verificare server-side' : 'ID numeric legacy · migrare necesară'], ['Acțiuni sensibile', 'Parolă + audit']];
     els.systemSummary.replaceChildren(...summary.map(([term, description]) => { const wrap = document.createElement('div'); const dt = document.createElement('dt'); const dd = document.createElement('dd'); dt.textContent = term; dd.textContent = description; wrap.append(dt, dd); return wrap; }));
 }
 async function loadDashboard() { renderMetrics(await api('/api/admin/overview')); }
@@ -94,4 +94,18 @@ els.suspendCancel.addEventListener('click', () => els.suspendDialog.close());
 els.suspendDialog.addEventListener('close', () => { els.suspendPassword.value = ''; els.suspendReason.value = ''; els.suspendError.textContent = ''; });
 els.suspendForm.addEventListener('submit', async event => { event.preventDefault(); const user = state.selectedUser; if (!user) return; els.suspendSubmit.disabled = true; els.suspendCancel.disabled = true; try { await api(`/api/admin/users/${user.id}/suspend`, { method: 'POST', body: JSON.stringify({ duration: els.suspendDuration.value, reason: els.suspendReason.value, currentPassword: els.suspendPassword.value }) }); els.suspendDialog.close(); els.userDialog.close(); setStatus('Cont suspendat și sesiuni revocate.', 'success'); await Promise.all([loadUsers(), loadDashboard(), loadAudit()]); } catch (error) { els.suspendError.textContent = error.message; els.suspendPassword.select(); } finally { els.suspendSubmit.disabled = false; els.suspendCancel.disabled = false; } });
 
-(async function initialize() { try { const session = await api('/api/admin/session'); state.adminUserId = session.user.id; els.identity.textContent = `${session.user.username} · ID ${session.user.id}`; await loadDashboard(); } catch (error) { setStatus(error.message, 'error'); } })();
+(async function initialize() {
+    try {
+        const session = await api('/api/admin/session');
+        state.adminUserId = session.user.id;
+        state.adminAuthorizationMode = session.authorization?.mode || 'disabled';
+        const shortIdentity = session.user.accountUuid ? session.user.accountUuid.slice(0, 8) : `ID ${session.user.id}`;
+        els.identity.textContent = `${session.user.username} · ${shortIdentity}`;
+        await loadDashboard();
+        if (session.authorization?.legacyMigrationRequired) {
+            setStatus('Accesul admin folosește încă ID-ul numeric. Copiază accountUuid din /api/admin/session și configurează ADMIN_ACCOUNT_UUIDS.', 'warning');
+        }
+    } catch (error) {
+        setStatus(error.message, 'error');
+    }
+})();

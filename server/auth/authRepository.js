@@ -1,9 +1,12 @@
+const { generateAccountUuid, normalizeAccountUuid } = require('./accountIdentity');
+
 function normalizeUserRow(row) {
     if (!row) return null;
     return {
         ...row,
         id: Number(row.id),
         createdAt: row.createdAt || row.created_at,
+        accountUuid: normalizeAccountUuid(row.accountUuid || row.account_uuid),
         accountStatus: row.accountStatus || row.account_status || 'active',
         suspendedUntil: row.suspendedUntil || row.suspended_until || null,
         suspensionReason: row.suspensionReason || row.suspension_reason || null,
@@ -22,13 +25,14 @@ function isUniqueConstraintError(error) {
 
 function createSqliteAuthRepository(db) {
     const createUserStmt = db.prepare(`
-        INSERT INTO users (username, email, password_hash, last_seen_at)
-        VALUES (@username, @email, @passwordHash, datetime('now'))
+        INSERT INTO users (account_uuid, username, email, password_hash, last_seen_at)
+        VALUES (@accountUuid, @username, @email, @passwordHash, datetime('now'))
     `);
 
     const findByEmailStmt = db.prepare(`
         SELECT
             users.id,
+            users.account_uuid AS "accountUuid",
             users.username,
             users.email,
             users.account_status AS "accountStatus",
@@ -48,6 +52,7 @@ function createSqliteAuthRepository(db) {
     const findByIdStmt = db.prepare(`
         SELECT
             users.id,
+            users.account_uuid AS "accountUuid",
             users.username,
             users.email,
             users.account_status AS "accountStatus",
@@ -66,6 +71,7 @@ function createSqliteAuthRepository(db) {
     const findCredentialsByIdStmt = db.prepare(`
         SELECT
             users.id,
+            users.account_uuid AS "accountUuid",
             users.username,
             users.email,
             users.account_status AS "accountStatus",
@@ -124,6 +130,7 @@ function createSqliteAuthRepository(db) {
     const getSessionUserStmt = db.prepare(`
         SELECT
             users.id,
+            users.account_uuid AS "accountUuid",
             users.username,
             users.email,
             users.account_status AS "accountStatus",
@@ -166,8 +173,14 @@ function createSqliteAuthRepository(db) {
     return {
         provider: 'sqlite',
         isUniqueConstraintError,
-        async createUser({ username, email, passwordHash }) {
-            const result = createUserStmt.run({ username, email, passwordHash });
+        async createUser({ username, email, passwordHash, accountUuid = null }) {
+            const resolvedAccountUuid = normalizeAccountUuid(accountUuid) || generateAccountUuid();
+            const result = createUserStmt.run({
+                accountUuid: resolvedAccountUuid,
+                username,
+                email,
+                passwordHash
+            });
             return normalizeUserRow(findByIdStmt.get(result.lastInsertRowid));
         },
         async findUserByEmail(email) {
@@ -222,12 +235,14 @@ function createPostgresAuthRepository(database) {
     return {
         provider: 'postgres',
         isUniqueConstraintError,
-        async createUser({ username, email, passwordHash }) {
+        async createUser({ username, email, passwordHash, accountUuid = null }) {
+            const resolvedAccountUuid = normalizeAccountUuid(accountUuid) || generateAccountUuid();
             const row = await queryOne(`
-                INSERT INTO users (username, email, password_hash, last_seen_at)
-                VALUES ($1, $2, $3, now())
+                INSERT INTO users (account_uuid, username, email, password_hash, last_seen_at)
+                VALUES ($1, $2, $3, $4, now())
                 RETURNING
                     id,
+                    account_uuid AS "accountUuid",
                     username,
                     email,
                     account_status AS "accountStatus",
@@ -237,13 +252,14 @@ function createPostgresAuthRepository(database) {
                     created_at AS "createdAt",
                     'helmet-red' AS "avatarKey",
                     NULL AS "usernameChangedAt"
-            `, [username, email, passwordHash]);
+            `, [resolvedAccountUuid, username, email, passwordHash]);
             return normalizeUserRow(row);
         },
         async findUserByEmail(email) {
             const row = await queryOne(`
                 SELECT
                     users.id,
+                    users.account_uuid AS "accountUuid",
                     users.username,
                     users.email,
                     users.account_status AS "accountStatus",
@@ -265,6 +281,7 @@ function createPostgresAuthRepository(database) {
             const row = await queryOne(`
                 SELECT
                     users.id,
+                    users.account_uuid AS "accountUuid",
                     users.username,
                     users.email,
                     users.account_status AS "accountStatus",
@@ -285,6 +302,7 @@ function createPostgresAuthRepository(database) {
             const row = await queryOne(`
                 SELECT
                     users.id,
+                    users.account_uuid AS "accountUuid",
                     users.username,
                     users.email,
                     users.account_status AS "accountStatus",
@@ -318,10 +336,11 @@ function createPostgresAuthRepository(database) {
                     SET username = $2
                     FROM claimed_limit
                     WHERE users.id = claimed_limit.user_id
-                    RETURNING users.id, users.username, users.email, users.created_at
+                    RETURNING users.id, users.account_uuid, users.username, users.email, users.created_at
                 )
                 SELECT
                     updated_user.id,
+                    updated_user.account_uuid AS "accountUuid",
                     updated_user.username,
                     updated_user.email,
                     updated_user.created_at AS "createdAt",
@@ -351,6 +370,7 @@ function createPostgresAuthRepository(database) {
             const row = await queryOne(`
                 SELECT
                     users.id,
+                    users.account_uuid AS "accountUuid",
                     users.username,
                     users.email,
                     users.account_status AS "accountStatus",
@@ -380,6 +400,7 @@ function createPostgresAuthRepository(database) {
             const row = await queryOne(`
                 SELECT
                     users.id,
+                    users.account_uuid AS "accountUuid",
                     users.username,
                     users.email,
                     users.account_status AS "accountStatus",

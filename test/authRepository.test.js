@@ -9,6 +9,7 @@ const {
 function createFakePostgresDatabase() {
     const queries = [];
     let currentUsername = 'Narcis';
+    let currentAccountUuid = '11111111-2222-4333-8444-555555555555';
     let currentAvatarKey = 'helmet-red';
     let currentUsernameChangedAt = null;
     return {
@@ -20,8 +21,9 @@ function createFakePostgresDatabase() {
                 return {
                     rows: [{
                         id: '7',
-                        username: params[0],
-                        email: params[1],
+                        accountUuid: params[0],
+                        username: params[1],
+                        email: params[2],
                         avatarKey: currentAvatarKey,
                         usernameChangedAt: currentUsernameChangedAt,
                         createdAt: '2026-07-07T00:00:00.000Z'
@@ -34,6 +36,7 @@ function createFakePostgresDatabase() {
                 return {
                     rows: [{
                         id: '7',
+                        accountUuid: currentAccountUuid,
                         username: 'Narcis',
                         email: params[0].toLowerCase(),
                         password_hash: 'hash',
@@ -49,6 +52,7 @@ function createFakePostgresDatabase() {
                 return {
                     rows: [{
                         id: '7',
+                        accountUuid: currentAccountUuid,
                         username: 'Narcis',
                         email: 'narcis@example.com',
                         password_hash: 'hash',
@@ -66,6 +70,7 @@ function createFakePostgresDatabase() {
                 return {
                     rows: [{
                         id: '7',
+                        accountUuid: currentAccountUuid,
                         username: currentUsername,
                         email: 'narcis@example.com',
                         avatarKey: currentAvatarKey,
@@ -85,6 +90,7 @@ function createFakePostgresDatabase() {
                 return {
                     rows: [{
                         id: '7',
+                        accountUuid: currentAccountUuid,
                         username: currentUsername,
                         email: 'narcis@example.com',
                         avatarKey: currentAvatarKey,
@@ -99,6 +105,7 @@ function createFakePostgresDatabase() {
                 return {
                     rows: [{
                         id: '7',
+                        accountUuid: currentAccountUuid,
                         username: 'Narcis',
                         email: 'narcis@example.com',
                         avatarKey: currentAvatarKey,
@@ -127,8 +134,10 @@ test('postgres auth repository uses parameterized user inserts and normalizes id
     assert.equal(user.id, 7);
     assert.equal(user.username, 'Narcis');
     assert.equal(user.avatarKey, 'helmet-red');
-    assert.equal(database.queries[0].params[0], 'Narcis');
-    assert.equal(database.queries[0].params[2], 'pbkdf2$hash');
+    assert.match(user.accountUuid, /^[0-9a-f-]{36}$/);
+    assert.equal(database.queries[0].params[0], user.accountUuid);
+    assert.equal(database.queries[0].params[1], 'Narcis');
+    assert.equal(database.queries[0].params[3], 'pbkdf2$hash');
     assert.match(database.queries[0].sql, /RETURNING[\s\S]*id,[\s\S]*username,[\s\S]*email/);
 });
 

@@ -67,10 +67,15 @@ function createAdminRoutes({
     router.get('/session', readLimiter, (req, res) => res.json({
         user: {
             id: req.user.id,
+            accountUuid: req.user.accountUuid,
             username: req.user.username,
             email: req.user.email
         },
-        admin: true
+        admin: true,
+        authorization: {
+            mode: adminAccess.mode,
+            legacyMigrationRequired: adminAccess.usesLegacyUserIds
+        }
     }));
 
     router.get('/overview', readLimiter, async (req, res, next) => {

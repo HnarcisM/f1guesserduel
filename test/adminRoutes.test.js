@@ -48,6 +48,26 @@ test('admin routes return overview only after server-side authorization', async 
     });
 });
 
+
+test('admin session exposes the immutable account UUID and authorization mode', async () => {
+    const accountUuid = '11111111-2222-4333-8444-555555555555';
+    await withServer({
+        user: { id: 1, accountUuid, username: 'Admin', email: 'admin@example.com' },
+        adminAccess: { requireAdminApi: passThrough, mode: 'account-uuid', usesLegacyUserIds: false },
+        adminService: {},
+        authService: {}
+    }, async baseUrl => {
+        const response = await fetch(`${baseUrl}/session`);
+        assert.equal(response.status, 200);
+        const payload = await response.json();
+        assert.equal(payload.user.accountUuid, accountUuid);
+        assert.deepEqual(payload.authorization, {
+            mode: 'account-uuid',
+            legacyMigrationRequired: false
+        });
+    });
+});
+
 test('admin routes audit a failed password reconfirmation without executing the action', async () => {
     const audits = [];
     let revokeCalls = 0;

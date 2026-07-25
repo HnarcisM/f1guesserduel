@@ -311,7 +311,8 @@ Aplicația poate fi configurată prin variabile de mediu. Pentru rulare locală 
 | `GAME_HISTORY_RETENTION_DAYS` | `365` | Păstrează rezultatele detaliate pentru acest număr de zile; statisticile agregate și XP-ul rămân permanent. |
 | `GAME_HISTORY_CLEANUP_INTERVAL_MS` | `604800000` | Rulează cleanup-ul la pornire și apoi o dată la 7 zile; `0` dezactivează jobul automat. |
 | `GAME_HISTORY_CLEANUP_BATCH_SIZE` | `5000` | Numărul maxim de rezultate șterse într-o singură interogare de cleanup. |
-| `ADMIN_USER_IDS` | none | Lista ID-urilor de cont autorizate să acceseze `/admin`, separate prin virgulă. Dacă lipsește, panoul este dezactivat. |
+| `ADMIN_ACCOUNT_UUIDS` | none | Lista UUID-urilor permanente autorizate să acceseze `/admin`, separate prin virgulă. Are prioritate față de ID-urile numerice. |
+| `ADMIN_USER_IDS` | none | Fallback temporar pentru migrarea instalărilor vechi. Este ignorat când `ADMIN_ACCOUNT_UUIDS` este configurat. |
 | `SESSION_SECRET` | dev fallback local | Secret pentru sesiuni; obligatoriu în production. |
 | `SOCKET_AUTH_SECRET` | `SESSION_SECRET` sau dev fallback | Secret pentru token-ul scurt folosit de socket auth refresh. |
 | `SESSION_COOKIE_NAME` | `f1_session` | Numele cookie-ului de sesiune. |
@@ -374,15 +375,20 @@ Pe Render Free, folosește `PERSISTENCE_MODE=ephemeral` și `DATA_DIR=/tmp/f1gue
 
 ### Panou de administrare owner-only
 
-Prima versiune a panoului este disponibilă la `/admin` și nu este servită din directorul public. Accesul este verificat la fiecare pagină și cerere API folosind sesiunea curentă și lista `ADMIN_USER_IDS`.
+Panoul este disponibil la `/admin`, nu este servit din directorul public și verifică identitatea contului pe server la fiecare pagină și cerere API. Identitatea recomandată este UUID-ul permanent al contului, nu ID-ul numeric auto-incrementat.
 
-1. Autentifică-te în aplicație și deschide `/api/auth/me`; copiază valoarea numerică `user.id`.
-2. În Render, adaugă variabila `ADMIN_USER_IDS` cu acel ID, de exemplu `ADMIN_USER_IDS=1`.
-3. Redeploy și deschide `/admin`.
+Migrare de la `ADMIN_USER_IDS`:
 
-Nu există endpoint pentru promovarea unui cont la admin. Acțiunile destructive cer din nou parola contului și sunt salvate în `admin_audit_log`. Nu adăuga în `ADMIN_USER_IDS` ID-uri care nu îți aparțin.
+1. Deployează această versiune păstrând temporar valoarea existentă, de exemplu `ADMIN_USER_IDS=1`.
+2. Autentifică-te ca owner și deschide `/api/admin/session`; copiază `user.accountUuid`.
+3. În Render setează `ADMIN_ACCOUNT_UUIDS=<uuid-ul-copiat>`.
+4. Elimină `ADMIN_USER_IDS` și fă redeploy.
 
-Admin V2 adaugă:
+Când `ADMIN_ACCOUNT_UUIDS` conține cel puțin o valoare validă, fallback-ul numeric este ignorat complet. Dacă baza de date este recreată, conturile noi primesc UUID-uri noi și vechea configurație nu poate acorda accidental acces altui utilizator.
+
+Nu există endpoint pentru promovarea unui cont la admin. Acțiunile destructive cer din nou parola contului și sunt salvate în `admin_audit_log`.
+
+Admin V2 include:
 
 - activitate agregată pentru ultimele șapte zile;
 - detalii de cont, statistici pe mod și rezultate recente;
@@ -392,7 +398,7 @@ Admin V2 adaugă:
 - resetarea individuală a participării Daily sau Weekly curente, fără ștergerea istoricului ori a XP-ului;
 - filtrarea auditului după categorie și text.
 
-Suspendarea este verificată atât la login, cât și la rezolvarea sesiunilor HTTP și Socket.IO. Contul owner și celelalte ID-uri din `ADMIN_USER_IDS` nu pot fi suspendate din panou.
+Suspendarea este verificată atât la login, cât și la rezolvarea sesiunilor HTTP și Socket.IO. Conturile autorizate prin UUID nu pot fi suspendate din panou.
 
 
 ### Conturi persistente pe Render Free cu Neon Postgres

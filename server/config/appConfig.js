@@ -1,5 +1,6 @@
 const os = require('node:os');
 const path = require('path');
+const { normalizeAccountUuid } = require('../auth/accountIdentity');
 
 const DEFAULT_PORT = 3000;
 const DEFAULT_SESSION_COOKIE_NAME = 'f1_session';
@@ -93,6 +94,22 @@ function parsePositiveIntegerListEnv(env, name) {
         return parsed;
     });
 
+    return [...new Set(normalized)];
+}
+
+function parseAccountUuidListEnv(env, name) {
+    const value = env[name];
+    if (value === undefined || value === null || value === '') return [];
+    if (typeof value !== 'string') {
+        throw new Error(`${name} must be a comma-separated list of UUID account identities.`);
+    }
+
+    const values = value.split(',').map(part => part.trim()).filter(Boolean);
+    const normalized = values.map(accountUuid => {
+        const parsed = normalizeAccountUuid(accountUuid);
+        if (!parsed) throw new Error(`${name} must contain only canonical UUID account identities.`);
+        return parsed;
+    });
     return [...new Set(normalized)];
 }
 
@@ -400,6 +417,7 @@ function createAppConfig(env = process.env, options = {}) {
     });
     const cookieSecure = parseBooleanEnv(env, 'COOKIE_SECURE', isProduction);
     const cookieSameSite = parseSameSiteEnv(env, 'COOKIE_SAMESITE', 'lax');
+    const adminAccountUuids = parseAccountUuidListEnv(env, 'ADMIN_ACCOUNT_UUIDS');
     const adminUserIds = parsePositiveIntegerListEnv(env, 'ADMIN_USER_IDS');
 
     if (cookieSameSite === 'none' && !cookieSecure) {
@@ -570,7 +588,8 @@ function createAppConfig(env = process.env, options = {}) {
             }
         },
         admin: {
-            enabled: adminUserIds.length > 0,
+            enabled: adminAccountUuids.length > 0 || adminUserIds.length > 0,
+            accountUuids: adminAccountUuids,
             userIds: adminUserIds
         },
         account: {
@@ -627,6 +646,7 @@ module.exports = {
     parseBoolean,
     parsePositiveInteger,
     parsePositiveIntegerListEnv,
+    parseAccountUuidListEnv,
     normalizeSameSite,
     normalizeAllowedOrigin,
     normalizePersistenceMode,

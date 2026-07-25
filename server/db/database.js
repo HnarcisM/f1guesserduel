@@ -5,6 +5,7 @@ const {
     ensureSqliteAccountGameHistoryColumns,
     ensureSqliteUserModerationColumns
 } = require('./sqliteSchemaUpgrade');
+const { ensureSqliteUserAccountUuid } = require('./sqliteAccountIdentityUpgrade');
 
 const TRANSIENT_POSTGRES_ERROR_CODES = new Set([
     'ETIMEDOUT',
@@ -132,6 +133,7 @@ function createSqliteDatabase({ dbFilePath, schemaFilePath }) {
 
     const schema = fs.readFileSync(schemaFilePath, 'utf8');
     db.exec(schema);
+    ensureSqliteUserAccountUuid(db);
     ensureSqliteAccountGameHistoryColumns(db);
     ensureSqliteUserModerationColumns(db);
 

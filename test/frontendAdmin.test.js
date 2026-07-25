@@ -46,3 +46,11 @@ test('admin V2 exposes user moderation, challenge resets, activity trend and aud
     assert.match(script, /historyPreserved|Istoricul și XP-ul nu sunt șterse/);
     assert.doesNotMatch(script, /innerHTML\s*=/);
 });
+
+
+test('admin UI surfaces UUID authorization and legacy migration guidance', () => {
+    const source = fs.readFileSync(path.join(__dirname, '..', 'server', 'admin', 'ui', 'admin.js'), 'utf8');
+    assert.match(source, /accountUuid/);
+    assert.match(source, /ADMIN_ACCOUNT_UUIDS/);
+    assert.match(source, /legacyMigrationRequired/);
+});

@@ -1,17 +1,38 @@
 'use strict';
 
+const { normalizeAccountUuid } = require('../auth/accountIdentity');
+
 function normalizeAdminUserIds(userIds = []) {
     return new Set((Array.isArray(userIds) ? userIds : [])
         .map(Number)
         .filter(userId => Number.isSafeInteger(userId) && userId > 0));
 }
 
-function createAdminAccess({ userIds = [] } = {}) {
-    const allowedUserIds = normalizeAdminUserIds(userIds);
+function normalizeAdminAccountUuids(accountUuids = []) {
+    return new Set((Array.isArray(accountUuids) ? accountUuids : [])
+        .map(normalizeAccountUuid)
+        .filter(Boolean));
+}
+
+function createAdminAccess({ accountUuids = [], legacyUserIds = [], userIds = [] } = {}) {
+    const allowedAccountUuids = normalizeAdminAccountUuids(accountUuids);
+    const allowedLegacyUserIds = normalizeAdminUserIds(
+        legacyUserIds.length ? legacyUserIds : userIds
+    );
+    const mode = allowedAccountUuids.size > 0
+        ? 'account-uuid'
+        : (allowedLegacyUserIds.size > 0 ? 'legacy-user-id' : 'disabled');
 
     function isAdminUser(user) {
-        const userId = Number(user?.id);
-        return Number.isSafeInteger(userId) && allowedUserIds.has(userId);
+        if (mode === 'account-uuid') {
+            const accountUuid = normalizeAccountUuid(user?.accountUuid || user?.account_uuid);
+            return Boolean(accountUuid && allowedAccountUuids.has(accountUuid));
+        }
+        if (mode === 'legacy-user-id') {
+            const userId = Number(user?.id);
+            return Number.isSafeInteger(userId) && allowedLegacyUserIds.has(userId);
+        }
+        return false;
     }
 
     function requireAdminApi(req, res, next) {
@@ -34,7 +55,9 @@ function createAdminAccess({ userIds = [] } = {}) {
     }
 
     return {
-        enabled: allowedUserIds.size > 0,
+        enabled: mode !== 'disabled',
+        mode,
+        usesLegacyUserIds: mode === 'legacy-user-id',
         isAdminUser,
         requireAdminApi,
         requireAdminPage
@@ -43,5 +66,6 @@ function createAdminAccess({ userIds = [] } = {}) {
 
 module.exports = {
     createAdminAccess,
+    normalizeAdminAccountUuids,
     normalizeAdminUserIds
 };

@@ -551,12 +551,21 @@ test('logging config defaults to info request logging in production', () => {
     assert.equal(normalizeLogLevel('ERROR'), 'error');
 });
 
-test('admin access is disabled by default and accepts a deduplicated owner id allowlist', () => {
-    assert.deepEqual(createAppConfig({}).admin, { enabled: false, userIds: [] });
-    assert.deepEqual(createAppConfig({ ADMIN_USER_IDS: '7, 12,7' }).admin, {
+test('admin config prefers stable UUID identities and keeps numeric ids only for migration', () => {
+    const ownerUuid = '11111111-2222-4333-8444-555555555555';
+    assert.deepEqual(createAppConfig({}).admin, { enabled: false, accountUuids: [], userIds: [] });
+    assert.deepEqual(createAppConfig({
+        ADMIN_ACCOUNT_UUIDS: `${ownerUuid.toUpperCase()},${ownerUuid}`,
+        ADMIN_USER_IDS: '7, 12,7'
+    }).admin, {
         enabled: true,
+        accountUuids: [ownerUuid],
         userIds: [7, 12]
     });
+    assert.throws(
+        () => createAppConfig({ ADMIN_ACCOUNT_UUIDS: 'not-a-uuid' }),
+        /canonical UUID account identities/
+    );
     assert.throws(
         () => createAppConfig({ ADMIN_USER_IDS: '7,narcis' }),
         /positive integer user ids/

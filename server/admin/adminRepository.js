@@ -93,6 +93,7 @@ function createPostgresAdminRepository(database) {
             database.query(`
                 SELECT
                     users.id,
+                    users.account_uuid AS "accountUuid",
                     users.username,
                     users.email,
                     users.created_at AS "createdAt",
@@ -136,6 +137,7 @@ function createPostgresAdminRepository(database) {
             database.query(`
                 SELECT
                     users.id,
+                    users.account_uuid AS "accountUuid",
                     users.username,
                     users.email,
                     users.created_at AS "createdAt",
@@ -395,6 +397,7 @@ function createSqliteAdminRepository(database) {
         const query = database.prepare(`
             SELECT
                 users.id,
+                users.account_uuid AS accountUuid,
                 users.username,
                 users.email,
                 users.created_at AS createdAt,
@@ -432,6 +435,7 @@ function createSqliteAdminRepository(database) {
         const user = database.prepare(`
             SELECT
                 users.id,
+                users.account_uuid AS accountUuid,
                 users.username,
                 users.email,
                 users.created_at AS createdAt,

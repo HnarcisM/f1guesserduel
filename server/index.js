@@ -177,7 +177,15 @@ const sessionService = createSessionService(db, {
 });
 const authService = createAuthService(db, sessionService);
 const accountStatsService = createAccountStatsService(db);
-const adminAccess = createAdminAccess({ userIds: config.admin.userIds });
+const adminAccess = createAdminAccess({
+    accountUuids: config.admin.accountUuids,
+    legacyUserIds: config.admin.userIds
+});
+if (adminAccess.usesLegacyUserIds) {
+    logger.warn('Admin access still uses legacy numeric user IDs. Configure ADMIN_ACCOUNT_UUIDS and remove ADMIN_USER_IDS.', {
+        adminAuthorizationMode: adminAccess.mode
+    });
+}
 const adminService = createAdminService({
     database: db,
     roomStore,

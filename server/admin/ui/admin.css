@@ -36,6 +36,7 @@ h2 { margin-bottom: 0; font-size: 20px; }
 .admin-status { min-height: 22px; color: var(--muted); }
 .admin-status.is-error { color: #ff8794; }
 .admin-status.is-success { color: var(--success); }
+.admin-status.is-warning { color: #ffd166; }
 .admin-view.is-hidden { display: none; }
 .admin-metric-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
 .admin-metric { min-height: 126px; padding: 20px; border: 1px solid var(--border); border-radius: 16px; background: linear-gradient(145deg, rgba(255,255,255,.035), transparent), var(--panel); }

@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_uuid TEXT NOT NULL UNIQUE,
     username TEXT NOT NULL UNIQUE COLLATE NOCASE,
     email TEXT NOT NULL UNIQUE COLLATE NOCASE,
     password_hash TEXT NOT NULL,
@@ -11,6 +12,8 @@ CREATE TABLE IF NOT EXISTS users (
     suspended_at TEXT
 );
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_account_uuid
+    ON users(account_uuid);
 CREATE INDEX IF NOT EXISTS idx_users_account_status
     ON users(account_status, suspended_until);
 
