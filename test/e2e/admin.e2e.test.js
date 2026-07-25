@@ -74,7 +74,9 @@ async function collectMobileMetrics(page) {
                 top: bounds.top,
                 bottom: bounds.bottom,
                 width: bounds.width,
-                height: bounds.height
+                height: bounds.height,
+                scrollWidth: element.scrollWidth,
+                clientWidth: element.clientWidth
             } : null;
         };
         const refresh = document.querySelector('#adminRefreshBtn');
@@ -91,6 +93,8 @@ async function collectMobileMetrics(page) {
             activeView: rect('.admin-view:not(.is-hidden)'),
             tableWrap: rect('.admin-view:not(.is-hidden) .admin-table-wrap'),
             dialog: rect('#adminUserDialog[open]'),
+            dialogHeader: rect('#adminUserDialog[open] .admin-user-dialog-head'),
+            dialogDetails: rect('#adminUserDialog[open] .admin-user-details'),
             dialogClose: rect('#adminUserDialogClose'),
             refreshVisible: Boolean(refreshRect && refreshStyle
                 && refreshStyle.display !== 'none'
@@ -144,10 +148,28 @@ function assertMobileDialog(metrics, label) {
         metrics.dialog.bottom <= metrics.viewport.height + tolerance,
         `${label}: dialogul depășește marginea de jos`
     );
-    assert.ok(metrics.dialogClose, `${label}: butonul de închidere al dialogului lipsește`);
+    assert.ok(
+        metrics.dialog.scrollWidth <= metrics.dialog.clientWidth + tolerance,
+        `${label}: dialogul are overflow intern (${metrics.dialog.scrollWidth}px > ${metrics.dialog.clientWidth}px)`
+    );
+    for (const [name, bounds] of Object.entries({
+        dialogHeader: metrics.dialogHeader,
+        dialogDetails: metrics.dialogDetails,
+        dialogClose: metrics.dialogClose
+    })) {
+        assert.ok(bounds, `${label}: lipsește zona ${name}`);
+        assert.ok(
+            bounds.left >= metrics.dialog.left - tolerance,
+            `${label}: ${name} depășește marginea stângă a dialogului`
+        );
+        assert.ok(
+            bounds.right <= metrics.dialog.right + tolerance,
+            `${label}: ${name} depășește marginea dreaptă a dialogului (${bounds.right}px > ${metrics.dialog.right}px)`
+        );
+    }
     assert.ok(
         metrics.dialogClose.right <= metrics.viewport.width + tolerance,
-        `${label}: butonul de închidere al dialogului iese din viewport`
+        `${label}: butonul de închidere al dialogului iese din viewport (${metrics.dialogClose.right}px > ${metrics.viewport.width}px)`
     );
 }
 

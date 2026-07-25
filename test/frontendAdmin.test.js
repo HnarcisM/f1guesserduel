@@ -101,3 +101,15 @@ test('admin mobile topbar wraps without widening fold viewports', () => {
     assert.match(css, /@media \(max-width: 560px\)[\s\S]*\.admin-topbar \{ align-items: flex-end; flex-wrap: wrap; gap: 12px; \}/);
     assert.match(css, /@media \(max-width: 560px\)[\s\S]*\.admin-topbar > div \{ min-width: 0; \}/);
 });
+
+
+test('admin mobile user dialog contains long account details and controls inside the viewport', () => {
+    const css = fs.readFileSync(path.join(root, 'server', 'admin', 'ui', 'admin.css'), 'utf8');
+    assert.match(css, /\.admin-dialog-wide \{[^}]*overflow-x: hidden;[^}]*overflow-y: auto;/);
+    assert.match(css, /\.admin-user-dialog-head \{[^}]*min-width: 0;[^}]*max-width: 100%;/);
+    assert.match(css, /\.admin-detail-section strong \{[^}]*min-width: 0;[^}]*overflow-wrap: anywhere;/);
+    assert.match(css, /@media \(max-width: 560px\)[\s\S]*\.admin-dialog \{ width: calc\(100vw - 24px\); max-width: calc\(100vw - 24px\); \}/);
+    assert.match(css, /@media \(max-width: 560px\)[\s\S]*\.admin-user-dialog-head \{ display: grid; grid-template-columns: minmax\(0, 1fr\) auto;/);
+    assert.match(css, /@media \(max-width: 560px\)[\s\S]*\.admin-detail-section > div \{ flex-wrap: wrap; \}/);
+    assert.match(css, /@media \(max-width: 560px\)[\s\S]*\.admin-detail-section strong \{ flex: 1 1 100%; text-align: left; \}/);
+});
