@@ -237,7 +237,7 @@ async function assertGameHubCatalog(page, viewportLabel) {
             keys: cards.map(card => card.dataset.gameVariant),
             available: cards
                 .filter(card => !card.disabled)
-                .map(card => card.dataset.gameModeChoice || card.dataset.extendedModeChoice),
+                .map(card => card.dataset.gameModeChoice || card.dataset.gameVariant),
             comingSoon: cards
                 .filter(card => card.disabled)
                 .map(card => card.dataset.gameVariant),

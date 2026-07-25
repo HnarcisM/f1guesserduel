@@ -237,4 +237,5 @@ test('responsive E2E expects all planned modes to be enabled', () => {
     assert.match(source, /catalog\.available\.length, 10/);
     assert.match(source, /catalog\.comingSoon\.length, 0/);
     assert.match(source, /assertExtendedModesLaunch/);
+    assert.match(source, /card\.dataset\.gameModeChoice \|\| card\.dataset\.gameVariant/);
 });
