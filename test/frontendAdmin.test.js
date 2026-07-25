@@ -83,3 +83,14 @@ test('admin responsive layout contains wide trend and table content inside the v
     assert.match(css, /\.admin-trend \{[\s\S]*overflow-x: auto;/);
     assert.match(css, /\.admin-table-wrap \{ overflow-x: auto; \}/);
 });
+
+
+test('admin audit UI exposes filtered JSON and CSV exports with retention metadata', () => {
+    assert.match(html, /adminAuditExportJson/);
+    assert.match(html, /adminAuditExportCsv/);
+    assert.match(script, /\/api\/admin\/audit\/export/);
+    assert.match(script, /downloadAudit\('json'\)/);
+    assert.match(script, /downloadAudit\('csv'\)/);
+    assert.match(script, /retenție \$\{formatNumber\(payload\.retentionDays\)\} zile/);
+    assert.doesNotMatch(script, /innerHTML\s*=/);
+});

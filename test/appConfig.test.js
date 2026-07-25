@@ -43,6 +43,13 @@ test('app config provides safe development defaults', () => {
             cleanupBatchSize: 5_000
         }
     });
+    assert.deepEqual(config.admin.audit, {
+        retentionDays: 180,
+        cleanupIntervalMs: 86_400_000,
+        cleanupBatchSize: 250,
+        cleanupMaxBatches: 20,
+        exportMaxRows: 10_000
+    });
     assert.deepEqual(config.redis, {
         enabled: false,
         url: null,
@@ -112,6 +119,11 @@ test('app config reads production values from environment', () => {
         GAME_HISTORY_RETENTION_DAYS: '730',
         GAME_HISTORY_CLEANUP_INTERVAL_MS: '86400000',
         GAME_HISTORY_CLEANUP_BATCH_SIZE: '2500',
+        ADMIN_AUDIT_RETENTION_DAYS: '365',
+        ADMIN_AUDIT_CLEANUP_INTERVAL_MS: '43200000',
+        ADMIN_AUDIT_CLEANUP_BATCH_SIZE: '100',
+        ADMIN_AUDIT_CLEANUP_MAX_BATCHES: '12',
+        ADMIN_AUDIT_EXPORT_MAX_ROWS: '5000',
         REDIS_URL: 'rediss://default:secret@redis.example.com:6379',
         REDIS_KEY_PREFIX: 'f1:production',
         REDIS_CONNECT_TIMEOUT_MS: '15000',
@@ -170,6 +182,13 @@ test('app config reads production values from environment', () => {
             cleanupIntervalMs: 86_400_000,
             cleanupBatchSize: 2_500
         }
+    });
+    assert.deepEqual(config.admin.audit, {
+        retentionDays: 365,
+        cleanupIntervalMs: 43_200_000,
+        cleanupBatchSize: 100,
+        cleanupMaxBatches: 12,
+        exportMaxRows: 5_000
     });
     assert.deepEqual(config.redis, {
         enabled: true,
@@ -284,6 +303,26 @@ test('app config rejects invalid numeric environment values', () => {
     assert.throws(
         () => createAppConfig({ GAME_HISTORY_CLEANUP_BATCH_SIZE: '100001' }),
         /GAME_HISTORY_CLEANUP_BATCH_SIZE must be an integer/
+    );
+    assert.throws(
+        () => createAppConfig({ ADMIN_AUDIT_RETENTION_DAYS: '0' }),
+        /ADMIN_AUDIT_RETENTION_DAYS must be an integer/
+    );
+    assert.throws(
+        () => createAppConfig({ ADMIN_AUDIT_CLEANUP_INTERVAL_MS: '-1' }),
+        /ADMIN_AUDIT_CLEANUP_INTERVAL_MS must be an integer/
+    );
+    assert.throws(
+        () => createAppConfig({ ADMIN_AUDIT_CLEANUP_BATCH_SIZE: '10001' }),
+        /ADMIN_AUDIT_CLEANUP_BATCH_SIZE must be an integer/
+    );
+    assert.throws(
+        () => createAppConfig({ ADMIN_AUDIT_CLEANUP_MAX_BATCHES: '0' }),
+        /ADMIN_AUDIT_CLEANUP_MAX_BATCHES must be an integer/
+    );
+    assert.throws(
+        () => createAppConfig({ ADMIN_AUDIT_EXPORT_MAX_ROWS: '100001' }),
+        /ADMIN_AUDIT_EXPORT_MAX_ROWS must be an integer/
     );
     assert.throws(
         () => createAppConfig({ POSTGRES_CONNECTION_TIMEOUT_MS: '500' }),
@@ -553,14 +592,32 @@ test('logging config defaults to info request logging in production', () => {
 
 test('admin config prefers stable UUID identities and keeps numeric ids only for migration', () => {
     const ownerUuid = '11111111-2222-4333-8444-555555555555';
-    assert.deepEqual(createAppConfig({}).admin, { enabled: false, accountUuids: [], userIds: [] });
+    assert.deepEqual(createAppConfig({}).admin, {
+        enabled: false,
+        accountUuids: [],
+        userIds: [],
+        audit: {
+            retentionDays: 180,
+            cleanupIntervalMs: 86_400_000,
+            cleanupBatchSize: 250,
+            cleanupMaxBatches: 20,
+            exportMaxRows: 10_000
+        }
+    });
     assert.deepEqual(createAppConfig({
         ADMIN_ACCOUNT_UUIDS: `${ownerUuid.toUpperCase()},${ownerUuid}`,
         ADMIN_USER_IDS: '7, 12,7'
     }).admin, {
         enabled: true,
         accountUuids: [ownerUuid],
-        userIds: [7, 12]
+        userIds: [7, 12],
+        audit: {
+            retentionDays: 180,
+            cleanupIntervalMs: 86_400_000,
+            cleanupBatchSize: 250,
+            cleanupMaxBatches: 20,
+            exportMaxRows: 10_000
+        }
     });
     assert.throws(
         () => createAppConfig({ ADMIN_ACCOUNT_UUIDS: 'not-a-uuid' }),

@@ -334,6 +334,48 @@ function createPostgresAdminRepository(database) {
         };
     }
 
+
+    async function listAuditForExport({ limit = 1_000, action, search } = {}) {
+        const exportLimit = normalizeLimit(limit, 1_000, 100_001);
+        const cleanAction = normalizeSearch(action, 80);
+        const cleanSearch = normalizeSearch(search);
+        const conditions = [];
+        const params = [];
+        if (cleanAction) {
+            params.push(`${cleanAction}%`);
+            conditions.push(`audit.action ILIKE $${params.length}`);
+        }
+        if (cleanSearch) {
+            params.push(`%${cleanSearch}%`);
+            const index = params.length;
+            conditions.push(`(
+                audit.action ILIKE $${index}
+                OR COALESCE(audit.target_id, '') ILIKE $${index}
+                OR users.username ILIKE $${index}
+                OR audit.details_json::text ILIKE $${index}
+            )`);
+        }
+        const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+        params.push(exportLimit);
+        const result = await database.query(`
+            SELECT
+                audit.id,
+                audit.action,
+                audit.target_type AS "targetType",
+                audit.target_id AS "targetId",
+                audit.details_json AS details,
+                audit.request_id AS "requestId",
+                audit.created_at AS "createdAt",
+                users.username AS "adminUsername"
+            FROM admin_audit_log audit
+            JOIN users ON users.id = audit.admin_user_id
+            ${where}
+            ORDER BY audit.created_at DESC, audit.id DESC
+            LIMIT $${params.length}
+        `, params);
+        return (result.rows || []).map(row => ({ ...row, details: parseAuditDetails(row.details) }));
+    }
+
     return {
         getOverview,
         listUsers,
@@ -343,7 +385,8 @@ function createPostgresAdminRepository(database) {
         resetDailyAttempts,
         resetWeeklyAttempt,
         recordAudit,
-        listAudit
+        listAudit,
+        listAuditForExport
     };
 }
 
@@ -598,6 +641,47 @@ function createSqliteAdminRepository(database) {
         };
     }
 
+
+    async function listAuditForExport({ limit = 1_000, action, search } = {}) {
+        const exportLimit = normalizeLimit(limit, 1_000, 100_001);
+        const cleanAction = normalizeSearch(action, 80);
+        const cleanSearch = normalizeSearch(search);
+        const conditions = [];
+        const params = [];
+        if (cleanAction) {
+            conditions.push('audit.action LIKE ? COLLATE NOCASE');
+            params.push(`${cleanAction}%`);
+        }
+        if (cleanSearch) {
+            conditions.push(`(
+                audit.action LIKE ? COLLATE NOCASE
+                OR COALESCE(audit.target_id, '') LIKE ? COLLATE NOCASE
+                OR users.username LIKE ? COLLATE NOCASE
+                OR audit.details_json LIKE ? COLLATE NOCASE
+            )`);
+            const pattern = `%${cleanSearch}%`;
+            params.push(pattern, pattern, pattern, pattern);
+        }
+        const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+        const rows = database.prepare(`
+            SELECT
+                audit.id,
+                audit.action,
+                audit.target_type AS targetType,
+                audit.target_id AS targetId,
+                audit.details_json AS details,
+                audit.request_id AS requestId,
+                audit.created_at AS createdAt,
+                users.username AS adminUsername
+            FROM admin_audit_log audit
+            JOIN users ON users.id = audit.admin_user_id
+            ${where}
+            ORDER BY datetime(audit.created_at) DESC, audit.id DESC
+            LIMIT ?
+        `).all(...params, exportLimit);
+        return rows.map(row => ({ ...row, details: parseAuditDetails(row.details) }));
+    }
+
     return {
         getOverview,
         listUsers,
@@ -607,7 +691,8 @@ function createSqliteAdminRepository(database) {
         resetDailyAttempts,
         resetWeeklyAttempt,
         recordAudit,
-        listAudit
+        listAudit,
+        listAuditForExport
     };
 }
 

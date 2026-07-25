@@ -63,3 +63,17 @@ test('Postgres admin audit filters and moderation updates remain parameterized',
     const moderationCall = database.calls.at(-1);
     assert.deepEqual(moderationCall.params, [7, null, hostile]);
 });
+
+test('Postgres admin audit export keeps filters parameterized and applies a bounded limit', async () => {
+    const database = createFakeDatabase();
+    const repository = createPostgresAdminRepository(database);
+    const hostile = "=cmd|' /C calc'!A0";
+
+    await repository.listAuditForExport({ action: 'admin.', search: hostile, limit: 5000 });
+
+    const call = database.calls.find(entry => entry.sql.includes('FROM admin_audit_log audit') && entry.sql.includes('LIMIT $'));
+    assert.ok(call);
+    assert.equal(call.sql.includes(hostile), false);
+    assert.equal(call.params.includes(`%${hostile}%`), true);
+    assert.equal(call.params.at(-1), 5000);
+});

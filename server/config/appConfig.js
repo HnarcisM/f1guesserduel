@@ -10,6 +10,11 @@ const DEFAULT_SESSION_CLEANUP_INTERVAL_MS = 15 * 60 * 1000;
 const DEFAULT_GAME_HISTORY_RETENTION_DAYS = 365;
 const DEFAULT_GAME_HISTORY_CLEANUP_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000;
 const DEFAULT_GAME_HISTORY_CLEANUP_BATCH_SIZE = 5_000;
+const DEFAULT_ADMIN_AUDIT_RETENTION_DAYS = 180;
+const DEFAULT_ADMIN_AUDIT_CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_ADMIN_AUDIT_CLEANUP_BATCH_SIZE = 250;
+const DEFAULT_ADMIN_AUDIT_CLEANUP_MAX_BATCHES = 20;
+const DEFAULT_ADMIN_AUDIT_EXPORT_MAX_ROWS = 10_000;
 const DEFAULT_ROOM_SAVE_DEBOUNCE_MS = 250;
 const DEFAULT_ROOM_CLEANUP_INTERVAL_MS = 60 * 1000;
 const DEFAULT_ROOM_INACTIVE_TTL_MS = 30 * 60 * 1000;
@@ -590,7 +595,39 @@ function createAppConfig(env = process.env, options = {}) {
         admin: {
             enabled: adminAccountUuids.length > 0 || adminUserIds.length > 0,
             accountUuids: adminAccountUuids,
-            userIds: adminUserIds
+            userIds: adminUserIds,
+            audit: {
+                retentionDays: parseIntegerEnv(
+                    env,
+                    'ADMIN_AUDIT_RETENTION_DAYS',
+                    DEFAULT_ADMIN_AUDIT_RETENTION_DAYS,
+                    { min: 1, max: 3650 }
+                ),
+                cleanupIntervalMs: parseIntegerEnv(
+                    env,
+                    'ADMIN_AUDIT_CLEANUP_INTERVAL_MS',
+                    DEFAULT_ADMIN_AUDIT_CLEANUP_INTERVAL_MS,
+                    { min: 0, max: 30 * 24 * 60 * 60 * 1000 }
+                ),
+                cleanupBatchSize: parseIntegerEnv(
+                    env,
+                    'ADMIN_AUDIT_CLEANUP_BATCH_SIZE',
+                    DEFAULT_ADMIN_AUDIT_CLEANUP_BATCH_SIZE,
+                    { min: 1, max: 10_000 }
+                ),
+                cleanupMaxBatches: parseIntegerEnv(
+                    env,
+                    'ADMIN_AUDIT_CLEANUP_MAX_BATCHES',
+                    DEFAULT_ADMIN_AUDIT_CLEANUP_MAX_BATCHES,
+                    { min: 1, max: 1_000 }
+                ),
+                exportMaxRows: parseIntegerEnv(
+                    env,
+                    'ADMIN_AUDIT_EXPORT_MAX_ROWS',
+                    DEFAULT_ADMIN_AUDIT_EXPORT_MAX_ROWS,
+                    { min: 1, max: 100_000 }
+                )
+            }
         },
         account: {
             gameHistory: {
@@ -663,6 +700,11 @@ module.exports = {
     DEFAULT_GAME_HISTORY_RETENTION_DAYS,
     DEFAULT_GAME_HISTORY_CLEANUP_INTERVAL_MS,
     DEFAULT_GAME_HISTORY_CLEANUP_BATCH_SIZE,
+    DEFAULT_ADMIN_AUDIT_RETENTION_DAYS,
+    DEFAULT_ADMIN_AUDIT_CLEANUP_INTERVAL_MS,
+    DEFAULT_ADMIN_AUDIT_CLEANUP_BATCH_SIZE,
+    DEFAULT_ADMIN_AUDIT_CLEANUP_MAX_BATCHES,
+    DEFAULT_ADMIN_AUDIT_EXPORT_MAX_ROWS,
     DEFAULT_ROOM_SAVE_DEBOUNCE_MS,
     DEFAULT_ROOM_CLEANUP_INTERVAL_MS,
     DEFAULT_ROOM_INACTIVE_TTL_MS,

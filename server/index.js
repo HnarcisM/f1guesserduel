@@ -21,6 +21,7 @@ const { createGameHistoryCleanupService } = require('./account/gameHistoryCleanu
 const { createAccountRoutes } = require('./account/accountRoutes');
 const { createAdminAccess } = require('./admin/adminAccess');
 const { createAdminService } = require('./admin/adminService');
+const { createAdminAuditCleanupService } = require('./admin/adminAuditCleanupService');
 const { createAdminRoutes } = require('./admin/adminRoutes');
 const { createAdminPageRoutes } = require('./admin/adminPageRoutes');
 const {
@@ -191,8 +192,18 @@ const adminService = createAdminService({
     roomStore,
     io,
     sessionService,
-    isAdminUser: adminAccess.isAdminUser
+    isAdminUser: adminAccess.isAdminUser,
+    auditPolicy: config.admin.audit
 });
+const adminAuditCleanupService = createAdminAuditCleanupService({
+    databaseOrRepository: db,
+    retentionDays: config.admin.audit.retentionDays,
+    cleanupIntervalMs: config.admin.audit.cleanupIntervalMs,
+    batchSize: config.admin.audit.cleanupBatchSize,
+    maxBatches: config.admin.audit.cleanupMaxBatches,
+    logger
+});
+adminAuditCleanupService.start({ runImmediately: true });
 const gameHistoryCleanupService = createGameHistoryCleanupService({
     databaseOrRepository: db,
     retentionDays: config.account.gameHistory.retentionDays,
@@ -334,6 +345,7 @@ async function shutdownRoomStore() {
 }
 
 function prepareApplicationShutdown() {
+    adminAuditCleanupService.stopScheduling();
     gameHistoryCleanupService.stopScheduling();
     stopInactiveRoomCleanup?.();
     const disconnectTarget = config.socket.redisAdapter.enabled && io.local ? io.local : io;
@@ -343,7 +355,10 @@ function prepareApplicationShutdown() {
 async function cleanupApplicationResources() {
     stopExpiredSessionCleanup?.();
     stopInactiveRoomCleanup?.();
-    await gameHistoryCleanupService.stop();
+    await Promise.all([
+        adminAuditCleanupService.stop(),
+        gameHistoryCleanupService.stop()
+    ]);
     await shutdownRoomStore();
     const connectionResults = await Promise.allSettled([
         redisSocketAdapter?.close?.(),
@@ -387,6 +402,11 @@ server.listen(config.port, () => {
         gameHistoryRetentionDays: config.account.gameHistory.retentionDays,
         gameHistoryCleanupIntervalMs: config.account.gameHistory.cleanupIntervalMs,
         gameHistoryCleanupBatchSize: config.account.gameHistory.cleanupBatchSize,
+        adminAuditRetentionDays: config.admin.audit.retentionDays,
+        adminAuditCleanupIntervalMs: config.admin.audit.cleanupIntervalMs,
+        adminAuditCleanupBatchSize: config.admin.audit.cleanupBatchSize,
+        adminAuditCleanupMaxBatches: config.admin.audit.cleanupMaxBatches,
+        adminAuditExportMaxRows: config.admin.audit.exportMaxRows,
         rateLimitProvider: redisClient ? 'redis' : 'memory'
     });
 });
@@ -400,7 +420,8 @@ return {
     redisSocketAdapter,
     roomStore,
     roomCleanupService,
-    gameHistoryCleanupService
+    gameHistoryCleanupService,
+    adminAuditCleanupService
 };
 }
 

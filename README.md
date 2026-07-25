@@ -313,6 +313,11 @@ Aplicația poate fi configurată prin variabile de mediu. Pentru rulare locală 
 | `GAME_HISTORY_CLEANUP_BATCH_SIZE` | `5000` | Numărul maxim de rezultate șterse într-o singură interogare de cleanup. |
 | `ADMIN_ACCOUNT_UUIDS` | none | Lista UUID-urilor permanente autorizate să acceseze `/admin`, separate prin virgulă. Are prioritate față de ID-urile numerice. |
 | `ADMIN_USER_IDS` | none | Fallback temporar pentru migrarea instalărilor vechi. Este ignorat când `ADMIN_ACCOUNT_UUIDS` este configurat. |
+| `ADMIN_AUDIT_RETENTION_DAYS` | `180` | Păstrează auditul administrativ activ pentru acest număr de zile. |
+| `ADMIN_AUDIT_CLEANUP_INTERVAL_MS` | `86400000` | Rulează cleanup-ul la pornire și apoi zilnic; `0` dezactivează jobul automat. |
+| `ADMIN_AUDIT_CLEANUP_BATCH_SIZE` | `250` | Numărul maxim de intrări șterse într-o singură interogare. |
+| `ADMIN_AUDIT_CLEANUP_MAX_BATCHES` | `20` | Numărul maxim de batch-uri procesate într-o singură rulare. |
+| `ADMIN_AUDIT_EXPORT_MAX_ROWS` | `10000` | Limita de intrări incluse într-un export JSON sau CSV. |
 | `SESSION_SECRET` | dev fallback local | Secret pentru sesiuni; obligatoriu în production. |
 | `SOCKET_AUTH_SECRET` | `SESSION_SECRET` sau dev fallback | Secret pentru token-ul scurt folosit de socket auth refresh. |
 | `SESSION_COOKIE_NAME` | `f1_session` | Numele cookie-ului de sesiune. |
@@ -397,6 +402,8 @@ Admin V2 include:
 - reactivarea conturilor;
 - resetarea individuală a participării Daily sau Weekly curente, fără ștergerea istoricului ori a XP-ului;
 - filtrarea auditului după categorie și text.
+- exportul auditului filtrat în JSON sau CSV, cu protecție împotriva formulelor CSV;
+- retenție implicită de 180 de zile și cleanup automat în batch-uri mici, coordonat cu advisory lock în PostgreSQL.
 
 Suspendarea este verificată atât la login, cât și la rezolvarea sesiunilor HTTP și Socket.IO. Conturile autorizate prin UUID nu pot fi suspendate din panou.
 

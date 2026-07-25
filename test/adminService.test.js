@@ -168,3 +168,77 @@ test('admin reset actions preserve history and audit only the current challenge 
     assert.equal(audits[0].details.historyPreserved, true);
     assert.equal(audits[1].details.historyPreserved, true);
 });
+
+test('admin audit listing includes the active retention policy', async () => {
+    const service = createAdminService({
+        database: {},
+        roomStore: { values() { return []; } },
+        io: {},
+        sessionService: {},
+        repository: {
+            async listAudit() { return { entries: [], total: 0, limit: 50, offset: 0 }; }
+        },
+        auditPolicy: { retentionDays: 180, cleanupBatchSize: 250, exportMaxRows: 1000 }
+    });
+
+    const result = await service.listAudit({});
+    assert.equal(result.retentionDays, 180);
+    assert.equal(result.cleanupBatchSize, 250);
+});
+
+test('admin audit export supports JSON and CSV with row limits and CSV formula protection', async () => {
+    const entries = [
+        {
+            id: 1,
+            createdAt: '2026-07-26T12:00:00.000Z',
+            adminUsername: '=Admin',
+            action: 'user.suspended',
+            targetType: 'user',
+            targetId: '2',
+            requestId: 'req-1',
+            details: { reason: '+formula' }
+        },
+        {
+            id: 2,
+            createdAt: '2026-07-26T12:01:00.000Z',
+            adminUsername: 'Owner',
+            action: 'room.closed',
+            targetType: 'room',
+            targetId: 'ABC123',
+            requestId: 'req-2',
+            details: {}
+        }
+    ];
+    const calls = [];
+    const service = createAdminService({
+        database: {},
+        roomStore: { values() { return []; } },
+        io: {},
+        sessionService: {},
+        repository: {
+            async listAuditForExport(options) { calls.push(options); return entries; }
+        },
+        now: () => new Date('2026-07-26T12:30:00.000Z'),
+        auditPolicy: { retentionDays: 180, cleanupBatchSize: 250, exportMaxRows: 1 }
+    });
+
+    const json = await service.exportAudit({ format: 'json', action: 'user.', search: 'Admin' });
+    assert.equal(json.ok, true);
+    assert.equal(json.truncated, true);
+    assert.equal(json.count, 1);
+    assert.equal(calls[0].limit, 2);
+    const jsonPayload = JSON.parse(json.body);
+    assert.equal(jsonPayload.retentionDays, 180);
+    assert.equal(jsonPayload.entries.length, 1);
+    assert.deepEqual(jsonPayload.filters, { action: 'user.', search: 'Admin' });
+
+    const csv = await service.exportAudit({ format: 'csv' });
+    assert.equal(csv.ok, true);
+    assert.match(csv.contentType, /^text\/csv/);
+    assert.ok(csv.body.startsWith('\\uFEFF') || csv.body.charCodeAt(0) === 0xFEFF);
+    assert.match(csv.body, /"'=Admin"/);
+    assert.doesNotMatch(csv.body, /,"=Admin"/);
+    assert.match(csv.filename, /^admin-audit-20260726T123000Z\.csv$/);
+
+    assert.equal((await service.exportAudit({ format: 'xml' })).status, 400);
+});

@@ -140,3 +140,37 @@ test('admin user details and filtered audit routes return service payloads', asy
         assert.equal(payload.options.search, 'Pilot');
     });
 });
+
+test('admin audit export returns downloadable JSON and CSV content', async () => {
+    const calls = [];
+    const adminService = {
+        async exportAudit(options) {
+            calls.push(options);
+            const format = options.format || 'json';
+            return {
+                ok: true,
+                filename: `admin-audit.${format}`,
+                contentType: format === 'csv' ? 'text/csv; charset=utf-8' : 'application/json; charset=utf-8',
+                body: format === 'csv' ? '"id"\n"1"\n' : '{"entries":[]}'
+            };
+        }
+    };
+    await withServer({
+        user: { id: 1, username: 'Admin', email: 'admin@example.com' },
+        adminAccess: { requireAdminApi: passThrough },
+        adminService,
+        authService: {}
+    }, async baseUrl => {
+        const csv = await fetch(`${baseUrl}/audit/export?format=csv&action=user.&search=Pilot`);
+        assert.equal(csv.status, 200);
+        assert.match(csv.headers.get('content-type'), /^text\/csv/);
+        assert.equal(csv.headers.get('content-disposition'), 'attachment; filename="admin-audit.csv"');
+        assert.equal(csv.headers.get('x-content-type-options'), 'nosniff');
+        assert.match(await csv.text(), /"id"/);
+        assert.deepEqual(calls[0], { format: 'csv', action: 'user.', search: 'Pilot' });
+
+        const json = await fetch(`${baseUrl}/audit/export?format=json`);
+        assert.match(json.headers.get('content-type'), /^application\/json/);
+        assert.deepEqual(await json.json(), { entries: [] });
+    });
+});

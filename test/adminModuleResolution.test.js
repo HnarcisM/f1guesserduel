@@ -5,6 +5,8 @@ const assert = require('node:assert/strict');
 
 const ADMIN_MODULE_PATHS = Object.freeze([
     '../server/admin/adminAccess',
+    '../server/admin/adminAuditCleanupService',
+    '../server/admin/adminAuditRetentionRepository',
     '../server/admin/adminPageRoutes',
     '../server/admin/adminRepository',
     '../server/admin/adminRoutes',

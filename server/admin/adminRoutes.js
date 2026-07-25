@@ -203,6 +203,23 @@ function createAdminRoutes({
         }
     });
 
+    router.get('/audit/export', readLimiter, async (req, res, next) => {
+        try {
+            const result = await adminService.exportAudit({
+                format: req.query?.format,
+                action: req.query?.action,
+                search: req.query?.search
+            });
+            if (!result.ok) return res.status(result.status || 400).json({ message: result.message });
+            res.set('Content-Type', result.contentType);
+            res.set('Content-Disposition', `attachment; filename="${result.filename}"`);
+            res.set('X-Content-Type-Options', 'nosniff');
+            return res.send(result.body);
+        } catch (error) {
+            return next(error);
+        }
+    });
+
     router.get('/audit', readLimiter, async (req, res, next) => {
         try {
             return res.json(await adminService.listAudit({

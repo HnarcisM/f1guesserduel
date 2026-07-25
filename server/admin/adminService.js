@@ -5,6 +5,11 @@ const { buildPublicRoomListPayload } = require('../socket/roomListPayloads');
 const { getDailyDateKey } = require('../game/dailyChallenge');
 const { getIsoWeekInfo } = require('../game/weeklyChallenge');
 const { isValidRoomId } = require('../config/constants');
+const {
+    DEFAULT_ADMIN_AUDIT_RETENTION_DAYS,
+    DEFAULT_ADMIN_AUDIT_CLEANUP_BATCH_SIZE,
+    DEFAULT_ADMIN_AUDIT_EXPORT_MAX_ROWS
+} = require('../config/appConfig');
 
 const SUSPENSION_DURATIONS_MS = Object.freeze({
     '1h': 60 * 60 * 1000,
@@ -23,6 +28,38 @@ function normalizeReason(value) {
     return reason.length >= 5 && reason.length <= 250 ? reason : null;
 }
 
+
+function normalizeAuditExportFormat(value) {
+    const format = String(value || 'json').trim().toLowerCase();
+    return format === 'json' || format === 'csv' ? format : null;
+}
+
+function escapeCsvCell(value) {
+    let text = value === null || value === undefined ? '' : String(value);
+    if (/^[=+\-@]/.test(text)) text = `'${text}`;
+    return `"${text.replace(/"/g, '""')}"`;
+}
+
+function serializeAuditCsv(entries) {
+    const headers = ['id', 'createdAt', 'adminUsername', 'action', 'targetType', 'targetId', 'requestId', 'details'];
+    const rows = entries.map(entry => [
+        entry.id,
+        entry.createdAt,
+        entry.adminUsername,
+        entry.action,
+        entry.targetType,
+        entry.targetId,
+        entry.requestId,
+        JSON.stringify(entry.details || {})
+    ].map(escapeCsvCell).join(','));
+    return `\uFEFF${headers.map(escapeCsvCell).join(',')}\n${rows.join('\n')}${rows.length ? '\n' : ''}`;
+}
+
+function buildAuditExportFilename(format, now) {
+    const timestamp = new Date(now).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+    return `admin-audit-${timestamp}.${format}`;
+}
+
 function createAdminService({
     database,
     roomStore,
@@ -30,9 +67,21 @@ function createAdminService({
     sessionService,
     repository = null,
     now = () => new Date(),
-    isAdminUser = () => false
+    isAdminUser = () => false,
+    auditPolicy = {}
 }) {
     const adminRepository = repository || createAdminRepository(database);
+    const effectiveAuditPolicy = Object.freeze({
+        retentionDays: Number.isSafeInteger(Number(auditPolicy.retentionDays)) && Number(auditPolicy.retentionDays) > 0
+            ? Number(auditPolicy.retentionDays)
+            : DEFAULT_ADMIN_AUDIT_RETENTION_DAYS,
+        cleanupBatchSize: Number.isSafeInteger(Number(auditPolicy.cleanupBatchSize)) && Number(auditPolicy.cleanupBatchSize) > 0
+            ? Number(auditPolicy.cleanupBatchSize)
+            : DEFAULT_ADMIN_AUDIT_CLEANUP_BATCH_SIZE,
+        exportMaxRows: Number.isSafeInteger(Number(auditPolicy.exportMaxRows)) && Number(auditPolicy.exportMaxRows) > 0
+            ? Number(auditPolicy.exportMaxRows)
+            : DEFAULT_ADMIN_AUDIT_EXPORT_MAX_ROWS
+    });
 
     function getChallengeKeys() {
         const current = new Date(now());
@@ -78,7 +127,60 @@ function createAdminService({
     }
 
     async function listAudit(options) {
-        return adminRepository.listAudit(options || {});
+        const result = await adminRepository.listAudit(options || {});
+        return {
+            ...result,
+            retentionDays: effectiveAuditPolicy.retentionDays,
+            cleanupBatchSize: effectiveAuditPolicy.cleanupBatchSize
+        };
+    }
+
+    async function exportAudit(options = {}) {
+        const format = normalizeAuditExportFormat(options.format);
+        if (!format) return { ok: false, status: 400, message: 'Formatul de export trebuie să fie json sau csv.' };
+
+        const requestedLimit = effectiveAuditPolicy.exportMaxRows + 1;
+        const rows = await adminRepository.listAuditForExport({
+            action: options.action,
+            search: options.search,
+            limit: requestedLimit
+        });
+        const truncated = rows.length > effectiveAuditPolicy.exportMaxRows;
+        const entries = rows.slice(0, effectiveAuditPolicy.exportMaxRows);
+        const exportedAt = new Date(now()).toISOString();
+        const filename = buildAuditExportFilename(format, exportedAt);
+
+        if (format === 'csv') {
+            return {
+                ok: true,
+                format,
+                filename,
+                contentType: 'text/csv; charset=utf-8',
+                body: serializeAuditCsv(entries),
+                count: entries.length,
+                truncated
+            };
+        }
+
+        return {
+            ok: true,
+            format,
+            filename,
+            contentType: 'application/json; charset=utf-8',
+            body: JSON.stringify({
+                exportedAt,
+                retentionDays: effectiveAuditPolicy.retentionDays,
+                filters: {
+                    action: String(options.action || '').trim().slice(0, 80) || null,
+                    search: String(options.search || '').trim().slice(0, 100) || null
+                },
+                count: entries.length,
+                truncated,
+                entries
+            }, null, 2),
+            count: entries.length,
+            truncated
+        };
     }
 
     async function recordAuditEvent(entry) {
@@ -229,6 +331,7 @@ function createAdminService({
         getUserDetails,
         listRooms,
         listAudit,
+        exportAudit,
         recordAuditEvent,
         revokeUserSessions,
         suspendUser,
@@ -242,5 +345,9 @@ function createAdminService({
 module.exports = {
     createAdminService,
     SUSPENSION_DURATIONS_MS,
-    normalizeReason
+    normalizeReason,
+    normalizeAuditExportFormat,
+    escapeCsvCell,
+    serializeAuditCsv,
+    buildAuditExportFilename
 };
