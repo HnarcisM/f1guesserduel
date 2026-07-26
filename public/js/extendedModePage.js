@@ -2,6 +2,7 @@ import { authApi } from './apiClient.js';
 import { VARIANT_COPY } from './extendedModesConfig.js';
 import { createExtendedModesController } from './extendedModesController.js';
 import { installPageNavigation, updateAccountBadge } from './extendedModeHeaderController.js';
+import { ensureClassicExtendedModeShell } from './extendedModeShell.js';
 
 const MODE_PATHS = Object.freeze({
     'speed-run': '/modes/speed-run/',
@@ -64,21 +65,28 @@ async function loadAuthenticatedUser(socket, documentObject) {
     return authPayload.user || null;
 }
 
-async function setupEmbeddedAuth({ socket, documentObject }) {
+async function setupEmbeddedAuth({ socket, documentObject, afterAuthChanged = null }) {
     if (!documentObject.getElementById('authPanel')) return null;
 
     const { createAuthView } = await import('./authView.js');
+    let setupComplete = false;
     let socketAuthSyncPromise = Promise.resolve(false);
     const authView = createAuthView({
         onAuthChanged(user, socketAuthToken) {
             updateAccountBadge(documentObject, user || null);
             socketAuthSyncPromise = waitForSocketConnection(socket)
                 .then(() => refreshSocketAuth(socket, socketAuthToken || null));
+            if (setupComplete && typeof afterAuthChanged === 'function') {
+                socketAuthSyncPromise = socketAuthSyncPromise
+                    .then(() => afterAuthChanged(user || null))
+                    .catch(() => false);
+            }
         }
     });
 
     await authView.setup();
     await socketAuthSyncPromise;
+    setupComplete = true;
     return authView;
 }
 
@@ -127,6 +135,7 @@ async function startExtendedModePage({
     }
 
     documentObject.title = `${copy.title} · F1 Guesser Duel`;
+    ensureClassicExtendedModeShell({ documentObject, modeKey });
     await windowObject.F1RuntimeSettings?.load?.({ force: true });
     if (windowObject.F1RuntimeSettings?.isMaintenanceEnabled?.()) {
         renderFatalError(documentObject, windowObject.F1RuntimeSettings.getSnapshot().maintenance.message || 'Aplicația este temporar în mentenanță.');
@@ -155,12 +164,18 @@ async function startExtendedModePage({
 
     preparePageSurface(controller, documentObject);
     installPageNavigation({ windowObject, documentObject, socket });
-    const embeddedAuthView = await setupEmbeddedAuth({ socket, documentObject });
-    if (!embeddedAuthView) await loadAuthenticatedUser(socket, documentObject);
-    await controller.open(modeKey, {
-        trigger: documentObject.getElementById('siteHomeControl')
-            || documentObject.getElementById('modePageHome')
+    const modeTrigger = documentObject.getElementById('siteHomeControl')
+        || documentObject.getElementById('modePageHome');
+    const embeddedAuthView = await setupEmbeddedAuth({
+        socket,
+        documentObject,
+        afterAuthChanged() {
+            if (modeKey !== 'weekly') return false;
+            return controller.open(modeKey, { trigger: modeTrigger });
+        }
     });
+    if (!embeddedAuthView) await loadAuthenticatedUser(socket, documentObject);
+    await controller.open(modeKey, { trigger: modeTrigger });
     return controller;
 }
 

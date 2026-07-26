@@ -30,37 +30,59 @@ test('every extended mode has a dedicated standalone HTML page', () => {
     }
 });
 
-test('speed run reuses the Classic header, profile and feedback settings controls', () => {
-    const html = read('public/modes/speed-run/index.html');
+test('every extended mode uses the Classic header, profile and feedback settings shell', () => {
+    const shell = read('public/js/extendedModeShell.js');
+    const shellMarkup = read('public/js/extendedModeShellMarkup.js');
 
-    assert.match(html, /class="site-header mode-page-site-header"/);
-    assert.match(html, /id="menu-hamburger"/);
-    assert.match(html, /id="dropdown-menu"/);
-    assert.match(html, /id="siteHomeControl"/);
-    assert.match(html, /id="authOpenBtn" class="auth-open-btn"/);
-    assert.match(html, /id="feedbackSettingsBtn"/);
-    assert.match(html, /id="feedbackSettingsPanel"/);
-    assert.match(html, /\/js\/themeBootstrap\.js/);
-    assert.match(html, /\/css\/01-theme-tokens\.css/);
-    assert.match(html, /\/css\/02-header-menu\.css/);
-    assert.match(html, /\/css\/08-auth\.css/);
-    assert.match(html, /\/css\/11-mobile-layout-fix\.css/);
-    assert.match(html, /\/css\/13-progress-values\.css/);
-    assert.match(html, /\/css\/14-auth-panel-viewport-fix\.css/);
-    assert.match(html, /\/css\/19-account-game-history\.css/);
-    assert.match(html, /\/css\/21-feedback-settings\.css/);
-    assert.match(html, /id="authBackdrop"/);
-    assert.match(html, /id="authPanel"[^>]*role="dialog"/);
-    assert.match(html, /id="authAccountView"/);
-    assert.match(html, /id="authGameHistory"/);
-    assert.match(html, /\/js\/feedbackController\.js/);
-    assert.match(html, /\/js\/accountGameHistoryController\.js/);
-    assert.match(html, /\/js\/pwaController\.js/);
-    assert.ok(
-        html.indexOf('/css/25-mode-pages.css') < html.indexOf('/css/01-theme-tokens.css'),
-        'Classic theme tokens must load after the standalone fallback tokens'
-    );
-    assert.doesNotMatch(html, /shareRoomBtn|duelStatus|roomBtnText/);
+    for (const mode of MODES) {
+        const html = read(`public${mode.path}index.html`);
+        assert.match(html, /class="extended-mode-page mode-page-classic-shell"/);
+        assert.match(html, /\/js\/themeBootstrap\.js/);
+        assert.match(html, /\/css\/01-theme-tokens\.css/);
+        assert.match(html, /\/css\/02-header-menu\.css/);
+        assert.match(html, /\/css\/08-auth\.css/);
+        assert.match(html, /\/css\/11-mobile-layout-fix\.css/);
+        assert.match(html, /\/css\/13-progress-values\.css/);
+        assert.match(html, /\/css\/14-auth-panel-viewport-fix\.css/);
+        assert.match(html, /\/css\/19-account-game-history\.css/);
+        assert.match(html, /\/css\/21-feedback-settings\.css/);
+        assert.match(html, /\/js\/feedbackController\.js/);
+        assert.match(html, /\/js\/accountGameHistoryController\.js/);
+        assert.match(html, /\/js\/pwaController\.js/);
+        assert.ok(
+            html.indexOf('/css/25-mode-pages.css') < html.indexOf('/css/01-theme-tokens.css'),
+            `${mode.key}: Classic theme tokens must load after standalone fallback tokens`
+        );
+        assert.doesNotMatch(html, /shareRoomBtn|duelStatus|roomBtnText/);
+
+        if (mode.key === 'speed-run') {
+            assert.match(html, /class="site-header mode-page-site-header"/);
+            assert.match(html, /id="authPanel"[^>]*role="dialog"/);
+            assert.match(html, /id="feedbackSettingsPanel"/);
+        } else {
+            assert.match(html, /\/js\/extendedModeShell\.js/);
+            assert.doesNotMatch(html, /class="mode-page-nav"|id="modePageAccount"/);
+        }
+    }
+
+    for (const selector of [
+        'site-header mode-page-site-header',
+        'menu-hamburger',
+        'dropdown-menu',
+        'siteHomeControl',
+        'authOpenBtn',
+        'feedbackSettingsBtn',
+        'authBackdrop',
+        'authPanel',
+        'authAccountView',
+        'authGameHistory',
+        'feedbackSettingsPanel'
+    ]) {
+        assert.match(shellMarkup, new RegExp(selector));
+    }
+    assert.match(shell, /markCurrentMode/);
+    assert.match(shell, /is-current-mode/);
+    assert.match(shell, /aria-current/);
 });
 
 test('every standalone page has an independent entry module', () => {
@@ -86,11 +108,15 @@ test('standalone page core validates routes and synchronizes account auth before
     assert.match(source, /setupEmbeddedAuth/);
     assert.match(source, /refreshAuthUser/);
     assert.match(source, /await setupEmbeddedAuth/);
+    assert.match(source, /afterAuthChanged/);
+    assert.match(source, /modeKey !== 'weekly'/);
     assert.match(source, /await loadAuthenticatedUser/);
     assert.match(source, /await controller\.open/);
     assert.match(source, /replaceChildren\?\.\(panel\)/);
     assert.match(source, /setAttribute\('role', 'region'\)/);
     assert.match(source, /extendedModeHeaderController/);
+    assert.match(source, /extendedModeShell/);
+    assert.match(source, /ensureClassicExtendedModeShell/);
     assert.match(source, /installPageNavigation/);
     assert.match(header, /setupThemeMenu\(menu\)/);
     assert.match(header, /setNavigationMenuOpen/);
@@ -104,6 +130,8 @@ test('standalone page core validates routes and synchronizes account auth before
 test('standalone header controller is included in the offline precache manifest', () => {
     const versioning = read('scripts/version-frontend-assets.js');
     assert.match(versioning, /\/js\/extendedModeHeaderController\.js/);
+    assert.match(versioning, /\/js\/extendedModeShellMarkup\.js/);
+    assert.match(versioning, /\/js\/extendedModeShell\.js/);
 });
 
 test('standalone mode styling converts the modal shell into a full page surface', () => {

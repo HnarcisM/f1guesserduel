@@ -105,6 +105,8 @@ test('extended mode modules stay within maintainable size budgets', () => {
         'public/js/extendedModesConfig.js': 3_000,
         'public/js/extendedModePage.js': 9_000,
         'public/js/extendedModeHeaderController.js': 6_000,
+        'public/js/extendedModeShell.js': 6_000,
+        'public/js/extendedModeShellMarkup.js': 26_000,
         'public/css/25-mode-pages.css': 8_000,
         'server/game/extendedModesService.js': 40_000,
         'server/game/extendedModesCatalogs.js': 12_000,

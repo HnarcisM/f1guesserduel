@@ -7,28 +7,30 @@
     <meta name="theme-color" content="#0f1116">
     <title>Streak · F1 Guesser Duel</title>
     <link rel="icon" href="/logos/F1.svg" type="image/svg+xml">
+    <script src="/js/themeBootstrap.js"></script>
     <link rel="stylesheet" href="/css/24-extended-modes.css">
     <link rel="stylesheet" href="/css/25-mode-pages.css">
+    <link rel="stylesheet" href="/css/01-theme-tokens.css">
+    <link rel="stylesheet" href="/css/02-header-menu.css">
+    <link rel="stylesheet" href="/css/08-auth.css">
+    <link rel="stylesheet" href="/css/11-mobile-layout-fix.css">
+    <link rel="stylesheet" href="/css/13-progress-values.css">
+    <link rel="stylesheet" href="/css/14-auth-panel-viewport-fix.css">
+    <link rel="stylesheet" href="/css/19-account-game-history.css">
+    <link rel="stylesheet" href="/css/21-feedback-settings.css">
     <link rel="stylesheet" href="/css/26-runtime-status.css">
 </head>
-<body class="extended-mode-page" data-extended-mode="streak">
-    <header class="mode-page-nav">
-        <a class="mode-page-brand" href="/" aria-label="F1 Guesser Duel · Game Hub">
-            <span aria-hidden="true">🏁</span>
-            <span>F1 Guesser Duel</span>
-        </a>
-        <nav class="mode-page-nav-actions" aria-label="Navigare mod">
-            <span id="modePageAccount" class="mode-page-account">👤 Se verifică...</span>
-            <a id="modePageHome" class="mode-page-home" href="/">Game Hub</a>
-        </nav>
-    </header>
+<body class="extended-mode-page mode-page-classic-shell" data-extended-mode="streak">
     <main id="modePageContent" class="mode-page-content">
         <p id="modePageLoading" class="mode-page-loading" role="status">Se încarcă Streak...</p>
     </main>
-    <button id="authOpenBtn" type="button" hidden aria-hidden="true" tabindex="-1"></button>
     <script src="/js/runtimeExperienceController.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script src="/js/socketBridgeBootstrap.js"></script>
+    <script type="module" src="/js/extendedModeShell.js"></script>
+    <script type="module" src="/js/feedbackController.js"></script>
+    <script type="module" src="/js/accountGameHistoryController.js"></script>
+    <script type="module" src="/js/pwaController.js"></script>
     <script type="module" src="/js/modes/streakPage.js"></script>
 </body>
 </html>

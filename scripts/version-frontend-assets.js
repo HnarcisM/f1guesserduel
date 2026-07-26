@@ -32,6 +32,8 @@ const DEFAULT_PRECACHE_STATIC_URLS = Object.freeze([
     '/js/extendedModesController.js',
     '/js/extendedModePage.js',
     '/js/extendedModeHeaderController.js',
+    '/js/extendedModeShellMarkup.js',
+    '/js/extendedModeShell.js',
     '/js/navigationMenuController.js',
     '/js/progressStyle.js',
     '/js/runtimeExperienceController.js',

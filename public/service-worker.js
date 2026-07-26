@@ -2,7 +2,7 @@
 
 const CACHE_PREFIX = 'f1-guesser-static-';
 /* GENERATED_PRECACHE_START */
-const STATIC_CACHE_NAME = 'f1-guesser-static-5a7fb896fb35bee88ee2';
+const STATIC_CACHE_NAME = 'f1-guesser-static-de415da25bc268370ac0';
 const PRECACHE_URLS = Object.freeze([
     "/css/01-theme-tokens.css",
     "/css/02-header-menu.css",
@@ -44,6 +44,8 @@ const PRECACHE_URLS = Object.freeze([
     "/js/duelSeriesController.js?v=14bfad7705c45b6d",
     "/js/extendedModeHeaderController.js",
     "/js/extendedModePage.js",
+    "/js/extendedModeShell.js",
+    "/js/extendedModeShellMarkup.js",
     "/js/extendedModesConfig.js",
     "/js/extendedModesController.js",
     "/js/feedbackController.js?v=5cd6b13e762a05bd",
