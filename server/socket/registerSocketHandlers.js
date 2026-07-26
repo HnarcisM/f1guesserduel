@@ -10,7 +10,6 @@ const { registerDuelLobbySocketHandlers } = require('./duelLobbySocketHandlers')
 const { registerDuelMatchSocketHandlers } = require('./duelMatchSocketHandlers');
 const { registerDuelLifecycleSocketHandlers } = require('./duelLifecycleSocketHandlers');
 const { registerDuelRoundSocketHandlers } = require('./duelRoundSocketHandlers');
-const { buildDuelAccountResults } = require('./duelAccountResultBuilder');
 const { createRuntimeGuardedEventRegistrar } = require('./runtimeGuardedEventRegistrar');
 
 function registerSocketHandlers(io, dependencies) {
@@ -140,6 +139,5 @@ function registerSocketHandlers(io, dependencies) {
 }
 
 module.exports = {
-    buildDuelAccountResults,
     registerSocketHandlers
 };

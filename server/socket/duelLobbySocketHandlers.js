@@ -1,17 +1,8 @@
 const { MAX_PLAYERS_PER_ROOM, isValidRoomId } = require('../config/constants');
 const {
-    createRoom,
-    addPlayerToRoom,
-    selectSpectatorAsPlayer,
-    updateDuelLobbySettings,
-    resetDuelReadyState,
-    setDuelPlayerReady,
-    getPlayer,
-    isHost,
-    isSpectator,
-    getRoomMemberCount,
-    buildLiveBoardState,
-    buildPublicDuelMatch
+    createRoom, addPlayerToRoom, selectSpectatorAsPlayer, updateDuelLobbySettings,
+    resetDuelReadyState, setDuelPlayerReady, getPlayer, isHost, isSpectator,
+    getRoomMemberCount, buildLiveBoardState, buildPublicDuelMatch
 } = require('../rooms/roomService');
 const { normalizeRoundOptions } = require('./socketPayloadValidators');
 const { normalizeJoinRoomPayload, buildPlayerProgressPayload } = require('./socketRoomPayloads');
@@ -32,9 +23,7 @@ function registerDuelLobbySocketHandlers(context) {
         metrics
     } = context;
 
-    onSocketEvent('requestRoomList', async () => {
-        await emitRoomListUpdate(socket);
-    });
+    onSocketEvent('requestRoomList', () => emitRoomListUpdate(socket));
 
     onSocketEvent('joinRoom', async (payload) => {
         const { roomId, clientId } = normalizeJoinRoomPayload(payload);
@@ -135,9 +124,7 @@ function registerDuelLobbySocketHandlers(context) {
             return;
         }
 
-        const ready = payload && typeof payload === 'object'
-            ? payload.ready === true
-            : payload === true;
+        const ready = payload && typeof payload === 'object' ? payload.ready === true : payload === true;
         const result = setDuelPlayerReady(room, socket.id, ready);
         if (result.reason === 'round-active') {
             socket.emit('errorMessage', 'Ready poate fi schimbat doar în lobby.');

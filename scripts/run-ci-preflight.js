@@ -82,6 +82,12 @@ function buildSteps({
             args: [...python.args, 'test/ci_backend_tests_test.py']
         },
         {
+            id: 'build',
+            name: 'Build production',
+            command: npm.command,
+            args: [...npm.args, 'run', 'build']
+        },
+        {
             id: 'backend-tests',
             name: 'Backend tests and coverage',
             command: python.command,
@@ -98,12 +104,6 @@ function buildSteps({
                 'run',
                 'test:coverage'
             ]
-        },
-        {
-            id: 'build',
-            name: 'Build production',
-            command: npm.command,
-            args: [...npm.args, 'run', 'build']
         },
         {
             id: 'generated-files',

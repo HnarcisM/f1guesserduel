@@ -44,6 +44,7 @@
     "pretest:e2e:admin": "node scripts/ensure-playwright-browser.js --strict",
     "test:e2e:install": "node scripts/ensure-playwright-browser.js --strict",
     "ci:verify": "node scripts/run-ci-preflight.js",
+    "ci:verify:clean": "node scripts/run-ci-clean-worktree.js",
     "ci:verify:full": "node scripts/run-ci-preflight.js --with-services --with-browser",
     "ci:preflight": "npm run ci:verify:full",
     "ci:preflight:services": "npm run ci:verify:full",

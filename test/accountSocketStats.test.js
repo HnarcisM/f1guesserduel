@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
-const { buildDuelAccountResults } = require('../server/socket/registerSocketHandlers');
+const { buildDuelAccountResults } = require('../server/socket/duelAccountResultBuilder');
 const { registerDailyChallengeSocketHandlers } = require('../server/socket/dailyChallengeSocketHandlers');
 const { registerSoloGameSocketHandlers } = require('../server/socket/soloGameSocketHandlers');
 

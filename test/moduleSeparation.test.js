@@ -59,6 +59,7 @@ test('Duel socket coordinator delegates lobby, round and lifecycle events once',
     assertFileBudget('server/socket/duelLobbySocketHandlers.js', 7_300);
     assertFileBudget('server/socket/duelMatchSocketHandlers.js', 2_500);
     assertFileBudget('server/socket/duelRoundSocketHandlers.js', 14_000);
+    assertFileBudget('server/socket/duelRoundResultEmitter.js', 5_000);
     assertFileBudget('server/socket/duelLifecycleSocketHandlers.js', 5_000);
 
     for (const eventName of expectedRateLimitedEvents) {

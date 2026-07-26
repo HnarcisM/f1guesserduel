@@ -109,6 +109,7 @@ test('extended mode modules stay within maintainable size budgets', () => {
         'server/game/extendedModesService.js': 40_000,
         'server/game/extendedModesCatalogs.js': 12_000,
         'server/socket/extendedModesSocketHandlers.js': 13_000,
+        'server/socket/extendedModesSocketPayloads.js': 2_000,
         'server/socket/weeklyChallengeCoordinator.js': 7_000
     };
     for (const [relativePath, maximumBytes] of Object.entries(budgets)) {

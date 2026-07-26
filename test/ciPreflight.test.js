@@ -21,23 +21,23 @@ function commandOf(step) {
     return [step.command, ...step.args].join(' ');
 }
 
-test('ci:verify mirrors the required GitHub test-and-build job in one fail-fast sequence', () => {
+test('ci:verify builds generated assets before testing them in one fail-fast sequence', () => {
     const steps = buildSteps({ platform: 'linux', env: {} });
     const commands = steps.map(commandOf);
 
     assert.deepEqual(steps.map(step => step.id), [
         'python-helpers',
-        'backend-tests',
         'build',
+        'backend-tests',
         'generated-files',
         'whitespace'
     ]);
     assert.equal(commands[0], 'python test/ci_backend_tests_test.py');
+    assert.equal(commands[1], 'npm run build');
     assert.equal(
-        commands[1],
+        commands[2],
         `python scripts/ci_backend_tests.py run --propagate-exit-code --log-file ${BACKEND_LOG_FILE} -- npm run test:coverage`
     );
-    assert.equal(commands[2], 'npm run build');
     assert.deepEqual(steps[3].args, ['diff', '--exit-code', '--', ...GENERATED_FILES]);
     assert.equal(commands[4], 'git diff --check');
     assert.equal(steps.some(step => step.args.includes('test:integration:services')), false);
@@ -71,7 +71,9 @@ test('ci:verify resolves Python and npm commands cross-platform', () => {
     });
     assert.equal(windowsSteps[0].command, 'py');
     assert.deepEqual(windowsSteps[0].args, ['-3', 'test/ci_backend_tests_test.py']);
-    assert.deepEqual(windowsSteps[1].args.slice(-8), [
+    assert.equal(windowsSteps[1].command, 'C:\\Windows\\System32\\cmd.exe');
+    assert.deepEqual(windowsSteps[1].args, ['/d', '/s', '/c', 'npm.cmd', 'run', 'build']);
+    assert.deepEqual(windowsSteps[2].args.slice(-8), [
         '--',
         'C:\\Windows\\System32\\cmd.exe',
         '/d',
@@ -81,8 +83,6 @@ test('ci:verify resolves Python and npm commands cross-platform', () => {
         'run',
         'test:coverage'
     ]);
-    assert.equal(windowsSteps[2].command, 'C:\\Windows\\System32\\cmd.exe');
-    assert.deepEqual(windowsSteps[2].args, ['/d', '/s', '/c', 'npm.cmd', 'run', 'build']);
 });
 
 test('Windows npm steps execute cmd.exe directly without enabling a Node shell', () => {

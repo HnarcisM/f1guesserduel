@@ -131,7 +131,7 @@ function installSocketListeners(socket, controller) {
         extendedModeFinished: payload => controller.handleFinished(payload),
         extendedModeError: message => controller.handleError(message),
         weeklyChallengeStatus: payload => controller.handleWeeklyStatus(payload),
-        extendedModeLeft: () => controller.handleServerLeft()
+        extendedModeLeft: () => {}
     };
     for (const [eventName, handler] of Object.entries(handlers)) {
         socket.off?.(eventName, handler);
@@ -773,10 +773,6 @@ function createExtendedModesController({ windowObject, documentObject, storage }
         setStatus(message || 'Acțiunea nu a putut fi efectuată.', 'error');
     }
 
-    function handleServerLeft() {
-        // The local close transition already handles the UI.
-    }
-
     async function open(variantKey, { trigger = null } = {}) {
         if (!VARIANT_COPY[variantKey]) throw new Error(`Unknown extended mode: ${variantKey}`);
         state.variantKey = variantKey;
@@ -868,7 +864,6 @@ function createExtendedModesController({ windowObject, documentObject, storage }
         handleGuessResult,
         handleRoundReady,
         handleRoundResult,
-        handleServerLeft,
         handleStarted,
         handleSudokuUpdate,
         handleWeeklyStatus,
