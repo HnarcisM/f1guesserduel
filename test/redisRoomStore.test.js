@@ -263,7 +263,7 @@ test('socket room mutations identify the affected room for scoped Redis writes',
     assert.doesNotMatch(socketSources, /roomStore\.markDirty\?\.\(state\.currentRoom\)/);
 });
 
-function createSharedRedisBackend() {
+function createSharedRedisBackend({ clock = Date.now } = {}) {
     const data = new Map();
     const expiresAt = new Map();
     const subscribers = new Map();
@@ -271,7 +271,7 @@ function createSharedRedisBackend() {
 
     function purgeExpired(key) {
         const deadline = expiresAt.get(key);
-        if (deadline !== undefined && deadline <= Date.now()) {
+        if (deadline !== undefined && deadline <= clock()) {
             data.delete(key);
             expiresAt.delete(key);
         }
@@ -328,8 +328,8 @@ function createSharedRedisBackend() {
                 purgeExpired(key);
                 if (options.NX && data.has(key)) return null;
                 data.set(key, value);
-                if (Number.isFinite(options.PX)) expiresAt.set(key, Date.now() + options.PX);
-                else if (Number.isFinite(options.EX)) expiresAt.set(key, Date.now() + options.EX * 1000);
+                if (Number.isFinite(options.PX)) expiresAt.set(key, clock() + options.PX);
+                else if (Number.isFinite(options.EX)) expiresAt.set(key, clock() + options.EX * 1000);
                 else expiresAt.delete(key);
                 return 'OK';
             },
@@ -343,7 +343,7 @@ function createSharedRedisBackend() {
                 purgeExpired(key);
                 if (data.get(key) !== token) return 0;
                 if (script.includes('PEXPIRE')) {
-                    expiresAt.set(key, Date.now() + Number(ttl));
+                    expiresAt.set(key, clock() + Number(ttl));
                     renewedLockCount += 1;
                     return 1;
                 }
@@ -436,7 +436,8 @@ test('distributed Redis room mutations serialize concurrent writers and synchron
 
 
 test('distributed Redis room lock lease is renewed during long mutations', async () => {
-    const backend = createSharedRedisBackend();
+    let logicalNow = 0;
+    const backend = createSharedRedisBackend({ clock: () => logicalNow });
     const options = {
         keyPrefix: 'f1:lease',
         distributedCoordinationEnabled: true,
@@ -445,14 +446,16 @@ test('distributed Redis room lock lease is renewed during long mutations', async
         saveDebounceMs: 60_000,
         logger: { error() {}, info() {} }
     };
+    const firstClient = backend.createClient();
+    const secondClient = backend.createClient();
     const firstStore = await createRedisRoomStore({
         ...options,
-        redisClient: backend.createClient(),
+        redisClient: firstClient,
         instanceId: 'lease-a'
     });
     const secondStore = await createRedisRoomStore({
         ...options,
-        redisClient: backend.createClient(),
+        redisClient: secondClient,
         instanceId: 'lease-b'
     });
 
@@ -462,15 +465,39 @@ test('distributed Redis room lock lease is renewed during long mutations', async
         firstStore.set('lease-room', room);
     });
 
+    const waitForRenewals = async expectedCount => {
+        const deadline = Date.now() + 2_000;
+        while (backend.getRenewedLockCount() < expectedCount) {
+            if (Date.now() >= deadline) {
+                throw new Error(`Expected ${expectedCount} lock renewals before the test deadline.`);
+            }
+            await new Promise(resolve => setTimeout(resolve, 5));
+        }
+    };
+    let releaseContender;
+    const contenderMayStart = new Promise(resolve => {
+        releaseContender = resolve;
+    });
+
     await Promise.all([
         firstStore.runExclusive('lease-room', async () => {
             const room = firstStore.get('lease-room');
             const value = room.nextGuestNumber;
-            await new Promise(resolve => setTimeout(resolve, 750));
+
+            await waitForRenewals(1);
+            logicalNow = 250;
+            await waitForRenewals(2);
+            logicalNow = 350;
+
+            const lockKey = 'f1:lease:rooms:lock:lease-room';
+            assert.notEqual(await firstClient.get(lockKey), null);
+            releaseContender();
+            await new Promise(resolve => setImmediate(resolve));
+
             room.nextGuestNumber = value + 1;
             firstStore.markDirty('lease-room');
         }),
-        new Promise(resolve => setTimeout(resolve, 450)).then(() => secondStore.runExclusive('lease-room', () => {
+        contenderMayStart.then(() => secondStore.runExclusive('lease-room', () => {
             const room = secondStore.get('lease-room');
             room.nextGuestNumber += 1;
             secondStore.markDirty('lease-room');

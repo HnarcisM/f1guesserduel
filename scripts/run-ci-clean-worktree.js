@@ -8,6 +8,10 @@ const { spawnSync } = require('node:child_process');
 
 const { resolveNpmCommand } = require('./run-ci-preflight');
 
+function resolvePathApi(platform = process.platform) {
+    return platform === 'win32' ? path.win32 : path.posix;
+}
+
 function executeCommand({ id, name, command, args = [], cwd, env = process.env, capture = false }, {
     spawn = spawnSync
 } = {}) {
@@ -72,6 +76,8 @@ function runCleanWorktree({
     platform = process.platform,
     env = process.env,
     executor = executeCommand,
+    temporaryDirectoryRoot = os.tmpdir(),
+    pathApi = resolvePathApi(platform),
     makeTempDirectory = prefix => fs.mkdtempSync(prefix),
     removeDirectoryFn = removeDirectory,
     logger = console
@@ -98,7 +104,7 @@ function runCleanWorktree({
         return { exitCode: rootResult.exitCode || 1, results };
     }
 
-    const repositoryRoot = path.resolve(rootResult.stdout.trim());
+    const repositoryRoot = pathApi.resolve(rootResult.stdout.trim());
     const statusResult = run({
         id: 'repository-status',
         name: 'Verify committed repository state',
@@ -119,8 +125,16 @@ function runCleanWorktree({
         return { exitCode: 1, results, repositoryRoot, dirty: true };
     }
 
-    const temporaryRoot = makeTempDirectory(path.join(os.tmpdir(), 'f1-ci-worktree-'));
-    const worktreePath = path.join(temporaryRoot, 'checkout');
+    let temporaryRoot;
+    try {
+        const prefix = pathApi.join(temporaryDirectoryRoot, 'f1-ci-worktree-');
+        temporaryRoot = makeTempDirectory(prefix);
+    } catch (error) {
+        logger.error(`[ci:verify:clean] Nu am putut crea directorul temporar: ${error.message}`);
+        return { exitCode: 1, results, repositoryRoot, error };
+    }
+
+    const worktreePath = pathApi.join(temporaryRoot, 'checkout');
     let worktreeAttempted = false;
     let worktreeAdded = false;
     let exitCode = 0;
@@ -185,7 +199,7 @@ function runCleanWorktree({
         }
     }
 
-    return { exitCode, results, repositoryRoot, worktreePath };
+    return { exitCode, results, repositoryRoot, temporaryRoot, worktreePath };
 }
 
 function main() {
@@ -209,5 +223,6 @@ module.exports = {
     buildWorktreeSteps,
     executeCommand,
     removeDirectory,
+    resolvePathApi,
     runCleanWorktree
 };
