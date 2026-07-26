@@ -127,6 +127,7 @@ test('game variant registry exposes every planned mode as playable in release or
     const variants = registry.listGameVariants();
 
     assert.equal(variants.length, 10);
+    assert.equal(typeof registry.HUB_GROUPS.SINGLE, 'string');
     assert.deepEqual(
         variants.map(variant => variant.key),
         ['classic', 'daily', 'duel', 'speed-run', 'era', 'streak', 'weekly', 'constructor', 'pilot-sudoku', 'track']
@@ -140,9 +141,17 @@ test('game variant registry exposes every planned mode as playable in release or
     assert.equal(registry.isGameVariantAvailable('track'), true);
     assert.equal(registry.getGameVariant('missing'), null);
     assert.equal(Object.isFrozen(registry.GAME_VARIANTS), true);
+    assert.deepEqual(
+        registry.listGameVariantsByGroup(registry.HUB_GROUPS.SINGLE).map(variant => variant.key),
+        ['classic', 'daily', 'era', 'weekly']
+    );
+    assert.deepEqual(
+        registry.listGameVariantsByGroup(registry.HUB_GROUPS.SPECIALTY).map(variant => variant.key),
+        ['speed-run', 'streak', 'constructor', 'pilot-sudoku', 'track']
+    );
 });
 
-test('game hub renders all ten modes as enabled cards without unsafe HTML', async () => {
+test('game hub renders the dashboard layout with all ten enabled cards', async () => {
     const { registry, createGameHubController } = await loadGameHubModules();
     const documentObject = createFakeDocument();
     const controller = createGameHubController({ documentObject, registry });
@@ -153,7 +162,13 @@ test('game hub renders all ten modes as enabled cards without unsafe HTML', asyn
 
     const elements = flatten(documentObject.root);
     const cards = elements.filter(element => element.dataset?.gameVariant);
+    const dashboard = elements.find(element => element.classList?.contains('game-hub-dashboard'));
+    const summaryItems = elements.filter(element => element.classList?.contains('game-hub-summary-item'));
+    const featuredDuel = elements.find(element => element.classList?.contains('game-hub-featured-card'));
+    assert.ok(dashboard);
     assert.equal(cards.length, 10);
+    assert.equal(summaryItems.length, 5);
+    assert.ok(featuredDuel);
 
     const classicCards = cards.filter(card => card.dataset.gameModeChoice);
     assert.deepEqual(classicCards.map(card => card.dataset.gameModeChoice), ['single', 'daily', 'duel']);
@@ -163,11 +178,13 @@ test('game hub renders all ten modes as enabled cards without unsafe HTML', asyn
     const extendedCards = cards.filter(card => card.dataset.gameModePage);
     assert.deepEqual(
         extendedCards.map(card => card.dataset.gameVariant),
-        ['speed-run', 'era', 'streak', 'weekly', 'constructor', 'pilot-sudoku', 'track']
+        ['era', 'weekly', 'speed-run', 'streak', 'constructor', 'pilot-sudoku', 'track']
     );
     assert.equal(extendedCards.every(card => card.tagName === 'BUTTON'), true);
     assert.equal(cards.filter(card => card.disabled).length, 0);
     assert.equal(cards.every(card => flatten(card).some(element => element.textContent === 'Disponibil')), true);
+    assert.equal(featuredDuel.dataset.gameModeChoice, 'duel');
+    assert.equal(featuredDuel.tagName, 'BUTTON');
 });
 
 test('game hub disables a mode immediately when runtime settings turn it off', async () => {

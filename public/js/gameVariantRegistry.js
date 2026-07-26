@@ -6,6 +6,12 @@
         COMING_SOON: 'coming-soon'
     });
 
+    const HUB_GROUPS = Object.freeze({
+        SINGLE: 'single-player',
+        DUEL: 'duel',
+        SPECIALTY: 'specialty'
+    });
+
     const GAME_VARIANTS = Object.freeze([
         Object.freeze({
             key: 'classic',
@@ -15,6 +21,7 @@
             context: 'single',
             modeChoice: 'single',
             state: GAME_VARIANT_STATES.AVAILABLE,
+            hubGroup: HUB_GROUPS.SINGLE,
             tags: Object.freeze(['Solo', 'Timer opțional'])
         }),
         Object.freeze({
@@ -25,6 +32,7 @@
             context: 'daily',
             modeChoice: 'daily',
             state: GAME_VARIANT_STATES.AVAILABLE,
+            hubGroup: HUB_GROUPS.SINGLE,
             requiresAccount: true,
             tags: Object.freeze(['Zilnic', 'Necesită cont'])
         }),
@@ -36,6 +44,7 @@
             context: 'duel',
             modeChoice: 'duel',
             state: GAME_VARIANT_STATES.AVAILABLE,
+            hubGroup: HUB_GROUPS.DUEL,
             tags: Object.freeze(['2 jucători', 'Spectatori'])
         }),
         Object.freeze({
@@ -46,6 +55,7 @@
             context: 'single',
             pagePath: '/modes/speed-run/',
             state: GAME_VARIANT_STATES.AVAILABLE,
+            hubGroup: HUB_GROUPS.SPECIALTY,
             tags: Object.freeze(['5 runde', '90 secunde', 'Scor'])
         }),
         Object.freeze({
@@ -56,6 +66,7 @@
             context: 'single',
             pagePath: '/modes/era/',
             state: GAME_VARIANT_STATES.AVAILABLE,
+            hubGroup: HUB_GROUPS.SINGLE,
             tags: Object.freeze(['5 ere', 'Solo'])
         }),
         Object.freeze({
@@ -66,6 +77,7 @@
             context: 'single',
             pagePath: '/modes/streak/',
             state: GAME_VARIANT_STATES.AVAILABLE,
+            hubGroup: HUB_GROUPS.SPECIALTY,
             tags: Object.freeze(['3 încercări', 'Record personal'])
         }),
         Object.freeze({
@@ -76,6 +88,7 @@
             context: 'daily',
             pagePath: '/modes/weekly/',
             state: GAME_VARIANT_STATES.AVAILABLE,
+            hubGroup: HUB_GROUPS.SINGLE,
             requiresAccount: true,
             tags: Object.freeze(['5 runde', 'Necesită cont', '1× pe săptămână'])
         }),
@@ -87,6 +100,7 @@
             context: 'single',
             pagePath: '/modes/constructor/',
             state: GAME_VARIANT_STATES.AVAILABLE,
+            hubGroup: HUB_GROUPS.SPECIALTY,
             tags: Object.freeze(['Constructori', '6 încercări'])
         }),
         Object.freeze({
@@ -97,6 +111,7 @@
             context: 'single',
             pagePath: '/modes/pilot-sudoku/',
             state: GAME_VARIANT_STATES.AVAILABLE,
+            hubGroup: HUB_GROUPS.SPECIALTY,
             tags: Object.freeze(['Puzzle', 'Grilă 3×3'])
         }),
         Object.freeze({
@@ -107,6 +122,8 @@
             context: 'single',
             pagePath: '/modes/track/',
             state: GAME_VARIANT_STATES.AVAILABLE,
+            hubGroup: HUB_GROUPS.SPECIALTY,
+            hubLayout: 'wide',
             tags: Object.freeze(['Circuite', 'Siluete', '6 încercări'])
         })
     ]);
@@ -127,12 +144,18 @@
         return GAME_VARIANTS.filter(variant => variant.state === state);
     }
 
+    function listGameVariantsByGroup(group) {
+        return GAME_VARIANTS.filter(variant => variant.hubGroup === group);
+    }
+
     const api = Object.freeze({
         GAME_VARIANTS,
         GAME_VARIANT_STATES,
+        HUB_GROUPS,
         getGameVariant,
         isGameVariantAvailable,
         listGameVariants,
+        listGameVariantsByGroup,
         listGameVariantsByState
     });
 
