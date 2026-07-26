@@ -72,6 +72,7 @@ test('admin E2E suite is wired into package scripts and the browser CI gate', ()
     assert.match(source, /suspendarea cu parolă greșită este refuzată/);
     assert.match(source, /auditul poate fi filtrat după categorie și text/);
     assert.match(source, /panoul rămâne utilizabil pe ecrane mobile/);
+    assert.match(source, /administratorul poate inspecta controalele operaționale și statisticile/);
 });
 
 

@@ -12,8 +12,9 @@
         return createElement(documentObject, 'span', 'game-hub-tag', text);
     }
 
-    function createModeCard(documentObject, variant) {
-        const available = variant.state === 'available';
+    function createModeCard(documentObject, variant, runtimeSettings = null) {
+        const runtimeEnabled = runtimeSettings?.isModeEnabled?.(variant.key) !== false;
+        const available = variant.state === 'available' && runtimeEnabled;
         const isPageLink = available && typeof variant.pagePath === 'string';
         const card = createElement(documentObject, 'button', 'game-mode-card game-hub-card');
         card.type = 'button';
@@ -31,9 +32,11 @@
             }
         } else {
             card.disabled = true;
-            card.classList.add('is-coming-soon');
+            card.classList.add(runtimeEnabled ? 'is-coming-soon' : 'is-runtime-disabled');
             card.setAttribute('aria-disabled', 'true');
-            card.title = `${variant.title} va fi disponibil într-un update viitor.`;
+            card.title = runtimeEnabled
+                ? `${variant.title} va fi disponibil într-un update viitor.`
+                : `${variant.title} este temporar dezactivat.`;
         }
 
         const topRow = createElement(documentObject, 'span', 'game-hub-card-top');
@@ -44,7 +47,7 @@
             documentObject,
             'span',
             available ? 'game-hub-state is-available' : 'game-hub-state',
-            available ? 'Disponibil' : 'În curând'
+            available ? 'Disponibil' : (runtimeEnabled ? 'În curând' : 'Dezactivat')
         ));
 
         const title = createElement(documentObject, 'strong', 'game-hub-card-title', variant.title);
@@ -74,7 +77,7 @@
         const grid = createElement(documentObject, 'div', 'game-hub-grid');
         grid.setAttribute('role', 'group');
         grid.setAttribute('aria-label', title);
-        for (const variant of variants) grid.append(createModeCard(documentObject, variant));
+        for (const variant of variants) grid.append(createModeCard(documentObject, variant, globalObject?.F1RuntimeSettings));
 
         section.append(header, grid);
         return section;
@@ -145,6 +148,7 @@
             windowObject
         });
         const render = () => controller.render();
+        windowObject.document.addEventListener?.('f1:runtime-settings', render);
 
         if (!render()) {
             windowObject.document.addEventListener?.('DOMContentLoaded', render, { once: true });

@@ -2,7 +2,7 @@
 
 const CACHE_PREFIX = 'f1-guesser-static-';
 /* GENERATED_PRECACHE_START */
-const STATIC_CACHE_NAME = 'f1-guesser-static-e57cf18ec5721f0398b2';
+const STATIC_CACHE_NAME = 'f1-guesser-static-2b99d902be15f985d380';
 const PRECACHE_URLS = Object.freeze([
     "/css/16-duel-ready.css?v=325c0498b808b8c1",
     "/css/17-duel-series.css?v=519233effd931ef4",
@@ -14,6 +14,8 @@ const PRECACHE_URLS = Object.freeze([
     "/css/23-game-hub.css?v=7ecca81778fc1131",
     "/css/24-extended-modes.css",
     "/css/25-mode-pages.css",
+    "/css/26-runtime-status.css",
+    "/css/26-runtime-status.css?v=9e36b3f6d4da0032",
     "/game.bundle.min.js?v=58124a83dd554db3",
     "/icons/pwa-192.png",
     "/icons/pwa-512.png",
@@ -30,7 +32,7 @@ const PRECACHE_URLS = Object.freeze([
     "/js/extendedModesConfig.js",
     "/js/extendedModesController.js",
     "/js/feedbackController.js?v=5cd6b13e762a05bd",
-    "/js/gameHubController.js?v=a2a1e672c5b3fecd",
+    "/js/gameHubController.js?v=d9cd6edce3b4febb",
     "/js/gameVariantRegistry.js?v=ad37d1ad96dccbd0",
     "/js/modes/constructorPage.js",
     "/js/modes/eraPage.js",
@@ -40,6 +42,8 @@ const PRECACHE_URLS = Object.freeze([
     "/js/modes/trackPage.js",
     "/js/modes/weeklyPage.js",
     "/js/pwaController.js?v=a28eba69df98be12",
+    "/js/runtimeExperienceController.js",
+    "/js/runtimeExperienceController.js?v=b5b11ddcec171cdc",
     "/js/socketBridgeBootstrap.js?v=fd76646cd8126930",
     "/js/themeBootstrap.js?v=6afc6a3773845bb4",
     "/js/weeklyChallengeView.js",

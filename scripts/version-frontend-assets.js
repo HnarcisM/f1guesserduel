@@ -12,10 +12,12 @@ const DEFAULT_PRECACHE_STATIC_URLS = Object.freeze([
     '/icons/pwa-512.png',
     '/css/24-extended-modes.css',
     '/css/25-mode-pages.css',
+    '/css/26-runtime-status.css',
     '/js/apiClient.js',
     '/js/extendedModesConfig.js',
     '/js/extendedModesController.js',
     '/js/extendedModePage.js',
+    '/js/runtimeExperienceController.js',
     '/js/weeklyChallengeView.js',
     '/js/modes/speedRunPage.js',
     '/js/modes/eraPage.js',
@@ -84,6 +86,11 @@ const DEFAULT_ASSETS = Object.freeze([
         sourceFile: path.join('public', 'css', '23-game-hub.css')
     },
     {
+        attribute: 'href',
+        publicPath: '/css/26-runtime-status.css',
+        sourceFile: path.join('public', 'css', '26-runtime-status.css')
+    },
+    {
         attribute: 'src',
         publicPath: '/js/socketBridgeBootstrap.js',
         sourceFile: path.join('public', 'js', 'socketBridgeBootstrap.js')
@@ -92,6 +99,11 @@ const DEFAULT_ASSETS = Object.freeze([
         attribute: 'src',
         publicPath: '/js/gameVariantRegistry.js',
         sourceFile: path.join('public', 'js', 'gameVariantRegistry.js')
+    },
+    {
+        attribute: 'src',
+        publicPath: '/js/runtimeExperienceController.js',
+        sourceFile: path.join('public', 'js', 'runtimeExperienceController.js')
     },
     {
         attribute: 'src',

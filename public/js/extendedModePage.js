@@ -143,6 +143,15 @@ async function startExtendedModePage({
     }
 
     documentObject.title = `${copy.title} · F1 Guesser Duel`;
+    await windowObject.F1RuntimeSettings?.load?.({ force: true });
+    if (windowObject.F1RuntimeSettings?.isMaintenanceEnabled?.()) {
+        renderFatalError(documentObject, windowObject.F1RuntimeSettings.getSnapshot().maintenance.message || 'Aplicația este temporar în mentenanță.');
+        return null;
+    }
+    if (windowObject.F1RuntimeSettings?.isModeEnabled?.(modeKey) === false) {
+        renderFatalError(documentObject, 'Acest mod este temporar dezactivat de administrator.');
+        return null;
+    }
     const socket = typeof windowObject.io === 'function' ? windowObject.io() : null;
     if (!socket) {
         renderFatalError(documentObject, 'Conexiunea Socket.IO nu este disponibilă. Reîncarcă pagina.');

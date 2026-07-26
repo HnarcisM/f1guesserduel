@@ -1,6 +1,8 @@
 'use strict';
 
 const { createAdminRepository } = require('./adminRepository');
+const { createAdminOperationalRepository } = require('./adminOperationalRepository');
+const { GAME_MODE_DEFINITIONS } = require('../runtime/runtimeSettingsCatalog');
 const { buildPublicRoomListPayload } = require('../socket/roomListPayloads');
 const { getDailyDateKey } = require('../game/dailyChallenge');
 const { getIsoWeekInfo } = require('../game/weeklyChallenge');
@@ -66,11 +68,26 @@ function createAdminService({
     io,
     sessionService,
     repository = null,
+    operationalRepository = null,
+    runtimeSettingsService = null,
+    redisClient = null,
+    databaseProvider = null,
+    redisEnabled = false,
+    adminLoginNotifierEnabled = false,
     now = () => new Date(),
     isAdminUser = () => false,
     auditPolicy = {}
 }) {
     const adminRepository = repository || createAdminRepository(database);
+    const canCreateOperationalRepository = Boolean(
+        database && (database.provider === 'postgres' ? typeof database.query === 'function' : typeof database.prepare === 'function')
+    );
+    const adminOperationalRepository = operationalRepository
+        || (canCreateOperationalRepository ? createAdminOperationalRepository(database) : {
+            async getModeDifficultyStats() { return []; },
+            async getSuspensionHistory() { return []; },
+            async recordSuspensionHistory() { return null; }
+        });
     const effectiveAuditPolicy = Object.freeze({
         retentionDays: Number.isSafeInteger(Number(auditPolicy.retentionDays)) && Number(auditPolicy.retentionDays) > 0
             ? Number(auditPolicy.retentionDays)
@@ -116,9 +133,92 @@ function createAdminService({
     async function getUserDetails(userId) {
         const normalizedUserId = normalizeUserId(userId);
         if (!normalizedUserId) return { ok: false, status: 400, message: 'Utilizatorul selectat nu este valid.' };
-        const details = await adminRepository.getUserDetails(normalizedUserId);
+        const [details, suspensionHistory] = await Promise.all([
+            adminRepository.getUserDetails(normalizedUserId),
+            adminOperationalRepository.getSuspensionHistory(normalizedUserId)
+        ]);
         if (!details) return { ok: false, status: 404, message: 'Utilizatorul nu a fost găsit.' };
-        return { ok: true, ...details, challengeKeys: getChallengeKeys() };
+        return { ok: true, ...details, suspensionHistory, challengeKeys: getChallengeKeys() };
+    }
+
+    async function getOperationalSettings() {
+        const snapshot = runtimeSettingsService?.getSnapshot?.() || { settings: null, updatedBy: null, updatedAt: null };
+        return {
+            ...snapshot,
+            modeDefinitions: GAME_MODE_DEFINITIONS,
+            adminLoginNotifications: {
+                webhookEnabled: adminLoginNotifierEnabled === true
+            }
+        };
+    }
+
+    async function updateOperationalSettings({ adminUserId, patch, requestId }) {
+        if (!runtimeSettingsService?.update) {
+            return { ok: false, status: 503, message: 'Setările operaționale nu sunt disponibile.' };
+        }
+        const before = runtimeSettingsService.getSnapshot();
+        const result = await runtimeSettingsService.update({ patch, adminUserId });
+        if (!result.ok) return { ok: false, status: 400, message: result.message };
+        await adminRepository.recordAudit({
+            adminUserId,
+            action: 'operations.settings.updated',
+            targetType: 'runtime-settings',
+            targetId: 'operational-controls',
+            details: { before: before.settings, after: result.settings },
+            requestId
+        });
+        return { ok: true, ...result };
+    }
+
+    async function getModeDifficultyStats() {
+        return {
+            rows: await adminOperationalRepository.getModeDifficultyStats(),
+            generatedAt: new Date(now()).toISOString()
+        };
+    }
+
+    async function resolveDependencyStatus({ name, enabled, provider, check }) {
+        if (!enabled) return { name, provider, enabled: false, status: 'disabled', latencyMs: null };
+        const startedAt = Date.now();
+        try {
+            await check();
+            return {
+                name,
+                provider,
+                enabled: true,
+                status: 'ok',
+                latencyMs: Math.max(0, Date.now() - startedAt)
+            };
+        } catch {
+            return {
+                name,
+                provider,
+                enabled: true,
+                status: 'error',
+                latencyMs: Math.max(0, Date.now() - startedAt)
+            };
+        }
+    }
+
+    async function getDependencyStatus() {
+        const databaseCheck = typeof database?.check === 'function'
+            ? () => database.check()
+            : () => database.prepare('SELECT 1 AS ok').get();
+        const statuses = await Promise.all([
+            resolveDependencyStatus({
+                name: (databaseProvider || database?.provider) === 'postgres' ? 'PostgreSQL' : 'SQLite',
+                enabled: true,
+                provider: databaseProvider || database?.provider || 'sqlite',
+                check: databaseCheck
+            }),
+            resolveDependencyStatus({
+                name: 'Redis',
+                enabled: redisEnabled === true,
+                provider: redisEnabled ? 'redis' : 'disabled',
+                check: () => redisClient.ping()
+            })
+        ]);
+        return { services: statuses, generatedAt: new Date(now()).toISOString() };
     }
 
     async function listRooms() {
@@ -239,6 +339,15 @@ function createAdminService({
             suspendedUntil
         });
         const revokedSessions = Number(revoked?.changes ?? revoked?.rowCount) || 0;
+        await adminOperationalRepository.recordSuspensionHistory({
+            userId: normalizedTargetId,
+            adminUserId,
+            eventType: 'suspended',
+            duration,
+            reason: cleanReason,
+            suspendedUntil,
+            details: { revokedSessions, disconnectedSockets }
+        });
         await adminRepository.recordAudit({
             adminUserId,
             action: 'user.suspended',
@@ -255,6 +364,12 @@ function createAdminService({
         if (!normalizedTargetId) return { ok: false, status: 400, message: 'Utilizatorul selectat nu este valid.' };
         const updated = await adminRepository.clearUserSuspension(normalizedTargetId);
         if (!updated) return { ok: false, status: 404, message: 'Utilizatorul nu a fost găsit.' };
+        await adminOperationalRepository.recordSuspensionHistory({
+            userId: normalizedTargetId,
+            adminUserId,
+            eventType: 'reactivated',
+            details: {}
+        });
         await adminRepository.recordAudit({
             adminUserId,
             action: 'user.reactivated',
@@ -329,6 +444,10 @@ function createAdminService({
         getOverview,
         listUsers,
         getUserDetails,
+        getOperationalSettings,
+        updateOperationalSettings,
+        getModeDifficultyStats,
+        getDependencyStatus,
         listRooms,
         listAudit,
         exportAudit,

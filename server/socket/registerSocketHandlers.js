@@ -11,6 +11,7 @@ const { registerDuelMatchSocketHandlers } = require('./duelMatchSocketHandlers')
 const { registerDuelLifecycleSocketHandlers } = require('./duelLifecycleSocketHandlers');
 const { registerDuelRoundSocketHandlers } = require('./duelRoundSocketHandlers');
 const { buildDuelAccountResults } = require('./duelAccountResultBuilder');
+const { createRuntimeGuardedEventRegistrar } = require('./runtimeGuardedEventRegistrar');
 
 function registerSocketHandlers(io, dependencies) {
     const {
@@ -20,7 +21,8 @@ function registerSocketHandlers(io, dependencies) {
         accountStatsService = null,
         dailyChallengeNow,
         logger = console,
-        metrics = null
+        metrics = null,
+        runtimeSettingsService = null
     } = dependencies;
     const dailySessions = new Map();
     const singleSessions = new Map();
@@ -64,9 +66,13 @@ function registerSocketHandlers(io, dependencies) {
             logger
         });
 
-        function onSocketEvent(eventName, handler) {
-            socketEventRateLimiter.register(socket, eventName, coordinateEventHandler(eventName, handler));
-        }
+        const onSocketEvent = createRuntimeGuardedEventRegistrar({
+            socket,
+            coordinateEventHandler,
+            socketEventRateLimiter,
+            runtimeSettingsService,
+            extendedSessions
+        });
 
         function clearSoloModeSessions() {
             singleSessions.delete(socket.id);

@@ -313,6 +313,9 @@ Aplicația poate fi configurată prin variabile de mediu. Pentru rulare locală 
 | `GAME_HISTORY_CLEANUP_BATCH_SIZE` | `5000` | Numărul maxim de rezultate șterse într-o singură interogare de cleanup. |
 | `ADMIN_ACCOUNT_UUIDS` | none | Lista UUID-urilor permanente autorizate să acceseze `/admin`, separate prin virgulă. Are prioritate față de ID-urile numerice. |
 | `ADMIN_USER_IDS` | none | Fallback temporar pentru migrarea instalărilor vechi. Este ignorat când `ADMIN_ACCOUNT_UUIDS` este configurat. |
+| `RUNTIME_SETTINGS_REFRESH_INTERVAL_MS` | `30000` | Sincronizează maintenance mode, anunțul global și starea modurilor între instanțe; `0` oprește polling-ul periodic. |
+| `ADMIN_LOGIN_WEBHOOK_URL` | none | Webhook HTTP(S) opțional apelat după fiecare login reușit al unui administrator; auditul și logul server rămân active și fără webhook. |
+| `ADMIN_LOGIN_WEBHOOK_TIMEOUT_MS` | `5000` | Timeout-ul requestului către webhook-ul de login admin. |
 | `ADMIN_AUDIT_RETENTION_DAYS` | `180` | Păstrează auditul administrativ activ pentru acest număr de zile. |
 | `ADMIN_AUDIT_CLEANUP_INTERVAL_MS` | `86400000` | Rulează cleanup-ul la pornire și apoi zilnic; `0` dezactivează jobul automat. |
 | `ADMIN_AUDIT_CLEANUP_BATCH_SIZE` | `250` | Numărul maxim de intrări șterse într-o singură interogare. |
@@ -407,6 +410,19 @@ Admin V2 include:
 
 Suspendarea este verificată atât la login, cât și la rezolvarea sesiunilor HTTP și Socket.IO. Conturile autorizate prin UUID nu pot fi suspendate din panou.
 
+Admin V3 adaugă:
+
+- activarea sau dezactivarea individuală a fiecărui mod, aplicată atât în Game Hub, cât și server-side în Socket.IO;
+- maintenance mode persistent, cu mesaj public și blocarea acțiunilor de joc;
+- anunț global cu nivel `info`, `warning` sau `critical`, afișat pe pagina principală și pe paginile modurilor dedicate;
+- status PostgreSQL/SQLite și Redis, cu latența ultimei verificări;
+- statistici agregate pe mod și dificultate pentru rezultatele persistate în `user_game_results`;
+- notificare la login admin: intrare de audit și log server întotdeauna, plus webhook HTTP(S) opțional;
+- istoric separat al suspendărilor și reactivărilor, păstrat în detaliile contului;
+- exportul JSON/CSV al auditului rămâne disponibil din Admin V2.
+
+Setările operaționale sunt păstrate în `app_runtime_settings` și sunt sincronizate între instanțe la intervalul configurat. Istoricul suspendărilor este păstrat în `user_suspension_history` și nu este eliminat de retenția de 180 de zile a auditului general.
+
 
 ### Conturi persistente pe Render Free cu Neon Postgres
 
@@ -448,7 +464,7 @@ Un job periodic verifică o dată pe minut camerele din memorie. Când o cameră
 
 ### Migrații PostgreSQL versionate
 
-La pornire, serverul citește fișierele din `server/db/migrations/postgres` în ordine numerică. `001_initial_auth_schema.sql` creează autentificarea, iar `002_account_game_stats.sql` adaugă statisticile persistente.
+La pornire, serverul citește fișierele din `server/db/migrations/postgres` în ordine numerică. `001_initial_auth_schema.sql` creează autentificarea, `002_account_game_stats.sql` adaugă statisticile persistente, iar `013_admin_operational_controls.sql` creează setările operaționale și istoricul suspendărilor pentru Admin V3.
 
 - migrările aplicate sunt înregistrate în tabela `schema_migrations` cu versiune, nume, checksum și timestamp;
 - întregul lot rulează într-o tranzacție și este anulat prin rollback dacă o comandă eșuează;

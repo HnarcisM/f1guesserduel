@@ -9,6 +9,7 @@
     <link rel="icon" href="/logos/F1.svg" type="image/svg+xml">
     <link rel="stylesheet" href="/css/24-extended-modes.css">
     <link rel="stylesheet" href="/css/25-mode-pages.css">
+    <link rel="stylesheet" href="/css/26-runtime-status.css">
 </head>
 <body class="extended-mode-page" data-extended-mode="streak">
     <header class="mode-page-nav">
@@ -25,6 +26,7 @@
         <p id="modePageLoading" class="mode-page-loading" role="status">Se încarcă Streak...</p>
     </main>
     <button id="authOpenBtn" type="button" hidden aria-hidden="true" tabindex="-1"></button>
+    <script src="/js/runtimeExperienceController.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <script src="/js/socketBridgeBootstrap.js"></script>
     <script type="module" src="/js/modes/streakPage.js"></script>

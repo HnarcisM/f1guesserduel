@@ -151,6 +151,21 @@ test('game hub renders all ten modes as enabled cards without unsafe HTML', asyn
     assert.equal(cards.every(card => flatten(card).some(element => element.textContent === 'Disponibil')), true);
 });
 
+test('game hub disables a mode immediately when runtime settings turn it off', async () => {
+    const { registry, createModeCard } = await loadGameHubModules();
+    const documentObject = createFakeDocument();
+    const duel = registry.getGameVariant('duel');
+    const card = createModeCard(documentObject, duel, {
+        isModeEnabled(modeKey) { return modeKey !== 'duel'; }
+    });
+
+    assert.equal(card.disabled, true);
+    assert.equal(card.dataset.gameModeChoice, undefined);
+    assert.equal(card.classList.contains('is-runtime-disabled'), true);
+    assert.equal(card.getAttribute('aria-disabled'), 'true');
+    assert.equal(flatten(card).some(element => element.textContent === 'Dezactivat'), true);
+});
+
 test('extended mode card exposes launch metadata and remains keyboard enabled', async () => {
     const { registry, createModeCard } = await loadGameHubModules();
     const documentObject = createFakeDocument();

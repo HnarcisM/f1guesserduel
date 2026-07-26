@@ -174,3 +174,32 @@ test('admin audit export returns downloadable JSON and CSV content', async () =>
         assert.deepEqual(await json.json(), { entries: [] });
     });
 });
+
+test('admin operational, analytics and service status routes expose and update P3 controls', async () => {
+    const updates = [];
+    const adminService = {
+        async getOperationalSettings() { return { settings: { modes: { duel: true } } }; },
+        async updateOperationalSettings(payload) { updates.push(payload); return { ok: true, settings: payload.patch }; },
+        async getModeDifficultyStats() { return { rows: [{ mode: 'single', difficulty: 'easy' }] }; },
+        async getDependencyStatus() { return { services: [{ name: 'Redis', status: 'ok' }] }; },
+        async recordAuditEvent() {}
+    };
+    await withServer({
+        user: { id: 1, username: 'Admin', email: 'admin@example.com' },
+        adminAccess: { requireAdminApi: passThrough },
+        adminService,
+        authService: { async verifyPasswordForUser() { return true; } }
+    }, async baseUrl => {
+        assert.equal((await (await fetch(`${baseUrl}/operations/settings`)).json()).settings.modes.duel, true);
+        const update = await fetch(`${baseUrl}/operations/settings`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ currentPassword: 'secret', settings: { modes: { duel: false } } })
+        });
+        assert.equal(update.status, 200);
+        assert.equal(updates[0].adminUserId, 1);
+        assert.deepEqual(updates[0].patch, { modes: { duel: false } });
+        assert.equal((await (await fetch(`${baseUrl}/analytics/modes`)).json()).rows[0].mode, 'single');
+        assert.equal((await (await fetch(`${baseUrl}/system/status`)).json()).services[0].status, 'ok');
+    });
+});

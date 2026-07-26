@@ -16,6 +16,8 @@
             <button type="button" class="admin-nav-item is-active" data-admin-view="dashboard">📊 Dashboard</button>
             <button type="button" class="admin-nav-item" data-admin-view="users">👥 Utilizatori</button>
             <button type="button" class="admin-nav-item" data-admin-view="rooms">🏁 Camere active</button>
+            <button type="button" class="admin-nav-item" data-admin-view="operations">⚙️ Operațional</button>
+            <button type="button" class="admin-nav-item" data-admin-view="analytics">📈 Statistici</button>
             <button type="button" class="admin-nav-item" data-admin-view="audit">🛡️ Audit</button>
         </nav>
         <div class="admin-sidebar-footer"><span id="adminIdentity">Se verifică accesul…</span><a href="/">Înapoi în joc</a></div>
@@ -39,6 +41,35 @@
         </section>
 
         <section id="adminViewRooms" class="admin-view is-hidden" aria-hidden="true"><article class="admin-panel"><div class="admin-panel-header"><div><p class="admin-eyebrow">Duel</p><h2>Camere active</h2></div></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Cameră</th><th>Host</th><th>Participanți</th><th>Stare</th><th>Setări</th><th>Acțiuni</th></tr></thead><tbody id="adminRoomsBody"></tbody></table></div><p id="adminRoomsMeta" class="admin-panel-note"></p></article></section>
+
+        <section id="adminViewOperations" class="admin-view is-hidden" aria-hidden="true">
+            <article class="admin-panel">
+                <div class="admin-panel-header"><div><p class="admin-eyebrow">Control aplicație</p><h2>Setări operaționale</h2></div><button type="button" id="adminOperationsSave" class="admin-primary-btn">Salvează setările</button></div>
+                <div class="admin-operations-grid">
+                    <section class="admin-detail-section admin-operation-card">
+                        <h3>Maintenance mode</h3>
+                        <label class="admin-toggle-row"><input id="adminMaintenanceEnabled" type="checkbox"><span>Blochează pornirea jocurilor</span></label>
+                        <label for="adminMaintenanceMessage">Mesaj afișat utilizatorilor</label>
+                        <textarea id="adminMaintenanceMessage" maxlength="240"></textarea>
+                    </section>
+                    <section class="admin-detail-section admin-operation-card">
+                        <h3>Anunț global</h3>
+                        <label class="admin-toggle-row"><input id="adminAnnouncementEnabled" type="checkbox"><span>Afișează anunțul în aplicație</span></label>
+                        <label for="adminAnnouncementLevel">Nivel</label>
+                        <select id="adminAnnouncementLevel"><option value="info">Info</option><option value="warning">Avertizare</option><option value="critical">Critic</option></select>
+                        <label for="adminAnnouncementMessage">Mesaj</label>
+                        <textarea id="adminAnnouncementMessage" maxlength="300"></textarea>
+                    </section>
+                </div>
+                <section class="admin-operation-section"><div><p class="admin-eyebrow">Disponibilitate</p><h2>Moduri de joc</h2></div><div id="adminModeToggles" class="admin-mode-toggle-grid"></div></section>
+                <p id="adminOperationsMeta" class="admin-panel-note"></p>
+            </article>
+            <article class="admin-panel"><div class="admin-panel-header"><div><p class="admin-eyebrow">Dependențe</p><h2>Starea serviciilor</h2></div></div><div id="adminServiceStatus" class="admin-service-grid"></div></article>
+        </section>
+
+        <section id="adminViewAnalytics" class="admin-view is-hidden" aria-hidden="true">
+            <article class="admin-panel"><div class="admin-panel-header"><div><p class="admin-eyebrow">Jocuri înregistrate</p><h2>Moduri și dificultăți</h2></div></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Mod</th><th>Dificultate</th><th>Jocuri</th><th>Jucători</th><th>Victorii</th><th>Remize</th><th>Înfrângeri</th><th>Medie încercări</th><th>Durată medie</th></tr></thead><tbody id="adminAnalyticsBody"></tbody></table></div><p id="adminAnalyticsMeta" class="admin-panel-note"></p></article>
+        </section>
 
         <section id="adminViewAudit" class="admin-view is-hidden" aria-hidden="true"><article class="admin-panel"><div class="admin-panel-header admin-panel-header-wrap"><div><p class="admin-eyebrow">Securitate</p><h2>Acțiuni administrative</h2></div><form id="adminAuditFilterForm" class="admin-search-form"><label class="sr-only" for="adminAuditSearch">Filtrează auditul</label><input id="adminAuditSearch" type="search" maxlength="100" placeholder="Acțiune, țintă sau detaliu"><select id="adminAuditAction"><option value="">Toate acțiunile</option><option value="user.">Utilizatori</option><option value="challenge.">Challenge</option><option value="room.">Camere</option><option value="admin.">Securitate</option></select><button type="submit" class="admin-primary-btn">Filtrează</button><button id="adminAuditExportJson" type="button" class="admin-secondary-btn">Export JSON</button><button id="adminAuditExportCsv" type="button" class="admin-secondary-btn">Export CSV</button></form></div><div class="admin-table-wrap"><table class="admin-table"><thead><tr><th>Data</th><th>Administrator</th><th>Acțiune</th><th>Țintă</th><th>Detalii</th></tr></thead><tbody id="adminAuditBody"></tbody></table></div><p id="adminAuditMeta" class="admin-panel-note"></p></article></section>
     </main>

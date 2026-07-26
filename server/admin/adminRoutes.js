@@ -86,6 +86,44 @@ function createAdminRoutes({
         }
     });
 
+    router.get('/operations/settings', readLimiter, async (req, res, next) => {
+        try {
+            return res.json(await adminService.getOperationalSettings());
+        } catch (error) {
+            return next(error);
+        }
+    });
+
+    router.put('/operations/settings', writeLimiter, requireAdminPassword, async (req, res, next) => {
+        try {
+            const result = await adminService.updateOperationalSettings({
+                adminUserId: req.user.id,
+                patch: req.body?.settings,
+                requestId: req.requestId
+            });
+            if (!result.ok) return res.status(result.status || 400).json({ message: result.message });
+            return res.json(result);
+        } catch (error) {
+            return next(error);
+        }
+    });
+
+    router.get('/analytics/modes', readLimiter, async (req, res, next) => {
+        try {
+            return res.json(await adminService.getModeDifficultyStats());
+        } catch (error) {
+            return next(error);
+        }
+    });
+
+    router.get('/system/status', readLimiter, async (req, res, next) => {
+        try {
+            return res.json(await adminService.getDependencyStatus());
+        } catch (error) {
+            return next(error);
+        }
+    });
+
     router.get('/users', readLimiter, async (req, res, next) => {
         try {
             return res.json(await adminService.listUsers({

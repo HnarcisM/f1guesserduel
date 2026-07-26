@@ -24,6 +24,9 @@ const { createAdminService } = require('./admin/adminService');
 const { createAdminAuditCleanupService } = require('./admin/adminAuditCleanupService');
 const { createAdminRoutes } = require('./admin/adminRoutes');
 const { createAdminPageRoutes } = require('./admin/adminPageRoutes');
+const { createAdminLoginNotifier } = require('./admin/adminLoginNotifier');
+const { createRuntimeSettingsService } = require('./runtime/runtimeSettingsService');
+const { createRuntimeSettingsRoutes } = require('./routes/runtimeSettingsRoutes');
 const {
     createApiRequestContextMiddleware
 } = require('./middleware/apiRequestContext');
@@ -178,6 +181,14 @@ const sessionService = createSessionService(db, {
 });
 const authService = createAuthService(db, sessionService);
 const accountStatsService = createAccountStatsService(db);
+const runtimeSettingsService = createRuntimeSettingsService({
+    database: db,
+    io,
+    logger,
+    refreshIntervalMs: config.admin.runtimeSettingsRefreshIntervalMs
+});
+await runtimeSettingsService.refresh({ emit: false });
+runtimeSettingsService.start();
 const adminAccess = createAdminAccess({
     accountUuids: config.admin.accountUuids,
     legacyUserIds: config.admin.userIds
@@ -192,8 +203,20 @@ const adminService = createAdminService({
     roomStore,
     io,
     sessionService,
+    runtimeSettingsService,
+    redisClient,
+    databaseProvider: config.database.provider,
+    redisEnabled: config.redis.enabled,
+    adminLoginNotifierEnabled: Boolean(config.admin.loginNotifications.webhookUrl),
     isAdminUser: adminAccess.isAdminUser,
     auditPolicy: config.admin.audit
+});
+const adminLoginNotifier = createAdminLoginNotifier({
+    isAdminUser: adminAccess.isAdminUser,
+    recordAuditEvent: entry => adminService.recordAuditEvent(entry),
+    webhookUrl: config.admin.loginNotifications.webhookUrl,
+    webhookTimeoutMs: config.admin.loginNotifications.webhookTimeoutMs,
+    logger
 });
 const adminAuditCleanupService = createAdminAuditCleanupService({
     databaseOrRepository: db,
@@ -262,6 +285,7 @@ app.use(
 app.use('/api/auth', csrfProtection);
 app.use('/api/account', csrfProtection);
 app.use('/api/admin', csrfProtection);
+app.use('/api', createRuntimeSettingsRoutes({ runtimeSettingsService }));
 app.use('/api', createHealthRoutes({
     appVersion: packageJson.version,
     nodeEnv: config.nodeEnv,
@@ -281,7 +305,12 @@ app.use('/api/auth', createAuthRoutes({
     rateLimitStore: redisRateLimitStore,
     logger,
     metrics: operationalMetrics,
-    cookieOptions: config.auth.cookie
+    cookieOptions: config.auth.cookie,
+    onLoginSuccess: ({ user, request }) => adminLoginNotifier.notify({
+        user,
+        request,
+        authorizationMode: adminAccess.mode
+    })
 }));
 app.use('/api/account', createAccountRoutes({
     accountStatsService,
@@ -328,6 +357,7 @@ registerSocketHandlers(io, {
     accountStatsService,
     logger,
     metrics: operationalMetrics,
+    runtimeSettingsService,
     socketRateLimit
 });
 
@@ -347,6 +377,7 @@ async function shutdownRoomStore() {
 function prepareApplicationShutdown() {
     adminAuditCleanupService.stopScheduling();
     gameHistoryCleanupService.stopScheduling();
+    runtimeSettingsService.stop();
     stopInactiveRoomCleanup?.();
     const disconnectTarget = config.socket.redisAdapter.enabled && io.local ? io.local : io;
     disconnectTarget.disconnectSockets?.(true);
@@ -407,6 +438,8 @@ server.listen(config.port, () => {
         adminAuditCleanupBatchSize: config.admin.audit.cleanupBatchSize,
         adminAuditCleanupMaxBatches: config.admin.audit.cleanupMaxBatches,
         adminAuditExportMaxRows: config.admin.audit.exportMaxRows,
+        runtimeSettingsRefreshIntervalMs: config.admin.runtimeSettingsRefreshIntervalMs,
+        adminLoginWebhookEnabled: adminLoginNotifier.enabled,
         rateLimitProvider: redisClient ? 'redis' : 'memory'
     });
 });
@@ -421,7 +454,9 @@ return {
     roomStore,
     roomCleanupService,
     gameHistoryCleanupService,
-    adminAuditCleanupService
+    adminAuditCleanupService,
+    runtimeSettingsService,
+    adminLoginNotifier
 };
 }
 

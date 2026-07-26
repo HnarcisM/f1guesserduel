@@ -596,6 +596,8 @@ test('admin config prefers stable UUID identities and keeps numeric ids only for
         enabled: false,
         accountUuids: [],
         userIds: [],
+        loginNotifications: { webhookUrl: null, webhookTimeoutMs: 5_000 },
+        runtimeSettingsRefreshIntervalMs: 30_000,
         audit: {
             retentionDays: 180,
             cleanupIntervalMs: 86_400_000,
@@ -611,6 +613,8 @@ test('admin config prefers stable UUID identities and keeps numeric ids only for
         enabled: true,
         accountUuids: [ownerUuid],
         userIds: [7, 12],
+        loginNotifications: { webhookUrl: null, webhookTimeoutMs: 5_000 },
+        runtimeSettingsRefreshIntervalMs: 30_000,
         audit: {
             retentionDays: 180,
             cleanupIntervalMs: 86_400_000,
@@ -626,5 +630,10 @@ test('admin config prefers stable UUID identities and keeps numeric ids only for
     assert.throws(
         () => createAppConfig({ ADMIN_USER_IDS: '7,narcis' }),
         /positive integer user ids/
+    );
+    assert.equal(createAppConfig({ ADMIN_LOGIN_WEBHOOK_URL: 'https://hooks.example.test/admin' }).admin.loginNotifications.webhookUrl, 'https://hooks.example.test/admin');
+    assert.throws(
+        () => createAppConfig({ ADMIN_LOGIN_WEBHOOK_URL: 'file:///tmp/admin' }),
+        /valid http\(s\) URL/
     );
 });

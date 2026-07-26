@@ -35,8 +35,10 @@ function createFixture() {
     writeFile(rootDir, 'public/css/23-game-hub.css', '.game-hub { display: grid; }\n');
     writeFile(rootDir, 'public/css/24-extended-modes.css', '.extended-mode-panel { display: grid; }\n');
     writeFile(rootDir, 'public/css/25-mode-pages.css', '.extended-mode-page { display: block; }\n');
+    writeFile(rootDir, 'public/css/26-runtime-status.css', '.runtime-status { display: block; }\n');
     writeFile(rootDir, 'public/js/socketBridgeBootstrap.js', 'bridgeSocket();\n');
     writeFile(rootDir, 'public/js/gameVariantRegistry.js', 'installRegistry();\n');
+    writeFile(rootDir, 'public/js/runtimeExperienceController.js', 'installRuntimeExperience();\n');
     writeFile(rootDir, 'public/js/gameHubController.js', 'installGameHub();\n');
     writeFile(rootDir, 'public/js/apiClient.js', 'export const authApi = {};\n');
     writeFile(rootDir, 'public/js/extendedModesConfig.js', 'export const STYLE_URL = \'/extended.css\';\n');
@@ -95,8 +97,10 @@ function createFixture() {
         '<link rel="stylesheet" href="/css/21-feedback-settings.css?v=manual-version">',
         '<link rel="stylesheet" href="/css/22-connection-status.css?v=manual-version">',
         '<link rel="stylesheet" href="/css/23-game-hub.css?v=manual-version">',
+        '<link rel="stylesheet" href="/css/26-runtime-status.css?v=manual-version">',
         '<script src="/js/socketBridgeBootstrap.js?v=manual-version"></script>',
         '<script src="/js/gameVariantRegistry.js?v=manual-version"></script>',
+        '<script src="/js/runtimeExperienceController.js?v=manual-version"></script>',
         '<script src="/js/gameHubController.js?v=manual-version"></script>',
         '<script src="/other.js?v=keep-this"></script>',
         '<script defer src="/game.bundle.min.js?v=manual-version"></script>',
@@ -119,7 +123,7 @@ test('frontend asset versioning replaces manual values with deterministic conten
     const firstHtml = fs.readFileSync(path.join(rootDir, 'public', 'index.html'), 'utf8');
 
     assert.equal(firstResult.changed, true);
-    assert.equal(firstResult.assets.length, 24);
+    assert.equal(firstResult.assets.length, 26);
     for (const asset of firstResult.assets) {
         assert.match(asset.version, /^[a-f0-9]{16}$/);
         assert.ok(firstHtml.includes(`${asset.publicPath}?v=${asset.version}`));

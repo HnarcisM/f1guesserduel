@@ -242,3 +242,51 @@ test('admin audit export supports JSON and CSV with row limits and CSV formula p
 
     assert.equal((await service.exportAudit({ format: 'xml' })).status, 400);
 });
+
+test('admin P3 settings, analytics and suspension history use dedicated repositories and audit changes', async () => {
+    const audits = [];
+    const suspensionHistory = [];
+    const runtimeSettingsService = {
+        snapshot: { settings: { maintenance: { enabled: false }, announcement: { enabled: false }, modes: { duel: true } }, updatedAt: null, updatedBy: null },
+        getSnapshot() { return this.snapshot; },
+        async update({ patch, adminUserId }) {
+            this.snapshot = { settings: { ...this.snapshot.settings, ...patch }, updatedAt: '2026-07-26T12:00:00.000Z', updatedBy: adminUserId };
+            return { ok: true, ...this.snapshot };
+        }
+    };
+    const fixture = createFixtures();
+    const repository = {
+        ...fixture.repository,
+        async getUserDetails() { return { user: { id: 2, username: 'Pilot' }, stats: [], recentResults: [], dailyAttempts: [], weeklyAttempts: [] }; },
+        async setUserSuspension() { return { id: 2 }; },
+        async clearUserSuspension() { return { id: 2 }; },
+        async recordAudit(entry) { audits.push(entry); return 1; }
+    };
+    const operationalRepository = {
+        async getModeDifficultyStats() { return [{ mode: 'single', difficulty: 'hard', gamesPlayed: 4 }]; },
+        async getSuspensionHistory() { return suspensionHistory; },
+        async recordSuspensionHistory(entry) { suspensionHistory.push(entry); return suspensionHistory.length; }
+    };
+    const service = createAdminService({
+        database: {},
+        repository,
+        operationalRepository,
+        runtimeSettingsService,
+        roomStore: fixture.roomStore,
+        io: { engine: { clientsCount: 0 }, async fetchSockets() { return []; } },
+        sessionService: { async destroyAllSessionsForUser() { return { changes: 0 }; } },
+        isAdminUser: () => false,
+        now: () => new Date('2026-07-26T12:00:00.000Z')
+    });
+
+    const updated = await service.updateOperationalSettings({ adminUserId: 1, patch: { modes: { duel: false } }, requestId: 'req-p3' });
+    assert.equal(updated.ok, true);
+    assert.equal(audits.at(-1).action, 'operations.settings.updated');
+    assert.equal((await service.getModeDifficultyStats()).rows[0].difficulty, 'hard');
+
+    await service.suspendUser({ adminUserId: 1, targetUserId: 2, duration: '24h', reason: 'Test suspendare P3', requestId: 'req-suspend' });
+    await service.reactivateUser({ adminUserId: 1, targetUserId: 2, requestId: 'req-reactivate' });
+    assert.deepEqual(suspensionHistory.map(entry => entry.eventType), ['suspended', 'reactivated']);
+    const details = await service.getUserDetails(2);
+    assert.equal(details.suspensionHistory.length, 2);
+});

@@ -157,3 +157,28 @@ CREATE INDEX IF NOT EXISTS idx_user_daily_attempts_date
     ON user_daily_attempts(daily_date);
 CREATE INDEX IF NOT EXISTS idx_user_weekly_attempts_week
     ON user_weekly_attempts(week_key);
+
+CREATE TABLE IF NOT EXISTS app_runtime_settings (
+    setting_key TEXT PRIMARY KEY,
+    value_json TEXT NOT NULL,
+    updated_by INTEGER,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS user_suspension_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    admin_user_id INTEGER NOT NULL,
+    event_type TEXT NOT NULL CHECK (event_type IN ('suspended', 'reactivated')),
+    duration_key TEXT,
+    reason TEXT,
+    suspended_until TEXT,
+    details_json TEXT NOT NULL DEFAULT '{}',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (admin_user_id) REFERENCES users(id) ON DELETE RESTRICT
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_suspension_history_user
+    ON user_suspension_history(user_id, created_at DESC, id DESC);

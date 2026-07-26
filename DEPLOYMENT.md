@@ -122,6 +122,25 @@ user_game_stats
 
 Conturile, sesiunile și statisticile utilizatorilor autentificați se păstrează în Postgres. Migrările numerotate sunt aplicate automat la deploy. Rezultatele detaliate din `user_game_results` sunt păstrate implicit 365 de zile și curățate la pornire, apoi săptămânal, în query-uri de maximum 5.000 de rânduri; statisticile agregate, XP-ul și badge-urile rămân permanente. Fără Redis, camerele active rămân în `rooms.json` pe `/tmp`, deci pot dispărea la restart/redeploy/sleep.
 
+### Controale operaționale Admin V3
+
+Maintenance mode, anunțul global și activarea modurilor sunt persistate în baza principală. Nu trebuie configurate variabile separate pentru starea lor curentă. Pentru mai multe instanțe, păstrează:
+
+```env
+RUNTIME_SETTINGS_REFRESH_INTERVAL_MS=30000
+```
+
+Fiecare login reușit al unui administrator este înregistrat în audit și în logurile serverului. Pentru o notificare externă suplimentară, configurează un endpoint HTTPS care acceptă POST JSON:
+
+```env
+ADMIN_LOGIN_WEBHOOK_URL=https://example.com/hooks/f1-admin-login
+ADMIN_LOGIN_WEBHOOK_TIMEOUT_MS=5000
+```
+
+Eșecul webhook-ului nu blochează autentificarea. Payload-ul include identitatea publică a administratorului, timestampul, IP-ul și user-agentul, dar nu conține parola, tokenul sau cookie-ul de sesiune.
+
+Statusul bazei și Redis este disponibil owner-ului în secțiunea **Operațional**. Redis apare `Dezactivat` când `REDIS_URL` nu este configurat, fără ca această stare să fie tratată ca eroare.
+
 ### Redis opțional pentru camere și rate limiting
 
 După ce creezi separat un serviciu Redis, copiază URL-ul lui în Render → Environment. Pentru un provider cloud folosește de preferat conexiunea TLS `rediss://`:

@@ -279,6 +279,23 @@ test('admin console protects access and supports core moderation flows', { concu
             assert.match(await adminPage.locator('#adminAuditMeta').innerText(), /1 înregistrări/i);
         });
 
+        await t.test('administratorul poate inspecta controalele operaționale și statisticile', async () => {
+            await selectAdminView(adminPage, 'operations');
+            await adminPage.locator('#adminModeToggles [data-mode-key]').first().waitFor({
+                state: 'visible',
+                timeout: 7000
+            });
+            assert.equal(await adminPage.locator('#adminModeToggles [data-mode-key]').count(), 10);
+            assert.equal(await adminPage.locator('#adminServiceStatus .admin-service-card').count(), 2);
+            assert.match(await adminPage.locator('#adminOperationsMeta').innerText(), /notificare login admin/i);
+
+            await selectAdminView(adminPage, 'analytics');
+            await adminPage.locator('#adminAnalyticsMeta').filter({ hasText: 'jocuri analizate' }).waitFor({
+                state: 'visible',
+                timeout: 7000
+            });
+        });
+
         await t.test('panoul rămâne utilizabil pe ecrane mobile', async () => {
             await selectAdminView(adminPage, 'dashboard');
             for (const viewport of MOBILE_VIEWPORTS) {
@@ -313,6 +330,17 @@ test('admin console protects access and supports core moderation flows', { concu
                 await adminPage.locator('#adminUserDialogClose').click({ trial: true });
                 await adminPage.locator('#adminUserDialogClose').click();
                 await adminPage.locator('#adminUserDialog').waitFor({ state: 'hidden', timeout: 7000 });
+
+                await selectAdminView(adminPage, 'operations');
+                await adminPage.locator('#adminModeToggles [data-mode-key]').first().waitFor({ state: 'visible', timeout: 7000 });
+                metrics = await collectMobileMetrics(adminPage);
+                assertMobileLayout(metrics, `${viewport.label}/operations`);
+
+                await selectAdminView(adminPage, 'analytics');
+                await adminPage.locator('#adminAnalyticsMeta').filter({ hasText: 'jocuri analizate' }).waitFor({ state: 'visible', timeout: 7000 });
+                metrics = await collectMobileMetrics(adminPage);
+                assertMobileLayout(metrics, `${viewport.label}/analytics`);
+                assert.ok(metrics.tableWrap, `${viewport.label}: tabelul statisticilor nu are container responsive`);
             }
         });
     } finally {

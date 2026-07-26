@@ -9,7 +9,8 @@ function createAuthRoutes({
     rateLimitStore = null,
     logger = console,
     metrics = null,
-    cookieOptions = {}
+    cookieOptions = {},
+    onLoginSuccess = null
 }) {
     const router = express.Router();
     const loginRateLimiter = rateLimiters.login || createMemoryRateLimiter({
@@ -94,10 +95,18 @@ function createAuthRoutes({
             }
 
             setSessionCookie(res, result.session.token);
-            return res.json(buildAuthResponse(
+            const response = res.json(buildAuthResponse(
                 result.user,
                 await getSocketAuthToken(req, result.session)
             ));
+            if (typeof onLoginSuccess === 'function') {
+                Promise.resolve()
+                    .then(() => onLoginSuccess({ user: result.user, request: req }))
+                    .catch(error => {
+                        logger?.error?.('Post-login notification failed.', { error, userId: result.user?.id });
+                    });
+            }
+            return response;
         } catch (error) {
             return next(error);
         }

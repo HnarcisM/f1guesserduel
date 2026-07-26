@@ -15,6 +15,8 @@ const DEFAULT_ADMIN_AUDIT_CLEANUP_INTERVAL_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_ADMIN_AUDIT_CLEANUP_BATCH_SIZE = 250;
 const DEFAULT_ADMIN_AUDIT_CLEANUP_MAX_BATCHES = 20;
 const DEFAULT_ADMIN_AUDIT_EXPORT_MAX_ROWS = 10_000;
+const DEFAULT_RUNTIME_SETTINGS_REFRESH_INTERVAL_MS = 30_000;
+const DEFAULT_ADMIN_LOGIN_WEBHOOK_TIMEOUT_MS = 5_000;
 const DEFAULT_ROOM_SAVE_DEBOUNCE_MS = 250;
 const DEFAULT_ROOM_CLEANUP_INTERVAL_MS = 60 * 1000;
 const DEFAULT_ROOM_INACTIVE_TTL_MS = 30 * 60 * 1000;
@@ -193,6 +195,20 @@ function normalizeDatabaseProvider(value) {
         throw new Error('DATABASE_PROVIDER must be one of: sqlite, postgres.');
     }
     return normalized;
+}
+
+function normalizeOptionalHttpUrl(value, name) {
+    if (value === undefined || value === null || value === '') return null;
+    if (typeof value !== 'string') throw new Error(`${name} must be a valid http(s) URL.`);
+    try {
+        const parsed = new URL(value.trim());
+        if (!['http:', 'https:'].includes(parsed.protocol) || !parsed.hostname) {
+            throw new Error('invalid protocol');
+        }
+        return parsed.toString();
+    } catch {
+        throw new Error(`${name} must be a valid http(s) URL.`);
+    }
 }
 
 function normalizeRedisUrl(value) {
@@ -424,6 +440,7 @@ function createAppConfig(env = process.env, options = {}) {
     const cookieSameSite = parseSameSiteEnv(env, 'COOKIE_SAMESITE', 'lax');
     const adminAccountUuids = parseAccountUuidListEnv(env, 'ADMIN_ACCOUNT_UUIDS');
     const adminUserIds = parsePositiveIntegerListEnv(env, 'ADMIN_USER_IDS');
+    const adminLoginWebhookUrl = normalizeOptionalHttpUrl(env.ADMIN_LOGIN_WEBHOOK_URL, 'ADMIN_LOGIN_WEBHOOK_URL');
 
     if (cookieSameSite === 'none' && !cookieSecure) {
         throw new Error('COOKIE_SAMESITE=none requires COOKIE_SECURE=true.');
@@ -596,6 +613,21 @@ function createAppConfig(env = process.env, options = {}) {
             enabled: adminAccountUuids.length > 0 || adminUserIds.length > 0,
             accountUuids: adminAccountUuids,
             userIds: adminUserIds,
+            loginNotifications: {
+                webhookUrl: adminLoginWebhookUrl,
+                webhookTimeoutMs: parseIntegerEnv(
+                    env,
+                    'ADMIN_LOGIN_WEBHOOK_TIMEOUT_MS',
+                    DEFAULT_ADMIN_LOGIN_WEBHOOK_TIMEOUT_MS,
+                    { min: 500, max: 30_000 }
+                )
+            },
+            runtimeSettingsRefreshIntervalMs: parseIntegerEnv(
+                env,
+                'RUNTIME_SETTINGS_REFRESH_INTERVAL_MS',
+                DEFAULT_RUNTIME_SETTINGS_REFRESH_INTERVAL_MS,
+                { min: 0, max: 24 * 60 * 60 * 1000 }
+            ),
             audit: {
                 retentionDays: parseIntegerEnv(
                     env,
@@ -705,6 +737,8 @@ module.exports = {
     DEFAULT_ADMIN_AUDIT_CLEANUP_BATCH_SIZE,
     DEFAULT_ADMIN_AUDIT_CLEANUP_MAX_BATCHES,
     DEFAULT_ADMIN_AUDIT_EXPORT_MAX_ROWS,
+    DEFAULT_RUNTIME_SETTINGS_REFRESH_INTERVAL_MS,
+    DEFAULT_ADMIN_LOGIN_WEBHOOK_TIMEOUT_MS,
     DEFAULT_ROOM_SAVE_DEBOUNCE_MS,
     DEFAULT_ROOM_CLEANUP_INTERVAL_MS,
     DEFAULT_ROOM_INACTIVE_TTL_MS,
