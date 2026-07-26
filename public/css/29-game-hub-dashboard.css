@@ -798,7 +798,14 @@
     }
 }
 
-/* Fluid dashboard shell: overrides the legacy 700px menu container safely. */
+/* Fluid dashboard shell: overrides the legacy menu constraints safely. */
+.game-mode-selection.game-hub {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    margin: 0;
+}
+
 .overlay > .menu-container.game-hub-menu {
     width: min(1600px, calc(100vw - 32px));
     max-width: none;

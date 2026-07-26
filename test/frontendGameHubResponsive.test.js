@@ -9,12 +9,13 @@ function readCss() {
     return fs.readFileSync(cssPath, 'utf8');
 }
 
-test('Game Hub overrides the legacy 700px menu width with a viewport-fluid shell', () => {
+test('Game Hub resets both legacy catalog width constraints with a viewport-fluid shell', () => {
     const css = readCss();
 
+    assert.match(css, /\.game-mode-selection\.game-hub\s*\{[\s\S]*?max-width:\s*none/);
     assert.match(css, /\.overlay\s*>\s*\.menu-container\.game-hub-menu\s*\{/);
     assert.match(css, /width:\s*min\(1600px,\s*calc\(100vw\s*-\s*32px\)\)/);
-    assert.match(css, /max-width:\s*none/);
+    assert.match(css, /\.overlay\s*>\s*\.menu-container\.game-hub-menu\s*\{[\s\S]*?max-width:\s*none/);
 });
 
 test('Game Hub provides desktop, laptop and mobile dashboard arrangements', () => {
