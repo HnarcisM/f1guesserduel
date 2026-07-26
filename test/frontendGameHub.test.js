@@ -5,6 +5,7 @@ const test = require('node:test');
 
 async function loadGameHubModules() {
     await import('../public/js/gameVariantRegistry.js');
+    await import('../public/js/gameHubDashboardView.js');
     await import('../public/js/gameHubController.js');
     return {
         registry: globalThis.F1GameVariantRegistry,
@@ -308,6 +309,7 @@ test('game hub installer is idempotent', async () => {
 test('production HTML loads the Game Hub before the existing game bundle', () => {
     const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
     const registryIndex = html.indexOf('/js/gameVariantRegistry.js');
+    const viewIndex = html.indexOf('/js/gameHubDashboardView.js');
     const controllerIndex = html.indexOf('/js/gameHubController.js');
     const bundleIndex = html.indexOf('/game.bundle.min.js');
 
@@ -317,8 +319,10 @@ test('production HTML loads the Game Hub before the existing game bundle', () =>
     assert.ok(html.includes('id="gameHubBackBtn"'));
     assert.match(html, /id="difficultySection" class="difficulty-section is-hidden"/);
     assert.ok(html.includes('/css/23-game-hub.css'));
+    assert.ok(html.includes('/css/29-game-hub-dashboard.css'));
     assert.ok(registryIndex > 0);
-    assert.ok(controllerIndex > registryIndex);
+    assert.ok(viewIndex > registryIndex);
+    assert.ok(controllerIndex > viewIndex);
     assert.ok(bundleIndex > controllerIndex);
 });
 

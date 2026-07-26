@@ -112,6 +112,11 @@ const DEFAULT_ASSETS = Object.freeze([
     },
     {
         attribute: 'href',
+        publicPath: '/css/29-game-hub-dashboard.css',
+        sourceFile: path.join('public', 'css', '29-game-hub-dashboard.css')
+    },
+    {
+        attribute: 'href',
         publicPath: '/css/26-runtime-status.css',
         sourceFile: path.join('public', 'css', '26-runtime-status.css')
     },
@@ -124,6 +129,11 @@ const DEFAULT_ASSETS = Object.freeze([
         attribute: 'src',
         publicPath: '/js/gameVariantRegistry.js',
         sourceFile: path.join('public', 'js', 'gameVariantRegistry.js')
+    },
+    {
+        attribute: 'src',
+        publicPath: '/js/gameHubDashboardView.js',
+        sourceFile: path.join('public', 'js', 'gameHubDashboardView.js')
     },
     {
         attribute: 'src',
