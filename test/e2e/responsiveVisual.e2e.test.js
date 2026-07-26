@@ -249,17 +249,17 @@ async function assertGameHubCatalog(page, viewportLabel) {
     assert.deepEqual(catalog.keys, [
         'classic',
         'daily',
+        'era',
+        'weekly',
         'duel',
         'speed-run',
-        'era',
         'streak',
-        'weekly',
         'constructor',
         'pilot-sudoku',
         'track'
     ]);
     assert.deepEqual(catalog.available, [
-        'single', 'daily', 'duel', 'speed-run', 'era', 'streak', 'weekly',
+        'single', 'daily', 'era', 'weekly', 'duel', 'speed-run', 'streak',
         'constructor', 'pilot-sudoku', 'track'
     ]);
     assert.equal(catalog.comingSoon.length, 0);
