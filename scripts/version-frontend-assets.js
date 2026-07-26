@@ -133,6 +133,11 @@ const DEFAULT_ASSETS = Object.freeze([
     },
     {
         attribute: 'src',
+        publicPath: '/js/accountRedirectController.js',
+        sourceFile: path.join('public', 'js', 'accountRedirectController.js')
+    },
+    {
+        attribute: 'src',
         publicPath: '/js/duelRoomBrowserSeriesController.js',
         sourceFile: path.join('public', 'js', 'duelRoomBrowserSeriesController.js')
     },

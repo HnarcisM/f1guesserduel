@@ -2,7 +2,7 @@
 
 const CACHE_PREFIX = 'f1-guesser-static-';
 /* GENERATED_PRECACHE_START */
-const STATIC_CACHE_NAME = 'f1-guesser-static-97a16958323972729a53';
+const STATIC_CACHE_NAME = 'f1-guesser-static-35d7df1a6a8e6a664e4f';
 const PRECACHE_URLS = Object.freeze([
     "/css/16-duel-ready.css?v=325c0498b808b8c1",
     "/css/17-duel-series.css?v=519233effd931ef4",
@@ -21,6 +21,7 @@ const PRECACHE_URLS = Object.freeze([
     "/icons/pwa-512.png",
     "/index.html",
     "/js/accountGameHistoryController.js?v=0bdff1b6f186805c",
+    "/js/accountRedirectController.js?v=6c40d148b45d80e8",
     "/js/apiClient.js",
     "/js/connectionStatusController.js?v=6df8af4e1cbae20a",
     "/js/duelIdentityController.js?v=1345c7e6d7940860",
