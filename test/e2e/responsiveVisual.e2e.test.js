@@ -410,6 +410,7 @@ test('responsive layouts match committed visual baselines', { concurrency: false
             try {
                 const page = await openAppPage(context, app.baseUrl);
                 await page.locator('#difficulty-overlay').waitFor({ state: 'visible', timeout: 7000 });
+                await page.evaluate(() => window.F1RuntimeSettings?.load?.({ force: true }));
                 // Game Hub-ul se schimbă la activarea fiecărui mod; îl verificăm semantic și responsive,
                 // iar baseline-ul pixel-perfect rămâne rezervat ecranului stabil de gameplay.
                 const home = await captureState(page, viewport, 'home', HOME_SELECTORS, { compareVisual: false });

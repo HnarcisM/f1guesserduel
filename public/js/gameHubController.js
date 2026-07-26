@@ -12,16 +12,55 @@
         return createElement(documentObject, 'span', 'game-hub-tag', text);
     }
 
-    function createModeCard(documentObject, variant, runtimeSettings = null) {
+    function findDescendantByClass(root, className) {
+        if (!root) return null;
+        if (root.classList?.contains?.(className)) return root;
+        for (const child of Array.from(root.children || [])) {
+            const match = findDescendantByClass(child, className);
+            if (match) return match;
+        }
+        return null;
+    }
+
+    function applyModeCardAvailability(card, variant, runtimeSettings = null) {
+        if (!card || !variant) return card;
         const runtimeEnabled = runtimeSettings?.isModeEnabled?.(variant.key) !== false;
         const available = variant.state === 'available' && runtimeEnabled;
-        const isPageLink = available && typeof variant.pagePath === 'string';
+        const state = findDescendantByClass(card, 'game-hub-state');
+
+        card.disabled = !available;
+        card.classList.toggle('is-runtime-disabled', !runtimeEnabled);
+        card.classList.toggle('is-coming-soon', runtimeEnabled && variant.state !== 'available');
+
+        if (available) {
+            card.removeAttribute?.('aria-disabled');
+            card.title = '';
+            if (state) {
+                state.className = 'game-hub-state is-available';
+                state.textContent = 'Disponibil';
+            }
+            return card;
+        }
+
+        card.setAttribute('aria-disabled', 'true');
+        card.title = runtimeEnabled
+            ? `${variant.title} va fi disponibil într-un update viitor.`
+            : `${variant.title} este temporar dezactivat.`;
+        if (state) {
+            state.className = 'game-hub-state';
+            state.textContent = runtimeEnabled ? 'În curând' : 'Dezactivat';
+        }
+        return card;
+    }
+
+    function createModeCard(documentObject, variant, runtimeSettings = null) {
+        const isPageLink = variant.state === 'available' && typeof variant.pagePath === 'string';
         const card = createElement(documentObject, 'button', 'game-mode-card game-hub-card');
         card.type = 'button';
         card.dataset.gameVariant = variant.key;
         card.dataset.gameContext = variant.context;
 
-        if (available) {
+        if (variant.state === 'available') {
             if (variant.modeChoice) {
                 card.dataset.gameModeChoice = variant.modeChoice;
                 card.setAttribute('aria-pressed', 'false');
@@ -30,25 +69,13 @@
                 card.dataset.gameModePage = variant.pagePath;
                 card.setAttribute('aria-label', `${variant.title} · deschide pagina modului`);
             }
-        } else {
-            card.disabled = true;
-            card.classList.add(runtimeEnabled ? 'is-coming-soon' : 'is-runtime-disabled');
-            card.setAttribute('aria-disabled', 'true');
-            card.title = runtimeEnabled
-                ? `${variant.title} va fi disponibil într-un update viitor.`
-                : `${variant.title} este temporar dezactivat.`;
         }
 
         const topRow = createElement(documentObject, 'span', 'game-hub-card-top');
         const icon = createElement(documentObject, 'span', 'mode-icon', variant.icon);
         icon.setAttribute('aria-hidden', 'true');
         topRow.append(icon);
-        topRow.append(createElement(
-            documentObject,
-            'span',
-            available ? 'game-hub-state is-available' : 'game-hub-state',
-            available ? 'Disponibil' : (runtimeEnabled ? 'În curând' : 'Dezactivat')
-        ));
+        topRow.append(createElement(documentObject, 'span', 'game-hub-state'));
 
         const title = createElement(documentObject, 'strong', 'game-hub-card-title', variant.title);
         const description = createElement(documentObject, 'small', 'game-hub-card-description', variant.description);
@@ -56,14 +83,15 @@
         for (const tag of variant.tags || []) tags.append(createTag(documentObject, tag));
 
         card.append(topRow, title, description, tags);
-        return card;
+        return applyModeCardAvailability(card, variant, runtimeSettings);
     }
 
     function createSection(documentObject, {
         title,
         description,
         variants,
-        modifier = ''
+        modifier = '',
+        runtimeSettings = null
     }) {
         const section = createElement(documentObject, 'section', `game-hub-section ${modifier}`.trim());
         const header = createElement(documentObject, 'div', 'game-hub-section-header');
@@ -77,10 +105,29 @@
         const grid = createElement(documentObject, 'div', 'game-hub-grid');
         grid.setAttribute('role', 'group');
         grid.setAttribute('aria-label', title);
-        for (const variant of variants) grid.append(createModeCard(documentObject, variant, globalObject?.F1RuntimeSettings));
+        for (const variant of variants) grid.append(createModeCard(documentObject, variant, runtimeSettings));
 
         section.append(header, grid);
         return section;
+    }
+
+    function collectModeCards(root) {
+        const cards = [];
+        function visit(element) {
+            if (!element) return;
+            if (element.dataset?.gameVariant) cards.push(element);
+            for (const child of Array.from(element.children || [])) visit(child);
+        }
+        visit(root);
+        return cards;
+    }
+
+    function syncRuntimeModeCards(root, registry, runtimeSettings = null) {
+        for (const card of collectModeCards(root)) {
+            const variant = registry?.getGameVariant?.(card.dataset.gameVariant);
+            if (variant) applyModeCardAvailability(card, variant, runtimeSettings);
+        }
+        return root;
     }
 
     function createGameHubController({
@@ -110,6 +157,12 @@
             const root = documentObject?.getElementById?.(rootId);
             if (!root || !registry) return false;
 
+            const runtimeSettings = windowObject?.F1RuntimeSettings || globalObject?.F1RuntimeSettings || null;
+            if (root.dataset.gameHubReady === 'true') {
+                syncRuntimeModeCards(root, registry, runtimeSettings);
+                return true;
+            }
+
             const available = registry.listGameVariantsByState(registry.GAME_VARIANT_STATES.AVAILABLE);
             const comingSoon = registry.listGameVariantsByState(registry.GAME_VARIANT_STATES.COMING_SOON);
             const sections = [
@@ -117,7 +170,8 @@
                     title: 'Joacă acum',
                     description: 'Alege experiența pe care vrei să o pornești.',
                     variants: available,
-                    modifier: 'game-hub-section--available'
+                    modifier: 'game-hub-section--available',
+                    runtimeSettings
                 })
             ];
             if (comingSoon.length > 0) {
@@ -125,7 +179,8 @@
                     title: 'În dezvoltare',
                     description: 'Următoarele moduri vor fi activate treptat în update-urile viitoare.',
                     variants: comingSoon,
-                    modifier: 'game-hub-section--upcoming'
+                    modifier: 'game-hub-section--upcoming',
+                    runtimeSettings
                 }));
             }
 
@@ -158,9 +213,11 @@
     }
 
     const api = Object.freeze({
+        applyModeCardAvailability,
         createGameHubController,
         createModeCard,
-        installGameHubController
+        installGameHubController,
+        syncRuntimeModeCards
     });
 
     if (typeof module !== 'undefined' && module.exports) module.exports = api;

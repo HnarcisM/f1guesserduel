@@ -62,6 +62,9 @@ function createFakeElement(tagName = 'div') {
         getAttribute(name) {
             return attributes.get(name) ?? null;
         },
+        removeAttribute(name) {
+            attributes.delete(name);
+        },
         addEventListener(name, handler) {
             listeners.set(name, handler);
         },
@@ -160,10 +163,54 @@ test('game hub disables a mode immediately when runtime settings turn it off', a
     });
 
     assert.equal(card.disabled, true);
-    assert.equal(card.dataset.gameModeChoice, undefined);
+    assert.equal(card.dataset.gameModeChoice, 'duel');
     assert.equal(card.classList.contains('is-runtime-disabled'), true);
     assert.equal(card.getAttribute('aria-disabled'), 'true');
     assert.equal(flatten(card).some(element => element.textContent === 'Dezactivat'), true);
+});
+
+test('runtime refresh updates existing cards without replacing their click-bound DOM nodes', async () => {
+    const { registry, createGameHubController } = await loadGameHubModules();
+    const documentObject = createFakeDocument();
+    const disabledModes = new Set();
+    const windowObject = {
+        F1RuntimeSettings: {
+            isModeEnabled(modeKey) {
+                return !disabledModes.has(modeKey);
+            }
+        }
+    };
+    const controller = createGameHubController({ documentObject, registry, windowObject });
+
+    controller.render();
+    const initialCards = flatten(documentObject.root)
+        .filter(element => element.dataset?.gameVariant);
+    const classic = initialCards.find(card => card.dataset.gameVariant === 'classic');
+    const daily = initialCards.find(card => card.dataset.gameVariant === 'daily');
+    const duel = initialCards.find(card => card.dataset.gameVariant === 'duel');
+    let dailyClicks = 0;
+    daily.addEventListener('click', () => { dailyClicks += 1; });
+
+    disabledModes.add('daily');
+    controller.render();
+    const refreshedCards = flatten(documentObject.root)
+        .filter(element => element.dataset?.gameVariant);
+
+    assert.equal(refreshedCards.find(card => card.dataset.gameVariant === 'classic'), classic);
+    assert.equal(refreshedCards.find(card => card.dataset.gameVariant === 'daily'), daily);
+    assert.equal(refreshedCards.find(card => card.dataset.gameVariant === 'duel'), duel);
+    assert.equal(daily.disabled, true);
+    assert.equal(daily.classList.contains('is-runtime-disabled'), true);
+    assert.equal(daily.dataset.gameModeChoice, 'daily');
+
+    disabledModes.delete('daily');
+    controller.render();
+    assert.equal(daily.disabled, false);
+    assert.equal(daily.classList.contains('is-runtime-disabled'), false);
+    assert.equal(daily.getAttribute('aria-disabled'), null);
+    assert.equal(flatten(daily).some(element => element.textContent === 'Disponibil'), true);
+    await daily.trigger('click', { target: daily });
+    assert.equal(dailyClicks, 1, 'listenerul atașat înainte de refresh trebuie păstrat');
 });
 
 test('extended mode card exposes launch metadata and remains keyboard enabled', async () => {

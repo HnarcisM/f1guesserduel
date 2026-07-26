@@ -101,7 +101,6 @@
         if (message) message.textContent = snapshot.maintenance.message || 'Aplicația este temporar în mentenanță.';
         documentObject.body.classList.toggle('runtime-maintenance-active', snapshot.maintenance.enabled);
         documentObject.dispatchEvent(new CustomEvent('f1:runtime-settings', { detail: getSnapshot() }));
-        globalObject?.__f1GameHubController?.render?.();
     }
 
     async function load({ force = false } = {}) {

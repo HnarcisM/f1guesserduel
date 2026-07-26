@@ -27,6 +27,7 @@ test('public runtime controller renders announcements and maintenance without un
     assert.match(runtimeController, /runtimeRestrictionNotice/);
     assert.match(runtimeController, /showRestrictionMessage\(payload\.message\)/);
     assert.match(runtimeController, /if \(loadPromise\) return loadPromise/);
+    assert.doesNotMatch(runtimeController, /__f1GameHubController\?\.render/);
     assert.doesNotMatch(runtimeController, /innerHTML\s*=/);
     assert.match(runtimeStyles, /body\.runtime-maintenance-active \{ overflow: hidden; \}/);
     assert.match(runtimeStyles, /\.runtime-restriction-notice/);
