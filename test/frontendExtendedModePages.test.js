@@ -66,6 +66,7 @@ test('every standalone page has an independent entry module', () => {
 
 test('standalone page core validates routes and synchronizes account auth before starting', () => {
     const source = read('public/js/extendedModePage.js');
+    const header = read('public/js/extendedModeHeaderController.js');
     for (const mode of MODES) {
         const escapedKey = mode.key.replace('-', '\\-');
         const escapedPath = mode.path.replaceAll('/', '\\/');
@@ -77,11 +78,18 @@ test('standalone page core validates routes and synchronizes account auth before
     assert.match(source, /await controller\.open/);
     assert.match(source, /replaceChildren\?\.\(panel\)/);
     assert.match(source, /setAttribute\('role', 'region'\)/);
-    assert.match(source, /setupThemeMenu\(menu\)/);
-    assert.match(source, /setNavigationMenuOpen/);
-    assert.match(source, /querySelectorAll\('\[data-mode-path\]'\)/);
-    assert.match(source, /f1-mode-return-path/);
-    assert.match(source, /location\.assign\('\/#login'\)/);
+    assert.match(source, /extendedModeHeaderController/);
+    assert.match(source, /installPageNavigation/);
+    assert.match(header, /setupThemeMenu\(menu\)/);
+    assert.match(header, /setNavigationMenuOpen/);
+    assert.match(header, /querySelectorAll\('\[data-mode-path\]'\)/);
+    assert.match(header, /f1-mode-return-path/);
+    assert.match(header, /location\.assign\('\/#login'\)/);
+});
+
+test('standalone header controller is included in the offline precache manifest', () => {
+    const versioning = read('scripts/version-frontend-assets.js');
+    assert.match(versioning, /\/js\/extendedModeHeaderController\.js/);
 });
 
 test('standalone mode styling converts the modal shell into a full page surface', () => {
