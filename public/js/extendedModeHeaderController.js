@@ -98,15 +98,18 @@ function installPageNavigation({ windowObject, documentObject, socket }) {
     installClassicHeaderNavigation({ windowObject, documentObject, socket });
 
     const profileButton = documentObject.getElementById('authOpenBtn');
-    profileButton?.addEventListener('click', () => {
-        try {
-            windowObject.sessionStorage?.setItem?.('f1-mode-return-path', windowObject.location.pathname);
-        } catch {
-            // The return path is optional.
-        }
-        socket?.emit?.('leaveExtendedMode');
-        windowObject.location.assign('/#login');
-    });
+    const embeddedProfilePanel = documentObject.getElementById('authPanel');
+    if (profileButton && !embeddedProfilePanel) {
+        profileButton.addEventListener('click', () => {
+            try {
+                windowObject.sessionStorage?.setItem?.('f1-mode-return-path', windowObject.location.pathname);
+            } catch {
+                // The return path is optional when the profile is not embedded.
+            }
+            socket?.emit?.('leaveExtendedMode');
+            windowObject.location.assign('/#login');
+        });
+    }
 }
 
 export {

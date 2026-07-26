@@ -53,13 +53,14 @@ function createElement(id, { classes = [], dataset = {}, attributes = {} } = {})
     return element;
 }
 
-function createDocument() {
+function createDocument({ embeddedProfile = false } = {}) {
     const menuButton = createElement('menu-hamburger');
     const firstMenuItem = createElement('firstMenuItem');
     const menu = createElement('dropdown-menu', { classes: ['hidden'] });
     menu.querySelector = () => firstMenuItem;
     const home = createElement('siteHomeControl');
     const profile = createElement('authOpenBtn');
+    const authPanel = embeddedProfile ? createElement('authPanel') : null;
     const legacyBadge = createElement('modePageAccount');
     const currentMode = createElement('currentMode', { dataset: { modePath: '/modes/speed-run/' } });
     const otherMode = createElement('otherMode', { dataset: { modePath: '/modes/era/' } });
@@ -72,7 +73,8 @@ function createDocument() {
         [menu.id, menu],
         [home.id, home],
         [profile.id, profile],
-        [legacyBadge.id, legacyBadge]
+        [legacyBadge.id, legacyBadge],
+        ...(authPanel ? [[authPanel.id, authPanel]] : [])
     ]);
     const documentListeners = new Map();
     const documentObject = {
@@ -105,6 +107,7 @@ function createDocument() {
         firstMenuItem,
         home,
         profile,
+        authPanel,
         legacyBadge,
         currentMode,
         otherMode,
@@ -213,7 +216,7 @@ test('Classic header opens, closes, applies themes and changes standalone modes 
     assert.deepEqual(emitted, ['leaveExtendedMode', 'leaveExtendedMode']);
 });
 
-test('page navigation leaves the game before profile or close navigation', async () => {
+test('page navigation keeps the legacy profile redirect when no embedded panel exists', async () => {
     const { installPageNavigation } = await modulePromise;
     const fixture = createDocument();
     const emitted = [];
@@ -241,4 +244,31 @@ test('page navigation leaves the game before profile or close navigation', async
     assert.deepEqual(sessionWrites, [['f1-mode-return-path', '/modes/speed-run/']]);
     assert.deepEqual(assigned, ['/#login', '/']);
     assert.deepEqual(emitted, ['leaveExtendedMode', 'leaveExtendedMode']);
+});
+
+test('embedded profile button stays on the standalone page and preserves the active mode', async () => {
+    const { installPageNavigation } = await modulePromise;
+    const fixture = createDocument({ embeddedProfile: true });
+    const emitted = [];
+    const assigned = [];
+    const sessionWrites = [];
+    const socket = { emit(eventName) { emitted.push(eventName); } };
+    const windowObject = {
+        location: {
+            pathname: '/modes/speed-run/',
+            assign(pathname) { assigned.push(pathname); }
+        },
+        sessionStorage: {
+            setItem(key, value) { sessionWrites.push([key, value]); }
+        }
+    };
+
+    await withGlobals(fixture.documentObject, { getItem() { return 'default'; }, setItem() {} }, () => {
+        installPageNavigation({ windowObject, documentObject: fixture.documentObject, socket });
+        fixture.profile.dispatch('click');
+    });
+
+    assert.deepEqual(sessionWrites, []);
+    assert.deepEqual(assigned, []);
+    assert.deepEqual(emitted, []);
 });

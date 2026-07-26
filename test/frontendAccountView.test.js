@@ -194,6 +194,49 @@ test('login and feedback settings remain interactive above the initial mode over
     assert.match(authCss, /\.auth-panel\s*\{[\s\S]*?z-index:\s*11000\b/);
 });
 
+test('auth setup resolves only after the initial account refresh finishes', async t => {
+    const originalDocument = globalThis.document;
+    const originalFetch = globalThis.fetch;
+    const { document } = createAccountDocument();
+    const initialMe = createDeferred();
+    const authChanges = [];
+    globalThis.document = document;
+    globalThis.fetch = () => initialMe.promise;
+    t.after(() => {
+        if (originalDocument === undefined) delete globalThis.document;
+        else globalThis.document = originalDocument;
+        if (originalFetch === undefined) delete globalThis.fetch;
+        else globalThis.fetch = originalFetch;
+    });
+
+    const { createAuthView } = await import('../public/js/authView.js');
+    const view = createAuthView({
+        onAuthChanged(user, token) {
+            authChanges.push({ user, token });
+        }
+    });
+    const setupPromise = view.setup();
+    assert.equal(typeof setupPromise?.then, 'function');
+    assert.deepEqual(authChanges, []);
+
+    initialMe.resolve({
+        ok: true,
+        async json() {
+            return {
+                user: { id: 7, username: 'Narcis', email: 'narcis@example.com' },
+                socketAuthToken: 'socket-token'
+            };
+        }
+    });
+    await setupPromise;
+
+    assert.equal(view.getCurrentUser().username, 'Narcis');
+    assert.deepEqual(authChanges, [{
+        user: { id: 7, username: 'Narcis', email: 'narcis@example.com' },
+        token: 'socket-token'
+    }]);
+});
+
 test('auth dialog moves focus inside, closes with Escape and restores the opener', async t => {
     const originalDocument = globalThis.document;
     const originalFetch = globalThis.fetch;

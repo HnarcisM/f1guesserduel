@@ -64,6 +64,24 @@ async function loadAuthenticatedUser(socket, documentObject) {
     return authPayload.user || null;
 }
 
+async function setupEmbeddedAuth({ socket, documentObject }) {
+    if (!documentObject.getElementById('authPanel')) return null;
+
+    const { createAuthView } = await import('./authView.js');
+    let socketAuthSyncPromise = Promise.resolve(false);
+    const authView = createAuthView({
+        onAuthChanged(user, socketAuthToken) {
+            updateAccountBadge(documentObject, user || null);
+            socketAuthSyncPromise = waitForSocketConnection(socket)
+                .then(() => refreshSocketAuth(socket, socketAuthToken || null));
+        }
+    });
+
+    await authView.setup();
+    await socketAuthSyncPromise;
+    return authView;
+}
+
 function preparePageSurface(controller, documentObject) {
     const panel = controller?._elements?.panel;
     const close = controller?._elements?.close;
@@ -137,7 +155,8 @@ async function startExtendedModePage({
 
     preparePageSurface(controller, documentObject);
     installPageNavigation({ windowObject, documentObject, socket });
-    await loadAuthenticatedUser(socket, documentObject);
+    const embeddedAuthView = await setupEmbeddedAuth({ socket, documentObject });
+    if (!embeddedAuthView) await loadAuthenticatedUser(socket, documentObject);
     await controller.open(modeKey, {
         trigger: documentObject.getElementById('siteHomeControl')
             || documentObject.getElementById('modePageHome')
@@ -163,6 +182,7 @@ export {
     loadAuthenticatedUser,
     refreshSocketAuth,
     runExtendedModePage,
+    setupEmbeddedAuth,
     startExtendedModePage,
     waitForSocketConnection
 };

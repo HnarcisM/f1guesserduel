@@ -45,8 +45,16 @@ test('speed run reuses the Classic header, profile and feedback settings control
     assert.match(html, /\/css\/02-header-menu\.css/);
     assert.match(html, /\/css\/08-auth\.css/);
     assert.match(html, /\/css\/11-mobile-layout-fix\.css/);
+    assert.match(html, /\/css\/13-progress-values\.css/);
+    assert.match(html, /\/css\/14-auth-panel-viewport-fix\.css/);
+    assert.match(html, /\/css\/19-account-game-history\.css/);
     assert.match(html, /\/css\/21-feedback-settings\.css/);
+    assert.match(html, /id="authBackdrop"/);
+    assert.match(html, /id="authPanel"[^>]*role="dialog"/);
+    assert.match(html, /id="authAccountView"/);
+    assert.match(html, /id="authGameHistory"/);
     assert.match(html, /\/js\/feedbackController\.js/);
+    assert.match(html, /\/js\/accountGameHistoryController\.js/);
     assert.ok(
         html.indexOf('/css/25-mode-pages.css') < html.indexOf('/css/01-theme-tokens.css'),
         'Classic theme tokens must load after the standalone fallback tokens'
@@ -73,7 +81,10 @@ test('standalone page core validates routes and synchronizes account auth before
         assert.match(source, new RegExp(`['"]?${escapedKey}['"]?: '${escapedPath}'`));
     }
     assert.match(source, /authApi\.me\(\)/);
+    assert.match(source, /createAuthView/);
+    assert.match(source, /setupEmbeddedAuth/);
     assert.match(source, /refreshAuthUser/);
+    assert.match(source, /await setupEmbeddedAuth/);
     assert.match(source, /await loadAuthenticatedUser/);
     assert.match(source, /await controller\.open/);
     assert.match(source, /replaceChildren\?\.\(panel\)/);
@@ -83,6 +94,8 @@ test('standalone page core validates routes and synchronizes account auth before
     assert.match(header, /setupThemeMenu\(menu\)/);
     assert.match(header, /setNavigationMenuOpen/);
     assert.match(header, /querySelectorAll\('\[data-mode-path\]'\)/);
+    assert.match(header, /getElementById\('authPanel'\)/);
+    assert.match(header, /profileButton && !embeddedProfilePanel/);
     assert.match(header, /f1-mode-return-path/);
     assert.match(header, /location\.assign\('\/#login'\)/);
 });
@@ -103,4 +116,8 @@ test('standalone mode styling converts the modal shell into a full page surface'
     assert.match(styles, /body\.extended-mode-page\.mode-page-classic-shell/);
     assert.match(styles, /padding: var\(--header-height\) 0 0/);
     assert.match(styles, /background: var\(--bg-gradient\)/);
+
+    const authViewportStyles = read('public/css/14-auth-panel-viewport-fix.css');
+    assert.match(authViewportStyles, /body\.extended-mode-page \.auth-panel/);
+    assert.match(authViewportStyles, /body\.extended-mode-page \.auth-panel\.show/);
 });

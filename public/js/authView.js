@@ -300,7 +300,7 @@ export function createAuthView({ onAuthChanged } = {}) {
 
         setMode('login');
         selectAccountTab('overview');
-        refreshCurrentUser();
+        return refreshCurrentUser();
     }
 
     return {
