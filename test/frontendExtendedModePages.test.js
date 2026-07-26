@@ -127,6 +127,8 @@ test('standalone page core validates routes and synchronizes account auth before
     assert.match(source, /await controller\.open/);
     assert.match(source, /replaceChildren\?\.\(panel\)/);
     assert.match(source, /setAttribute\('role', 'region'\)/);
+    assert.match(source, /close\?\.remove\?\.\(\)/);
+    assert.doesNotMatch(source, /close\.textContent\s*=\s*['"]Game Hub/);
     assert.match(source, /extendedModeHeaderController/);
     assert.match(source, /extendedModeShell/);
     assert.match(source, /ensureClassicExtendedModeShell/);

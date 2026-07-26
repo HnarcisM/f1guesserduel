@@ -301,10 +301,14 @@ async function assertExtendedModesLaunch(page, viewportLabel, baseUrl) {
 
         const panelLayout = await collectLayout(page, [
             '#extendedModePanel',
-            '#extendedModeTitle',
-            '#extendedModeClose'
+            '#extendedModeTitle'
         ]);
         assertLayoutFits(panelLayout, viewportLabel, variantKey);
+        assert.equal(
+            await page.locator('#extendedModeClose').count(),
+            0,
+            `${viewportLabel}: butonul Game Hub nu trebuie afișat în pagina ${variantKey}`
+        );
 
         if (variantKey === 'pilot-sudoku') {
             await page.locator('.extended-sudoku-grid').waitFor({ state: 'visible', timeout: 7000 });
@@ -313,7 +317,7 @@ async function assertExtendedModesLaunch(page, viewportLabel, baseUrl) {
             await page.locator('#extendedModeClue svg').waitFor({ state: 'visible', timeout: 7000 });
         }
 
-        await page.locator('#extendedModeClose').click();
+        await page.locator('#siteHomeControl').click();
         await page.waitForURL(url => url.pathname === '/', { timeout: 7000 });
         await page.locator('#gameHubCatalogView').waitFor({ state: 'visible', timeout: 7000 });
     }

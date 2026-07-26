@@ -100,10 +100,7 @@ function preparePageSurface(controller, documentObject) {
         panel.removeAttribute('aria-modal');
         root?.replaceChildren?.(panel);
     }
-    if (close) {
-        close.textContent = 'Game Hub';
-        close.setAttribute('aria-label', 'Înapoi la Game Hub');
-    }
+    close?.remove?.();
 }
 
 function renderFatalError(documentObject, message) {
