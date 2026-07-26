@@ -170,6 +170,34 @@ body.extended-mode-page.extended-mode-open {
     color: var(--text-secondary);
 }
 
+/* Speed Run reuses the Classic application shell without loading the full game bundle. */
+html:has(body.mode-page-classic-shell) {
+    background: var(--surface-main);
+}
+
+body.extended-mode-page.mode-page-classic-shell {
+    padding: var(--header-height) 0 0;
+    background: var(--bg-gradient);
+    background-size: var(--bg-size);
+    color: var(--text-primary);
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    text-align: left;
+}
+
+.mode-page-classic-shell .mode-page-content {
+    min-height: calc(100vh - var(--header-height));
+}
+
+.mode-page-classic-shell .menu-item.is-current-mode {
+    border-color: color-mix(in srgb, var(--accent-f1) 38%, transparent);
+    background: color-mix(in srgb, var(--accent-f1) 14%, transparent);
+    color: var(--text-primary);
+}
+
+.mode-page-classic-shell .site-header h1 {
+    white-space: nowrap;
+}
+
 @media (max-width: 680px) {
     .mode-page-nav {
         align-items: flex-start;

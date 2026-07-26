@@ -30,6 +30,30 @@ test('every extended mode has a dedicated standalone HTML page', () => {
     }
 });
 
+test('speed run reuses the Classic header, profile and feedback settings controls', () => {
+    const html = read('public/modes/speed-run/index.html');
+
+    assert.match(html, /class="site-header mode-page-site-header"/);
+    assert.match(html, /id="menu-hamburger"/);
+    assert.match(html, /id="dropdown-menu"/);
+    assert.match(html, /id="siteHomeControl"/);
+    assert.match(html, /id="authOpenBtn" class="auth-open-btn"/);
+    assert.match(html, /id="feedbackSettingsBtn"/);
+    assert.match(html, /id="feedbackSettingsPanel"/);
+    assert.match(html, /\/js\/themeBootstrap\.js/);
+    assert.match(html, /\/css\/01-theme-tokens\.css/);
+    assert.match(html, /\/css\/02-header-menu\.css/);
+    assert.match(html, /\/css\/08-auth\.css/);
+    assert.match(html, /\/css\/11-mobile-layout-fix\.css/);
+    assert.match(html, /\/css\/21-feedback-settings\.css/);
+    assert.match(html, /\/js\/feedbackController\.js/);
+    assert.ok(
+        html.indexOf('/css/25-mode-pages.css') < html.indexOf('/css/01-theme-tokens.css'),
+        'Classic theme tokens must load after the standalone fallback tokens'
+    );
+    assert.doesNotMatch(html, /shareRoomBtn|duelStatus|roomBtnText/);
+});
+
 test('every standalone page has an independent entry module', () => {
     for (const mode of MODES) {
         const entryPath = `public/js/modes/${mode.entry}`;
@@ -53,6 +77,11 @@ test('standalone page core validates routes and synchronizes account auth before
     assert.match(source, /await controller\.open/);
     assert.match(source, /replaceChildren\?\.\(panel\)/);
     assert.match(source, /setAttribute\('role', 'region'\)/);
+    assert.match(source, /setupThemeMenu\(menu\)/);
+    assert.match(source, /setNavigationMenuOpen/);
+    assert.match(source, /querySelectorAll\('\[data-mode-path\]'\)/);
+    assert.match(source, /f1-mode-return-path/);
+    assert.match(source, /location\.assign\('\/#login'\)/);
 });
 
 test('standalone mode styling converts the modal shell into a full page surface', () => {
@@ -63,4 +92,7 @@ test('standalone mode styling converts the modal shell into a full page surface'
     assert.match(styles, /\.extended-mode-page \.extended-mode-panel/);
     assert.match(styles, /position: relative/);
     assert.match(styles, /max-height: none/);
+    assert.match(styles, /body\.extended-mode-page\.mode-page-classic-shell/);
+    assert.match(styles, /padding: var\(--header-height\) 0 0/);
+    assert.match(styles, /background: var\(--bg-gradient\)/);
 });
