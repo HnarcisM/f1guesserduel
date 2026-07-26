@@ -1,0 +1,86 @@
+/* Autocomplete comun pentru modurile extinse: listă opacă, navigare activă și identitate vizuală. */
+.extended-suggestions {
+    z-index: 20;
+    max-height: 280px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-color: color-mix(in srgb, var(--border-soft, #39404d) 88%, white 12%);
+    background: color-mix(in srgb, var(--surface-card, #1e1e27) 92%, #05070b 8%);
+    box-shadow: 0 18px 38px rgba(0, 0, 0, 0.62);
+    color: var(--text-primary, #fff);
+}
+
+.extended-suggestion {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    min-height: 50px;
+    padding: 8px 10px;
+    border: 1px solid transparent;
+    color: var(--text-primary, #fff);
+    font: inherit;
+}
+
+.extended-suggestion:hover,
+.extended-suggestion:focus-visible,
+.extended-suggestion.is-active,
+.extended-suggestion[aria-selected="true"] {
+    border-color: color-mix(in srgb, var(--accent-f1, #d61220) 62%, white 18%);
+    background: color-mix(in srgb, var(--accent-f1, #d61220) 78%, #101319 22%);
+    color: #fff;
+    outline: none;
+}
+
+.extended-suggestion-visual {
+    display: block;
+    width: 30px;
+    height: 20px;
+    box-sizing: border-box;
+    justify-self: center;
+    border: 1px solid color-mix(in srgb, var(--border-soft, #39404d) 76%, white 24%);
+    border-radius: 4px;
+    background: #fff;
+    box-shadow: 0 2px 7px rgba(0, 0, 0, 0.35);
+    object-fit: cover;
+}
+
+.extended-suggestion-visual.is-logo {
+    height: 26px;
+    padding: 3px;
+    border-radius: 7px;
+    object-fit: contain;
+}
+
+.extended-suggestion-copy {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+}
+
+.extended-suggestion-copy strong {
+    overflow: hidden;
+    color: inherit;
+    font-size: 0.9rem;
+    font-weight: 850;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.extended-suggestion-copy small {
+    overflow: hidden;
+    color: var(--text-secondary, #c0c6d0);
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.extended-suggestion:hover .extended-suggestion-copy small,
+.extended-suggestion:focus-visible .extended-suggestion-copy small,
+.extended-suggestion.is-active .extended-suggestion-copy small,
+.extended-suggestion[aria-selected="true"] .extended-suggestion-copy small {
+    color: rgba(255, 255, 255, 0.84);
+}

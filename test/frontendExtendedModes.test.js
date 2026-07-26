@@ -6,6 +6,7 @@ const test = require('node:test');
 const root = path.join(__dirname, '..');
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
+const autocomplete = read('public/js/extendedModeAutocomplete.js');
 const controller = read('public/js/extendedModesController.js');
 const weeklyView = read('public/js/weeklyChallengeView.js');
 const extendedConfig = read('public/js/extendedModesConfig.js');
@@ -92,6 +93,22 @@ test('track, Sudoku and responsive layouts have dedicated accessible UI', () => 
     assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
+test('extended autocomplete mirrors Classic keyboard selection and entity visuals', () => {
+    const autocompleteStyles = read('public/css/28-extended-mode-autocomplete.css');
+    assert.match(controller, /createExtendedModeAutocomplete/);
+    assert.match(controller, /autocomplete\.renderSuggestions/);
+    assert.match(controller, /autocomplete\.handleKeydown/);
+    assert.match(autocomplete, /ArrowDown/);
+    assert.match(autocomplete, /ArrowUp/);
+    assert.match(autocomplete, /aria-activedescendant/);
+    assert.match(autocomplete, /getLocalTeamLogoPath/);
+    assert.match(autocomplete, /getIsoCode/);
+    assert.match(autocompleteStyles, /var\(--surface-card/);
+    assert.doesNotMatch(autocompleteStyles, /surface-elevated/);
+    assert.match(autocompleteStyles, /\.extended-suggestion\.is-active/);
+    assert.match(autocompleteStyles, /\.extended-suggestion-visual\.is-logo/);
+});
+
 test('non-timed modes do not interpret a null deadline as an expired timer', () => {
     assert.match(controller, /rawExpiresAt === null \|\| rawExpiresAt === undefined/);
     assert.match(controller, /current\.expiresAt !== null/);
@@ -99,6 +116,7 @@ test('non-timed modes do not interpret a null deadline as an expired timer', () 
 
 test('extended mode modules stay within maintainable size budgets', () => {
     const budgets = {
+        'public/js/extendedModeAutocomplete.js': 9_000,
         'public/js/extendedModesController.js': 40_000,
         'public/css/24-extended-modes.css': 16_000,
         'public/js/weeklyChallengeView.js': 6_000,
@@ -108,6 +126,7 @@ test('extended mode modules stay within maintainable size budgets', () => {
         'public/js/extendedModeShell.js': 6_000,
         'public/js/extendedModeShellMarkup.js': 26_000,
         'public/css/25-mode-pages.css': 8_000,
+        'public/css/28-extended-mode-autocomplete.css': 4_000,
         'server/game/extendedModesService.js': 40_000,
         'server/game/extendedModesCatalogs.js': 12_000,
         'server/socket/extendedModesSocketHandlers.js': 13_000,

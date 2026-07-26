@@ -8,7 +8,8 @@ export const F1_TO_ISO = {
 	"MAS": "my", "MEX": "mx", "MON": "mc", "NED": "nl", "NZL": "nz",
 	"POL": "pl", "POR": "pt", "RSA": "za", "RUS": "ru", "SUI": "ch",
 	"SWE": "se", "THA": "th", "USA": "us", "VEN": "ve",
-	"UAE": "ae", "CHI": "cl", "URU": "uy", "BUL": "bg", "CRO": "hr"
+	"UAE": "ae", "CHI": "cl", "URU": "uy", "BUL": "bg", "CRO": "hr",
+	"BHR": "bh", "IRL": "ie", "KSA": "sa", "QAT": "qa", "SGP": "sg"
 };
 
 // Mapare nume echipă normalizat -> fișier logo local.

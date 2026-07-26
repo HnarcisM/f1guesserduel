@@ -1,3 +1,4 @@
+import { createExtendedModeAutocomplete } from './extendedModeAutocomplete.js';
 import { setProgressPercent } from './progressStyle.js';
 import {
     formatWeeklyCountdown,
@@ -189,7 +190,6 @@ function createExtendedModesController({ windowObject, documentObject, storage }
         catalog: [],
         serverState: null,
         activeSudokuCell: null,
-        selectedId: null,
         timerInterval: null,
         timeoutSent: false,
         weeklyCountdownInterval: null,
@@ -212,15 +212,18 @@ function createExtendedModesController({ windowObject, documentObject, storage }
         element.setAttribute?.('aria-hidden', String(!visible));
     }
 
-    function hideSuggestions() {
-        elements.suggestions.hidden = true;
-        elements.suggestions.replaceChildren();
-    }
+    const autocomplete = createExtendedModeAutocomplete({
+        documentObject: doc,
+        input: elements.input,
+        suggestions: elements.suggestions,
+        getCatalog: () => state.catalog,
+        getVariantKey: () => state.variantKey,
+        onSubmit: submitGuess
+    });
 
     function resetInput() {
-        state.selectedId = null;
         elements.input.value = '';
-        hideSuggestions();
+        autocomplete.resetSelection();
     }
 
     function getSocket() {
@@ -406,35 +409,9 @@ function createExtendedModesController({ windowObject, documentObject, storage }
         elements.comparison.prepend(createComparisonRow(feedback));
     }
 
-    function renderSuggestions() {
-        const query = normalizeName(elements.input.value);
-        state.selectedId = null;
-        elements.suggestions.replaceChildren();
-        if (!query) {
-            hideSuggestions();
-            return;
-        }
-        const matches = state.catalog
-            .filter(entry => normalizeName(entry.name).includes(query))
-            .slice(0, 8);
-        for (const entry of matches) {
-            const button = createElement(doc, 'button', 'extended-suggestion', entry.name);
-            button.type = 'button';
-            button.dataset.entityId = entry.id;
-            button.setAttribute('role', 'option');
-            button.addEventListener('click', () => {
-                state.selectedId = entry.id;
-                elements.input.value = entry.name;
-                hideSuggestions();
-                elements.submit.focus();
-            });
-            elements.suggestions.append(button);
-        }
-        elements.suggestions.hidden = matches.length === 0;
-    }
-
     function resolveSelectedEntity() {
-        if (state.selectedId) return state.catalog.find(entry => entry.id === state.selectedId) || null;
+        const selectedId = autocomplete.getSelectedEntityId();
+        if (selectedId) return state.catalog.find(entry => entry.id === selectedId) || null;
         const normalized = normalizeName(elements.input.value);
         return state.catalog.find(entry => normalizeName(entry.name) === normalized) || null;
     }
@@ -587,7 +564,6 @@ function createExtendedModesController({ windowObject, documentObject, storage }
         state.catalog = [];
         state.serverState = null;
         state.activeSudokuCell = null;
-        state.selectedId = null;
         state.weeklyStartPending = false;
         state.hasStarted = false;
         elements.comparison.replaceChildren();
@@ -826,7 +802,7 @@ function createExtendedModesController({ windowObject, documentObject, storage }
         state.weeklyStatus = null;
         state.weeklyStartPending = false;
         state.hasStarted = false;
-        hideSuggestions();
+        autocomplete.clearSuggestions();
         panel.hidden = true;
         backdrop.hidden = true;
         backdrop.setAttribute('aria-hidden', 'true');
@@ -874,13 +850,8 @@ function createExtendedModesController({ windowObject, documentObject, storage }
 
     elements.close.addEventListener('click', () => close());
     backdrop.addEventListener('click', () => close());
-    elements.input.addEventListener('input', renderSuggestions);
-    elements.input.addEventListener('keydown', event => {
-        if (event.key === 'Enter') {
-            event.preventDefault();
-            submitGuess();
-        }
-    });
+    elements.input.addEventListener('input', autocomplete.renderSuggestions);
+    elements.input.addEventListener('keydown', autocomplete.handleKeydown);
     elements.submit.addEventListener('click', submitGuess);
     elements.skip.addEventListener('click', () => emit('skipExtendedRound'));
     elements.continueButton.addEventListener('click', () => emit('continueExtendedMode'));
@@ -895,7 +866,7 @@ function createExtendedModesController({ windowObject, documentObject, storage }
         if (event.target?.id === 'siteHomeControl' || event.target?.dataset?.level === 'home') {
             close();
         }
-        if (!elements.suggestions.contains(event.target) && event.target !== elements.input) hideSuggestions();
+        if (!elements.suggestions.contains(event.target) && event.target !== elements.input) autocomplete.clearSuggestions();
     }, true);
 
     return controller;

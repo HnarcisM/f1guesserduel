@@ -148,7 +148,11 @@ test('standalone header controller is included in the offline precache manifest'
     assert.match(versioning, /\/js\/extendedModeHeaderController\.js/);
     assert.match(versioning, /\/js\/extendedModeShellMarkup\.js/);
     assert.match(versioning, /\/js\/extendedModeShell\.js/);
+    assert.match(versioning, /\/js\/extendedModeAutocomplete\.js/);
+    assert.match(versioning, /\/js\/assets\.js/);
+    assert.match(versioning, /\/js\/constants\.js/);
     assert.match(versioning, /\/css\/27-extended-mode-legend\.css/);
+    assert.match(versioning, /\/css\/28-extended-mode-autocomplete\.css/);
 });
 
 test('standalone mode styling converts the modal shell into a full page surface', () => {

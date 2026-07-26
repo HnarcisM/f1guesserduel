@@ -2,7 +2,7 @@
 
 const CACHE_PREFIX = 'f1-guesser-static-';
 /* GENERATED_PRECACHE_START */
-const STATIC_CACHE_NAME = 'f1-guesser-static-5e59a59242830be4b688';
+const STATIC_CACHE_NAME = 'f1-guesser-static-3af6fb17d7dbe9d1799e';
 const PRECACHE_URLS = Object.freeze([
     "/css/01-theme-tokens.css",
     "/css/02-header-menu.css",
@@ -25,7 +25,8 @@ const PRECACHE_URLS = Object.freeze([
     "/css/26-runtime-status.css",
     "/css/26-runtime-status.css?v=9e36b3f6d4da0032",
     "/css/27-extended-mode-legend.css",
-    "/game.bundle.min.js?v=2260b4c3700810df",
+    "/css/28-extended-mode-autocomplete.css",
+    "/game.bundle.min.js?v=170240afb2c48c7a",
     "/icons/pwa-192.png",
     "/icons/pwa-512.png",
     "/index.html",
@@ -34,15 +35,18 @@ const PRECACHE_URLS = Object.freeze([
     "/js/accountGameHistoryController.js?v=0bdff1b6f186805c",
     "/js/accountSettingsController.js",
     "/js/apiClient.js",
+    "/js/assets.js",
     "/js/authView.js",
     "/js/authViewElements.js",
     "/js/connectionStatusController.js?v=6df8af4e1cbae20a",
+    "/js/constants.js",
     "/js/dialogFocusManager.js",
     "/js/duelIdentityController.js?v=1345c7e6d7940860",
     "/js/duelReadyController.js?v=29b02568a275c131",
     "/js/duelRoomBrowserSeriesController.js?v=ebbf9dd31662abb2",
     "/js/duelRoundHistoryController.js?v=77fa53fbfa13103a",
     "/js/duelSeriesController.js?v=14bfad7705c45b6d",
+    "/js/extendedModeAutocomplete.js",
     "/js/extendedModeHeaderController.js",
     "/js/extendedModePage.js",
     "/js/extendedModeShell.js",
