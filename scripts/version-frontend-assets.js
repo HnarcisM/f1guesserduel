@@ -58,16 +58,16 @@ const DEFAULT_PRECACHE_STATIC_URLS = Object.freeze([
     '/modes/constructor/',
     '/modes/pilot-sudoku/',
     '/modes/track/',
-    '/images/game-hub/classic.svg',
-    '/images/game-hub/daily.svg',
-    '/images/game-hub/era.svg',
-    '/images/game-hub/weekly.svg',
-    '/images/game-hub/speed-run.svg',
-    '/images/game-hub/streak.svg',
-    '/images/game-hub/constructor.svg',
-    '/images/game-hub/pilot-sudoku.svg',
-    '/images/game-hub/track.svg',
-    '/images/game-hub/duel.svg'
+    '/images/game-hub/classic.webp',
+    '/images/game-hub/daily.webp',
+    '/images/game-hub/era.webp',
+    '/images/game-hub/weekly.webp',
+    '/images/game-hub/speed-run.webp',
+    '/images/game-hub/streak.webp',
+    '/images/game-hub/constructor.webp',
+    '/images/game-hub/pilot-sudoku.webp',
+    '/images/game-hub/track.webp',
+    '/images/game-hub/duel.webp'
 ]);
 const DEFAULT_ASSETS = Object.freeze([
     {
