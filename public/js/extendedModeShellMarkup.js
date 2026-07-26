@@ -308,9 +308,43 @@ const FEEDBACK_PANEL_MARKUP = String.raw`<div class="feedback-backdrop" id="feed
         <p id="feedbackSettingsStatus" class="feedback-settings-status" aria-live="polite"></p>
     </section>`;
 
+const EXTENDED_MODE_LEGEND_MARKUP = String.raw`<footer id="extendedModeLegend" class="site-footer legend-card extended-mode-legend" aria-label="Legendă culori rezultate">
+    <div class="legend-header">
+        <div class="legend-icon" aria-hidden="true">💡</div>
+        <div>
+            <p class="legend-eyebrow">Ghid rapid</p>
+            <h2>Legendă culori</h2>
+        </div>
+    </div>
+
+    <ul class="legend-list">
+        <li class="legend-item">
+            <div class="legend-box green" aria-hidden="true"></div>
+            <div class="legend-copy"><strong>Verde</strong><span>Potrivire perfectă — valoare exactă.</span></div>
+        </li>
+        <li class="legend-item">
+            <div class="legend-box yellow" aria-hidden="true"></div>
+            <div class="legend-copy"><strong>Galben</strong><span>Potrivire parțială sau asociere relevantă.</span></div>
+        </li>
+        <li class="legend-item">
+            <div class="legend-box orange" aria-hidden="true"></div>
+            <div class="legend-copy"><strong>Portocaliu</strong><span>Valoarea corectă este mai mare decât cea introdusă.</span></div>
+        </li>
+        <li class="legend-item">
+            <div class="legend-box purple" aria-hidden="true"></div>
+            <div class="legend-copy"><strong>Violet</strong><span>Valoarea corectă este mai mică decât cea introdusă.</span></div>
+        </li>
+        <li class="legend-item">
+            <div class="legend-box red" aria-hidden="true"></div>
+            <div class="legend-copy"><strong>Roșu</strong><span>Lipsă totală de potrivire.</span></div>
+        </li>
+    </ul>
+</footer>`;
+
 export {
     AUTH_PANEL_MARKUP,
     CLASSIC_HEADER_MARKUP,
+    EXTENDED_MODE_LEGEND_MARKUP,
     FEEDBACK_PANEL_MARKUP,
     MODE_LABELS
 };

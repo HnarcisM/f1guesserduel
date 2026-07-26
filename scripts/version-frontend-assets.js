@@ -21,6 +21,7 @@ const DEFAULT_PRECACHE_STATIC_URLS = Object.freeze([
     '/css/24-extended-modes.css',
     '/css/25-mode-pages.css',
     '/css/26-runtime-status.css',
+    '/css/27-extended-mode-legend.css',
     '/js/accountDashboardView.js',
     '/js/accountGameHistoryController.js',
     '/js/accountSettingsController.js',

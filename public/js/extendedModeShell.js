@@ -1,6 +1,7 @@
 import {
     AUTH_PANEL_MARKUP,
     CLASSIC_HEADER_MARKUP,
+    EXTENDED_MODE_LEGEND_MARKUP,
     FEEDBACK_PANEL_MARKUP,
     MODE_LABELS
 } from './extendedModeShellMarkup.js';
@@ -27,6 +28,14 @@ function appendToBody(documentObject, markup) {
     const body = documentObject.body;
     if (!body || typeof body.insertAdjacentHTML !== 'function') return false;
     body.insertAdjacentHTML('beforeend', markup);
+    return true;
+}
+
+function ensureExtendedModeLegend(documentObject) {
+    if (documentObject.getElementById?.('extendedModeLegend')) return true;
+    const modeContent = documentObject.getElementById?.('modePageContent');
+    if (!modeContent || typeof modeContent.insertAdjacentHTML !== 'function') return false;
+    modeContent.insertAdjacentHTML('beforeend', EXTENDED_MODE_LEGEND_MARKUP);
     return true;
 }
 
@@ -80,6 +89,7 @@ if (typeof document !== 'undefined' && document.body) {
 
 export {
     ensureClassicExtendedModeShell,
+    ensureExtendedModeLegend,
     markCurrentMode,
     resolveModeKey
 };

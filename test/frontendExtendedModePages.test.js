@@ -46,6 +46,7 @@ test('every extended mode uses the Classic header, profile and feedback settings
         assert.match(html, /\/css\/14-auth-panel-viewport-fix\.css/);
         assert.match(html, /\/css\/19-account-game-history\.css/);
         assert.match(html, /\/css\/21-feedback-settings\.css/);
+        assert.match(html, /\/css\/27-extended-mode-legend\.css/);
         assert.match(html, /\/js\/feedbackController\.js/);
         assert.match(html, /\/js\/accountGameHistoryController\.js/);
         assert.match(html, /\/js\/pwaController\.js/);
@@ -76,13 +77,25 @@ test('every extended mode uses the Classic header, profile and feedback settings
         'authPanel',
         'authAccountView',
         'authGameHistory',
-        'feedbackSettingsPanel'
+        'feedbackSettingsPanel',
+        'extendedModeLegend',
+        'Legendă culori'
     ]) {
         assert.match(shellMarkup, new RegExp(selector));
     }
     assert.match(shell, /markCurrentMode/);
     assert.match(shell, /is-current-mode/);
     assert.match(shell, /aria-current/);
+    assert.match(shell, /ensureExtendedModeLegend/);
+    assert.match(shell, /insertAdjacentHTML\('beforeend', EXTENDED_MODE_LEGEND_MARKUP\)/);
+
+    const legendStyles = read('public/css/27-extended-mode-legend.css');
+    assert.match(legendStyles, /\.extended-mode-legend/);
+    assert.match(legendStyles, /grid-template-columns: repeat\(2/);
+    for (const color of ['green', 'yellow', 'orange', 'purple', 'red']) {
+        assert.match(shellMarkup, new RegExp(`legend-box ${color}`));
+        assert.match(legendStyles, new RegExp(`legend-box\\.${color}`));
+    }
 });
 
 test('every standalone page has an independent entry module', () => {
@@ -117,6 +130,7 @@ test('standalone page core validates routes and synchronizes account auth before
     assert.match(source, /extendedModeHeaderController/);
     assert.match(source, /extendedModeShell/);
     assert.match(source, /ensureClassicExtendedModeShell/);
+    assert.match(source, /ensureExtendedModeLegend/);
     assert.match(source, /installPageNavigation/);
     assert.match(header, /setupThemeMenu\(menu\)/);
     assert.match(header, /setNavigationMenuOpen/);
@@ -132,6 +146,7 @@ test('standalone header controller is included in the offline precache manifest'
     assert.match(versioning, /\/js\/extendedModeHeaderController\.js/);
     assert.match(versioning, /\/js\/extendedModeShellMarkup\.js/);
     assert.match(versioning, /\/js\/extendedModeShell\.js/);
+    assert.match(versioning, /\/css\/27-extended-mode-legend\.css/);
 });
 
 test('standalone mode styling converts the modal shell into a full page surface', () => {

@@ -2,7 +2,7 @@ import { authApi } from './apiClient.js';
 import { VARIANT_COPY } from './extendedModesConfig.js';
 import { createExtendedModesController } from './extendedModesController.js';
 import { installPageNavigation, updateAccountBadge } from './extendedModeHeaderController.js';
-import { ensureClassicExtendedModeShell } from './extendedModeShell.js';
+import { ensureClassicExtendedModeShell, ensureExtendedModeLegend } from './extendedModeShell.js';
 
 const MODE_PATHS = Object.freeze({
     'speed-run': '/modes/speed-run/',
@@ -163,6 +163,7 @@ async function startExtendedModePage({
     }
 
     preparePageSurface(controller, documentObject);
+    ensureExtendedModeLegend(documentObject);
     installPageNavigation({ windowObject, documentObject, socket });
     const modeTrigger = documentObject.getElementById('siteHomeControl')
         || documentObject.getElementById('modePageHome');

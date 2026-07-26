@@ -1,0 +1,143 @@
+/* Legendă comună pentru toate modurile standalone. */
+.extended-mode-legend {
+    position: relative;
+    width: min(920px, 100%);
+    box-sizing: border-box;
+    overflow: hidden;
+    margin: 28px auto 12px;
+    padding: 24px;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-2xl);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.025));
+    box-shadow: var(--shadow-md);
+    text-align: left;
+    backdrop-filter: blur(14px);
+}
+
+.extended-mode-legend::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 3px;
+    background: linear-gradient(90deg, var(--success), var(--warning), var(--orange), var(--purple), var(--danger));
+}
+
+.extended-mode-legend .legend-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xl);
+    margin-bottom: var(--space-5xl);
+    padding-bottom: var(--space-4xl);
+    border-bottom: 1px solid var(--border-soft);
+}
+
+.extended-mode-legend .legend-icon {
+    display: grid;
+    place-items: center;
+    flex: 0 0 42px;
+    width: 42px;
+    height: 42px;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-xl);
+    background: var(--surface-elevated);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    font-size: 20px;
+}
+
+.extended-mode-legend .legend-eyebrow {
+    margin: 0 0 var(--space-xs);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+}
+
+.extended-mode-legend h2 {
+    margin: 0;
+    color: var(--text-on-accent);
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+}
+
+.extended-mode-legend .legend-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-xl);
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.extended-mode-legend .legend-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-xl);
+    min-height: 56px;
+    box-sizing: border-box;
+    padding: var(--space-xl);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-xl);
+    background: rgba(255, 255, 255, 0.035);
+    color: var(--text-secondary);
+    line-height: 1.4;
+    transition: transform var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.extended-mode-legend .legend-item:hover {
+    transform: translateY(-2px);
+    border-color: var(--border-soft);
+    background: var(--surface-elevated);
+}
+
+.extended-mode-legend .legend-box {
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    margin-top: var(--space-2xs);
+    border-radius: var(--radius-sm);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+
+.extended-mode-legend .legend-box.green { background: linear-gradient(135deg, var(--success), var(--success-dark)); }
+.extended-mode-legend .legend-box.yellow { background: linear-gradient(135deg, var(--warning), var(--warning-dark)); }
+.extended-mode-legend .legend-box.orange { background: linear-gradient(135deg, var(--orange), var(--orange-dark)); }
+.extended-mode-legend .legend-box.purple { background: linear-gradient(135deg, var(--purple), var(--purple-dark)); }
+.extended-mode-legend .legend-box.red { background: linear-gradient(135deg, var(--danger), var(--danger-dark)); }
+
+.extended-mode-legend .legend-copy {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    min-width: 0;
+    font-size: 13px;
+}
+
+.extended-mode-legend .legend-copy strong {
+    color: var(--text-primary);
+    font-size: 13.5px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.extended-mode-legend .legend-copy span { color: var(--text-secondary); }
+
+[data-app-theme="carbon"] .extended-mode-legend {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.02));
+}
+
+[data-app-theme="neon"] .extended-mode-legend {
+    box-shadow: 0 0 24px rgba(0, 240, 255, 0.08), var(--shadow-md);
+}
+
+@media (max-width: 680px) {
+    .extended-mode-legend {
+        margin-top: 20px;
+        padding: 16px;
+    }
+
+    .extended-mode-legend .legend-list { grid-template-columns: 1fr; }
+}
