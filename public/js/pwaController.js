@@ -19,6 +19,25 @@ function dispatchPwaEvent(windowObject, eventName, detail) {
     return true;
 }
 
+export function installServiceWorkerControllerReload({
+    windowObject = globalThis.window,
+    navigatorObject = globalThis.navigator
+} = {}) {
+    const serviceWorker = navigatorObject?.serviceWorker;
+    if (!windowObject || !serviceWorker?.controller || typeof serviceWorker.addEventListener !== 'function') {
+        return false;
+    }
+    if (windowObject.__f1PwaControllerReloadInstalled) return true;
+
+    windowObject.__f1PwaControllerReloadInstalled = true;
+    serviceWorker.addEventListener('controllerchange', () => {
+        if (windowObject.__f1PwaControllerReloading) return;
+        windowObject.__f1PwaControllerReloading = true;
+        windowObject.location?.reload?.();
+    });
+    return true;
+}
+
 export async function registerPwaServiceWorker({
     windowObject = globalThis.window,
     navigatorObject = globalThis.navigator,
@@ -44,12 +63,17 @@ export function installPwaController(windowObject = globalThis.window) {
     if (!windowObject?.document) return null;
     if (windowObject.__f1PwaRegistrationPromise) return windowObject.__f1PwaRegistrationPromise;
 
+    installServiceWorkerControllerReload({
+        windowObject,
+        navigatorObject: windowObject.navigator
+    });
+
     const register = () => registerPwaServiceWorker({
         windowObject,
         navigatorObject: windowObject.navigator
     });
 
-    const registrationPromise = windowObject.document.readyState === 'complete'
+    const registrationPromise = windowObject.document.readyState !== 'loading'
         ? register()
         : new Promise(resolve => {
             windowObject.addEventListener?.('load', () => resolve(register()), { once: true });

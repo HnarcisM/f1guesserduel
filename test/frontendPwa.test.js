@@ -250,6 +250,35 @@ test('PWA controller registers only in supported secure contexts', async () => {
     assert.equal(canRegisterPwaServiceWorker({ windowObject, navigatorObject: {} }), false);
 });
 
+test('PWA controller reloads once when an updated worker takes control', async () => {
+    const { installServiceWorkerControllerReload } = await pwaModulePromise;
+    const listeners = new Map();
+    let reloadCount = 0;
+    const serviceWorker = {
+        controller: { state: 'activated' },
+        addEventListener(type, handler) {
+            listeners.set(type, handler);
+        }
+    };
+    const windowObject = {
+        location: { reload() { reloadCount += 1; } }
+    };
+    const navigatorObject = { serviceWorker };
+
+    assert.equal(installServiceWorkerControllerReload({ windowObject, navigatorObject }), true);
+    assert.equal(installServiceWorkerControllerReload({ windowObject, navigatorObject }), true);
+    assert.equal(typeof listeners.get('controllerchange'), 'function');
+
+    listeners.get('controllerchange')();
+    listeners.get('controllerchange')();
+    assert.equal(reloadCount, 1);
+
+    assert.equal(installServiceWorkerControllerReload({
+        windowObject: {},
+        navigatorObject: { serviceWorker: { controller: null } }
+    }), false);
+});
+
 test('PWA installer waits for load and reuses one registration promise', async () => {
     const { installPwaController } = await pwaModulePromise;
     const calls = [];
@@ -271,6 +300,19 @@ test('PWA installer waits for load and reuses one registration promise', async (
     windowObject.dispatch('load');
     assert.deepEqual(await first, { scope: '/' });
     assert.deepEqual(calls, ['/service-worker.js']);
+
+    const interactiveCalls = [];
+    const interactiveWindow = createWindow({ readyState: 'interactive' });
+    interactiveWindow.navigator = {
+        serviceWorker: {
+            async register(url) {
+                interactiveCalls.push(url);
+                return { scope: '/' };
+            }
+        }
+    };
+    assert.deepEqual(await installPwaController(interactiveWindow), { scope: '/' });
+    assert.deepEqual(interactiveCalls, ['/service-worker.js']);
 });
 
 test('service worker cache helpers reject unsafe responses and refresh cache misses', async () => {

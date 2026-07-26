@@ -55,6 +55,7 @@ test('speed run reuses the Classic header, profile and feedback settings control
     assert.match(html, /id="authGameHistory"/);
     assert.match(html, /\/js\/feedbackController\.js/);
     assert.match(html, /\/js\/accountGameHistoryController\.js/);
+    assert.match(html, /\/js\/pwaController\.js/);
     assert.ok(
         html.indexOf('/css/25-mode-pages.css') < html.indexOf('/css/01-theme-tokens.css'),
         'Classic theme tokens must load after the standalone fallback tokens'
