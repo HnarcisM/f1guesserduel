@@ -89,6 +89,10 @@
     font-weight: 800;
 }
 
+.auth-panel .is-hidden {
+    display: none !important;
+}
+
 .auth-account-view {
     display: grid;
     gap: 12px;

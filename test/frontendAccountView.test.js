@@ -162,6 +162,7 @@ test('authenticated account dashboard is present while the login form remains se
     assert.match(css, /\.auth-profile-tabs/);
     assert.match(css, /\.auth-achievement-card/);
     assert.match(css, /\.auth-settings-disclosure\[open\]/);
+    assert.match(css, /\.auth-panel \.is-hidden\s*\{[\s\S]*?display:\s*none\s*!important;/);
 });
 
 test('login and feedback settings remain interactive above the initial mode overlay', () => {
