@@ -65,6 +65,22 @@ function createFakeElement(tagName = 'div') {
         removeAttribute(name) {
             attributes.delete(name);
         },
+        querySelector(selector) {
+            return this.querySelectorAll(selector)[0] || null;
+        },
+        querySelectorAll(selector) {
+            const matches = [];
+            const byClass = selector.startsWith('.') ? selector.slice(1) : null;
+            const byVariant = selector === '[data-game-variant]';
+            function visit(node) {
+                if ((byClass && node.classList?.contains(byClass)) || (byVariant && node.dataset?.gameVariant)) {
+                    matches.push(node);
+                }
+                for (const child of node.children || []) visit(child);
+            }
+            visit(this);
+            return matches;
+        },
         addEventListener(name, handler) {
             listeners.set(name, handler);
         },
