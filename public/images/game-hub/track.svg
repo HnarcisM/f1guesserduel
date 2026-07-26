@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 260" role="img" aria-hidden="true" style="color:#ffd135"><defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#07111f"/><stop offset="1" stop-color="#02050a"/></linearGradient>
+  <radialGradient id="glow" cx="50%" cy="50%" r="60%"><stop stop-color="currentColor" stop-opacity=".45"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></radialGradient>
+  <filter id="soft"><feGaussianBlur stdDeviation="8"/></filter>
+  <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#9fdfff" stroke-opacity=".06"/></pattern>
+</defs><rect width="640" height="260" fill="url(#bg)"/><rect width="640" height="260" fill="url(#grid)"/>
+<g opacity=".35" stroke="#90a6b9" stroke-width="1" fill="none"><path d="M0 52c92-29 174-4 263-32 97-30 184 15 377-8M0 92c112-34 205 2 298-25 105-30 209 10 342-16M0 144c116-24 210 7 304-18 109-29 208 7 336-12M0 198c104-21 210 4 313-15 102-19 203 8 327-9"/></g>
+<path d="M98 166c-30-28-25-70 10-89 30-17 75-13 93 13 16 23 0 48 31 61 29 12 56-18 91-8 34 10 35 54 69 61 33 7 55-26 84-30 35-5 52 24 32 46-20 22-63 15-89 3-33-15-55-14-84-2-36 15-73-8-94-34-16-20-33-25-59-16-32 11-61 18-84-5Z" fill="none" stroke="#ffd331" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><path d="M98 166c-30-28-25-70 10-89 30-17 75-13 93 13 16 23 0 48 31 61 29 12 56-18 91-8 34 10 35 54 69 61 33 7 55-26 84-30 35-5 52 24 32 46" fill="none" stroke="#fff7b8" stroke-opacity=".45" stroke-width="3"/><circle cx="511" cy="218" r="9" fill="#ff574d"/></svg>

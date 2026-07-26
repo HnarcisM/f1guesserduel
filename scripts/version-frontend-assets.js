@@ -57,7 +57,17 @@ const DEFAULT_PRECACHE_STATIC_URLS = Object.freeze([
     '/modes/weekly/',
     '/modes/constructor/',
     '/modes/pilot-sudoku/',
-    '/modes/track/'
+    '/modes/track/',
+    '/images/game-hub/classic.svg',
+    '/images/game-hub/daily.svg',
+    '/images/game-hub/era.svg',
+    '/images/game-hub/weekly.svg',
+    '/images/game-hub/speed-run.svg',
+    '/images/game-hub/streak.svg',
+    '/images/game-hub/constructor.svg',
+    '/images/game-hub/pilot-sudoku.svg',
+    '/images/game-hub/track.svg',
+    '/images/game-hub/duel.svg'
 ]);
 const DEFAULT_ASSETS = Object.freeze([
     {
@@ -114,6 +124,11 @@ const DEFAULT_ASSETS = Object.freeze([
         attribute: 'href',
         publicPath: '/css/29-game-hub-dashboard.css',
         sourceFile: path.join('public', 'css', '29-game-hub-dashboard.css')
+    },
+    {
+        attribute: 'href',
+        publicPath: '/css/30-game-hub-visual-polish.css',
+        sourceFile: path.join('public', 'css', '30-game-hub-visual-polish.css')
     },
     {
         attribute: 'href',
