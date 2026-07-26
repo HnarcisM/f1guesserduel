@@ -19,65 +19,57 @@ function writeFile(rootDir, relativePath, content) {
     fs.writeFileSync(absolutePath, content, 'utf8');
 }
 
+function getFixtureContent(relativePath) {
+    const normalizedPath = String(relativePath).replaceAll('\\', '/');
+    if (normalizedPath === 'public/manifest.webmanifest') return '{"name":"F1 Guesser"}\n';
+    if (normalizedPath === 'public/icons/pwa-192.png') return 'icon-192';
+    if (normalizedPath === 'public/icons/pwa-512.png') return 'icon-512';
+    if (normalizedPath === 'public/js/themeBootstrap.js') return 'bootstrap();\r\n';
+    if (normalizedPath === 'public/style.bundle.css') return '.app { color: red; }\n';
+    if (normalizedPath === 'public/game.bundle.min.js') return 'startGame();\n';
+
+    switch (path.extname(normalizedPath).toLowerCase()) {
+        case '.css':
+            return `.fixture { content: ${JSON.stringify(normalizedPath)}; }\n`;
+        case '.html':
+            return `<main>${normalizedPath}</main>\n`;
+        case '.js':
+        case '.mjs':
+            return `// fixture for ${normalizedPath}\n`;
+        case '.json':
+        case '.webmanifest':
+            return '{}\n';
+        default:
+            return `fixture:${normalizedPath}`;
+    }
+}
+
+function getPrecacheFixturePath(staticUrl) {
+    const pathname = new URL(staticUrl, 'http://localhost').pathname;
+    const relativePath = path.join('public', pathname.replace(/^\/+/, ''));
+    return pathname.endsWith('/') ? path.join(relativePath, 'index.html') : relativePath;
+}
+
+function createAssetReference(asset) {
+    const versionedPath = `${asset.publicPath}?v=manual-version`;
+    if (asset.attribute === 'href') return `<link href="${versionedPath}">`;
+    return `<script src="${versionedPath}"></script>`;
+}
+
 function createFixture() {
     const rootDir = fs.mkdtempSync(path.join(os.tmpdir(), 'f1-asset-versioning-'));
-    writeFile(rootDir, 'public/manifest.webmanifest', '{"name":"F1 Guesser"}\n');
-    writeFile(rootDir, 'public/icons/pwa-192.png', 'icon-192');
-    writeFile(rootDir, 'public/icons/pwa-512.png', 'icon-512');
-    writeFile(rootDir, 'public/js/themeBootstrap.js', 'bootstrap();\r\n');
-    writeFile(rootDir, 'public/css/16-duel-ready.css', '.ready { color: green; }\n');
-    writeFile(rootDir, 'public/css/17-duel-series.css', '.series { color: gold; }\n');
-    writeFile(rootDir, 'public/css/18-duel-round-history.css', '.history { color: white; }\n');
-    writeFile(rootDir, 'public/css/19-account-game-history.css', '.account-history { color: white; }\n');
-    writeFile(rootDir, 'public/css/20-duel-identity.css', '.duel-identity { color: white; }\n');
-    writeFile(rootDir, 'public/css/21-feedback-settings.css', '.feedback-settings { color: white; }\n');
-    writeFile(rootDir, 'public/css/22-connection-status.css', '.connection-status { color: green; }\n');
-    writeFile(rootDir, 'public/css/23-game-hub.css', '.game-hub { display: grid; }\n');
-    writeFile(rootDir, 'public/css/24-extended-modes.css', '.extended-mode-panel { display: grid; }\n');
-    writeFile(rootDir, 'public/css/25-mode-pages.css', '.extended-mode-page { display: block; }\n');
-    writeFile(rootDir, 'public/css/26-runtime-status.css', '.runtime-status { display: block; }\n');
-    writeFile(rootDir, 'public/js/socketBridgeBootstrap.js', 'bridgeSocket();\n');
-    writeFile(rootDir, 'public/js/gameVariantRegistry.js', 'installRegistry();\n');
-    writeFile(rootDir, 'public/js/runtimeExperienceController.js', 'installRuntimeExperience();\n');
-    writeFile(rootDir, 'public/js/gameHubController.js', 'installGameHub();\n');
-    writeFile(rootDir, 'public/js/apiClient.js', 'export const authApi = {};\n');
-    writeFile(rootDir, 'public/js/extendedModesConfig.js', 'export const STYLE_URL = \'/extended.css\';\n');
-    writeFile(rootDir, 'public/js/extendedModesController.js', 'installExtendedModes();\n');
-    writeFile(rootDir, 'public/js/extendedModePage.js', 'export function runExtendedModePage() {}\n');
-    writeFile(rootDir, 'public/js/weeklyChallengeView.js', 'export function renderWeekly() {}\n');
-    for (const entry of [
-        'speedRunPage.js',
-        'eraPage.js',
-        'streakPage.js',
-        'weeklyPage.js',
-        'constructorPage.js',
-        'pilotSudokuPage.js',
-        'trackPage.js'
-    ]) {
-        writeFile(rootDir, `public/js/modes/${entry}`, 'runExtendedModePage();\n');
+    const fixtureFiles = new Set(DEFAULT_ASSETS.map(asset => asset.sourceFile));
+
+    for (const staticUrl of DEFAULT_PRECACHE_STATIC_URLS) {
+        fixtureFiles.add(getPrecacheFixturePath(staticUrl));
     }
-    for (const modePath of [
-        'speed-run',
-        'era',
-        'streak',
-        'weekly',
-        'constructor',
-        'pilot-sudoku',
-        'track'
-    ]) {
-        writeFile(rootDir, `public/modes/${modePath}/index.html`, `<main>${modePath}</main>\n`);
+
+    fixtureFiles.delete(path.join('public', 'index.html'));
+    fixtureFiles.delete(path.join('public', 'service-worker.js'));
+    for (const relativePath of fixtureFiles) {
+        writeFile(rootDir, relativePath, getFixtureContent(relativePath));
     }
-    writeFile(rootDir, 'public/js/duelReadyController.js', 'installReady();\n');
-    writeFile(rootDir, 'public/js/duelSeriesController.js', 'installSeries();\n');
-    writeFile(rootDir, 'public/js/duelRoundHistoryController.js', 'installHistory();\n');
-    writeFile(rootDir, 'public/js/accountGameHistoryController.js', 'installAccountHistory();\n');
-    writeFile(rootDir, 'public/js/duelRoomBrowserSeriesController.js', 'installRoomSeries();\n');
-    writeFile(rootDir, 'public/js/duelIdentityController.js', 'installDuelIdentity();\n');
-    writeFile(rootDir, 'public/js/feedbackController.js', 'installFeedback();\n');
-    writeFile(rootDir, 'public/js/connectionStatusController.js', 'installConnectionStatus();\n');
-    writeFile(rootDir, 'public/js/pwaController.js', 'installPwa();\n');
-    writeFile(rootDir, 'public/style.bundle.css', '.app { color: red; }\n');
-    writeFile(rootDir, 'public/game.bundle.min.js', 'startGame();\n');
+
     writeFile(rootDir, 'public/service-worker.js', [
         'const CACHE_PREFIX = \'f1-guesser-static-\';',
         '/* GENERATED_PRECACHE_START */',
@@ -86,36 +78,31 @@ function createFixture() {
         '/* GENERATED_PRECACHE_END */'
     ].join('\n'));
     writeFile(rootDir, 'public/index.html', [
-        '<link rel="manifest" href="/manifest.webmanifest?v=manual-version">',
-        '<script src="/js/themeBootstrap.js?v=manual-version"></script>',
-        '<link rel="stylesheet" href="/style.bundle.css?v=manual-version">',
-        '<link rel="stylesheet" href="/css/16-duel-ready.css?v=manual-version">',
-        '<link rel="stylesheet" href="/css/17-duel-series.css?v=manual-version">',
-        '<link rel="stylesheet" href="/css/18-duel-round-history.css?v=manual-version">',
-        '<link rel="stylesheet" href="/css/19-account-game-history.css?v=manual-version">',
-        '<link rel="stylesheet" href="/css/20-duel-identity.css?v=manual-version">',
-        '<link rel="stylesheet" href="/css/21-feedback-settings.css?v=manual-version">',
-        '<link rel="stylesheet" href="/css/22-connection-status.css?v=manual-version">',
-        '<link rel="stylesheet" href="/css/23-game-hub.css?v=manual-version">',
-        '<link rel="stylesheet" href="/css/26-runtime-status.css?v=manual-version">',
-        '<script src="/js/socketBridgeBootstrap.js?v=manual-version"></script>',
-        '<script src="/js/gameVariantRegistry.js?v=manual-version"></script>',
-        '<script src="/js/runtimeExperienceController.js?v=manual-version"></script>',
-        '<script src="/js/gameHubController.js?v=manual-version"></script>',
-        '<script src="/other.js?v=keep-this"></script>',
-        '<script defer src="/game.bundle.min.js?v=manual-version"></script>',
-        '<script type="module" src="/js/duelReadyController.js?v=manual-version"></script>',
-        '<script type="module" src="/js/duelSeriesController.js?v=manual-version"></script>',
-        '<script type="module" src="/js/duelRoundHistoryController.js?v=manual-version"></script>',
-        '<script type="module" src="/js/accountGameHistoryController.js?v=manual-version"></script>',
-        '<script type="module" src="/js/duelRoomBrowserSeriesController.js?v=manual-version"></script>',
-        '<script type="module" src="/js/duelIdentityController.js?v=manual-version"></script>',
-        '<script type="module" src="/js/feedbackController.js?v=manual-version"></script>',
-        '<script type="module" src="/js/connectionStatusController.js?v=manual-version"></script>',
-        '<script type="module" src="/js/pwaController.js?v=manual-version"></script>'
+        ...DEFAULT_ASSETS.map(createAssetReference),
+        '<script src="/other.js?v=keep-this"></script>'
     ].join('\n'));
     return rootDir;
 }
+
+test('fixture follows configured assets and precache URLs automatically', () => {
+    const rootDir = createFixture();
+
+    for (const asset of DEFAULT_ASSETS) {
+        assert.equal(
+            fs.statSync(path.join(rootDir, asset.sourceFile)).isFile(),
+            true,
+            `${asset.sourceFile} must exist in the fixture`
+        );
+    }
+    for (const staticUrl of DEFAULT_PRECACHE_STATIC_URLS) {
+        const relativePath = getPrecacheFixturePath(staticUrl);
+        assert.equal(
+            fs.statSync(path.join(rootDir, relativePath)).isFile(),
+            true,
+            `${staticUrl} must resolve to a fixture file`
+        );
+    }
+});
 
 test('frontend asset versioning replaces manual values with deterministic content hashes', () => {
     const rootDir = createFixture();
@@ -123,7 +110,7 @@ test('frontend asset versioning replaces manual values with deterministic conten
     const firstHtml = fs.readFileSync(path.join(rootDir, 'public', 'index.html'), 'utf8');
 
     assert.equal(firstResult.changed, true);
-    assert.equal(firstResult.assets.length, 26);
+    assert.equal(firstResult.assets.length, DEFAULT_ASSETS.length);
     for (const asset of firstResult.assets) {
         assert.match(asset.version, /^[a-f0-9]{16}$/);
         assert.ok(firstHtml.includes(`${asset.publicPath}?v=${asset.version}`));
