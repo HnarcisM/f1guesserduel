@@ -2,7 +2,7 @@
 
 const CACHE_PREFIX = 'f1-guesser-static-';
 /* GENERATED_PRECACHE_START */
-const STATIC_CACHE_NAME = 'f1-guesser-static-45947df58c5d8c40f759';
+const STATIC_CACHE_NAME = 'f1-guesser-static-fb3b5f5738a0957f2b31';
 const PRECACHE_URLS = Object.freeze([
     "/css/01-theme-tokens.css",
     "/css/02-header-menu.css",
@@ -58,7 +58,7 @@ const PRECACHE_URLS = Object.freeze([
     "/js/modes/weeklyPage.js",
     "/js/navigationMenuController.js",
     "/js/progressStyle.js",
-    "/js/pwaController.js?v=a28eba69df98be12",
+    "/js/pwaController.js?v=1fa4c81639f75660",
     "/js/runtimeExperienceController.js",
     "/js/runtimeExperienceController.js?v=b3f5d64959795f47",
     "/js/socketBridgeBootstrap.js?v=fd76646cd8126930",
