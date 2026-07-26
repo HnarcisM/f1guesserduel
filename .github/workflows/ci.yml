@@ -43,23 +43,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Validate CI Python helpers
-        run: python test/ci_backend_tests_test.py
-
-      - name: Run tests with coverage thresholds
-        id: backend_tests
-        run: >-
-          python scripts/ci_backend_tests.py run
-          --log-file test-results/ci/backend-tests.log
-          -- npm run test:coverage
-
-      - name: Publish backend test summary
-        if: always()
-        env:
-          TEST_EXIT_CODE: ${{ steps.backend_tests.outputs.exit_code }}
-        run: >-
-          python scripts/ci_backend_tests.py summary
-          --log-file test-results/ci/backend-tests.log
+      - name: Run canonical CI verification
+        run: npm run ci:verify
 
       - name: Upload backend test log
         if: always()
@@ -78,18 +63,6 @@ jobs:
           path: test-results/coverage/coverage-summary.json
           if-no-files-found: error
           retention-days: 14
-
-      - name: Enforce backend test result
-        if: always()
-        env:
-          TEST_EXIT_CODE: ${{ steps.backend_tests.outputs.exit_code }}
-        run: python scripts/ci_backend_tests.py enforce
-
-      - name: Build production bundles
-        run: npm run build
-
-      - name: Verify generated frontend files are committed
-        run: git diff --exit-code -- public/index.html public/style.bundle.css public/game.bundle.min.js public/service-worker.js
 
   integration-services:
     name: Redis and PostgreSQL integration tests
@@ -264,7 +237,6 @@ jobs:
             echo "::error title=Browser quality tests failed::See the job summary and browser-quality artifact for every failing suite."
           fi
           exit "$failed"
-
 
   ci-gate:
     name: CI Gate

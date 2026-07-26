@@ -3,6 +3,7 @@
 
 const { spawnSync } = require('node:child_process');
 
+const BACKEND_LOG_FILE = 'test-results/ci/backend-tests.log';
 const GENERATED_FILES = Object.freeze([
     'public/index.html',
     'public/style.bundle.css',
@@ -10,8 +11,14 @@ const GENERATED_FILES = Object.freeze([
     'public/service-worker.js'
 ]);
 
-function executable(name, platform = process.platform) {
-    return platform === 'win32' ? `${name}.cmd` : name;
+function resolveNpmCommand({ platform = process.platform, env = process.env } = {}) {
+    if (platform !== 'win32') return { command: 'npm', args: [] };
+
+    const command = String(env.ComSpec || env.COMSPEC || 'cmd.exe').trim() || 'cmd.exe';
+    return {
+        command,
+        args: ['/d', '/s', '/c', 'npm.cmd']
+    };
 }
 
 function resolvePythonCommand({ platform = process.platform, env = process.env } = {}) {
@@ -21,9 +28,9 @@ function resolvePythonCommand({ platform = process.platform, env = process.env }
     return { command: 'python', args: [] };
 }
 
-function runStep({ name, command, args = [], env = process.env }) {
+function runStep({ name, command, args = [], env = process.env }, { spawn = spawnSync } = {}) {
     process.stdout.write(`\n=== ${name} ===\n`);
-    const result = spawnSync(command, args, {
+    const result = spawn(command, args, {
         cwd: process.cwd(),
         env,
         stdio: 'inherit',
@@ -32,86 +39,209 @@ function runStep({ name, command, args = [], env = process.env }) {
 
     const exitCode = Number.isInteger(result.status) ? result.status : 1;
     if (result.error) {
-        console.error(`[preflight] ${name}: ${result.error.message}`);
+        console.error(`[ci:verify] ${name}: ${result.error.message}`);
     }
     console.log(exitCode === 0
-        ? `[preflight] OK: ${name}`
-        : `[preflight] EȘEC (${exitCode}): ${name}`);
+        ? `[ci:verify] OK: ${name}`
+        : `[ci:verify] EȘEC (${exitCode}): ${name}`);
     return { name, exitCode };
+}
+
+function buildBackendSummaryStep({ exitCode, platform = process.platform, env = process.env } = {}) {
+    const python = resolvePythonCommand({ platform, env });
+    return {
+        id: 'backend-summary',
+        name: 'Publish backend test summary',
+        command: python.command,
+        args: [
+            ...python.args,
+            'scripts/ci_backend_tests.py',
+            'summary',
+            '--log-file',
+            BACKEND_LOG_FILE,
+            '--exit-code',
+            String(exitCode)
+        ],
+        env
+    };
 }
 
 function buildSteps({
     withServices = false,
+    withBrowser = false,
     platform = process.platform,
     env = process.env
 } = {}) {
-    const npm = executable('npm', platform);
+    const npm = resolveNpmCommand({ platform, env });
     const python = resolvePythonCommand({ platform, env });
     const steps = [
         {
+            id: 'python-helpers',
             name: 'Validate CI Python helpers',
             command: python.command,
             args: [...python.args, 'test/ci_backend_tests_test.py']
         },
-        { name: 'Build production', command: npm, args: ['run', 'build'] },
-        { name: 'Backend tests and coverage', command: npm, args: ['run', 'test:coverage'] },
-        { name: 'Responsive and visual E2E', command: npm, args: ['run', 'test:e2e:responsive'] },
-        { name: 'Profile and reconnection E2E', command: npm, args: ['run', 'test:e2e:flows'] },
-        { name: 'Accessibility E2E', command: npm, args: ['run', 'test:e2e:accessibility'] },
         {
-            name: 'Whitespace validation',
-            command: 'git',
-            args: ['diff', '--check']
+            id: 'backend-tests',
+            name: 'Backend tests and coverage',
+            command: python.command,
+            args: [
+                ...python.args,
+                'scripts/ci_backend_tests.py',
+                'run',
+                '--propagate-exit-code',
+                '--log-file',
+                BACKEND_LOG_FILE,
+                '--',
+                npm.command,
+                ...npm.args,
+                'run',
+                'test:coverage'
+            ]
         },
         {
+            id: 'build',
+            name: 'Build production',
+            command: npm.command,
+            args: [...npm.args, 'run', 'build']
+        },
+        {
+            id: 'generated-files',
             name: 'Generated frontend files are committed',
             command: 'git',
             args: ['diff', '--exit-code', '--', ...GENERATED_FILES]
+        },
+        {
+            id: 'whitespace',
+            name: 'Whitespace validation',
+            command: 'git',
+            args: ['diff', '--check']
         }
     ];
 
     if (withServices) {
-        steps.splice(3, 0, {
+        steps.push({
+            id: 'integration-services',
             name: 'Redis and PostgreSQL integration tests',
-            command: npm,
-            args: ['run', 'test:integration:services']
+            command: npm.command,
+            args: [...npm.args, 'run', 'test:integration:services']
         });
     }
+
+    if (withBrowser) {
+        steps.push(
+            {
+                id: 'responsive-visual',
+                name: 'Responsive and visual E2E',
+                command: npm.command,
+                args: [...npm.args, 'run', 'test:e2e:responsive'],
+                continueOnFailure: true
+            },
+            {
+                id: 'profile-reconnection',
+                name: 'Profile and reconnection E2E',
+                command: npm.command,
+                args: [...npm.args, 'run', 'test:e2e:flows'],
+                continueOnFailure: true
+            },
+            {
+                id: 'admin-console',
+                name: 'Admin console E2E',
+                command: npm.command,
+                args: [...npm.args, 'run', 'test:e2e:admin'],
+                continueOnFailure: true
+            },
+            {
+                id: 'accessibility',
+                name: 'Accessibility E2E',
+                command: npm.command,
+                args: [...npm.args, 'run', 'test:e2e:accessibility'],
+                continueOnFailure: true
+            }
+        );
+    }
+
     return steps;
 }
 
 function parseArguments(argv = process.argv.slice(2)) {
     return {
-        withServices: argv.includes('--with-services')
+        withServices: argv.includes('--with-services'),
+        withBrowser: argv.includes('--with-browser')
     };
+}
+
+function runSteps(steps, {
+    runner = runStep,
+    afterStep = null
+} = {}) {
+    const results = [];
+
+    for (const step of steps) {
+        const result = { id: step.id, ...runner(step) };
+        results.push(result);
+
+        const additionalResults = afterStep
+            ? afterStep(step, result)
+            : null;
+        const normalizedAdditionalResults = additionalResults
+            ? (Array.isArray(additionalResults) ? additionalResults : [additionalResults])
+            : [];
+        results.push(...normalizedAdditionalResults);
+
+        const additionalFailure = normalizedAdditionalResults.some(item => item.exitCode !== 0);
+        if (additionalFailure || (result.exitCode !== 0 && !step.continueOnFailure)) {
+            break;
+        }
+    }
+
+    return results;
 }
 
 function main() {
     const options = parseArguments();
-    const results = buildSteps(options).map(runStep);
+    const platform = process.platform;
+    const env = process.env;
+    const steps = buildSteps({ ...options, platform, env });
+    const results = runSteps(steps, {
+        afterStep(step, result) {
+            if (step.id !== 'backend-tests' || !String(env.GITHUB_STEP_SUMMARY || '').trim()) {
+                return null;
+            }
+            const summaryStep = buildBackendSummaryStep({
+                exitCode: result.exitCode,
+                platform,
+                env
+            });
+            return { id: summaryStep.id, ...runStep(summaryStep) };
+        }
+    });
     const failures = results.filter(result => result.exitCode !== 0);
 
-    console.log('\n=== Rezumat preflight ===');
+    console.log('\n=== Rezumat ci:verify ===');
     for (const result of results) {
         console.log(`${result.exitCode === 0 ? '✓' : '✗'} ${result.name}`);
     }
 
     if (failures.length > 0) {
-        console.error(`\n[preflight] ${failures.length} etapă(e) au eșuat. Nu face push până nu sunt rezolvate.`);
+        console.error(`\n[ci:verify] ${failures.length} etapă(e) au eșuat. Nu face push până nu sunt rezolvate.`);
         process.exitCode = 1;
         return;
     }
 
-    console.log('\n[preflight] Toate verificările locale au trecut.');
+    console.log('\n[ci:verify] Toate verificările au trecut.');
 }
 
 if (require.main === module) main();
 
 module.exports = {
+    BACKEND_LOG_FILE,
     GENERATED_FILES,
+    buildBackendSummaryStep,
     buildSteps,
-    executable,
+    resolveNpmCommand,
     parseArguments,
     resolvePythonCommand,
-    runStep
+    runStep,
+    runSteps
 };

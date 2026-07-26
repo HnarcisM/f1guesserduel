@@ -39,6 +39,40 @@ class CiBackendTestsScriptTest(unittest.TestCase):
             self.assertEqual(output_file.read_text(encoding="utf-8"), "exit_code=3\n")
             self.assertIn("backend output", stdout.getvalue())
 
+    def test_run_subcommand_optionally_propagates_original_exit_code(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            command = [
+                sys.executable,
+                "-c",
+                "print('captured failure'); raise SystemExit(4)",
+            ]
+
+            with mock.patch.dict(os.environ, {}, clear=True):
+                deferred_args = type(
+                    "Args",
+                    (),
+                    {
+                        "command": command,
+                        "log_file": root / "deferred.log",
+                        "propagate_exit_code": False,
+                    },
+                )()
+                propagated_args = type(
+                    "Args",
+                    (),
+                    {
+                        "command": command,
+                        "log_file": root / "propagated.log",
+                        "propagate_exit_code": True,
+                    },
+                )()
+
+                self.assertEqual(ci_backend_tests.command_run(deferred_args), 0)
+                self.assertEqual(ci_backend_tests.command_run(propagated_args), 4)
+
+            self.assertIn("captured failure", (root / "propagated.log").read_text(encoding="utf-8"))
+
     def test_failure_summary_keeps_totals_and_failed_test_section(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             log_file = Path(temporary_directory) / "backend-tests.log"

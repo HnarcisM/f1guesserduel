@@ -5,6 +5,7 @@ const test = require('node:test');
 
 const root = path.join(__dirname, '..');
 const workflowPath = path.join(root, '.github', 'workflows', 'ci.yml');
+const preflightPath = path.join(root, 'scripts', 'run-ci-preflight.js');
 const pythonHelperPath = path.join(root, 'scripts', 'ci_backend_tests.py');
 const pythonTestPath = path.join(root, 'test', 'ci_backend_tests_test.py');
 
@@ -36,59 +37,47 @@ test('GitHub Actions CI uses locked Node dependencies and an explicit Python run
     assert.match(source, /run:\s*npm ci/);
 });
 
-test('GitHub Actions CI enforces coverage, builds and rejects stale generated frontend files', () => {
+test('GitHub Actions delegates the required test-and-build job to the canonical local command', () => {
     const source = readWorkflow();
-    const coveragePosition = source.indexOf('python scripts/ci_backend_tests.py run');
-    const enforcementPosition = source.indexOf('name: Enforce backend test result');
-    const buildPosition = source.indexOf('run: npm run build');
-    const generatedCheckPosition = source.indexOf(
-        'git diff --exit-code -- public/index.html public/style.bundle.css public/game.bundle.min.js public/service-worker.js'
-    );
+    const verifyJob = source.split(/^  integration-services:$/m)[0];
 
-    assert.ok(coveragePosition >= 0);
-    assert.ok(enforcementPosition > coveragePosition);
-    assert.ok(buildPosition > enforcementPosition);
-    assert.ok(generatedCheckPosition > buildPosition);
+    assert.match(verifyJob, /name:\s*Run canonical CI verification\s*\n\s*run:\s*npm run ci:verify/);
+    assert.equal((verifyJob.match(/npm run ci:verify/g) || []).length, 1);
+    assert.doesNotMatch(verifyJob, /run:\s*npm run test:coverage/);
+    assert.doesNotMatch(verifyJob, /run:\s*npm run build/);
+    assert.doesNotMatch(verifyJob, /git diff --exit-code -- public\/index\.html/);
+    assert.doesNotMatch(verifyJob, /name:\s*Enforce backend test result/);
 });
 
-test('GitHub Actions CI retains the machine-readable coverage summary', () => {
+test('GitHub Actions CI retains backend logs and the machine-readable coverage summary', () => {
     const source = readWorkflow();
 
+    assert.match(source, /name:\s*backend-test-log-\$\{\{ github\.run_attempt \}\}/);
+    assert.match(source, /path:\s*test-results\/ci\/backend-tests\.log/);
     assert.match(source, /name:\s*coverage-\$\{\{ github\.run_attempt \}\}/);
     assert.match(source, /test-results\/coverage\/coverage-summary\.json/);
     assert.match(source, /if-no-files-found:\s*error/);
     assert.match(source, /retention-days:\s*14/);
 });
 
-test('GitHub Actions CI uses Python for backend logs, summaries and exit-code enforcement', () => {
-    const source = readWorkflow();
-
-    assert.match(source, /id:\s*backend_tests/);
-    assert.match(source, /python scripts\/ci_backend_tests\.py run/);
-    assert.match(source, /-- npm run test:coverage/);
-    assert.match(source, /python scripts\/ci_backend_tests\.py summary/);
-    assert.match(source, /python scripts\/ci_backend_tests\.py enforce/);
-    assert.match(source, /python test\/ci_backend_tests_test\.py/);
-    const verifyJob = source.split(/^  integration-services:$/m)[0];
-    assert.doesNotMatch(verifyJob, /shell:\s*bash/);
-    assert.doesNotMatch(source, /PIPESTATUS|grep -q|awk '\/\^✖ failing tests|tail -n/);
-    assert.match(source, /name:\s*backend-test-log-\$\{\{ github\.run_attempt \}\}/);
-    assert.match(source, /path:\s*test-results\/ci\/backend-tests\.log/);
-    assert.match(source, /TEST_EXIT_CODE:\s*\$\{\{ steps\.backend_tests\.outputs\.exit_code \}\}/);
-});
-
-test('Python CI helper is dependency-free and has focused unit tests', () => {
+test('canonical verification preserves Python diagnostics and propagates backend failures directly', () => {
+    const preflightSource = fs.readFileSync(preflightPath, 'utf8');
     const helperSource = fs.readFileSync(pythonHelperPath, 'utf8');
     const testSource = fs.readFileSync(pythonTestPath, 'utf8');
 
+    assert.match(preflightSource, /scripts\/ci_backend_tests\.py/);
+    assert.match(preflightSource, /--propagate-exit-code/);
+    assert.match(preflightSource, /GITHUB_STEP_SUMMARY/);
+    assert.match(preflightSource, /BACKEND_LOG_FILE/);
     assert.match(helperSource, /subprocess\.Popen/);
     assert.match(helperSource, /GITHUB_OUTPUT/);
     assert.match(helperSource, /GITHUB_STEP_SUMMARY/);
+    assert.match(helperSource, /propagate_exit_code/);
     assert.match(helperSource, /FAILURE_MARKER = "✖ failing tests:"/);
-    assert.match(helperSource, /::error title=Backend tests failed::/);
     assert.doesNotMatch(helperSource, /import (requests|yaml|click|pytest)/);
     assert.match(testSource, /class CiBackendTestsScriptTest\(unittest\.TestCase\)/);
     assert.match(testSource, /test_run_command_streams_output_and_records_original_exit_code/);
+    assert.match(testSource, /test_run_subcommand_optionally_propagates_original_exit_code/);
     assert.match(testSource, /test_failure_summary_keeps_totals_and_failed_test_section/);
 });
 
@@ -144,16 +133,17 @@ test('GitHub Actions CI regenerates visual baselines only through an explicit ma
     assert.match(source, /path:\s*test\/e2e\/baselines\/responsive-visual\//);
 });
 
-
-test('GitHub Actions CI rejects a stale committed service worker cache manifest', () => {
+test('canonical verification rejects stale committed frontend artifacts including the service worker', () => {
     const source = readWorkflow();
+    const preflightSource = fs.readFileSync(preflightPath, 'utf8');
 
-    assert.match(
-        source,
-        /git diff --exit-code -- public\/index\.html public\/style\.bundle\.css public\/game\.bundle\.min\.js public\/service-worker\.js/
-    );
+    assert.match(source, /run:\s*npm run ci:verify/);
+    assert.match(preflightSource, /public\/index\.html/);
+    assert.match(preflightSource, /public\/style\.bundle\.css/);
+    assert.match(preflightSource, /public\/game\.bundle\.min\.js/);
+    assert.match(preflightSource, /public\/service-worker\.js/);
+    assert.match(preflightSource, /args:\s*\['diff', '--exit-code', '--', \.\.\.GENERATED_FILES\]/);
 });
-
 
 test('GitHub Actions exposes one stable final CI gate for branch protection', () => {
     const source = readWorkflow();

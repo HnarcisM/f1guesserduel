@@ -127,9 +127,8 @@ def command_run(args: argparse.Namespace) -> int:
 
     github_output = os.getenv("GITHUB_OUTPUT")
     output_file = Path(github_output) if github_output else None
-    run_and_capture(command, args.log_file, output_file)
-    # The dedicated enforce step reapplies the recorded status after artifacts and summary are published.
-    return 0
+    exit_code = run_and_capture(command, args.log_file, output_file)
+    return exit_code if args.propagate_exit_code else 0
 
 
 def command_summary(args: argparse.Namespace) -> int:
@@ -157,6 +156,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     run_parser = subparsers.add_parser("run", help="Run and capture backend tests.")
     run_parser.add_argument("--log-file", type=Path, default=DEFAULT_LOG_FILE)
+    run_parser.add_argument(
+        "--propagate-exit-code",
+        action="store_true",
+        help="Return the wrapped command status instead of deferring enforcement.",
+    )
     run_parser.add_argument("command", nargs=argparse.REMAINDER)
     run_parser.set_defaults(handler=command_run)
 
