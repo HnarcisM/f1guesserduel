@@ -166,6 +166,16 @@ const DEFAULT_ASSETS = Object.freeze([
         sourceFile: path.join('public', 'game.bundle.min.js')
     }
 ]);
+const TEXT_STATIC_ASSET_EXTENSIONS = new Set([
+    '.css',
+    '.html',
+    '.js',
+    '.json',
+    '.mjs',
+    '.svg',
+    '.txt',
+    '.webmanifest'
+]);
 
 function normalizeTextForHash(content) {
     return String(content || '').replace(/\r\n?/g, '\n');
@@ -193,6 +203,21 @@ function createBinaryVersion(content, length = 16) {
         .update(content)
         .digest('hex')
         .slice(0, length);
+}
+
+function createStaticAssetVersion(filePath, content, length = 16) {
+    const extension = path.extname(filePath).toLowerCase();
+    if (!TEXT_STATIC_ASSET_EXTENSIONS.has(extension)) {
+        return createBinaryVersion(content, length);
+    }
+
+    // Keep compatibility with cache seeds historically generated on Windows,
+    // while producing the same bytes from LF or CRLF checkouts.
+    const canonicalWindowsText = normalizeTextForHash(
+        Buffer.isBuffer(content) ? content.toString('utf8') : content
+    ).replace(/\n/g, '\r\n');
+
+    return createBinaryVersion(Buffer.from(canonicalWindowsText, 'utf8'), length);
 }
 
 function escapeRegExp(value) {
@@ -281,7 +306,7 @@ function versionServiceWorker(rootDir, versionedAssets, options = {}) {
         if (!fs.existsSync(staticFile) || !fs.statSync(staticFile).isFile()) {
             throw new Error(`Precache static asset not found: ${staticUrl}`);
         }
-        staticAssetVersions.push(`${staticUrl}:${createBinaryVersion(fs.readFileSync(staticFile))}`);
+        staticAssetVersions.push(`${staticUrl}:${createStaticAssetVersion(staticFile, fs.readFileSync(staticFile))}`);
     }
 
     const originalContent = fs.readFileSync(serviceWorkerPath, 'utf8');
@@ -362,6 +387,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+    TEXT_STATIC_ASSET_EXTENSIONS,
     DEFAULT_ASSETS,
     DEFAULT_INDEX_FILE,
     DEFAULT_PRECACHE_STATIC_URLS,
@@ -371,6 +397,7 @@ module.exports = {
     createBinaryVersion,
     createContentVersion,
     createPrecacheUrls,
+    createStaticAssetVersion,
     normalizeTextForHash,
     updateAssetReference,
     updateServiceWorkerPrecache,
