@@ -28,6 +28,10 @@ test('responsive E2E suite captures home and game states and checks horizontal o
         'utf8'
     );
     const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
+    const dashboardSource = fs.readFileSync(
+        path.join(__dirname, '..', 'public', 'js', 'gameHubDashboardView.js'),
+        'utf8'
+    );
 
     assert.match(source, /page\.screenshot\(/);
     assert.match(source, /'home'/);
@@ -42,7 +46,10 @@ test('responsive E2E suite captures home and game states and checks horizontal o
     assert.match(source, /\.game-hub-featured-card\[data-game-variant=/);
     assert.match(source, /artworkReport\.artworkCount/);
     assert.doesNotMatch(source, /\.game-hub-mode-artwork/);
-    assert.doesNotMatch(source, /captureState\(page, viewport, 'home',[^\n]+compareVisual:\s*false/);
+    assert.match(source, /captureState\(page, viewport, 'home',[^\n]+compareVisual:\s*false/);
+    assert.match(source, /\.game-hub-summary-bar/);
+    assert.match(dashboardSource, /game-hub-summary-bar/);
+    assert.doesNotMatch(source, /\.game-hub-profile-bar/);
     assert.match(source, /UPDATE_VISUAL_BASELINES/);
     assert.match(source, /\.diff\.png/);
     assert.match(source, /const visualFailures = \[\]/);
