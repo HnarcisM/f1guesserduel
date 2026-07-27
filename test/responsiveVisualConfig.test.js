@@ -5,7 +5,7 @@ const test = require('node:test');
 
 const { VIEWPORTS } = require('./e2e/responsiveVisualConfig');
 
-test('responsive visual matrix covers phone, Galaxy Fold 5 and desktop layouts', () => {
+test('responsive visual matrix covers phone, Galaxy Fold 5, laptop and desktop layouts', () => {
     assert.deepEqual(
         VIEWPORTS.map(viewport => viewport.label),
         [
@@ -13,6 +13,7 @@ test('responsive visual matrix covers phone, Galaxy Fold 5 and desktop layouts',
             'fold5-cover',
             'fold5-inner-portrait',
             'fold5-inner-landscape',
+            'laptop-1366',
             'desktop'
         ]
     );
@@ -35,6 +36,9 @@ test('responsive E2E suite captures home and game states and checks horizontal o
     assert.match(source, /document\.body\.scrollWidth/);
     assert.match(source, /assertNoVisibleOverlap/);
     assert.match(source, /compareWithBaseline/);
+    assert.match(source, /assertGameHubSvgIcons/);
+    assert.match(source, /stabilizeHomeVisualState/);
+    assert.doesNotMatch(source, /captureState\(page, viewport, 'home',[^\n]+compareVisual:\s*false/);
     assert.match(source, /UPDATE_VISUAL_BASELINES/);
     assert.match(source, /\.diff\.png/);
     assert.match(source, /const visualFailures = \[\]/);

@@ -216,7 +216,7 @@ Pentru a rula doar matricea responsive și vizuală:
 npm run test:e2e:responsive
 ```
 
-Suita verifică pagina de start și starea de joc pe telefon, Galaxy Fold 5 (cover și ecran interior în ambele orientări) și desktop. Detectează automat overflow-ul lateral, elementele ieșite din viewport și suprapunerile importante, apoi compară pixel cu pixel capturile cu baseline-urile versionate din `test/e2e/baselines/responsive-visual/`. Capturile curente, raportul geometric și imaginile diff pentru regresii sunt scrise în `test-results/responsive-visual/`.
+Suita verifică pagina de start și starea de joc pe telefon, Galaxy Fold 5 (cover și ecran interior în ambele orientări), laptop 1366×768 și desktop. Detectează automat overflow-ul lateral, elementele ieșite din viewport și suprapunerile importante, validează iconurile SVG din Game Hub și compară pixel cu pixel capturile Home și Game cu baseline-urile versionate din `test/e2e/baselines/responsive-visual/`. Capturile curente, raportul geometric și imaginile diff pentru regresii sunt scrise în `test-results/responsive-visual/`.
 
 Baseline-urile oficiale se regenerează numai după aprobarea unei schimbări vizuale intenționate, folosind inputul manual `update_visual_baselines` al workflow-ului GitHub Actions `CI`. Artefactul `visual-baselines-<run_attempt>` este generat pe imaginea fixată `ubuntu-24.04` și poate înlocui conținutul din `test/e2e/baselines/responsive-visual/`.
 

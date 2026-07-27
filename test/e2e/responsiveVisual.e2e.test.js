@@ -27,7 +27,10 @@ const HOME_SELECTORS = Object.freeze([
     '#authOpenBtn',
     '.menu-container',
     '.game-mode-selection',
-    '#gameHubCatalogView'
+    '#gameHubCatalogView',
+    '.game-hub-profile-bar',
+    '.game-hub-featured-card',
+    '.game-hub-svg-icon'
 ]);
 
 const GAME_SELECTORS = Object.freeze([
@@ -267,6 +270,59 @@ async function assertGameHubCatalog(page, viewportLabel) {
     assert.equal(catalog.horizontalOverflow, false, `${viewportLabel}/home: Game Hub are overflow orizontal`);
 }
 
+
+
+async function stabilizeHomeVisualState(page) {
+    await page.evaluate(() => {
+        document.activeElement?.blur?.();
+        window.scrollTo(0, 0);
+        for (const selector of ['#difficulty-overlay', '#gameHubCatalogView', '#gameModeHub']) {
+            const element = document.querySelector(selector);
+            if (!element) continue;
+            element.scrollTop = 0;
+            element.scrollLeft = 0;
+        }
+    });
+    await page.locator('.game-hub-mode-artwork').first().evaluate(async element => {
+        const backgroundImage = getComputedStyle(element).backgroundImage;
+        const match = backgroundImage.match(/url\(["']?(.+?)["']?\)/);
+        if (!match) return;
+        const image = new Image();
+        image.src = match[1];
+        if (typeof image.decode === 'function') await image.decode().catch(() => {});
+    });
+}
+
+async function assertGameHubSvgIcons(page, viewportLabel) {
+    const iconReport = await page.evaluate(() => {
+        const icons = Array.from(document.querySelectorAll('.game-hub-svg-icon'));
+        return {
+            count: icons.length,
+            missingViewBox: icons.filter(icon => icon.getAttribute('viewBox') !== '0 0 24 24').length,
+            exposedToAssistiveTech: icons.filter(icon => icon.getAttribute('aria-hidden') !== 'true').length,
+            focusable: icons.filter(icon => icon.getAttribute('focusable') !== 'false').length,
+            empty: icons.filter(icon => icon.children.length === 0).length,
+            invalidSize: icons.filter(icon => {
+                const rectangle = icon.getBoundingClientRect();
+                return rectangle.width < 10 || rectangle.height < 10;
+            }).length,
+            fallbackIcons: icons.filter(icon => icon.dataset.iconKey === 'sparkles').length,
+            keys: Array.from(new Set(icons.map(icon => icon.dataset.iconKey).filter(Boolean))).sort()
+        };
+    });
+
+    assert.ok(iconReport.count >= 17, `${viewportLabel}/home: lipsesc iconuri SVG (${iconReport.count})`);
+    assert.equal(iconReport.missingViewBox, 0, `${viewportLabel}/home: există iconuri cu viewBox incorect`);
+    assert.equal(iconReport.exposedToAssistiveTech, 0, `${viewportLabel}/home: iconurile decorative nu sunt ascunse semantic`);
+    assert.equal(iconReport.focusable, 0, `${viewportLabel}/home: iconurile decorative pot primi focus`);
+    assert.equal(iconReport.empty, 0, `${viewportLabel}/home: există iconuri SVG fără forme`);
+    assert.equal(iconReport.invalidSize, 0, `${viewportLabel}/home: există iconuri SVG invizibile sau prea mici`);
+    assert.equal(iconReport.fallbackIcons, 0, `${viewportLabel}/home: registry-ul folosește iconuri fallback neașteptate`);
+    assert.ok(iconReport.keys.includes('target'), `${viewportLabel}/home: lipsește iconul Classic`);
+    assert.ok(iconReport.keys.includes('swords'), `${viewportLabel}/home: lipsește iconul Duel`);
+    assert.ok(iconReport.keys.includes('calendar'), `${viewportLabel}/home: lipsește iconul Weekly`);
+}
+
 async function assertExtendedModesLaunch(page, viewportLabel, baseUrl) {
     const variants = [
         ['speed-run', 'Speed Run'],
@@ -417,9 +473,11 @@ test('responsive layouts match committed visual baselines', { concurrency: false
                 const page = await openAppPage(context, app.baseUrl);
                 await page.locator('#difficulty-overlay').waitFor({ state: 'visible', timeout: 7000 });
                 await page.evaluate(() => window.F1RuntimeSettings?.load?.({ force: true }));
-                // Game Hub-ul se schimbă la activarea fiecărui mod; îl verificăm semantic și responsive,
-                // iar baseline-ul pixel-perfect rămâne rezervat ecranului stabil de gameplay.
-                const home = await captureState(page, viewport, 'home', HOME_SELECTORS, { compareVisual: false });
+                await page.locator('.game-hub-svg-icon').first().waitFor({ state: 'visible', timeout: 7000 });
+                await page.locator('#connectionStatus[data-connection-state="connected"]').waitFor({ state: 'visible', timeout: 7000 });
+                await assertGameHubSvgIcons(page, viewport.label);
+                await stabilizeHomeVisualState(page);
+                const home = await captureState(page, viewport, 'home', HOME_SELECTORS);
                 if (home.visualRegression.failure) visualFailures.push(home.visualRegression.failure);
                 await assertGameHubCatalog(page, viewport.label);
                 await assertMainMenuShowsCompactHeader(page, `${viewport.label}/home`);

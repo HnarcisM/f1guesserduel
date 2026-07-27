@@ -8,7 +8,7 @@ Aceste teste pornesc serverul local pe un port liber și deschid 3 taburi reale 
 
 Testele verifică faptul că spectatorul vede live board-ul, iar playerii nu îl văd. Mai există teste pentru restaurarea unei camere după restart server, auth register/login/logout cu refresh pe socket, rematch după final de rundă, Single Play fără cameră, Daily Challenge izolat de Single/Duel și cazul în care playerul non-host ghicește corect iar spectatorul vede rezultatul live.
 
-Suita separată `responsiveVisual.e2e.test.js` verifică automat layout-ul paginii de start și al jocului pe telefon, ecranul exterior Galaxy Fold 5, ecranul interior Fold în portrait/landscape și desktop. Pentru fiecare stare verifică overflow-ul orizontal, limitele elementelor importante și suprapunerile, apoi compară captura pixel cu pixel cu baseline-ul versionat din `test/e2e/baselines/responsive-visual/`. Capturile curente, raportul JSON și eventualele imagini `*.diff.png` sunt salvate în `test-results/responsive-visual/`.
+Suita separată `responsiveVisual.e2e.test.js` verifică automat layout-ul paginii de start și al jocului pe telefon, ecranul exterior Galaxy Fold 5, ecranul interior Fold în portrait/landscape, laptop 1366×768 și desktop. Pentru fiecare stare verifică overflow-ul orizontal, limitele elementelor importante și suprapunerile. Pagina Game Hub verifică suplimentar iconurile SVG decorative, iar atât starea Home, cât și starea Game sunt comparate pixel cu pixel cu baseline-ul versionat din `test/e2e/baselines/responsive-visual/`. Capturile curente, raportul JSON și eventualele imagini `*.diff.png` sunt salvate în `test-results/responsive-visual/`.
 
 Suita `accessibility.e2e.test.js` rulează axe-core în Chromium pentru 18 ecrane și stări: pagina principală, meniul de navigare, selecția și jocul Daily, browserul, lobby-ul, jocul și rezultatul Duel, perspectiva spectatorului, o rundă Single, login, înregistrare și toate taburile profilului autentificat, inclusiv setările extinse. Fiecare stare este verificată în temele Default, Neon și Carbon. Testul eșuează la orice încălcare axe și salvează raportul complet în `test-results/accessibility/axe-report.json`.
 
@@ -85,7 +85,7 @@ păstrează identificatorul tabului, rolul de host, numărul participanților ș
 
 Rapoartele și capturile generate local nu intră în Git. În GitHub Actions sunt încărcate ca artefact `browser-quality-<run_attempt>` și sunt păstrate 14 zile, inclusiv când un test eșuează.
 
-Suita responsive finalizează toate cele 10 capturi înainte să eșueze, astfel încât artefactul conține toate diferențele detectate într-o singură rulare.
+Suita responsive finalizează toate cele 12 capturi înainte să eșueze, astfel încât artefactul conține toate diferențele detectate într-o singură rulare.
 
 `npm run test:e2e` rulează automat `pretest:e2e`, care verifică Chromium înainte de pornirea browserului. Dacă Chromium lipsește, scriptul încearcă instalarea și oprește testele cu mesaj explicit dacă instalarea nu reușește.
 
