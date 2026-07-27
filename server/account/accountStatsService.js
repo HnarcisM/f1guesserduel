@@ -85,6 +85,14 @@ function asNonNegativeInteger(value) {
     return Number.isSafeInteger(number) && number >= 0 ? number : 0;
 }
 
+function calculateAccountAccuracy(played, won) {
+    const normalizedPlayed = asNonNegativeInteger(played);
+    const normalizedWon = Math.min(normalizedPlayed, asNonNegativeInteger(won));
+    return normalizedPlayed > 0
+        ? Math.round((normalizedWon / normalizedPlayed) * 100)
+        : 0;
+}
+
 function calculateXpReward(result = {}) {
     return XP_REWARDS.participation
         + (XP_REWARDS.outcomes[result.outcome] || 0)
@@ -120,7 +128,7 @@ function normalizeModeStats(row) {
     stats.won = asNonNegativeInteger(row.games_won);
     stats.drawn = asNonNegativeInteger(row.games_drawn);
     stats.lost = Math.max(0, stats.played - stats.won - stats.drawn);
-    stats.winRate = stats.played > 0 ? Math.round((stats.won / stats.played) * 100) : 0;
+    stats.winRate = calculateAccountAccuracy(stats.played, stats.won);
     stats.currentStreak = asNonNegativeInteger(row.current_streak);
     stats.bestStreak = asNonNegativeInteger(row.best_streak);
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
@@ -129,7 +137,7 @@ function normalizeModeStats(row) {
     return stats;
 }
 
-function buildAccountStats(rows = []) {
+function buildAccountStats(rows = [], progressRow = null) {
     const modes = Object.fromEntries(ACCOUNT_GAME_MODES.map(mode => [mode, createEmptyModeStats(mode)]));
 
     for (const row of rows) {
@@ -142,6 +150,7 @@ function buildAccountStats(rows = []) {
     const played = modeValues.reduce((total, mode) => total + mode.played, 0);
     const won = modeValues.reduce((total, mode) => total + mode.won, 0);
     const drawn = modeValues.reduce((total, mode) => total + mode.drawn, 0);
+    const accuracy = calculateAccountAccuracy(played, won);
 
     return {
         totals: {
@@ -149,7 +158,9 @@ function buildAccountStats(rows = []) {
             won,
             drawn,
             lost: Math.max(0, played - won - drawn),
-            winRate: played > 0 ? Math.round((won / played) * 100) : 0,
+            winRate: accuracy,
+            accuracy,
+            activeDays: asNonNegativeInteger(progressRow?.active_days ?? progressRow?.activeDays),
             bestStreak: Math.max(0, ...modeValues.map(mode => mode.bestStreak))
         },
         modes
@@ -413,7 +424,13 @@ function createAccountStatsService(databaseOrRepository) {
     async function getAccountStats(userId) {
         const normalizedUserId = normalizeUserId(userId);
         if (!normalizedUserId) throw new Error('Invalid account user id.');
-        return buildAccountStats(await repository.getStatsRows(normalizedUserId));
+        const [rows, progressRow] = await Promise.all([
+            repository.getStatsRows(normalizedUserId),
+            typeof repository.getProgressRow === 'function'
+                ? repository.getProgressRow(normalizedUserId)
+                : null
+        ]);
+        return buildAccountStats(rows, progressRow);
     }
 
     async function getAccountProgress(userId) {
@@ -438,7 +455,7 @@ function createAccountStatsService(databaseOrRepository) {
                 ? repository.getProgressRow(normalizedUserId)
                 : null
         ]);
-        const stats = buildAccountStats(rows);
+        const stats = buildAccountStats(rows, progressRow);
         const progress = buildAccountProgress(progressRow);
         return {
             stats,
@@ -453,7 +470,7 @@ function createAccountStatsService(databaseOrRepository) {
         const xpEarned = calculateXpReward(result);
         const repositoryResult = await repository.recordGameResult({ ...result, xpEarned });
         const recorded = Boolean(repositoryResult.recorded);
-        const stats = buildAccountStats(repositoryResult.rows);
+        const stats = buildAccountStats(repositoryResult.rows, repositoryResult.progressRow);
         const progress = buildAccountProgress(repositoryResult.progressRow);
         const achievements = buildAccountAchievements(stats, progress);
         const xpAwarded = recorded ? xpEarned : 0;
@@ -587,6 +604,7 @@ module.exports = {
     buildAccountStats,
     buildAccountStatsSocketPayload,
     buildRecentGames,
+    calculateAccountAccuracy,
     calculateXpReward,
     createAccountStatsService,
     createEmptyModeStats,

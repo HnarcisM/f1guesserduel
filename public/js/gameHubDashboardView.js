@@ -106,8 +106,8 @@
     const xpBar = documentObject?.getElementById?.('gameHubProfileXpBar');
     const status = documentObject?.getElementById?.('gameHubProfileStatus');
     const victories = documentObject?.getElementById?.('gameHubProfileVictories');
-    const winRate = documentObject?.getElementById?.('gameHubProfileWinRate');
-    const currentStreak = documentObject?.getElementById?.('gameHubProfileCurrentStreak');
+    const accuracy = documentObject?.getElementById?.('gameHubProfileAccuracy');
+    const activeDays = documentObject?.getElementById?.('gameHubProfileActiveDays');
     const played = documentObject?.getElementById?.('gameHubProfilePlayed');
 
     profile?.classList.toggle('is-guest', !isAuthenticated);
@@ -127,8 +127,15 @@
     const appliedPercent = setProgressPercent(xpBar, progressPercent);
     if (xpProgress) xpProgress.setAttribute('aria-valuenow', String(appliedPercent));
     if (victories) victories.textContent = isAuthenticated && hasSummary ? String(asNonNegativeInteger(totals.won)) : '—';
-    if (winRate) winRate.textContent = isAuthenticated && hasSummary ? `${asNonNegativeInteger(totals.winRate)}%` : '—';
-    if (currentStreak) currentStreak.textContent = isAuthenticated && hasSummary ? String(getActiveStreak(stats)) : '—';
+    if (accuracy) {
+      const accuracyValue = totals.accuracy ?? totals.winRate;
+      accuracy.textContent = isAuthenticated && hasSummary ? `${asNonNegativeInteger(accuracyValue)}%` : '—';
+    }
+    if (activeDays) {
+      activeDays.textContent = isAuthenticated && hasSummary
+        ? String(asNonNegativeInteger(totals.activeDays))
+        : '—';
+    }
     if (played) played.textContent = isAuthenticated && hasSummary ? String(asNonNegativeInteger(totals.played)) : '—';
     if (status) {
       status.textContent = options.error
@@ -903,10 +910,10 @@
         id: 'gameHubProfileVictories', icon: '🏆', label: 'Victorii', accentClass: 'game-hub-summary-item--single'
       }),
       createSummaryMetric(documentObject, {
-        id: 'gameHubProfileWinRate', icon: '▥', label: 'Rată victorii', accentClass: 'game-hub-summary-item--single'
+        id: 'gameHubProfileAccuracy', icon: '◎', label: 'Acuratețe', accentClass: 'game-hub-summary-item--single'
       }),
       createSummaryMetric(documentObject, {
-        id: 'gameHubProfileCurrentStreak', icon: '🔥', label: 'Serie activă', accentClass: 'game-hub-summary-item--specialty'
+        id: 'gameHubProfileActiveDays', icon: '◷', label: 'Zile active', accentClass: 'game-hub-summary-item--specialty'
       }),
       createSummaryMetric(documentObject, {
         id: 'gameHubProfilePlayed', icon: '▣', label: 'Meciuri jucate', accentClass: 'game-hub-summary-item--duel'

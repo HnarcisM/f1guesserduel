@@ -15,6 +15,7 @@ const ACCOUNT_GAME_HISTORY_COLUMNS = Object.freeze([
     Object.freeze({ name: 'winner_username', definition: 'TEXT' })
 ]);
 
+
 function getSqliteTableColumns(database, tableName) {
     if (!database || typeof database.prepare !== 'function') {
         throw new Error('SQLite schema upgrade requires a database with prepare().');
@@ -65,6 +66,7 @@ function ensureSqliteAccountGameHistoryColumns(database) {
 
     return addedColumns;
 }
+
 
 module.exports = {
     USER_MODERATION_COLUMNS,

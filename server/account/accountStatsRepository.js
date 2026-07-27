@@ -40,7 +40,7 @@ const SELECT_RECENT_RESULTS_SQL = `
 `;
 
 const SELECT_PROGRESS_SQL = `
-    SELECT total_xp
+    SELECT total_xp, active_days, last_active_date
     FROM user_progress
     WHERE user_id = $1
 `;
@@ -135,10 +135,19 @@ const POSTGRES_UPSERT_STATS_SQL = `
 `;
 
 const POSTGRES_UPSERT_PROGRESS_SQL = `
-    INSERT INTO user_progress (user_id, total_xp, updated_at)
-    VALUES ($1, $2, now())
+    INSERT INTO user_progress (
+        user_id, total_xp, active_days, last_active_date, updated_at
+    )
+    VALUES (
+        $1, $2, 1, (now() AT TIME ZONE 'UTC')::date, now()
+    )
     ON CONFLICT (user_id) DO UPDATE SET
         total_xp = user_progress.total_xp + EXCLUDED.total_xp,
+        active_days = user_progress.active_days + CASE
+            WHEN user_progress.last_active_date IS DISTINCT FROM EXCLUDED.last_active_date THEN 1
+            ELSE 0
+        END,
+        last_active_date = EXCLUDED.last_active_date,
         updated_at = now()
 `;
 
@@ -442,10 +451,19 @@ function createSqliteAccountStatsRepository(database) {
             updated_at = datetime('now')
     `);
     const upsertProgress = database.prepare(`
-        INSERT INTO user_progress (user_id, total_xp, updated_at)
-        VALUES (@userId, @xpEarned, datetime('now'))
+        INSERT INTO user_progress (
+            user_id, total_xp, active_days, last_active_date, updated_at
+        )
+        VALUES (
+            @userId, @xpEarned, 1, date('now'), datetime('now')
+        )
         ON CONFLICT(user_id) DO UPDATE SET
             total_xp = total_xp + excluded.total_xp,
+            active_days = active_days + CASE
+                WHEN last_active_date IS NOT excluded.last_active_date THEN 1
+                ELSE 0
+            END,
+            last_active_date = excluded.last_active_date,
             updated_at = datetime('now')
     `);
     const recordTransaction = database.transaction(result => {

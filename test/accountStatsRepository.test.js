@@ -117,7 +117,13 @@ class FakePostgresClient {
             };
         }
         if (normalizedSql.startsWith('SELECT total_xp')) {
-            return { rows: [{ total_xp: 50 }] };
+            return {
+                rows: [{
+                    total_xp: 50,
+                    active_days: 1,
+                    last_active_date: '2026-07-18'
+                }]
+            };
         }
         return { rowCount: 0, rows: [] };
     }
@@ -178,10 +184,13 @@ test('Postgres account stats use a transaction, parameters and idempotent result
     assert.deepEqual(accountLocks[0].params, [7]);
     assert.ok(Array.isArray(first.previousRows));
     assert.equal(first.progressRow.total_xp, 50);
+    assert.equal(first.progressRow.active_days, 1);
     assert.equal(first.recentResults.length, 1);
     assert.equal(historyQueries.length, 2);
     assert.deepEqual(historyQueries[0].params, [7, 10]);
     assert.match(statsUpserts[0].sql, /ON CONFLICT \(user_id, mode\) DO UPDATE/);
+    assert.match(progressUpserts[0].sql, /active_days = user_progress\.active_days \+ CASE/);
+    assert.match(progressUpserts[0].sql, /AT TIME ZONE 'UTC'/);
     assert.equal(client.queries.filter(query => query.sql === 'BEGIN').length, 2);
     assert.equal(client.queries.filter(query => query.sql === 'COMMIT').length, 2);
     assert.equal(client.releaseCalls, 2);

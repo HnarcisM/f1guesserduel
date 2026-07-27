@@ -6,6 +6,7 @@ const {
     buildAccountProgress,
     buildAccountStats,
     buildRecentGames,
+    calculateAccountAccuracy,
     calculateXpReward,
     createAccountStatsService,
     normalizeResultInput,
@@ -17,6 +18,7 @@ function createMemoryStatsRepository() {
     const resultKeys = new Set();
     const recentResults = [];
     const progressByUser = new Map();
+    const activeDatesByUser = new Map();
     const dailyAttempts = new Map();
     const weeklyAttempts = new Map();
 
@@ -56,7 +58,12 @@ function createMemoryStatsRepository() {
     }
 
     async function getProgressRow(userId) {
-        return { total_xp: progressByUser.get(userId) || 0 };
+        const activeDates = [...(activeDatesByUser.get(userId) || [])].sort();
+        return {
+            total_xp: progressByUser.get(userId) || 0,
+            active_days: activeDates.length,
+            last_active_date: activeDates.at(-1) || null
+        };
     }
 
     async function getDailyAttempts(userId, dailyDate) {
@@ -116,9 +123,12 @@ function createMemoryStatsRepository() {
             const previousProgressRow = await getProgressRow(result.userId);
             resultKeys.add(uniqueKey);
             progressByUser.set(result.userId, (progressByUser.get(result.userId) || 0) + result.xpEarned);
+            const completedAt = `2026-07-${String(recentResults.length + 18).padStart(2, '0')}T12:00:00.000Z`;
+            if (!activeDatesByUser.has(result.userId)) activeDatesByUser.set(result.userId, new Set());
+            activeDatesByUser.get(result.userId).add(completedAt.slice(0, 10));
             recentResults.push({
                 ...result,
-                completedAt: `2026-07-${String(recentResults.length + 18).padStart(2, '0')}T12:00:00.000Z`
+                completedAt
             });
 
             const row = getRow(result.userId, result.mode);
@@ -231,6 +241,8 @@ test('account stats aggregate modes and ignore duplicate server result keys', as
         drawn: 0,
         lost: 1,
         winRate: 50,
+        accuracy: 50,
+        activeDays: 2,
         bestStreak: 1
     });
     assert.equal(stats.modes.single.distribution[2], 1);
@@ -414,6 +426,13 @@ test('Weekly attempts are unique per account and ISO week and persist the offici
     assert.equal(status.result.roundsCompleted, 4);
     assert.equal(status.result.finishReason, 'time-expired');
     assert.equal(status.result.finishedAt, '2026-07-25T12:02:00.000Z');
+});
+
+test('account accuracy is the rounded share of completed games won', () => {
+    assert.equal(calculateAccountAccuracy(0, 0), 0);
+    assert.equal(calculateAccountAccuracy(3, 2), 67);
+    assert.equal(calculateAccountAccuracy(5, 9), 100);
+    assert.equal(calculateAccountAccuracy('invalid', 1), 0);
 });
 
 test('XP rewards and nonlinear level progress are deterministic', () => {

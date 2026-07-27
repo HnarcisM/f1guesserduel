@@ -183,7 +183,7 @@ test('game hub renders the dashboard layout with all ten enabled cards', async (
     assert.equal(elements.find(element => element.id === 'gameHubProfileUsername')?.textContent, 'Guest');
     assert.equal(elements.find(element => element.id === 'gameHubProfileLevel')?.textContent, 'Nivel —');
     assert.deepEqual(
-        ['gameHubProfileVictories', 'gameHubProfileWinRate', 'gameHubProfileCurrentStreak', 'gameHubProfilePlayed']
+        ['gameHubProfileVictories', 'gameHubProfileAccuracy', 'gameHubProfileActiveDays', 'gameHubProfilePlayed']
             .map(id => elements.find(element => element.id === id)?.textContent),
         ['—', '—', '—', '—']
     );
@@ -400,7 +400,7 @@ test('profile header and summary render authenticated account data without unsaf
     dashboardView.ensureHeaderProfileMarkup(documentObject, user);
     dashboardView.renderProfileSnapshot(documentObject, user, {
         stats: {
-            totals: { played: 34, won: 21, winRate: 62 },
+            totals: { played: 34, won: 21, winRate: 62, accuracy: 62, activeDays: 12 },
             modes: {
                 single: { currentStreak: 4 },
                 daily: { currentStreak: 2 },
@@ -423,8 +423,8 @@ test('profile header and summary render authenticated account data without unsaf
     assert.equal(documentObject.getElementById('gameHubProfileXpText').textContent, '350 / 600 XP');
     assert.equal(documentObject.getElementById('gameHubProfileXpBar').dataset.progressPercent, '58');
     assert.equal(documentObject.getElementById('gameHubProfileVictories').textContent, '21');
-    assert.equal(documentObject.getElementById('gameHubProfileWinRate').textContent, '62%');
-    assert.equal(documentObject.getElementById('gameHubProfileCurrentStreak').textContent, '7');
+    assert.equal(documentObject.getElementById('gameHubProfileAccuracy').textContent, '62%');
+    assert.equal(documentObject.getElementById('gameHubProfileActiveDays').textContent, '12');
     assert.equal(documentObject.getElementById('gameHubProfilePlayed').textContent, '34');
 
     dashboardView.ensureHeaderProfileMarkup(documentObject, { username: 'Mihai', avatarKey: 'invalid-value' });
@@ -453,7 +453,7 @@ test('profile summary consumes live account stats only for the authenticated use
             }
             return {
                 user: { id: 7, username: 'Narcis', avatarKey: 'helmet-green' },
-                stats: { totals: { played: 5, won: 3, winRate: 60 }, modes: {} },
+                stats: { totals: { played: 5, won: 3, winRate: 60, accuracy: 60, activeDays: 2 }, modes: {} },
                 progress: { level: 2, xpIntoLevel: 150, xpForLevel: 300, progressPercent: 50 }
             };
         }
@@ -473,13 +473,15 @@ test('profile summary consumes live account stats only for the authenticated use
         update({
             userId: 7,
             stats: {
-                totals: { played: 6, won: 4, winRate: 67 },
+                totals: { played: 6, won: 4, winRate: 67, accuracy: 67, activeDays: 3 },
                 modes: { single: { currentStreak: 3 } }
             },
             progress: { level: 2, xpIntoLevel: 180, xpForLevel: 300, progressPercent: 60 }
         });
         assert.equal(documentObject.getElementById('gameHubProfileVictories').textContent, '4');
         assert.equal(documentObject.getElementById('gameHubProfilePlayed').textContent, '6');
+        assert.equal(documentObject.getElementById('gameHubProfileAccuracy').textContent, '67%');
+        assert.equal(documentObject.getElementById('gameHubProfileActiveDays').textContent, '3');
         assert.equal(documentObject.getElementById('gameHubProfileXpBar').dataset.progressPercent, '60');
 
         update({

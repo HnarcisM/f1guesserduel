@@ -128,6 +128,8 @@ CREATE TABLE IF NOT EXISTS user_game_stats (
 CREATE TABLE IF NOT EXISTS user_progress (
     user_id INTEGER PRIMARY KEY,
     total_xp INTEGER NOT NULL DEFAULT 0 CHECK (total_xp >= 0),
+    active_days INTEGER NOT NULL DEFAULT 0 CHECK (active_days >= 0),
+    last_active_date TEXT,
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );

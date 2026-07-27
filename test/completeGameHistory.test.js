@@ -7,6 +7,10 @@ const {
     ACCOUNT_GAME_HISTORY_COLUMNS,
     ensureSqliteAccountGameHistoryColumns
 } = require('../server/db/sqliteSchemaUpgrade');
+const {
+    ACCOUNT_ACTIVITY_COLUMNS,
+    ensureSqliteAccountActivityColumns
+} = require('../server/db/sqliteAccountActivityUpgrade');
 
 async function importController() {
     return import(`../public/js/accountGameHistoryController.js?test=${Date.now()}-${Math.random()}`);
@@ -94,6 +98,49 @@ test('SQLite startup applies the idempotent account history upgrade', () => {
     );
 
     assert.match(databaseSource, /ensureSqliteAccountGameHistoryColumns\(db\)/);
+    assert.match(databaseSource, /ensureSqliteAccountActivityColumns\(db\)/);
+});
+
+test('account activity migration persists lifetime active days independently of retained history', () => {
+    const migration = fs.readFileSync(
+        path.join(__dirname, '..', 'server', 'db', 'migrations', 'postgres', '014_account_activity_days.sql'),
+        'utf8'
+    );
+    const sqliteSchema = fs.readFileSync(
+        path.join(__dirname, '..', 'server', 'db', 'schema.sql'),
+        'utf8'
+    );
+
+    assert.match(migration, /ADD COLUMN IF NOT EXISTS active_days/);
+    assert.match(migration, /ADD COLUMN IF NOT EXISTS last_active_date/);
+    assert.match(migration, /COUNT\(DISTINCT \(\(completed_at AT TIME ZONE 'UTC'\)::date\)\)/);
+    assert.match(migration, /GREATEST\(user_progress\.active_days, EXCLUDED\.active_days\)/);
+    assert.match(sqliteSchema, /active_days INTEGER NOT NULL DEFAULT 0/);
+    assert.match(sqliteSchema, /last_active_date TEXT/);
+});
+
+test('SQLite activity upgrade adds missing columns and backfills distinct UTC dates idempotently', () => {
+    const columns = new Set(['user_id', 'total_xp', 'updated_at']);
+    const statements = [];
+    const database = {
+        prepare(sql) {
+            assert.equal(sql, 'PRAGMA table_info(user_progress)');
+            return { all: () => [...columns].map(name => ({ name })) };
+        },
+        exec(sql) {
+            statements.push(sql);
+            const match = /ADD COLUMN ([a-z_]+)/.exec(sql);
+            if (match) columns.add(match[1]);
+        }
+    };
+
+    const first = ensureSqliteAccountActivityColumns(database);
+    const second = ensureSqliteAccountActivityColumns(database);
+
+    assert.deepEqual(first, ACCOUNT_ACTIVITY_COLUMNS.map(column => column.name));
+    assert.deepEqual(second, []);
+    assert.equal(statements.filter(sql => /ALTER TABLE user_progress/.test(sql)).length, 2);
+    assert.equal(statements.filter(sql => /COUNT\(DISTINCT date\(completed_at\)\)/.test(sql)).length, 1);
 });
 
 test('SQLite schema upgrade adds only missing account history columns', () => {
