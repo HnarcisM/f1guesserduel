@@ -5,6 +5,7 @@ const sharp = require('sharp');
 
 const DEFAULT_CHANNEL_THRESHOLD = 24;
 const DEFAULT_MAX_DIFF_RATIO = 0.005;
+const DEFAULT_MAX_HEIGHT_DELTA = 1;
 
 async function decodePng(input) {
     const { data, info } = await sharp(input)
@@ -23,12 +24,25 @@ async function decodePng(input) {
 function createDimensionMismatch(baseline, current) {
     return {
         dimensionsMatch: false,
+        dimensionsNormalized: false,
         baselineSize: { width: baseline.width, height: baseline.height },
         currentSize: { width: current.width, height: current.height },
+        comparisonSize: null,
         differentPixels: null,
         totalPixels: null,
         diffRatio: 1,
         diffData: null
+    };
+}
+
+function cropDecodedHeight(image, targetHeight) {
+    if (image.height === targetHeight) return image;
+
+    const rowSize = image.width * image.channels;
+    return {
+        ...image,
+        data: image.data.subarray(0, rowSize * targetHeight),
+        height: targetHeight
     };
 }
 
@@ -37,15 +51,24 @@ async function comparePngBuffers(baselineBuffer, currentBuffer, options = {}) {
         ? options.channelThreshold
         : DEFAULT_CHANNEL_THRESHOLD;
     const channelThreshold = Math.min(255, Math.max(0, requestedChannelThreshold));
-    const [baseline, current] = await Promise.all([
+    const requestedMaxHeightDelta = Number.isFinite(options.maxHeightDelta)
+        ? options.maxHeightDelta
+        : DEFAULT_MAX_HEIGHT_DELTA;
+    const maxHeightDelta = Math.max(0, Math.floor(requestedMaxHeightDelta));
+    const [decodedBaseline, decodedCurrent] = await Promise.all([
         decodePng(baselineBuffer),
         decodePng(currentBuffer)
     ]);
 
-    if (baseline.width !== current.width || baseline.height !== current.height) {
-        return createDimensionMismatch(baseline, current);
+    const heightDelta = Math.abs(decodedBaseline.height - decodedCurrent.height);
+    if (decodedBaseline.width !== decodedCurrent.width || heightDelta > maxHeightDelta) {
+        return createDimensionMismatch(decodedBaseline, decodedCurrent);
     }
 
+    const comparisonHeight = Math.min(decodedBaseline.height, decodedCurrent.height);
+    const baseline = cropDecodedHeight(decodedBaseline, comparisonHeight);
+    const current = cropDecodedHeight(decodedCurrent, comparisonHeight);
+    const dimensionsNormalized = heightDelta > 0;
     const totalPixels = baseline.width * baseline.height;
     const diffData = Buffer.alloc(current.data.length);
     let differentPixels = 0;
@@ -78,8 +101,10 @@ async function comparePngBuffers(baselineBuffer, currentBuffer, options = {}) {
 
     return {
         dimensionsMatch: true,
-        baselineSize: { width: baseline.width, height: baseline.height },
-        currentSize: { width: current.width, height: current.height },
+        dimensionsNormalized,
+        baselineSize: { width: decodedBaseline.width, height: decodedBaseline.height },
+        currentSize: { width: decodedCurrent.width, height: decodedCurrent.height },
+        comparisonSize: { width: baseline.width, height: baseline.height },
         differentPixels,
         totalPixels,
         diffRatio: totalPixels === 0 ? 0 : differentPixels / totalPixels,
@@ -90,10 +115,11 @@ async function comparePngBuffers(baselineBuffer, currentBuffer, options = {}) {
 async function writeDiffPng(comparison, outputPath) {
     if (!comparison.dimensionsMatch || !comparison.diffData) return false;
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    const outputSize = comparison.comparisonSize || comparison.currentSize;
     await sharp(comparison.diffData, {
         raw: {
-            width: comparison.currentSize.width,
-            height: comparison.currentSize.height,
+            width: outputSize.width,
+            height: outputSize.height,
             channels: 4
         }
     }).png({ compressionLevel: 9 }).toFile(outputPath);
@@ -103,6 +129,7 @@ async function writeDiffPng(comparison, outputPath) {
 module.exports = {
     DEFAULT_CHANNEL_THRESHOLD,
     DEFAULT_MAX_DIFF_RATIO,
+    DEFAULT_MAX_HEIGHT_DELTA,
     comparePngBuffers,
     decodePng,
     writeDiffPng

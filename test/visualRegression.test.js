@@ -10,6 +10,7 @@ const { VIEWPORTS } = require('./e2e/responsiveVisualConfig');
 const {
     DEFAULT_CHANNEL_THRESHOLD,
     DEFAULT_MAX_DIFF_RATIO,
+    DEFAULT_MAX_HEIGHT_DELTA,
     comparePngBuffers,
     writeDiffPng
 } = require('./e2e/visualRegression');
@@ -47,7 +48,7 @@ test('visual comparison ignores small channel noise and reports meaningful pixel
     assert.ok(DEFAULT_MAX_DIFF_RATIO > 0 && DEFAULT_MAX_DIFF_RATIO < 0.01);
 });
 
-test('visual comparison rejects screenshots with different dimensions', async () => {
+test('visual comparison rejects screenshots with different widths', async () => {
     const baseline = await createPng(4, 3, { r: 10, g: 20, b: 30, alpha: 1 });
     const current = await createPng(5, 3, { r: 10, g: 20, b: 30, alpha: 1 });
     const result = await comparePngBuffers(baseline, current);
@@ -55,6 +56,50 @@ test('visual comparison rejects screenshots with different dimensions', async ()
     assert.equal(result.dimensionsMatch, false);
     assert.deepEqual(result.baselineSize, { width: 4, height: 3 });
     assert.deepEqual(result.currentSize, { width: 5, height: 3 });
+});
+
+test('visual comparison normalizes a one-pixel full-page height difference', async () => {
+    const baseline = await createPng(4, 3, { r: 10, g: 20, b: 30, alpha: 1 });
+    const current = await createPng(4, 2, { r: 10, g: 20, b: 30, alpha: 1 });
+    const result = await comparePngBuffers(baseline, current);
+
+    assert.equal(DEFAULT_MAX_HEIGHT_DELTA, 1);
+    assert.equal(result.dimensionsMatch, true);
+    assert.equal(result.dimensionsNormalized, true);
+    assert.deepEqual(result.baselineSize, { width: 4, height: 3 });
+    assert.deepEqual(result.currentSize, { width: 4, height: 2 });
+    assert.deepEqual(result.comparisonSize, { width: 4, height: 2 });
+    assert.equal(result.differentPixels, 0);
+    assert.equal(result.diffRatio, 0);
+});
+
+test('visual comparison still detects changed pixels after height normalization', async () => {
+    const baseline = await createPng(4, 3, { r: 10, g: 20, b: 30, alpha: 1 });
+    const current = await createPng(4, 2, { r: 210, g: 20, b: 30, alpha: 1 });
+    const result = await comparePngBuffers(baseline, current);
+
+    assert.equal(result.dimensionsMatch, true);
+    assert.equal(result.dimensionsNormalized, true);
+    assert.equal(result.differentPixels, 8);
+    assert.equal(result.diffRatio, 1);
+});
+
+test('visual comparison rejects height differences beyond the configured tolerance', async () => {
+    const baseline = await createPng(4, 4, { r: 10, g: 20, b: 30, alpha: 1 });
+    const current = await createPng(4, 2, { r: 10, g: 20, b: 30, alpha: 1 });
+    const result = await comparePngBuffers(baseline, current);
+
+    assert.equal(result.dimensionsMatch, false);
+    assert.deepEqual(result.baselineSize, { width: 4, height: 4 });
+    assert.deepEqual(result.currentSize, { width: 4, height: 2 });
+});
+
+test('visual comparison can opt out of height normalization', async () => {
+    const baseline = await createPng(4, 3, { r: 10, g: 20, b: 30, alpha: 1 });
+    const current = await createPng(4, 2, { r: 10, g: 20, b: 30, alpha: 1 });
+    const result = await comparePngBuffers(baseline, current, { maxHeightDelta: 0 });
+
+    assert.equal(result.dimensionsMatch, false);
 });
 
 test('visual comparison writes a valid PNG diff for changed pixels', async () => {
