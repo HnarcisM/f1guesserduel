@@ -749,6 +749,27 @@ test('responsive E2E expects all planned modes to be enabled', () => {
     assert.match(source, /card\.dataset\.gameModeChoice \|\| card\.dataset\.gameVariant/);
 });
 
+test('Track Guesser wide card stretches artwork, copy and background across its border', () => {
+    const css = fs.readFileSync(
+        path.join(__dirname, '..', 'public', 'css', '30-game-hub-visual-polish.css'),
+        'utf8'
+    );
+
+    assert.match(css, /GAME_HUB_TRACK_FULL_WIDTH_FIX_START/);
+    assert.match(
+        css,
+        /\.game-hub-card-grid--specialty \.game-hub-card\.game-mode-card\.game-hub-card--track\s*\{[^}]*align-items:\s*stretch;/s
+    );
+    assert.match(
+        css,
+        /\.game-hub-card\.game-mode-card\.game-hub-card--track \.game-hub-card-chrome\s*\{[^}]*width:\s*100%;[^}]*max-width:\s*none;[^}]*align-self:\s*stretch;/s
+    );
+    assert.match(
+        css,
+        /\.game-hub-card\.game-mode-card\.game-hub-card--track \.game-hub-card-art,\s*\.game-hub-card\.game-mode-card\.game-hub-card--track \.game-hub-card-content\s*\{[^}]*width:\s*100%;[^}]*max-width:\s*none;/s
+    );
+});
+
 test('Game Hub SVG polish keeps semantic icon keys, theme colors and reduced-motion support', () => {
     const registrySource = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'gameVariantRegistry.js'), 'utf8');
     const viewSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'gameHubDashboardView.js'), 'utf8');

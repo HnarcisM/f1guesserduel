@@ -2,7 +2,7 @@
 
 const CACHE_PREFIX = 'f1-guesser-static-';
 /* GENERATED_PRECACHE_START */
-const STATIC_CACHE_NAME = 'f1-guesser-static-f1b394db1140a6fbf503';
+const STATIC_CACHE_NAME = 'f1-guesser-static-3410859c0a420ef6cc36';
 const PRECACHE_URLS = Object.freeze([
     "/css/01-theme-tokens.css",
     "/css/02-header-menu.css",
@@ -31,7 +31,7 @@ const PRECACHE_URLS = Object.freeze([
     "/css/27-extended-mode-legend.css",
     "/css/28-extended-mode-autocomplete.css",
     "/css/29-game-hub-dashboard.css?v=c50cd7d9d204dc3c",
-    "/css/30-game-hub-visual-polish.css?v=a47bb92f044ffe78",
+    "/css/30-game-hub-visual-polish.css?v=efaa5ebcf1d95cef",
     "/game.bundle.min.js?v=5e440a09c0df2c67",
     "/icons/pwa-192.png",
     "/icons/pwa-512.png",

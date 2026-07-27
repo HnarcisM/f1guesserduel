@@ -1445,3 +1445,29 @@ body:has(#difficulty-overlay:not(.hidden)) .header-actions {
 }
 
 /* GAME_HUB_SVG_ICON_POLISH_END */
+
+/* GAME_HUB_TRACK_FULL_WIDTH_FIX_START */
+/*
+ * Track Guesser spans both specialty columns. The base button aligns children
+ * to flex-start, while the legacy wide-card rule limits content to 72%, so the
+ * internal chrome could stop before the card border. Keep every visual layer
+ * stretched across the complete wide card without changing the compact cards.
+ */
+.game-hub-card-grid--specialty .game-hub-card.game-mode-card.game-hub-card--track {
+    align-items: stretch;
+}
+
+.game-hub-card.game-mode-card.game-hub-card--track .game-hub-card-chrome {
+    width: 100%;
+    max-width: none;
+    align-self: stretch;
+    box-sizing: border-box;
+}
+
+.game-hub-card.game-mode-card.game-hub-card--track .game-hub-card-art,
+.game-hub-card.game-mode-card.game-hub-card--track .game-hub-card-content {
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
+}
+/* GAME_HUB_TRACK_FULL_WIDTH_FIX_END */
