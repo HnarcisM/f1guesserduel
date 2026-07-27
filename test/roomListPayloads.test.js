@@ -13,7 +13,13 @@ function createRoomStore(rooms = []) {
 }
 
 test('public room list exposes safe summaries for joinable rooms', () => {
-    const room = createRoom('ROOM123', 'socket-host', { id: 1, username: 'Narcis' }, { clientId: 'host-client' });
+    const room = createRoom('ROOM123', 'socket-host', {
+        id: 1,
+        username: 'Narcis',
+        avatarKey: 'helmet-blue',
+        email: 'private@example.test',
+        sessionToken: 'must-not-leak'
+    }, { clientId: 'host-client' });
     updateDuelLobbySettings(room, {
         difficulty: 'medium',
         timed: true,
@@ -40,13 +46,32 @@ test('public room list exposes safe summaries for joinable rooms', () => {
     assert.equal(payload.rooms[0].roundsPlayed, 0);
     assert.deepEqual(payload.rooms[0].score, [0, 0]);
     assert.equal(payload.rooms[0].statusLabel, 'Lobby');
-    assert.equal('players' in payload.rooms[0], false);
+    assert.deepEqual(payload.rooms[0].players, [{
+        username: 'Narcis',
+        avatarKey: 'helmet-blue',
+        isHost: true,
+        connected: true
+    }]);
+    assert.deepEqual(
+        Object.keys(payload.rooms[0].players[0]).sort(),
+        ['avatarKey', 'connected', 'isHost', 'username']
+    );
+    assert.equal(JSON.stringify(payload.rooms[0].players).includes('private@example.test'), false);
+    assert.equal(JSON.stringify(payload.rooms[0].players).includes('must-not-leak'), false);
     assert.equal('scoreboard' in payload.rooms[0], false);
 });
 
 test('public room list exposes Best of progress and numeric score without internal scoreboard keys', () => {
-    const room = createRoom('SERIES1', 'socket-host', { id: 1, username: 'Host' }, { clientId: 'host-client' });
-    addPlayerToRoom(room, 'socket-2', { id: 2, username: 'Guest' }, { clientId: 'guest-client' });
+    const room = createRoom('SERIES1', 'socket-host', {
+        id: 1,
+        username: 'Host',
+        avatarKey: 'helmet-green'
+    }, { clientId: 'host-client' });
+    addPlayerToRoom(room, 'socket-2', {
+        id: 2,
+        username: 'Guest',
+        avatarKey: 'helmet-purple'
+    }, { clientId: 'guest-client' });
     updateDuelLobbySettings(room, {
         difficulty: 'easy',
         timed: false,
@@ -57,15 +82,25 @@ test('public room list exposes Best of progress and numeric score without intern
     room.matchState.roundsPlayed = 2;
     room.scoreboard['user:1'].wins = 1;
     room.scoreboard['user:2'].wins = 1;
+    room.players = {
+        'socket-2': room.players['socket-2'],
+        'socket-host': room.players['socket-host']
+    };
 
     const entry = buildPublicRoomListPayload(createRoomStore([room])).rooms[0];
 
     assert.equal(entry.bestOf, 3);
     assert.equal(entry.roundsPlayed, 2);
     assert.deepEqual(entry.score, [1, 1]);
+    assert.deepEqual(entry.players, [
+        { username: 'Host', avatarKey: 'helmet-green', isHost: true, connected: true },
+        { username: 'Guest', avatarKey: 'helmet-purple', isHost: false, connected: true }
+    ]);
     assert.equal('scoreboard' in entry, false);
     assert.equal(JSON.stringify(entry).includes('user:1'), false);
     assert.equal(JSON.stringify(entry).includes('user:2'), false);
+    assert.equal(JSON.stringify(entry.players).includes('socket-host'), false);
+    assert.equal(JSON.stringify(entry.players).includes('socket-2'), false);
 });
 
 test('public room list marks full rooms as spectator joins', () => {

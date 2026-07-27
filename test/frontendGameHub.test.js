@@ -226,6 +226,10 @@ test('Duel card renders live room metrics and a safe three-room preview', async 
             {
                 roomId: 'LIVE123',
                 hostUsername: '<Host Live>',
+                players: [
+                    { username: '<Host Live>', avatarKey: 'helmet-blue', isHost: true, connected: true },
+                    { username: 'Rival', avatarKey: 'helmet-purple', isHost: false, connected: true }
+                ],
                 playerCount: 2,
                 spectatorCount: 3,
                 totalCount: 5,
@@ -237,6 +241,9 @@ test('Duel card renders live room metrics and a safe three-room preview', async 
             {
                 roomId: 'OPEN456',
                 hostUsername: 'Narcis',
+                players: [
+                    { username: 'Narcis', avatarKey: 'not-an-avatar', isHost: true, connected: true }
+                ],
                 playerCount: 1,
                 spectatorCount: 0,
                 maxPlayers: 2,
@@ -278,8 +285,25 @@ test('Duel card renders live room metrics and a safe three-room preview', async 
     const previewItems = documentObject.getElementById('gameHubDuelRoomItems').children;
     assert.equal(previewItems.length, 4, 'trei camere și indicatorul pentru camera rămasă');
     assert.equal(previewItems[0].dataset.roomId, 'LIVE123');
-    assert.equal(previewItems[0].querySelector('.game-hub-duel-room-title').textContent, 'Camera LIVE123 · <Host Live>');
+    assert.equal(previewItems[0].querySelector('.game-hub-duel-room-title').textContent, 'Camera LIVE123');
+    assert.deepEqual(
+        previewItems[0].querySelectorAll('.game-hub-duel-player-name').map(element => element.textContent),
+        ['<Host Live>', 'Rival']
+    );
+    assert.deepEqual(
+        previewItems[0].querySelectorAll('.game-hub-duel-player-avatar').map(element => element.dataset.avatarKey),
+        ['helmet-blue', 'helmet-purple']
+    );
     assert.equal(previewItems[0].querySelector('.game-hub-duel-room-live').textContent, 'Live');
+    assert.deepEqual(
+        previewItems[1].querySelectorAll('.game-hub-duel-player-name').map(element => element.textContent),
+        ['Narcis', 'Loc liber']
+    );
+    assert.equal(
+        previewItems[1].querySelectorAll('.game-hub-duel-player-avatar')[0].dataset.avatarKey,
+        'helmet-red',
+        'avatarurile necunoscute folosesc presetul public implicit'
+    );
     assert.equal(previewItems[1].querySelector('.game-hub-duel-room-live').textContent, 'Lobby');
     assert.equal(previewItems[2].querySelector('.game-hub-duel-room-live').textContent, 'Plină');
     assert.match(previewItems[3].querySelector('.game-hub-duel-room-title').textContent, /^\+1 cameră disponibilă$/);
@@ -331,6 +355,12 @@ test('Duel room sync requests the initial list, consumes roomListUpdate and clea
         rooms: [{
             roomId: 'SYNC123',
             hostUsername: 'Narcis',
+            players: [{
+                username: 'Narcis',
+                avatarKey: 'helmet-yellow',
+                isHost: true,
+                connected: true
+            }],
             playerCount: 1,
             spectatorCount: 0,
             maxPlayers: 2,
@@ -341,6 +371,11 @@ test('Duel room sync requests the initial list, consumes roomListUpdate and clea
 
     assert.equal(documentObject.getElementById('gameHubDuelActiveRooms').textContent, '1');
     assert.equal(documentObject.getElementById('gameHubDuelRoomItems').children[0].dataset.roomId, 'SYNC123');
+    assert.equal(
+        documentObject.getElementById('gameHubDuelRoomItems').children[0]
+            .querySelector('.game-hub-duel-player-avatar').dataset.avatarKey,
+        'helmet-yellow'
+    );
 
     socketListeners.get('disconnect')?.();
     assert.equal(documentObject.getElementById('gameHubDuelCard').classList.contains('is-room-list-offline'), true);

@@ -1,9 +1,20 @@
 const { buildPublicRoomState } = require('../rooms/roomService');
+const { buildPublicMemberIdentity } = require('../rooms/memberIdentity');
 
 function getStatusLabel(roundState) {
     if (roundState === 'playing') return 'Rundă activă';
     if (roundState === 'finished') return 'Rundă terminată';
     return 'Lobby';
+}
+
+function normalizePublicPlayerPreview(player = {}) {
+    const identity = buildPublicMemberIdentity(player, 'Guest');
+    return {
+        username: identity.username,
+        avatarKey: identity.avatarKey,
+        isHost: player?.isHost === true,
+        connected: player?.connected !== false
+    };
 }
 
 function normalizeRoomListEntry(room) {
@@ -12,10 +23,15 @@ function normalizeRoomListEntry(room) {
     const state = buildPublicRoomState(room);
     const players = Array.isArray(state.players) ? state.players : [];
     const spectators = Array.isArray(state.spectators) ? state.spectators : [];
-    const host = players.find(player => player.isHost) || players[0] || null;
     const playerCount = Number.isFinite(state.playerCount) ? state.playerCount : players.length;
     const spectatorCount = Number.isFinite(state.spectatorCount) ? state.spectatorCount : spectators.length;
     const maxPlayers = Number.isFinite(state.maxPlayers) ? state.maxPlayers : 2;
+    const publicPlayers = players
+        .slice()
+        .sort((left, right) => Number(right?.isHost === true) - Number(left?.isHost === true))
+        .slice(0, maxPlayers)
+        .map(normalizePublicPlayerPreview);
+    const host = publicPlayers.find(player => player.isHost) || publicPlayers[0] || null;
     const totalCount = playerCount + spectatorCount;
     const bestOf = [3, 5, 7].includes(Number(state.match?.bestOf))
         ? Number(state.match.bestOf)
@@ -39,6 +55,7 @@ function normalizeRoomListEntry(room) {
     return {
         roomId: state.roomId,
         hostUsername: host?.username || 'Host necunoscut',
+        players: publicPlayers,
         playerCount,
         spectatorCount,
         totalCount,
@@ -85,5 +102,6 @@ function buildPublicRoomListPayload(roomStore, options = {}) {
 module.exports = {
     buildPublicRoomListPayload,
     compareRoomListEntries,
-    normalizeRoomListEntry
+    normalizeRoomListEntry,
+    normalizePublicPlayerPreview
 };

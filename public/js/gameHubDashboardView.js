@@ -271,6 +271,15 @@
       : 'Fără timp';
   }
 
+  function normalizeDuelPlayerPreview(player = {}, fallbackUsername = 'Jucător') {
+    return {
+      username: sanitizeDuelPreviewText(player.username, fallbackUsername, 20),
+      avatarKey: normalizeAvatarKey(player.avatarKey),
+      isHost: player.isHost === true,
+      connected: player.connected !== false
+    };
+  }
+
   function normalizeDuelRoomPreview(room = {}) {
     const playerCount = asNonNegativeInteger(room.playerCount);
     const spectatorCount = asNonNegativeInteger(room.spectatorCount);
@@ -283,10 +292,26 @@
     const roundState = ['waiting', 'playing', 'finished'].includes(rawRoundState)
       ? rawRoundState
       : 'waiting';
+    const rawPlayers = Array.isArray(room.players) ? room.players : [];
+    const players = rawPlayers
+      .slice()
+      .sort((left, right) => Number(right?.isHost === true) - Number(left?.isHost === true))
+      .slice(0, maxPlayers)
+      .map((player, index) => normalizeDuelPlayerPreview(player, `Jucător ${index + 1}`));
+
+    if (players.length === 0 && room.hostUsername) {
+      players.push(normalizeDuelPlayerPreview({
+        username: room.hostUsername,
+        avatarKey: room.hostAvatarKey,
+        isHost: true,
+        connected: true
+      }, 'Host necunoscut'));
+    }
 
     return {
       roomId: sanitizeDuelPreviewText(room.roomId, '--', 16),
       hostUsername: sanitizeDuelPreviewText(room.hostUsername, 'Host necunoscut', 32),
+      players,
       playerCount,
       spectatorCount,
       maxPlayers,
@@ -296,6 +321,65 @@
       difficultyLabel: getDuelDifficultyLabel(room),
       timerLabel: getDuelTimerLabel(room)
     };
+  }
+
+  function createDuelRoomPlayer(documentObject, player = null, seatIndex = 0) {
+    const isOpenSeat = !player;
+    const wrapper = createElement(
+      documentObject,
+      'span',
+      `game-hub-duel-player${isOpenSeat ? ' is-open-seat' : ''}${player?.connected === false ? ' is-disconnected' : ''}`
+    );
+    const avatar = createElement(
+      documentObject,
+      'span',
+      `game-hub-duel-player-avatar${isOpenSeat ? ' is-open-seat' : ' auth-avatar-visual'}`
+    );
+    avatar.setAttribute('aria-hidden', 'true');
+
+    if (isOpenSeat) {
+      avatar.textContent = '+';
+    } else {
+      avatar.dataset.avatarKey = normalizeAvatarKey(player.avatarKey);
+      avatar.append(createElement(documentObject, 'span', 'auth-helmet-icon'));
+    }
+
+    const copy = createElement(documentObject, 'span', 'game-hub-duel-player-copy');
+    copy.append(
+      createElement(
+        documentObject,
+        'strong',
+        'game-hub-duel-player-name',
+        isOpenSeat ? 'Loc liber' : player.username
+      ),
+      createElement(
+        documentObject,
+        'small',
+        'game-hub-duel-player-role',
+        isOpenSeat
+          ? `Jucător ${seatIndex + 1}`
+          : `${player.isHost ? 'Host' : `Jucător ${seatIndex + 1}`}${player.connected ? '' : ' · offline'}`
+      )
+    );
+    wrapper.append(avatar, copy);
+    return wrapper;
+  }
+
+  function createDuelRoomPlayers(documentObject, room = {}) {
+    const players = Array.isArray(room.players) ? room.players.slice(0, room.maxPlayers || 2) : [];
+    const group = createElement(documentObject, 'span', 'game-hub-duel-room-players');
+    const firstPlayer = players[0] || null;
+    const secondPlayer = players[1] || null;
+    group.setAttribute(
+      'aria-label',
+      `Jucători: ${firstPlayer?.username || 'loc liber'} versus ${secondPlayer?.username || 'loc liber'}`
+    );
+    group.append(
+      createDuelRoomPlayer(documentObject, firstPlayer, 0),
+      createElement(documentObject, 'span', 'game-hub-duel-player-versus', 'VS'),
+      createDuelRoomPlayer(documentObject, secondPlayer, 1)
+    );
+    return group;
   }
 
   function normalizeDuelRoomListPayload(payload = {}) {
@@ -356,8 +440,9 @@
         documentObject,
         'strong',
         'game-hub-duel-room-title',
-        `Camera ${normalizedRoom.roomId} · ${normalizedRoom.hostUsername}`
+        `Camera ${normalizedRoom.roomId}`
       ),
+      createDuelRoomPlayers(documentObject, normalizedRoom),
       createElement(
         documentObject,
         'small',

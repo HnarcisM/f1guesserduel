@@ -75,7 +75,11 @@ test('requestRoomList returns active Duel rooms to the requesting socket', async
     io.sockets.sockets.set(hostSocket.id, hostSocket);
     io.sockets.sockets.set(requesterSocket.id, requesterSocket);
 
-    const room = createRoom('ROOM123', hostSocket.id, { id: 1, username: 'Narcis' }, { clientId: 'host-client' });
+    const room = createRoom('ROOM123', hostSocket.id, {
+        id: 1,
+        username: 'Narcis',
+        avatarKey: 'helmet-cyan'
+    }, { clientId: 'host-client' });
     const roomStore = createRoomStore([room]);
 
     registerSocketHandlers(io, createDependencies(roomStore));
@@ -88,6 +92,12 @@ test('requestRoomList returns active Duel rooms to the requesting socket', async
     assert.equal(updates[0].payload.rooms.length, 1);
     assert.equal(updates[0].payload.rooms[0].roomId, 'ROOM123');
     assert.equal(updates[0].payload.rooms[0].hostUsername, 'Narcis');
+    assert.deepEqual(updates[0].payload.rooms[0].players, [{
+        username: 'Narcis',
+        avatarKey: 'helmet-cyan',
+        isHost: true,
+        connected: true
+    }]);
 });
 
 test('joining a room broadcasts an updated Duel room list', async () => {
