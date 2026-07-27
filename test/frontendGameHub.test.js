@@ -241,6 +241,7 @@ test('game hub renders the dashboard layout with all ten enabled cards', async (
     );
     assert.equal(svgIcons.every(icon => icon.getAttribute('aria-hidden') === 'true'), true);
     assert.equal(svgIcons.every(icon => icon.getAttribute('focusable') === 'false'), true);
+    assert.equal(svgIcons.some(icon => icon.dataset.iconFallback === 'true'), false);
 });
 
 
@@ -251,10 +252,15 @@ test('SVG icon factory uses a safe static fallback without innerHTML', async () 
 
     assert.equal(icon.tagName, 'SVG');
     assert.equal(icon.dataset.iconKey, 'sparkles');
+    assert.equal(icon.dataset.iconFallback, 'true');
     assert.equal(icon.getAttribute('viewBox'), '0 0 24 24');
     assert.equal(icon.getAttribute('aria-hidden'), 'true');
     assert.ok(icon.children.length > 0);
     assert.equal(flatten(icon).some(element => /script/i.test(element.tagName)), false);
+
+    const intentionalSparkles = dashboardView.createGameHubIcon(documentObject, 'sparkles');
+    assert.equal(intentionalSparkles.dataset.iconKey, 'sparkles');
+    assert.equal(intentionalSparkles.dataset.iconFallback, undefined);
 });
 
 

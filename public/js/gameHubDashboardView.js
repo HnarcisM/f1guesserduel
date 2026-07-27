@@ -85,9 +85,8 @@
   }
 
   function createGameHubIcon(documentObject, iconKey, className = 'game-hub-svg-icon') {
-    const normalizedKey = Object.hasOwn(GAME_HUB_ICON_DEFINITIONS, iconKey)
-      ? iconKey
-      : DEFAULT_GAME_HUB_ICON;
+    const usesFallback = !Object.hasOwn(GAME_HUB_ICON_DEFINITIONS, iconKey);
+    const normalizedKey = usesFallback ? DEFAULT_GAME_HUB_ICON : iconKey;
     const svg = createSvgElement(documentObject, 'svg');
     svg.setAttribute('class', className);
     if (typeof svg.className === 'string') svg.className = className;
@@ -100,6 +99,7 @@
     svg.setAttribute('aria-hidden', 'true');
     svg.setAttribute('focusable', 'false');
     svg.dataset.iconKey = normalizedKey;
+    if (usesFallback) svg.dataset.iconFallback = 'true';
 
     for (const definition of GAME_HUB_ICON_DEFINITIONS[normalizedKey]) {
       const shape = createSvgElement(documentObject, definition.tag);

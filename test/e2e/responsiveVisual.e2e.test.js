@@ -306,7 +306,7 @@ async function assertGameHubSvgIcons(page, viewportLabel) {
                 const rectangle = icon.getBoundingClientRect();
                 return rectangle.width < 10 || rectangle.height < 10;
             }).length,
-            fallbackIcons: icons.filter(icon => icon.dataset.iconKey === 'sparkles').length,
+            fallbackIcons: icons.filter(icon => icon.dataset.iconFallback === 'true').length,
             keys: Array.from(new Set(icons.map(icon => icon.dataset.iconKey).filter(Boolean))).sort()
         };
     });

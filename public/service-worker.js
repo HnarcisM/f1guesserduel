@@ -2,7 +2,7 @@
 
 const CACHE_PREFIX = 'f1-guesser-static-';
 /* GENERATED_PRECACHE_START */
-const STATIC_CACHE_NAME = 'f1-guesser-static-e026691e526c8a785417';
+const STATIC_CACHE_NAME = 'f1-guesser-static-a42c7a452c8080ff7753';
 const PRECACHE_URLS = Object.freeze([
     "/css/01-theme-tokens.css",
     "/css/02-header-menu.css",
@@ -71,7 +71,7 @@ const PRECACHE_URLS = Object.freeze([
     "/js/extendedModesController.js",
     "/js/feedbackController.js?v=5cd6b13e762a05bd",
     "/js/gameHubController.js?v=6dfabb2aa1f4b98f",
-    "/js/gameHubDashboardView.js?v=8831ea7bc5f824cf",
+    "/js/gameHubDashboardView.js?v=08524cb98d86d580",
     "/js/gameVariantRegistry.js?v=c4c515ccdd9587bc",
     "/js/modes/constructorPage.js",
     "/js/modes/eraPage.js",
