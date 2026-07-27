@@ -2,12 +2,15 @@
 
 const CACHE_PREFIX = 'f1-guesser-static-';
 /* GENERATED_PRECACHE_START */
-const STATIC_CACHE_NAME = 'f1-guesser-static-4c70e91c9dde870f9618';
+const STATIC_CACHE_NAME = 'f1-guesser-static-0ad02cf55a5299137a30';
 const PRECACHE_URLS = Object.freeze([
     "/css/01-theme-tokens.css",
     "/css/02-header-menu.css",
+    "/css/02-header-menu.css?v=28eff13600d50eeb",
     "/css/08-auth.css",
+    "/css/08-auth.css?v=0129cc0c688bd225",
     "/css/11-mobile-layout-fix.css",
+    "/css/11-mobile-layout-fix.css?v=50671d073fbb27c4",
     "/css/13-progress-values.css",
     "/css/14-auth-panel-viewport-fix.css",
     "/css/16-duel-ready.css?v=325c0498b808b8c1",
@@ -27,8 +30,8 @@ const PRECACHE_URLS = Object.freeze([
     "/css/27-extended-mode-legend.css",
     "/css/28-extended-mode-autocomplete.css",
     "/css/29-game-hub-dashboard.css?v=c50cd7d9d204dc3c",
-    "/css/30-game-hub-visual-polish.css?v=aa89ad10f2afa123",
-    "/game.bundle.min.js?v=170240afb2c48c7a",
+    "/css/30-game-hub-visual-polish.css?v=58060881b02d7ba6",
+    "/game.bundle.min.js?v=5e440a09c0df2c67",
     "/icons/pwa-192.png",
     "/icons/pwa-512.png",
     "/images/game-hub/classic.webp",
@@ -67,7 +70,7 @@ const PRECACHE_URLS = Object.freeze([
     "/js/extendedModesController.js",
     "/js/feedbackController.js?v=5cd6b13e762a05bd",
     "/js/gameHubController.js?v=68649281a38fffe1",
-    "/js/gameHubDashboardView.js?v=9ef511b890ccaba6",
+    "/js/gameHubDashboardView.js?v=9ac4fc66688c20a0",
     "/js/gameVariantRegistry.js?v=bd9f514a30511ede",
     "/js/modes/constructorPage.js",
     "/js/modes/eraPage.js",
@@ -93,7 +96,7 @@ const PRECACHE_URLS = Object.freeze([
     "/modes/streak/",
     "/modes/track/",
     "/modes/weekly/",
-    "/style.bundle.css?v=3e717e11dfe9ded6",
+    "/style.bundle.css?v=d8ba26802ca80843",
 ]);
 /* GENERATED_PRECACHE_END */
 

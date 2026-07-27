@@ -125,8 +125,19 @@ export function createAuthView({ onAuthChanged } = {}) {
     function renderUser() {
         const els = getAuthViewElements();
         const isAuthenticated = Boolean(state.currentUser);
-        const label = state.currentUser ? `👤 ${state.currentUser.username}` : '👤 Login';
-        if (els.openBtn) els.openBtn.textContent = label;
+        const username = state.currentUser?.username || 'Login';
+        const avatarKey = settingsController.normalizeAvatarKey(state.currentUser?.avatarKey);
+        if (els.openBtn) {
+            els.openBtn.classList.toggle('is-authenticated', isAuthenticated);
+            els.openBtn.setAttribute('aria-label', isAuthenticated
+                ? `Deschide profilul lui ${username}`
+                : 'Deschide autentificarea');
+            els.openBtn.title = isAuthenticated ? 'Deschide profilul' : 'Login sau creare cont';
+            if (!els.headerUsername) els.openBtn.textContent = isAuthenticated ? `👤 ${username}` : '👤 Login';
+        }
+        if (els.headerUsername) els.headerUsername.textContent = username;
+        if (els.headerAvatar) els.headerAvatar.dataset.avatarKey = avatarKey;
+        if (els.headerStatus) els.headerStatus.setAttribute('aria-hidden', 'true');
         if (els.userBadge) {
             els.userBadge.textContent = state.currentUser
                 ? `Logat ca ${state.currentUser.username}`
@@ -140,7 +151,7 @@ export function createAuthView({ onAuthChanged } = {}) {
         if (!isAuthenticated) return;
         if (els.title) els.title.textContent = 'Contul meu';
         if (els.subtitle) els.subtitle.textContent = 'Profilul și statisticile tale F1 Guesser Duel.';
-        state.selectedAvatarKey = settingsController.normalizeAvatarKey(state.currentUser.avatarKey);
+        state.selectedAvatarKey = avatarKey;
         settingsController.renderAvatarSelection();
         if (els.accountUsername) els.accountUsername.textContent = state.currentUser.username || 'Utilizator';
         if (els.accountEmail) els.accountEmail.textContent = state.currentUser.email || '';
@@ -196,6 +207,7 @@ export function createAuthView({ onAuthChanged } = {}) {
             }
             renderUser();
             emitAuthChanged();
+            if (state.currentUser) void dashboardView.refreshAccountSummary();
         } catch {
             if (requestedStateVersion !== state.authStateVersion) return;
             state.currentUser = null;
@@ -226,6 +238,7 @@ export function createAuthView({ onAuthChanged } = {}) {
             dashboardView.renderAccountDashboard();
             renderUser();
             emitAuthChanged();
+            if (state.currentUser) void dashboardView.refreshAccountSummary();
             setMessage(state.currentUser ? `Bun venit, ${state.currentUser.username}!` : 'Autentificare reușită.', 'success');
             if (els.password) els.password.value = '';
             setTimeout(closePanel, 500);

@@ -781,3 +781,216 @@
     }
 }
 /* GAME_HUB_TITLE_OVERLAY_FIX_END */
+
+
+/* GAME_HUB_PROFILE_SUMMARY_START */
+.game-hub-summary-bar {
+    grid-template-columns: minmax(300px, 1.55fr) repeat(4, minmax(118px, 1fr));
+    gap: 0;
+    padding: 10px 14px;
+    overflow: hidden;
+}
+
+.game-hub-summary-item {
+    min-height: 72px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.game-hub-summary-item + .game-hub-summary-item {
+    border-left: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.game-hub-summary-profile {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    padding: 8px 18px 8px 8px;
+}
+
+.game-hub-summary-avatar {
+    width: 52px;
+    height: 52px;
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.14),
+        0 8px 18px rgba(0, 0, 0, 0.28);
+}
+
+.game-hub-summary-profile-copy {
+    display: grid;
+    min-width: 0;
+    gap: 6px;
+}
+
+.game-hub-summary-profile-heading {
+    display: flex;
+    min-width: 0;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.game-hub-summary-username {
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: 0.66rem;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.game-hub-summary-level {
+    flex: 0 0 auto;
+    color: var(--text-primary);
+    font-size: 1.05rem;
+    font-weight: 950;
+}
+
+.game-hub-summary-progress {
+    display: block;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.09);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.38);
+}
+
+.game-hub-summary-progress-bar {
+    display: block;
+    width: var(--progress-percent, 0%);
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #ffb400, #ffd65a);
+    box-shadow: 0 0 10px rgba(255, 190, 38, 0.42);
+    transition: width 0.28s ease;
+}
+
+.game-hub-summary-xp {
+    overflow: hidden;
+    color: var(--text-secondary);
+    font-size: 0.64rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.game-hub-summary-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.game-hub-summary-profile.is-guest .game-hub-summary-avatar {
+    filter: grayscale(0.72);
+    opacity: 0.72;
+}
+
+.game-hub-summary-stat {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 10px 16px;
+}
+
+.game-hub-summary-icon {
+    display: grid;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.045);
+    color: #ffc629;
+    font-size: 1.15rem;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.game-hub-summary-stat-copy {
+    display: grid;
+    min-width: 0;
+    gap: 3px;
+}
+
+.game-hub-summary-label {
+    font-size: 0.61rem;
+    letter-spacing: 0.08em;
+}
+
+.game-hub-summary-value {
+    margin-top: 0;
+    font-size: clamp(1.15rem, 1.65vw, 1.55rem);
+}
+
+@media (max-width: 1280px) {
+    .game-hub-summary-bar {
+        grid-template-columns: minmax(280px, 2fr) repeat(2, minmax(145px, 1fr));
+    }
+
+    .game-hub-summary-profile {
+        grid-row: span 2;
+    }
+
+    .game-hub-summary-item:nth-child(4) {
+        border-left: 1px solid rgba(255, 255, 255, 0.09);
+    }
+}
+
+@media (max-width: 760px) {
+    .game-hub-summary-bar {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0;
+        padding: 10px;
+    }
+
+    .game-hub-summary-profile {
+        grid-column: 1 / -1;
+        grid-row: auto;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+    }
+
+    .game-hub-summary-item + .game-hub-summary-item {
+        border-left: 0;
+    }
+
+    .game-hub-summary-stat:nth-child(even) {
+        border-right: 1px solid rgba(255, 255, 255, 0.09);
+    }
+
+    .game-hub-summary-stat:nth-child(n + 4) {
+        border-top: 1px solid rgba(255, 255, 255, 0.09);
+    }
+}
+
+@media (max-width: 420px) {
+    .game-hub-summary-profile {
+        grid-template-columns: 44px minmax(0, 1fr);
+        gap: 10px;
+    }
+
+    .game-hub-summary-avatar {
+        width: 44px;
+        height: 44px;
+    }
+
+    .game-hub-summary-stat {
+        gap: 8px;
+        padding-inline: 8px;
+    }
+
+    .game-hub-summary-icon {
+        flex-basis: 34px;
+        width: 34px;
+        height: 34px;
+        font-size: 0.95rem;
+    }
+}
+/* GAME_HUB_PROFILE_SUMMARY_END */

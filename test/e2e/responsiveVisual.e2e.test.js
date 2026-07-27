@@ -323,7 +323,7 @@ async function assertExtendedModesLaunch(page, viewportLabel, baseUrl) {
     }
 }
 
-async function assertMainMenuShowsOnlyLoginFromHeader(page, label) {
+async function assertMainMenuShowsCompactHeader(page, label) {
     const presentation = await page.evaluate(() => {
         const isVisible = selector => {
             const element = document.querySelector(selector);
@@ -339,6 +339,7 @@ async function assertMainMenuShowsOnlyLoginFromHeader(page, label) {
 
         return {
             auth: isVisible('#authOpenBtn'),
+            settings: isVisible('#feedbackSettingsBtn'),
             hamburger: isVisible('#menu-hamburger'),
             dropdown: isVisible('#dropdown-menu'),
             title: isVisible('.site-header h1'),
@@ -348,6 +349,7 @@ async function assertMainMenuShowsOnlyLoginFromHeader(page, label) {
     });
 
     assert.equal(presentation.auth, true, `${label}: butonul Login nu este vizibil`);
+    assert.equal(presentation.settings, true, `${label}: butonul Setări nu este vizibil`);
     assert.deepEqual(
         {
             hamburger: presentation.hamburger,
@@ -359,11 +361,11 @@ async function assertMainMenuShowsOnlyLoginFromHeader(page, label) {
         {
             hamburger: false,
             dropdown: false,
-            title: false,
+            title: true,
             share: false,
             duelStatus: false
         },
-        `${label}: meniul principal trebuie să afișeze numai autentificarea din header`
+        `${label}: Game Hub trebuie să afișeze titlul, profilul și setările în header`
     );
 }
 
@@ -420,7 +422,7 @@ test('responsive layouts match committed visual baselines', { concurrency: false
                 const home = await captureState(page, viewport, 'home', HOME_SELECTORS, { compareVisual: false });
                 if (home.visualRegression.failure) visualFailures.push(home.visualRegression.failure);
                 await assertGameHubCatalog(page, viewport.label);
-                await assertMainMenuShowsOnlyLoginFromHeader(page, `${viewport.label}/home`);
+                await assertMainMenuShowsCompactHeader(page, `${viewport.label}/home`);
                 if (viewport.label === VIEWPORTS[0].label) {
                     await assertExtendedModesLaunch(page, viewport.label, app.baseUrl);
                 }

@@ -110,31 +110,29 @@
 }
 
 /*
- * În selectorul inițial păstrăm disponibilă autentificarea fără să afișăm
- * întregul header peste meniul principal. Starea este derivată direct din
- * vizibilitatea overlay-ului, astfel încât toate căile Home rămân sincronizate.
+ * Pe Game Hub păstrăm un header compact, cu titlul centrat, profilul și setările.
+ * Controalele specifice unei runde rămân ascunse până la pornirea unui mod.
  */
 body:has(#difficulty-overlay:not(.hidden)) .site-header {
     display: flex;
-    justify-content: flex-end;
-    background: transparent;
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-    border-bottom-color: transparent;
-    box-shadow: none;
-    pointer-events: none;
+    justify-content: space-between;
+    background: color-mix(in srgb, var(--header-bg) 94%, transparent);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    border-bottom-color: color-mix(in srgb, var(--accent-f1) 70%, var(--border-soft));
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.38);
+    pointer-events: auto;
 }
 
-body:has(#difficulty-overlay:not(.hidden)) .site-header::after,
 body:has(#difficulty-overlay:not(.hidden)) #menu-hamburger,
 body:has(#difficulty-overlay:not(.hidden)) #dropdown-menu,
-body:has(#difficulty-overlay:not(.hidden)) .site-header h1,
 body:has(#difficulty-overlay:not(.hidden)) #shareRoomBtn,
 body:has(#difficulty-overlay:not(.hidden)) #duelStatus {
     display: none;
 }
 
-body:has(#difficulty-overlay:not(.hidden)) #authOpenBtn {
+body:has(#difficulty-overlay:not(.hidden)) #authOpenBtn,
+body:has(#difficulty-overlay:not(.hidden)) #feedbackSettingsBtn {
     pointer-events: auto;
 }
 

@@ -9,6 +9,7 @@ async function loadGameHubModules() {
     await import('../public/js/gameHubController.js');
     return {
         registry: globalThis.F1GameVariantRegistry,
+        dashboardView: globalThis.F1GameHubDashboardView,
         ...globalThis.F1GameHub
     };
 }
@@ -73,8 +74,11 @@ function createFakeElement(tagName = 'div') {
             const matches = [];
             const byClass = selector.startsWith('.') ? selector.slice(1) : null;
             const byVariant = selector === '[data-game-variant]';
+            const byId = selector.startsWith('#') ? selector.slice(1) : null;
             function visit(node) {
-                if ((byClass && node.classList?.contains(byClass)) || (byVariant && node.dataset?.gameVariant)) {
+                if ((byClass && node.classList?.contains(byClass))
+                    || (byVariant && node.dataset?.gameVariant)
+                    || (byId && node.id === byId)) {
                     matches.push(node);
                 }
                 for (const child of node.children || []) visit(child);
@@ -108,12 +112,17 @@ function createFakeElement(tagName = 'div') {
 
 function createFakeDocument() {
     const root = createFakeElement('div');
+    const authButton = createFakeElement('button');
     root.id = 'gameModeHub';
+    authButton.id = 'authOpenBtn';
     return {
         root,
+        authButton,
         createElement: createFakeElement,
         getElementById(id) {
-            return id === 'gameModeHub' ? root : null;
+            if (id === 'gameModeHub') return root;
+            if (id === 'authOpenBtn') return authButton;
+            return flatten(root).find(element => element.id === id) || null;
         },
         addEventListener() {}
     };
@@ -170,6 +179,14 @@ test('game hub renders the dashboard layout with all ten enabled cards', async (
     assert.equal(cards.length, 10);
     assert.equal(summaryItems.length, 5);
     assert.ok(featuredDuel);
+    assert.ok(elements.find(element => element.id === 'gameHubProfileSummary'));
+    assert.equal(elements.find(element => element.id === 'gameHubProfileUsername')?.textContent, 'Guest');
+    assert.equal(elements.find(element => element.id === 'gameHubProfileLevel')?.textContent, 'Nivel —');
+    assert.deepEqual(
+        ['gameHubProfileVictories', 'gameHubProfileWinRate', 'gameHubProfileCurrentStreak', 'gameHubProfilePlayed']
+            .map(id => elements.find(element => element.id === id)?.textContent),
+        ['—', '—', '—', '—']
+    );
 
     const classicCards = cards.filter(card => card.dataset.gameModeChoice);
     assert.deepEqual(classicCards.map(card => card.dataset.gameModeChoice), ['single', 'daily', 'duel']);
@@ -186,6 +203,114 @@ test('game hub renders the dashboard layout with all ten enabled cards', async (
     assert.equal(cards.every(card => flatten(card).some(element => element.textContent === 'Disponibil')), true);
     assert.equal(featuredDuel.dataset.gameModeChoice, 'duel');
     assert.equal(featuredDuel.tagName, 'BUTTON');
+});
+
+test('profile header and summary render authenticated account data without unsafe HTML', async () => {
+    const { registry, createGameHubController, dashboardView } = await loadGameHubModules();
+    const documentObject = createFakeDocument();
+    const controller = createGameHubController({ documentObject, registry });
+    controller.render();
+
+    const user = { username: '<Mihai>', avatarKey: 'helmet-blue' };
+    dashboardView.ensureHeaderProfileMarkup(documentObject, user);
+    dashboardView.renderProfileSnapshot(documentObject, user, {
+        stats: {
+            totals: { played: 34, won: 21, winRate: 62 },
+            modes: {
+                single: { currentStreak: 4 },
+                daily: { currentStreak: 2 },
+                duel: { currentStreak: 7 }
+            }
+        },
+        progress: {
+            level: 8,
+            xpIntoLevel: 350,
+            xpForLevel: 600,
+            progressPercent: 58
+        }
+    });
+
+    assert.equal(documentObject.authButton.querySelector('#authHeaderUsername').textContent, '<Mihai>');
+    assert.equal(documentObject.authButton.querySelector('#authHeaderAvatar').dataset.avatarKey, 'helmet-blue');
+    assert.equal(documentObject.authButton.classList.contains('is-authenticated'), true);
+    assert.equal(documentObject.getElementById('gameHubProfileUsername').textContent, '<Mihai>');
+    assert.equal(documentObject.getElementById('gameHubProfileLevel').textContent, 'Nivel 8');
+    assert.equal(documentObject.getElementById('gameHubProfileXpText').textContent, '350 / 600 XP');
+    assert.equal(documentObject.getElementById('gameHubProfileXpBar').dataset.progressPercent, '58');
+    assert.equal(documentObject.getElementById('gameHubProfileVictories').textContent, '21');
+    assert.equal(documentObject.getElementById('gameHubProfileWinRate').textContent, '62%');
+    assert.equal(documentObject.getElementById('gameHubProfileCurrentStreak').textContent, '7');
+    assert.equal(documentObject.getElementById('gameHubProfilePlayed').textContent, '34');
+
+    dashboardView.ensureHeaderProfileMarkup(documentObject, { username: 'Mihai', avatarKey: 'invalid-value' });
+    assert.equal(documentObject.authButton.querySelector('#authHeaderAvatar').dataset.avatarKey, 'helmet-red');
+});
+
+test('profile summary consumes live account stats only for the authenticated user', async () => {
+    const { registry, createGameHubController, dashboardView } = await loadGameHubModules();
+    const documentObject = createFakeDocument();
+    createGameHubController({ documentObject, registry }).render();
+
+    const listeners = new Map();
+    const socket = {
+        on(eventName, handler) { listeners.set(eventName, handler); },
+        off(eventName, handler) {
+            if (listeners.get(eventName) === handler) listeners.delete(eventName);
+        }
+    };
+    const originalSocket = globalThis.__f1GameSocket;
+    globalThis.__f1GameSocket = socket;
+    const fetchImpl = async url => ({
+        ok: true,
+        async json() {
+            if (url === '/api/auth/me') {
+                return { user: { id: 7, username: 'Narcis', avatarKey: 'helmet-green' } };
+            }
+            return {
+                user: { id: 7, username: 'Narcis', avatarKey: 'helmet-green' },
+                stats: { totals: { played: 5, won: 3, winRate: 60 }, modes: {} },
+                progress: { level: 2, xpIntoLevel: 150, xpForLevel: 300, progressPercent: 50 }
+            };
+        }
+    });
+
+    let sync = null;
+    try {
+        sync = dashboardView.installGameHubProfileSync({
+            documentObject,
+            fetchImpl,
+            MutationObserverClass: null
+        });
+        await sync.refresh();
+
+        const update = listeners.get('accountStatsUpdated');
+        assert.equal(typeof update, 'function');
+        update({
+            userId: 7,
+            stats: {
+                totals: { played: 6, won: 4, winRate: 67 },
+                modes: { single: { currentStreak: 3 } }
+            },
+            progress: { level: 2, xpIntoLevel: 180, xpForLevel: 300, progressPercent: 60 }
+        });
+        assert.equal(documentObject.getElementById('gameHubProfileVictories').textContent, '4');
+        assert.equal(documentObject.getElementById('gameHubProfilePlayed').textContent, '6');
+        assert.equal(documentObject.getElementById('gameHubProfileXpBar').dataset.progressPercent, '60');
+
+        update({
+            userId: 8,
+            stats: { totals: { played: 99, won: 99, winRate: 100 }, modes: {} },
+            progress: { level: 99, xpIntoLevel: 0, xpForLevel: 100, progressPercent: 0 }
+        });
+        assert.equal(documentObject.getElementById('gameHubProfileVictories').textContent, '4');
+        assert.equal(documentObject.getElementById('gameHubProfilePlayed').textContent, '6');
+    } finally {
+        sync?.disconnect();
+        if (originalSocket === undefined) delete globalThis.__f1GameSocket;
+        else globalThis.__f1GameSocket = originalSocket;
+    }
+
+    assert.equal(listeners.has('accountStatsUpdated'), false);
 });
 
 test('game hub disables a mode immediately when runtime settings turn it off', async () => {
@@ -320,6 +445,9 @@ test('production HTML loads the Game Hub before the existing game bundle', () =>
     assert.match(html, /id="difficultySection" class="difficulty-section is-hidden"/);
     assert.ok(html.includes('/css/23-game-hub.css'));
     assert.ok(html.includes('/css/29-game-hub-dashboard.css'));
+    assert.ok(html.includes('/css/02-header-menu.css'));
+    assert.ok(html.includes('/css/08-auth.css'));
+    assert.ok(html.includes('/css/11-mobile-layout-fix.css'));
     assert.ok(registryIndex > 0);
     assert.ok(viewIndex > registryIndex);
     assert.ok(controllerIndex > viewIndex);

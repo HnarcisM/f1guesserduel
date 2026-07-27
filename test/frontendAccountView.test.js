@@ -64,7 +64,8 @@ function createElement() {
 
 function createAccountDocument() {
     const ids = [
-        'authOpenBtn', 'authPanel', 'authBackdrop', 'authCloseBtn', 'authTitle', 'authSubtitle',
+        'authOpenBtn', 'authHeaderAvatar', 'authHeaderUsername', 'authHeaderStatus',
+        'authPanel', 'authBackdrop', 'authCloseBtn', 'authTitle', 'authSubtitle',
         'authUsernameGroup', 'authUsername', 'authEmail', 'authPassword', 'authSubmitBtn',
         'authSwitchBtn', 'authMessage', 'authUserBadge', 'authLogoutBtn', 'authForm',
         'authAccountView', 'authAccountAvatar', 'authAccountUsername', 'authAccountEmail',
@@ -110,6 +111,11 @@ test('authenticated account dashboard is present while the login form remains se
     const css = fs.readFileSync(path.join(projectRoot, 'public', 'css', '08-auth.css'), 'utf8');
 
     assert.match(html, /id="authAccountView"[^>]*is-hidden/);
+    assert.match(html, /id="siteHomeControl"[^>]*>F1 GUESSER<\/button>/);
+    assert.doesNotMatch(html, /id="siteHomeControl"[^>]*>[^<]*🏎️/);
+    assert.match(html, /id="authHeaderAvatar"/);
+    assert.match(html, /id="authHeaderUsername"/);
+    assert.match(html, /id="authHeaderStatus"/);
     assert.match(html, /id="authForm"/);
     assert.match(html, /id="authStatPlayed"/);
     assert.match(html, /id="authAccountLevel"/);
@@ -174,17 +180,21 @@ test('login and feedback settings remain interactive above the initial mode over
     assert.match(headerCss, /\.site-header\s*\{[\s\S]*?z-index:\s*2000\b/);
     assert.match(
         headerCss,
-        /body:has\(#difficulty-overlay:not\(\.hidden\)\)\s+\.site-header\s*\{[\s\S]*?display:\s*flex\b[\s\S]*?pointer-events:\s*none\b/
+        /body:has\(#difficulty-overlay:not\(\.hidden\)\)\s+\.site-header\s*\{[\s\S]*?display:\s*flex\b[\s\S]*?pointer-events:\s*auto\b/
     );
     assert.match(
         headerCss,
-        /body:has\(#difficulty-overlay:not\(\.hidden\)\)\s+#authOpenBtn\s*\{[\s\S]*?pointer-events:\s*auto\b/
+        /body:has\(#difficulty-overlay:not\(\.hidden\)\)\s+#authOpenBtn,[\s\S]*?\{[\s\S]*?pointer-events:\s*auto\b/
     );
     assert.match(
         feedbackCss,
         /body:has\(#difficulty-overlay:not\(\.hidden\)\)\s+#feedbackSettingsBtn\s*\{[\s\S]*?pointer-events:\s*auto\b/
     );
-    for (const selector of ['#menu-hamburger', '#dropdown-menu', '.site-header h1', '#shareRoomBtn', '#duelStatus']) {
+    assert.doesNotMatch(
+        headerCss,
+        /body:has\(#difficulty-overlay:not\(\.hidden\)\)[\s\S]*?\.site-header h1[\s\S]*?\{[\s\S]*?display:\s*none\b/
+    );
+    for (const selector of ['#menu-hamburger', '#dropdown-menu', '#shareRoomBtn', '#duelStatus']) {
         assert.match(
             headerCss,
             new RegExp(`body:has\\(#difficulty-overlay:not\\(\\.hidden\\)\\)[\\s\\S]*?${selector.replace('.', '\\.')}[\\s\\S]*?\\{[\\s\\S]*?display:\\s*none\\b`)
@@ -350,6 +360,9 @@ test('a delayed initial auth refresh cannot overwrite a newer login or another a
     await new Promise(resolve => setImmediate(resolve));
 
     assert.equal(view.getCurrentUser().id, 7);
+    assert.equal(elements.authHeaderUsername.textContent, 'Narcis');
+    assert.equal(elements.authOpenBtn.classList.contains('is-authenticated'), true);
+    assert.equal(elements.authHeaderAvatar.dataset.avatarKey, 'helmet-red');
     await view.refreshAccountSummary({ stats: { totals: { played: 99 }, modes: {} } }, 8);
     assert.equal(elements.authStatPlayed.textContent, '0');
     await view.refreshAccountSummary({

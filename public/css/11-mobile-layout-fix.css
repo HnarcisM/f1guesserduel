@@ -88,20 +88,31 @@
     }
 
     .auth-open-btn {
-        width: var(--header-control-size);
+        width: auto;
         min-width: var(--header-control-size);
         height: var(--header-control-size);
-        padding: 0;
-        font-size: 0;
+        padding: 3px 6px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
     }
 
-    .auth-open-btn::before {
-        content: "👤";
-        font-size: 16px;
-        line-height: 1;
+    .auth-header-avatar {
+        width: 28px;
+        height: 28px;
+        flex-basis: 28px;
+    }
+
+    .auth-header-username {
+        display: none;
+    }
+
+    .auth-header-status {
+        position: absolute;
+        right: 3px;
+        bottom: 3px;
+        width: 7px;
+        height: 7px;
     }
 
     #status {
@@ -352,17 +363,14 @@
     .auth-open-btn {
         max-width: var(--header-control-size);
         width: var(--header-control-size);
-        padding: 0;
-        font-size: 0;
+        padding: 3px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
     }
 
-    .auth-open-btn::before {
-        content: "👤";
-        font-size: 16px;
-        line-height: 1;
+    .auth-header-username {
+        display: none;
     }
 
     .share-btn {

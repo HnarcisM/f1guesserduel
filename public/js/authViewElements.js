@@ -14,6 +14,9 @@ export const AVATAR_PRESETS = Object.freeze([
 export function getAuthViewElements() {
     return {
         openBtn: document.getElementById('authOpenBtn'),
+        headerAvatar: document.getElementById('authHeaderAvatar'),
+        headerUsername: document.getElementById('authHeaderUsername'),
+        headerStatus: document.getElementById('authHeaderStatus'),
         panel: document.getElementById('authPanel'),
         backdrop: document.getElementById('authBackdrop'),
         closeBtn: document.getElementById('authCloseBtn'),

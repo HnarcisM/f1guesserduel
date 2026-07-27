@@ -36,11 +36,15 @@ const CLASSIC_HEADER_MARKUP = String.raw`<header class="site-header mode-page-si
         </nav>
 
         <h1>
-            <button type="button" id="siteHomeControl" class="site-home-control" aria-label="F1 Guesser – revino la pagina principală">🏎️ F1 GUESSER</button>
+            <button type="button" id="siteHomeControl" class="site-home-control" aria-label="F1 Guesser – revino la pagina principală">F1 GUESSER</button>
         </h1>
 
         <div class="header-actions">
-            <button type="button" id="authOpenBtn" class="auth-open-btn" title="Deschide profilul">👤 Se verifică...</button>
+            <button type="button" id="authOpenBtn" class="auth-open-btn" title="Deschide profilul" aria-label="Deschide profilul">
+                <span id="authHeaderAvatar" class="auth-header-avatar auth-avatar-visual" data-avatar-key="helmet-red" aria-hidden="true"><span class="auth-helmet-icon"></span></span>
+                <span id="authHeaderUsername" class="auth-header-username">Se verifică...</span>
+                <span id="authHeaderStatus" class="auth-header-status" aria-hidden="true"></span>
+            </button>
             <button type="button" id="feedbackSettingsBtn" class="feedback-settings-btn" title="Setări sunet și vibrații" aria-label="Deschide setările pentru sunet și vibrații">
                 <span aria-hidden="true">⚙️</span><span class="feedback-settings-label">Setări</span>
             </button>
