@@ -346,7 +346,7 @@ async function assertGameHubSvgIcons(page, viewportLabel) {
         };
     });
 
-    assert.ok(iconReport.count >= 17, `${viewportLabel}/home: lipsesc iconuri SVG (${iconReport.count})`);
+    assert.ok(iconReport.count >= 14, `${viewportLabel}/home: lipsesc iconuri SVG (${iconReport.count})`);
     assert.equal(iconReport.missingViewBox, 0, `${viewportLabel}/home: există iconuri cu viewBox incorect`);
     assert.equal(iconReport.exposedToAssistiveTech, 0, `${viewportLabel}/home: iconurile decorative nu sunt ascunse semantic`);
     assert.equal(iconReport.focusable, 0, `${viewportLabel}/home: iconurile decorative pot primi focus`);

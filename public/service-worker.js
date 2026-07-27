@@ -2,7 +2,7 @@
 
 const CACHE_PREFIX = 'f1-guesser-static-';
 /* GENERATED_PRECACHE_START */
-const STATIC_CACHE_NAME = 'f1-guesser-static-3410859c0a420ef6cc36';
+const STATIC_CACHE_NAME = 'f1-guesser-static-1a40ee3f10aa376a3b8f';
 const PRECACHE_URLS = Object.freeze([
     "/css/01-theme-tokens.css",
     "/css/02-header-menu.css",
@@ -31,7 +31,7 @@ const PRECACHE_URLS = Object.freeze([
     "/css/27-extended-mode-legend.css",
     "/css/28-extended-mode-autocomplete.css",
     "/css/29-game-hub-dashboard.css?v=c50cd7d9d204dc3c",
-    "/css/30-game-hub-visual-polish.css?v=efaa5ebcf1d95cef",
+    "/css/30-game-hub-visual-polish.css?v=c9015daca4ae79e6",
     "/game.bundle.min.js?v=5e440a09c0df2c67",
     "/icons/pwa-192.png",
     "/icons/pwa-512.png",
@@ -71,7 +71,7 @@ const PRECACHE_URLS = Object.freeze([
     "/js/extendedModesController.js",
     "/js/feedbackController.js?v=5cd6b13e762a05bd",
     "/js/gameHubController.js?v=6dfabb2aa1f4b98f",
-    "/js/gameHubDashboardView.js?v=693532ccd5c1b852",
+    "/js/gameHubDashboardView.js?v=97d2aca058bb5540",
     "/js/gameVariantRegistry.js?v=27e50758846ee846",
     "/js/modes/constructorPage.js",
     "/js/modes/eraPage.js",

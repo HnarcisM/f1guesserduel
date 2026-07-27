@@ -219,16 +219,16 @@ test('game hub renders the dashboard layout with all ten enabled cards', async (
     );
 
     const svgIcons = elements.filter(element => element.tagName === 'SVG' && element.dataset?.iconKey);
-    assert.equal(svgIcons.length, 17, '9 carduri standard + 3 panouri + 4 statistici + săgeata CTA');
+    assert.equal(svgIcons.length, 14, '9 carduri standard + 4 statistici + săgeata CTA');
     assert.deepEqual(
         cards.filter(card => !card.classList.contains('game-hub-featured-card'))
             .map(card => flatten(card).find(element => element.classList?.contains('mode-icon'))?.dataset.iconKey),
         ['racing-line', 'race-day', 'heritage-helmet', 'grand-prix-week', 'boost-clock', 'hot-streak', 'constructor-works', 'driver-grid', 'circuit-flag']
     );
-    assert.deepEqual(
-        elements.filter(element => element.classList?.contains('game-hub-panel-icon'))
-            .map(element => element.dataset.iconKey),
-        ['trophy', 'duel-helmets', 'sparkles']
+    assert.equal(
+        elements.some(element => element.classList?.contains('game-hub-panel-badge')),
+        false,
+        'headerurile categoriilor nu mai randază chenare sau iconuri decorative'
     );
     assert.deepEqual(
         elements.filter(element => element.classList?.contains('game-hub-summary-svg'))
@@ -782,4 +782,24 @@ test('Game Hub SVG polish keeps semantic icon keys, theme colors and reduced-mot
     assert.match(css, /GAME_HUB_SVG_ICON_POLISH_START/);
     assert.match(css, /\.game-hub-svg-icon\s*\{[\s\S]*?color:\s*inherit;/);
     assert.match(css, /@media \(prefers-reduced-motion:\s*reduce\)/);
+});
+
+test('Game Hub category headers remove icon frames and center their accent bars', () => {
+    const source = fs.readFileSync(
+        path.join(__dirname, '..', 'public', 'css', '30-game-hub-visual-polish.css'),
+        'utf8'
+    );
+
+    assert.match(source, /\.game-hub-panel-header\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+    assert.match(source, /\.game-hub-panel-header\s*\{[\s\S]*?justify-items:\s*center/);
+    const dashboardSource = fs.readFileSync(
+        path.join(__dirname, '..', 'public', 'js', 'gameHubDashboardView.js'),
+        'utf8'
+    );
+    assert.doesNotMatch(dashboardSource, /game-hub-panel-badge|game-hub-panel-icon/);
+    assert.match(source, /\.game-hub-panel-copy\s*\{[\s\S]*?text-align:\s*center/);
+    assert.match(source, /\.game-hub-panel-accent\s*\{[\s\S]*?grid-column:\s*1[\s\S]*?justify-self:\s*center/);
+    assert.match(source, /rgba\(0,\s*238,\s*255,\s*0\.96\)\s*50%/);
+    assert.match(source, /rgba\(255,\s*67,\s*67,\s*0\.98\)\s*50%/);
+    assert.match(source, /rgba\(255,\s*198,\s*41,\s*0\.97\)\s*50%/);
 });

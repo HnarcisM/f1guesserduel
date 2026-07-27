@@ -846,12 +846,9 @@
     return applyModeCardAvailability(card, variant, runtimeSettings);
   }
 
-  function createPanel(documentObject, { title, description, iconKey, accentClass, bodyClass = '' }) {
+  function createPanel(documentObject, { title, description, accentClass, bodyClass = '' }) {
     const panel = createElement(documentObject, 'section', `game-hub-panel ${accentClass} ${bodyClass}`.trim());
     const header = createElement(documentObject, 'div', `game-hub-panel-header ${accentClass}`.trim());
-    const badge = createElement(documentObject, 'span', 'game-hub-panel-badge');
-    badge.setAttribute('aria-hidden', 'true');
-    badge.append(createGameHubIcon(documentObject, iconKey, 'game-hub-panel-icon game-hub-svg-icon'));
     const copy = createElement(documentObject, 'div', 'game-hub-panel-copy');
     copy.append(
       createElement(documentObject, 'h3', 'game-hub-panel-title', title),
@@ -859,7 +856,7 @@
     );
     const accent = createElement(documentObject, 'span', 'game-hub-panel-accent');
     accent.setAttribute('aria-hidden', 'true');
-    header.append(badge, copy, accent);
+    header.append(copy, accent);
     panel.append(header);
     return panel;
   }
@@ -1012,21 +1009,21 @@
     const singlePanel = createPanel(documentObject, {
       title: 'Single Player & Challenges',
       description: 'Classic, Daily și provocările oficiale într-o zonă separată.',
-      iconKey: 'trophy', accentClass: 'game-hub-panel--single'
+      accentClass: 'game-hub-panel--single'
     });
     singlePanel.append(createGrid(documentObject, singleVariants, runtimeSettings, 'game-hub-card-grid game-hub-card-grid--single'));
 
     const duelPanel = createPanel(documentObject, {
       title: 'Duel',
       description: 'Modul central pentru sesiunile multiplayer și camerele live.',
-      iconKey: 'duel-helmets', accentClass: 'game-hub-panel--duel', bodyClass: 'game-hub-panel--featured'
+      accentClass: 'game-hub-panel--duel', bodyClass: 'game-hub-panel--featured'
     });
     duelPanel.append(createFeaturedDuelCard(documentObject, duelVariant, runtimeSettings));
 
     const specialtyPanel = createPanel(documentObject, {
       title: 'Specialty Guesser Modes',
       description: 'Modurile rapide și experimentele competitive pe care le-ai adăugat recent.',
-      iconKey: 'sparkles', accentClass: 'game-hub-panel--specialty'
+      accentClass: 'game-hub-panel--specialty'
     });
     specialtyPanel.append(createGrid(documentObject, specialtyVariants, runtimeSettings, 'game-hub-card-grid game-hub-card-grid--specialty'));
     dashboard.append(singlePanel, duelPanel, specialtyPanel);

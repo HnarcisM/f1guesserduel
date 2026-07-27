@@ -31,15 +31,16 @@
 }
 
 .game-hub-panel-header {
-    gap: 10px;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    gap: 6px;
     margin-bottom: 10px;
+    text-align: center;
 }
 
-.game-hub-panel-badge {
-    width: 44px;
-    height: 44px;
-    border-radius: 15px;
-    font-size: 1.15rem;
+.game-hub-panel-copy {
+    width: 100%;
+    text-align: center;
 }
 
 .game-hub-panel-title {
@@ -52,9 +53,23 @@
 }
 
 .game-hub-panel-accent {
-    width: 72px;
+    grid-column: 1;
+    justify-self: center;
+    width: 88px;
     height: 3px;
-    margin-top: 5px;
+    margin: 5px auto 0;
+}
+
+.game-hub-panel--single .game-hub-panel-accent {
+    background: linear-gradient(90deg, rgba(0, 238, 255, 0.08), rgba(0, 238, 255, 0.96) 50%, rgba(0, 238, 255, 0.08));
+}
+
+.game-hub-panel--duel .game-hub-panel-accent {
+    background: linear-gradient(90deg, rgba(255, 67, 67, 0.08), rgba(255, 67, 67, 0.98) 50%, rgba(255, 67, 67, 0.08));
+}
+
+.game-hub-panel--specialty .game-hub-panel-accent {
+    background: linear-gradient(90deg, rgba(255, 198, 41, 0.08), rgba(255, 198, 41, 0.97) 50%, rgba(255, 198, 41, 0.08));
 }
 
 .game-hub-card-grid {
@@ -1224,14 +1239,12 @@ body:has(#difficulty-overlay:not(.hidden)) .header-actions {
     stroke: none;
 }
 
-.game-hub-panel-badge,
 .game-hub-card-icon-wrap,
 .game-hub-summary-icon {
     isolation: isolate;
     overflow: hidden;
 }
 
-.game-hub-panel-badge::before,
 .game-hub-card-icon-wrap::before,
 .game-hub-summary-icon::before {
     content: '';
@@ -1244,15 +1257,9 @@ body:has(#difficulty-overlay:not(.hidden)) .header-actions {
     pointer-events: none;
 }
 
-.game-hub-panel-badge,
 .game-hub-card-icon-wrap,
 .game-hub-summary-icon {
     position: relative;
-}
-
-.game-hub-panel-icon {
-    width: 24px;
-    height: 24px;
 }
 
 .game-hub-card .mode-icon {
@@ -1263,20 +1270,12 @@ body:has(#difficulty-overlay:not(.hidden)) .header-actions {
     transition: transform var(--transition-fast), filter var(--transition-fast);
 }
 
-.game-hub-panel-header.game-hub-panel--single .game-hub-panel-badge,
 .game-hub-panel--single .game-hub-card-icon-wrap {
     color: #79e9ff;
     border-color: rgba(92, 224, 255, 0.38);
     background: linear-gradient(145deg, rgba(10, 44, 60, 0.92), rgba(4, 12, 22, 0.82));
 }
 
-.game-hub-panel-header.game-hub-panel--duel .game-hub-panel-badge {
-    color: #ff7777;
-    border-color: rgba(255, 93, 93, 0.42);
-    background: linear-gradient(145deg, rgba(67, 16, 22, 0.94), rgba(17, 8, 12, 0.84));
-}
-
-.game-hub-panel-header.game-hub-panel--specialty .game-hub-panel-badge,
 .game-hub-panel--specialty .game-hub-card-icon-wrap {
     color: #ffd363;
     border-color: rgba(255, 205, 80, 0.38);
@@ -1353,11 +1352,6 @@ body:has(#difficulty-overlay:not(.hidden)) .header-actions {
 }
 
 @media (max-width: 520px) {
-    .game-hub-panel-icon {
-        width: 21px;
-        height: 21px;
-    }
-
     .game-hub-card .mode-icon {
         width: 20px;
         height: 20px;
