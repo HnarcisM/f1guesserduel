@@ -38,9 +38,38 @@
     text-align: center;
 }
 
+.game-hub-panel-heading {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.game-hub-panel-icon {
+    flex: 0 0 auto;
+    width: 23px;
+    height: 23px;
+    filter: drop-shadow(0 4px 9px rgba(0, 0, 0, 0.34));
+}
+
+.game-hub-panel-header.game-hub-panel--single .game-hub-panel-icon {
+    color: #79e9ff;
+}
+
+.game-hub-panel-header.game-hub-panel--duel .game-hub-panel-icon {
+    color: #ff7777;
+}
+
+.game-hub-panel-header.game-hub-panel--specialty .game-hub-panel-icon {
+    color: #ffd363;
+}
+
 .game-hub-panel-copy {
-    width: 100%;
-    text-align: center;
+    width: auto;
+    min-width: 0;
+    text-align: left;
 }
 
 .game-hub-panel-title {
@@ -1352,6 +1381,15 @@ body:has(#difficulty-overlay:not(.hidden)) .header-actions {
 }
 
 @media (max-width: 520px) {
+    .game-hub-panel-heading {
+        gap: 7px;
+    }
+
+    .game-hub-panel-icon {
+        width: 20px;
+        height: 20px;
+    }
+
     .game-hub-card .mode-icon {
         width: 20px;
         height: 20px;
@@ -1465,3 +1503,35 @@ body:has(#difficulty-overlay:not(.hidden)) .header-actions {
     box-sizing: border-box;
 }
 /* GAME_HUB_TRACK_FULL_WIDTH_FIX_END */
+
+/* GAME_HUB_MOBILE_CARD_FULL_WIDTH_FIX_START */
+/*
+ * Butonul de bază aliniază conținutul la flex-start. Pe mobil, cardurile cu
+ * texte mai scurte puteau lăsa chrome-ul intern la lățimea conținutului, în
+ * timp ce modurile cu texte mai lungi păreau corecte accidental. Întindem
+ * toate straturile cardurilor standard, fără să atingem cardul Duel featured.
+ */
+@media (max-width: 520px) {
+    .game-hub-card-grid--single .game-hub-card.game-mode-card,
+    .game-hub-card-grid--specialty .game-hub-card.game-mode-card {
+        align-items: stretch;
+    }
+
+    .game-hub-card.game-mode-card:not(.game-hub-featured-card) .game-hub-card-chrome {
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+        align-self: stretch;
+        box-sizing: border-box;
+    }
+
+    .game-hub-card.game-mode-card:not(.game-hub-featured-card) .game-hub-card-art,
+    .game-hub-card.game-mode-card:not(.game-hub-featured-card) .game-hub-card-content {
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+        align-self: stretch;
+        box-sizing: border-box;
+    }
+}
+/* GAME_HUB_MOBILE_CARD_FULL_WIDTH_FIX_END */

@@ -219,16 +219,21 @@ test('game hub renders the dashboard layout with all ten enabled cards', async (
     );
 
     const svgIcons = elements.filter(element => element.tagName === 'SVG' && element.dataset?.iconKey);
-    assert.equal(svgIcons.length, 14, '9 carduri standard + 4 statistici + săgeata CTA');
+    assert.equal(svgIcons.length, 17, '9 carduri standard + 3 titluri de panou + 4 statistici + săgeata CTA');
     assert.deepEqual(
         cards.filter(card => !card.classList.contains('game-hub-featured-card'))
             .map(card => flatten(card).find(element => element.classList?.contains('mode-icon'))?.dataset.iconKey),
         ['racing-line', 'race-day', 'heritage-helmet', 'grand-prix-week', 'boost-clock', 'hot-streak', 'constructor-works', 'driver-grid', 'circuit-flag']
     );
+    assert.deepEqual(
+        elements.filter(element => element.classList?.contains('game-hub-panel-icon'))
+            .map(element => element.dataset.iconKey),
+        ['trophy', 'duel-helmets', 'sparkles']
+    );
     assert.equal(
         elements.some(element => element.classList?.contains('game-hub-panel-badge')),
         false,
-        'headerurile categoriilor nu mai randază chenare sau iconuri decorative'
+        'iconurile din titluri nu folosesc chenare de tip badge'
     );
     assert.deepEqual(
         elements.filter(element => element.classList?.contains('game-hub-summary-svg'))
@@ -784,22 +789,51 @@ test('Game Hub SVG polish keeps semantic icon keys, theme colors and reduced-mot
     assert.match(css, /@media \(prefers-reduced-motion:\s*reduce\)/);
 });
 
-test('Game Hub category headers remove icon frames and center their accent bars', () => {
+test('Game Hub category headers keep unframed icons left of titles and centered accent bars', () => {
     const source = fs.readFileSync(
         path.join(__dirname, '..', 'public', 'css', '30-game-hub-visual-polish.css'),
+        'utf8'
+    );
+    const dashboardSource = fs.readFileSync(
+        path.join(__dirname, '..', 'public', 'js', 'gameHubDashboardView.js'),
         'utf8'
     );
 
     assert.match(source, /\.game-hub-panel-header\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)/);
     assert.match(source, /\.game-hub-panel-header\s*\{[\s\S]*?justify-items:\s*center/);
-    const dashboardSource = fs.readFileSync(
-        path.join(__dirname, '..', 'public', 'js', 'gameHubDashboardView.js'),
-        'utf8'
-    );
-    assert.doesNotMatch(dashboardSource, /game-hub-panel-badge|game-hub-panel-icon/);
-    assert.match(source, /\.game-hub-panel-copy\s*\{[\s\S]*?text-align:\s*center/);
+    assert.match(source, /\.game-hub-panel-heading\s*\{[\s\S]*?display:\s*inline-flex[\s\S]*?align-items:\s*center[\s\S]*?justify-content:\s*center/);
+    assert.match(source, /\.game-hub-panel-icon\s*\{[\s\S]*?width:\s*23px[\s\S]*?height:\s*23px/);
+    assert.doesNotMatch(source, /\.game-hub-panel-icon\s*\{[^}]*?(?:border|background)\s*:/);
+    assert.match(dashboardSource, /heading\.append\([\s\S]*?createGameHubIcon\(documentObject,\s*iconKey,\s*'game-hub-panel-icon game-hub-svg-icon'\)[\s\S]*?copy/);
+    assert.doesNotMatch(dashboardSource, /game-hub-panel-badge/);
+    assert.match(source, /\.game-hub-panel-copy\s*\{[\s\S]*?text-align:\s*left/);
     assert.match(source, /\.game-hub-panel-accent\s*\{[\s\S]*?grid-column:\s*1[\s\S]*?justify-self:\s*center/);
     assert.match(source, /rgba\(0,\s*238,\s*255,\s*0\.96\)\s*50%/);
     assert.match(source, /rgba\(255,\s*67,\s*67,\s*0\.98\)\s*50%/);
     assert.match(source, /rgba\(255,\s*198,\s*41,\s*0\.97\)\s*50%/);
+});
+
+test('all standard Game Hub cards stretch artwork and copy across mobile width', () => {
+    const css = fs.readFileSync(
+        path.join(__dirname, '..', 'public', 'css', '30-game-hub-visual-polish.css'),
+        'utf8'
+    );
+
+    assert.match(css, /GAME_HUB_MOBILE_CARD_FULL_WIDTH_FIX_START/);
+    const mobileBlock = css.match(
+        /@media \(max-width:\s*520px\)\s*\{[\s\S]*?GAME_HUB_MOBILE_CARD_FULL_WIDTH_FIX_END/
+    );
+    assert.ok(mobileBlock, 'Lipsește fixul responsive comun pentru cardurile Game Hub');
+    assert.match(
+        mobileBlock[0],
+        /\.game-hub-card-grid--single \.game-hub-card\.game-mode-card,\s*\.game-hub-card-grid--specialty \.game-hub-card\.game-mode-card\s*\{[^}]*align-items:\s*stretch;/s
+    );
+    assert.match(
+        mobileBlock[0],
+        /\.game-hub-card\.game-mode-card:not\(\.game-hub-featured-card\) \.game-hub-card-chrome\s*\{[^}]*width:\s*100%;[^}]*max-width:\s*none;[^}]*align-self:\s*stretch;/s
+    );
+    assert.match(
+        mobileBlock[0],
+        /\.game-hub-card\.game-mode-card:not\(\.game-hub-featured-card\) \.game-hub-card-art,\s*\.game-hub-card\.game-mode-card:not\(\.game-hub-featured-card\) \.game-hub-card-content\s*\{[^}]*width:\s*100%;[^}]*max-width:\s*none;[^}]*align-self:\s*stretch;/s
+    );
 });
