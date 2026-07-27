@@ -445,9 +445,14 @@ test('production HTML loads the Game Hub before the existing game bundle', () =>
     assert.match(html, /id="difficultySection" class="difficulty-section is-hidden"/);
     assert.ok(html.includes('/css/23-game-hub.css'));
     assert.ok(html.includes('/css/29-game-hub-dashboard.css'));
+    const authStylesIndex = html.indexOf('/css/08-auth.css');
+    const mobileStylesIndex = html.indexOf('/css/11-mobile-layout-fix.css');
+    const authViewportFixIndex = html.indexOf('/css/14-auth-panel-viewport-fix.css');
+
     assert.ok(html.includes('/css/02-header-menu.css'));
-    assert.ok(html.includes('/css/08-auth.css'));
-    assert.ok(html.includes('/css/11-mobile-layout-fix.css'));
+    assert.ok(authStylesIndex > 0);
+    assert.ok(mobileStylesIndex > authStylesIndex);
+    assert.ok(authViewportFixIndex > mobileStylesIndex);
     assert.ok(registryIndex > 0);
     assert.ok(viewIndex > registryIndex);
     assert.ok(controllerIndex > viewIndex);

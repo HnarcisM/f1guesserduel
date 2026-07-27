@@ -97,6 +97,11 @@ const DEFAULT_ASSETS = Object.freeze([
     },
     {
         attribute: 'href',
+        publicPath: '/css/14-auth-panel-viewport-fix.css',
+        sourceFile: path.join('public', 'css', '14-auth-panel-viewport-fix.css')
+    },
+    {
+        attribute: 'href',
         publicPath: '/css/16-duel-ready.css',
         sourceFile: path.join('public', 'css', '16-duel-ready.css')
     },
