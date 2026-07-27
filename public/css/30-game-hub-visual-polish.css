@@ -994,3 +994,27 @@
     }
 }
 /* GAME_HUB_PROFILE_SUMMARY_END */
+
+/* GAME_HUB_HEADER_ACTIONS_ALIGNMENT_START */
+/* Păstrăm profilul și setările în dreapta, iar titlul rămâne centrat în viewport. */
+body:has(#difficulty-overlay:not(.hidden)) .header-actions {
+    margin-left: auto;
+}
+
+@media (max-width: 920px) {
+    body:has(#difficulty-overlay:not(.hidden)) .site-header {
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    }
+
+    body:has(#difficulty-overlay:not(.hidden)) .site-header h1 {
+        grid-column: 2;
+        justify-self: center;
+    }
+
+    body:has(#difficulty-overlay:not(.hidden)) .header-actions {
+        grid-column: 3;
+        justify-self: end;
+        margin-left: 0;
+    }
+}
+/* GAME_HUB_HEADER_ACTIONS_ALIGNMENT_END */

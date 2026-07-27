@@ -459,6 +459,30 @@ test('production HTML loads the Game Hub before the existing game bundle', () =>
     assert.ok(bundleIndex > controllerIndex);
 });
 
+test('Game Hub keeps profile and settings on the right while the title stays centered', () => {
+    const css = fs.readFileSync(
+        path.join(__dirname, '..', 'public', 'css', '30-game-hub-visual-polish.css'),
+        'utf8'
+    );
+
+    assert.match(
+        css,
+        /body:has\(#difficulty-overlay:not\(\.hidden\)\) \.header-actions\s*\{[^}]*margin-left:\s*auto;/s
+    );
+    assert.match(
+        css,
+        /@media \(max-width:\s*920px\)[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+auto\s+minmax\(0,\s*1fr\);/
+    );
+    assert.match(
+        css,
+        /body:has\(#difficulty-overlay:not\(\.hidden\)\) \.site-header h1\s*\{[^}]*grid-column:\s*2;[^}]*justify-self:\s*center;/s
+    );
+    assert.match(
+        css,
+        /body:has\(#difficulty-overlay:not\(\.hidden\)\) \.header-actions\s*\{[^}]*grid-column:\s*3;[^}]*justify-self:\s*end;/s
+    );
+});
+
 test('responsive E2E expects all planned modes to be enabled', () => {
     const source = fs.readFileSync(
         path.join(__dirname, 'e2e', 'responsiveVisual.e2e.test.js'),
