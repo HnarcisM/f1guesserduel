@@ -145,7 +145,7 @@ test('game variant registry exposes every planned mode as playable in release or
     );
     assert.deepEqual(
         variants.map(variant => variant.iconKey),
-        ['target', 'sunrise', 'swords', 'stopwatch', 'landmark', 'flame', 'calendar', 'car', 'puzzle', 'map']
+        ['racing-line', 'race-day', 'duel-helmets', 'boost-clock', 'heritage-helmet', 'hot-streak', 'grand-prix-week', 'constructor-works', 'driver-grid', 'circuit-flag']
     );
     assert.equal(variants.every(variant => typeof variant.iconKey === 'string' && !Object.hasOwn(variant, 'icon')), true);
     assert.deepEqual(
@@ -223,12 +223,12 @@ test('game hub renders the dashboard layout with all ten enabled cards', async (
     assert.deepEqual(
         cards.filter(card => !card.classList.contains('game-hub-featured-card'))
             .map(card => flatten(card).find(element => element.classList?.contains('mode-icon'))?.dataset.iconKey),
-        ['target', 'sunrise', 'landmark', 'calendar', 'stopwatch', 'flame', 'car', 'puzzle', 'map']
+        ['racing-line', 'race-day', 'heritage-helmet', 'grand-prix-week', 'boost-clock', 'hot-streak', 'constructor-works', 'driver-grid', 'circuit-flag']
     );
     assert.deepEqual(
         elements.filter(element => element.classList?.contains('game-hub-panel-icon'))
             .map(element => element.dataset.iconKey),
-        ['trophy', 'swords', 'sparkles']
+        ['trophy', 'duel-helmets', 'sparkles']
     );
     assert.deepEqual(
         elements.filter(element => element.classList?.contains('game-hub-summary-svg'))
@@ -242,6 +242,22 @@ test('game hub renders the dashboard layout with all ten enabled cards', async (
     assert.equal(svgIcons.every(icon => icon.getAttribute('aria-hidden') === 'true'), true);
     assert.equal(svgIcons.every(icon => icon.getAttribute('focusable') === 'false'), true);
     assert.equal(svgIcons.some(icon => icon.dataset.iconFallback === 'true'), false);
+});
+
+
+test('premium Constructor icon uses a works-team badge with layered racing details', async () => {
+    const { dashboardView } = await loadGameHubModules();
+    const documentObject = createFakeDocument();
+    const icon = dashboardView.createGameHubIcon(documentObject, 'constructor-works');
+    const elements = flatten(icon);
+
+    assert.equal(icon.dataset.iconKey, 'constructor-works');
+    assert.equal(icon.dataset.iconFallback, undefined);
+    assert.ok(icon.children.length >= 5);
+    assert.ok(elements.some(element => element.getAttribute?.('class') === 'icon-strong'));
+    assert.ok(elements.some(element => element.getAttribute?.('class') === 'icon-secondary'));
+    assert.ok(elements.some(element => element.getAttribute?.('class') === 'icon-accent'));
+    assert.ok(elements.some(element => element.getAttribute?.('class') === 'icon-soft-fill'));
 });
 
 
@@ -739,7 +755,7 @@ test('Game Hub SVG polish keeps semantic icon keys, theme colors and reduced-mot
     const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', '30-game-hub-visual-polish.css'), 'utf8');
 
     assert.doesNotMatch(registrySource, /🎯|🌅|⚔️|⏱️|🏛️|🔥|📅|🏎️|🧩|🗺️/);
-    assert.match(registrySource, /iconKey:\s*'target'/);
+    assert.match(registrySource, /iconKey:\s*'racing-line'/);
     assert.match(viewSource, /createElementNS\(SVG_NAMESPACE, tagName\)/);
     assert.doesNotMatch(viewSource, /innerHTML\s*=/);
     assert.match(css, /GAME_HUB_SVG_ICON_POLISH_START/);

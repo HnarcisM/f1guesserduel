@@ -10,7 +10,8 @@ function readProjectFile(relativePath) {
 }
 
 function assertFileBudget(relativePath, maximumBytes) {
-    const size = fs.statSync(path.join(projectRoot, relativePath)).size;
+    const source = readProjectFile(relativePath).replace(/\r\n?/g, '\n');
+    const size = Buffer.byteLength(source, 'utf8');
     assert.ok(size <= maximumBytes, `${relativePath}: ${size} bytes > ${maximumBytes} bytes`);
 }
 

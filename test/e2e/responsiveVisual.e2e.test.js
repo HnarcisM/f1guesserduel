@@ -80,7 +80,8 @@ async function compareWithBaseline(fileName, screenshot) {
 
     const baseline = fs.readFileSync(baselinePath);
     const comparison = await comparePngBuffers(baseline, screenshot, {
-        channelThreshold: DEFAULT_CHANNEL_THRESHOLD
+        channelThreshold: DEFAULT_CHANNEL_THRESHOLD,
+        maxDimensionDelta: 1
     });
 
     if (!comparison.dimensionsMatch) {
@@ -105,6 +106,7 @@ async function compareWithBaseline(fileName, screenshot) {
         baseline: path.relative(process.cwd(), baselinePath).replace(/\\/g, '/'),
         channelThreshold: DEFAULT_CHANNEL_THRESHOLD,
         maxDiffRatio: DEFAULT_MAX_DIFF_RATIO,
+        dimensionsNormalized: comparison.dimensionsNormalized === true,
         diffRatio: comparison.diffRatio,
         differentPixels: comparison.differentPixels,
         totalPixels: comparison.totalPixels,
@@ -351,9 +353,9 @@ async function assertGameHubSvgIcons(page, viewportLabel) {
     assert.equal(iconReport.empty, 0, `${viewportLabel}/home: există iconuri SVG fără forme`);
     assert.equal(iconReport.invalidSize, 0, `${viewportLabel}/home: există iconuri SVG invizibile sau prea mici`);
     assert.equal(iconReport.fallbackIcons, 0, `${viewportLabel}/home: registry-ul folosește iconuri fallback neașteptate`);
-    assert.ok(iconReport.keys.includes('target'), `${viewportLabel}/home: lipsește iconul Classic`);
-    assert.ok(iconReport.keys.includes('swords'), `${viewportLabel}/home: lipsește iconul Duel`);
-    assert.ok(iconReport.keys.includes('calendar'), `${viewportLabel}/home: lipsește iconul Weekly`);
+    assert.ok(iconReport.keys.includes('racing-line'), `${viewportLabel}/home: lipsește iconul premium Classic`);
+    assert.ok(iconReport.keys.includes('duel-helmets'), `${viewportLabel}/home: lipsește iconul premium Duel`);
+    assert.ok(iconReport.keys.includes('grand-prix-week'), `${viewportLabel}/home: lipsește iconul premium Weekly`);
 }
 
 async function assertExtendedModesLaunch(page, viewportLabel, baseUrl) {

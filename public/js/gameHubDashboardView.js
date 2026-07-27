@@ -26,54 +26,86 @@
   const DEFAULT_GAME_HUB_ICON = 'sparkles';
   const GAME_HUB_ICON_DEFINITIONS = Object.freeze({
     trophy: Object.freeze([
-      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M8 4h8v3a4 4 0 0 1-8 0V4Z' }) }),
-      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M8 6H5a2 2 0 0 0 2 3h1M16 6h3a2 2 0 0 1-2 3h-1M12 11v4M9 20h6M10 15h4v5h-4z' }) })
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M8 4.5h8v2.8a4 4 0 0 1-8 0V4.5Z', class: 'icon-strong' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M8 5.5H5.5c0 2.1 1.4 3.9 3.6 4.3M16 5.5h2.5c0 2.1-1.4 3.9-3.6 4.3', class: 'icon-secondary' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M12 11.5v3.5M9 20h6M10 15.2h4V20h-4z', class: 'icon-accent' }) })
     ]),
-    target: Object.freeze([
-      Object.freeze({ tag: 'circle', attributes: Object.freeze({ cx: '12', cy: '12', r: '8' }) }),
-      Object.freeze({ tag: 'circle', attributes: Object.freeze({ cx: '12', cy: '12', r: '3' }) }),
-      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M12 2v3M22 12h-3M12 22v-3M2 12h3' }) })
+    'racing-line': Object.freeze([
+      Object.freeze({ tag: 'circle', attributes: Object.freeze({ cx: '12', cy: '12', r: '8.4', class: 'icon-strong' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M7.1 15.8c1.5-4.8 4.1-7.5 9.8-7.6M7.5 8.2h3.2M13.7 15.8h2.8', class: 'icon-secondary' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M15.7 5.8h3.1v3.1M16.4 6.5l2.1 2.1M5.1 17.9l2.2-2.2', class: 'icon-accent' }) })
     ]),
-    sunrise: Object.freeze([
-      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M4 15a8 8 0 0 1 16 0M2 19h20M5 22h14M12 2v4M4.5 6.5l2.2 2.2M19.5 6.5l-2.2 2.2' }) })
+    'race-day': Object.freeze([
+      Object.freeze({ tag: 'rect', attributes: Object.freeze({ x: '3.2', y: '5', width: '17.6', height: '16', rx: '3.2', class: 'icon-strong' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M7.5 3v4.3M16.5 3v4.3M3.2 10h17.6', class: 'icon-secondary' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M8 14.2h7.8l-1.6 1.7 1.6 1.7H8v-3.4ZM8 13v6', class: 'icon-accent' }) })
     ]),
-    swords: Object.freeze([
-      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M14 5 18.5 2 22 2.5 21.5 6 18 9.5M13 7l4 4M3 3l8 8-3 3-4-1-1-4 3-3M14 14l7 7M17 14l3 3' }) })
+    'duel-helmets': Object.freeze([
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M3.3 12.3c0-4.4 2.5-7.5 6.4-7.5v7.8H3.3v-.3ZM20.7 12.3c0-4.4-2.5-7.5-6.4-7.5v7.8h6.4v-.3Z', class: 'icon-strong' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M4.2 12.6h5.5v3.1H6.2M19.8 12.6h-5.5v3.1h3.5', class: 'icon-secondary' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M10.7 9.2h2.6M11.1 12h1.8M11.4 14.8h1.2', class: 'icon-accent' }) })
     ]),
-    stopwatch: Object.freeze([
-      Object.freeze({ tag: 'circle', attributes: Object.freeze({ cx: '12', cy: '13', r: '8' }) }),
-      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M9 2h6M12 2v3M18 7l2-2M12 13l3-2' }) })
+    'boost-clock': Object.freeze([
+      Object.freeze({ tag: 'circle', attributes: Object.freeze({ cx: '12.7', cy: '13.1', r: '7.2', class: 'icon-strong' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M9.7 3h6M12.7 3v3M18.4 7.5l1.9-1.9M12.7 13.1l3.3-2', class: 'icon-secondary' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M5.2 8.5H2.7M4.2 12H1.8M5.2 15.5H2.7', class: 'icon-accent' }) })
     ]),
-    landmark: Object.freeze([
-      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'm3 9 9-6 9 6M4 10h16M6 10v8M10 10v8M14 10v8M18 10v8M3 18h18M2 21h20' }) })
+    'heritage-helmet': Object.freeze([
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M5 13.1C5 7.8 7.8 4 12.3 4c4.1 0 6.7 3.1 6.7 7.6v1.5H5Z', class: 'icon-strong' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M5 13.1h9.3l2.3 2.6H9.2c-2.6 0-4.2-.9-4.2-2.6ZM10.2 7.1c2.2-.8 4.6-.5 6.3.8', class: 'icon-secondary' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M8.2 4.9 6.5 2.8M12 4V2M15.7 4.9l1.8-2.1', class: 'icon-accent' }) })
     ]),
-    flame: Object.freeze([
-      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M13 2c1 4-2 5-2 8 0 1.7 1.3 3 3 3 2.5 0 4-2.2 3.4-4.6C20.8 11 21 14.8 19 18a8 8 0 0 1-14 0c-2.2-4.1.3-8 3.5-10.5C8 10.8 9.6 12 11 12c-1.3-4 1.8-6.3 2-10Z' }) })
+    'hot-streak': Object.freeze([
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M13.1 2.8c.7 3.3-1.6 4.8-1.6 7.1 0 1.7 1.3 3 3 3 2.2 0 3.8-1.9 3.4-4.2 2.2 2.4 2.5 5.8.8 8.5A7.7 7.7 0 0 1 12 21a7.7 7.7 0 0 1-6.7-3.8C3.4 14 5 10.4 8.1 8.1c.1 2 1.2 3.5 3 4.1-1-3.1.9-5.5 2-9.4Z', class: 'icon-strong' }) }),
+      Object.freeze({ tag: 'circle', attributes: Object.freeze({ cx: '12', cy: '16.4', r: '2.8', class: 'icon-secondary' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M9.9 16.4h4.2M12 14.3v4.2', class: 'icon-accent' }) })
     ]),
-    calendar: Object.freeze([
-      Object.freeze({ tag: 'rect', attributes: Object.freeze({ x: '3', y: '5', width: '18', height: '16', rx: '3' }) }),
-      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M8 2v6M16 2v6M3 10h18M8 15l2 2 5-5' }) })
+    'grand-prix-week': Object.freeze([
+      Object.freeze({ tag: 'rect', attributes: Object.freeze({ x: '3.2', y: '5', width: '17.6', height: '16', rx: '3.2', class: 'icon-strong' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M7.5 3v4.3M16.5 3v4.3M3.2 10h17.6M7 14h3v3H7zM10 14h3v3h-3zM13 14h3v3h-3z', class: 'icon-secondary' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M7 14h3v3H7M13 14h3v3h-3', class: 'icon-accent' }) })
     ]),
-    car: Object.freeze([
-      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M3 14 5.5 8h11L21 14v4h-2M5 18H3v-4h18M7 18h10M7 14h10' }) }),
-      Object.freeze({ tag: 'circle', attributes: Object.freeze({ cx: '7', cy: '18', r: '2' }) }),
-      Object.freeze({ tag: 'circle', attributes: Object.freeze({ cx: '17', cy: '18', r: '2' }) })
+    'constructor-works': Object.freeze([
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M12 2.8 20 6v5.6c0 4.4-3 7.8-8 9.6-5-1.8-8-5.2-8-9.6V6l8-3.2Z', class: 'icon-strong' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'm7.2 10.3 4.8-3.1 4.8 3.1v5.6H7.2v-5.6ZM9.2 12.2h5.6', class: 'icon-secondary' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M8.1 15.9h7.8M9.4 14.1h5.2M10.1 17.7h3.8', class: 'icon-accent' }) }),
+      Object.freeze({ tag: 'circle', attributes: Object.freeze({ cx: '9.1', cy: '15.9', r: '.8', class: 'icon-soft-fill' }) }),
+      Object.freeze({ tag: 'circle', attributes: Object.freeze({ cx: '14.9', cy: '15.9', r: '.8', class: 'icon-soft-fill' }) })
     ]),
-    puzzle: Object.freeze([
-      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M4 4h6a2 2 0 1 1 4 0h6v6a2 2 0 1 1 0 4v6h-6a2 2 0 1 0-4 0H4v-6a2 2 0 1 1 0-4V4Z' }) })
+    'driver-grid': Object.freeze([
+      Object.freeze({ tag: 'rect', attributes: Object.freeze({ x: '3.5', y: '3.5', width: '17', height: '17', rx: '3.2', class: 'icon-strong' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M9.17 3.5v17M14.83 3.5v17M3.5 9.17h17M3.5 14.83h17', class: 'icon-secondary' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M10.3 11.7c0-1.2.7-2 1.8-2s1.8.8 1.8 2v.5h-3.6v-.5ZM10.3 12.2h3.6v1.2h-2.5', class: 'icon-accent' }) })
     ]),
-    map: Object.freeze([
-      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'm3 5 6-3 6 3 6-3v17l-6 3-6-3-6 3V5ZM9 2v17M15 5v17' }) })
+    'circuit-flag': Object.freeze([
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M6.2 17.6c2.3-1.1 2.8-3.3 1.7-5.1-1-1.7-.2-4.2 2.2-5.3 2.7-1.2 5.9-.2 7.1 2.2 1.1 2.3.2 5-2 6.2-1.8 1-4.2.6-5.4-.8', class: 'icon-strong' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M6.2 17.6H3.5M5 15.8v3.8M16.8 4.1v6.2', class: 'icon-secondary' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M16.8 4.1h4v3.6h-4M16.8 4.1h2v1.8h2M18.8 5.9v1.8', class: 'icon-accent' }) })
     ]),
     sparkles: Object.freeze([
-      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'm12 3 1.2 3.8L17 8l-3.8 1.2L12 13l-1.2-3.8L7 8l3.8-1.2L12 3ZM19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14ZM5 13l.8 2.2L8 16l-2.2.8L5 19l-.8-2.2L2 16l2.2-.8L5 13Z' }) })
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'm12 2.8 1.5 4.6 4.7 1.5-4.7 1.5L12 15l-1.5-4.6L5.8 8.9l4.7-1.5L12 2.8Z', class: 'icon-strong' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M18.7 14.2 19.5 16.4 21.7 17.2 19.5 18 18.7 20.2 17.9 18 15.7 17.2 17.9 16.4 18.7 14.2ZM5.3 13.2l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8.8-2.1Z', class: 'icon-accent' }) })
     ]),
     grid: Object.freeze([
-      Object.freeze({ tag: 'rect', attributes: Object.freeze({ x: '3', y: '3', width: '18', height: '18', rx: '3' }) }),
-      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M9 3v18M15 3v18M3 9h18M3 15h18' }) })
+      Object.freeze({ tag: 'rect', attributes: Object.freeze({ x: '4', y: '4', width: '6.2', height: '6.2', rx: '1.2', class: 'icon-soft-fill' }) }),
+      Object.freeze({ tag: 'rect', attributes: Object.freeze({ x: '13.8', y: '4', width: '6.2', height: '6.2', rx: '1.2', class: 'icon-strong' }) }),
+      Object.freeze({ tag: 'rect', attributes: Object.freeze({ x: '4', y: '13.8', width: '6.2', height: '6.2', rx: '1.2', class: 'icon-strong' }) }),
+      Object.freeze({ tag: 'rect', attributes: Object.freeze({ x: '13.8', y: '13.8', width: '6.2', height: '6.2', rx: '1.2', class: 'icon-secondary' }) })
+    ]),
+    target: Object.freeze([
+      Object.freeze({ tag: 'circle', attributes: Object.freeze({ cx: '12', cy: '12', r: '7.5', class: 'icon-strong' }) }),
+      Object.freeze({ tag: 'circle', attributes: Object.freeze({ cx: '12', cy: '12', r: '3.3', class: 'icon-secondary' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M12 2.8v2.7M21.2 12h-2.7M12 21.2v-2.7M2.8 12h2.7', class: 'icon-accent' }) })
+    ]),
+    calendar: Object.freeze([
+      Object.freeze({ tag: 'rect', attributes: Object.freeze({ x: '3', y: '5', width: '18', height: '16', rx: '3.2', class: 'icon-strong' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M7.5 3v4.5M16.5 3v4.5M3 10h18', class: 'icon-secondary' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M8.2 14.6h7.6M8.2 17.8h4.4', class: 'icon-accent' }) })
     ]),
     'arrow-right': Object.freeze([
-      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M5 12h14M14 7l5 5-5 5' }) })
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M4.5 12h12.6', class: 'icon-strong' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M12.5 6.8 17.8 12l-5.3 5.2', class: 'icon-secondary' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M18.2 12H21', class: 'icon-accent' }) })
     ])
   });
 
@@ -987,7 +1019,7 @@
     const duelPanel = createPanel(documentObject, {
       title: 'Duel',
       description: 'Modul central pentru sesiunile multiplayer și camerele live.',
-      iconKey: 'swords', accentClass: 'game-hub-panel--duel', bodyClass: 'game-hub-panel--featured'
+      iconKey: 'duel-helmets', accentClass: 'game-hub-panel--duel', bodyClass: 'game-hub-panel--featured'
     });
     duelPanel.append(createFeaturedDuelCard(documentObject, duelVariant, runtimeSettings));
 

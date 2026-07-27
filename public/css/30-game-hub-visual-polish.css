@@ -1205,6 +1205,25 @@ body:has(#difficulty-overlay:not(.hidden)) .header-actions {
     vector-effect: non-scaling-stroke;
 }
 
+.game-hub-svg-icon .icon-strong {
+    stroke-width: 2.08;
+}
+
+.game-hub-svg-icon .icon-secondary {
+    opacity: 0.82;
+}
+
+.game-hub-svg-icon .icon-accent {
+    opacity: 0.6;
+    stroke-width: 1.45;
+}
+
+.game-hub-svg-icon .icon-soft-fill {
+    fill: currentColor;
+    fill-opacity: 0.14;
+    stroke: none;
+}
+
 .game-hub-panel-badge,
 .game-hub-card-icon-wrap,
 .game-hub-summary-icon {
@@ -1361,4 +1380,68 @@ body:has(#difficulty-overlay:not(.hidden)) .header-actions {
         transform: none;
     }
 }
+
+/* Premium racing icon family: brushed-metal frames with restrained category glow. */
+.game-hub-card-icon-wrap {
+    border-width: 1px;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.13),
+        inset 0 -10px 18px rgba(0, 0, 0, 0.16),
+        0 10px 24px rgba(0, 0, 0, 0.26);
+}
+
+.game-hub-card-icon-wrap::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: linear-gradient(125deg, transparent 18%, rgba(255, 255, 255, 0.12) 48%, transparent 72%);
+    opacity: 0.42;
+    transform: translateX(-18%);
+    pointer-events: none;
+}
+
+.game-hub-card .mode-icon .icon-strong {
+    filter: drop-shadow(0 0 5px color-mix(in srgb, currentColor 42%, transparent));
+}
+
+.game-hub-card .mode-icon .icon-accent {
+    opacity: 0.88;
+    stroke-width: 1.55;
+}
+
+.game-hub-card--classic .game-hub-card-icon-wrap {
+    color: #7cecff;
+}
+
+.game-hub-card--speed-run .game-hub-card-icon-wrap {
+    color: #ffca63;
+}
+
+.game-hub-card--constructor .game-hub-card-icon-wrap {
+    color: #8ee7ff;
+    border-color: rgba(142, 231, 255, 0.52);
+    background:
+        linear-gradient(150deg, rgba(20, 61, 77, 0.96), rgba(4, 13, 21, 0.9)),
+        repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0 1px, transparent 1px 5px);
+}
+
+.game-hub-card--constructor .mode-icon {
+    width: 25px;
+    height: 25px;
+}
+
+.game-hub-card--constructor .mode-icon .icon-accent {
+    color: #ffffff;
+    opacity: 0.92;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .game-hub-card:hover .mode-icon {
+        transform: translateY(-1px) scale(1.06);
+        filter: drop-shadow(0 7px 13px rgba(0, 0, 0, 0.36));
+    }
+}
+
 /* GAME_HUB_SVG_ICON_POLISH_END */
