@@ -1018,3 +1018,82 @@ body:has(#difficulty-overlay:not(.hidden)) .header-actions {
     }
 }
 /* GAME_HUB_HEADER_ACTIONS_ALIGNMENT_END */
+
+/* GAME_HUB_DUEL_LIVE_ROOMS_START */
+.game-hub-duel-room-items {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+.game-hub-duel-room-item--playing {
+    border-color: rgba(255, 91, 84, 0.28);
+    background: linear-gradient(90deg, rgba(255, 65, 65, 0.10), rgba(255, 255, 255, 0.035));
+}
+
+.game-hub-duel-room-item--finished {
+    opacity: 0.84;
+}
+
+.game-hub-duel-room-state.is-loading,
+.game-hub-duel-room-state.is-empty,
+.game-hub-duel-room-state.is-offline,
+.game-hub-duel-room-state.is-more {
+    border-style: dashed;
+}
+
+.game-hub-duel-room-state.is-offline {
+    border-color: rgba(251, 113, 133, 0.28);
+}
+
+.game-hub-duel-room-live.is-lobby {
+    background: rgba(56, 189, 248, 0.14);
+    color: #7dd3fc;
+}
+
+.game-hub-duel-room-live.is-finished,
+.game-hub-duel-room-live.is-full {
+    background: rgba(148, 163, 184, 0.14);
+    color: #cbd5e1;
+}
+
+.game-hub-duel-room-live.is-state {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-secondary);
+}
+
+.game-hub-duel-room-state.is-offline .game-hub-duel-room-live {
+    background: rgba(251, 113, 133, 0.14);
+    color: #fda4af;
+}
+
+.game-hub-duel-room-status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.game-hub-featured-card.is-room-list-offline .game-hub-duel-features {
+    opacity: 0.72;
+}
+
+@media (max-width: 520px) {
+    .game-hub-duel-room-title,
+    .game-hub-duel-room-meta {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .game-hub-duel-room-live {
+        max-width: 76px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+/* GAME_HUB_DUEL_LIVE_ROOMS_END */

@@ -19,6 +19,16 @@ test('admin UI is a dedicated page without the game bundle', () => {
     assert.doesNotMatch(html, /game\.bundle\.min\.js|socket\.io/);
 });
 
+test('admin user search ignores stale list responses and the E2E flow waits for filtered data', () => {
+    const e2eSource = fs.readFileSync(path.join(root, 'test', 'e2e', 'admin.e2e.test.js'), 'utf8');
+    assert.match(script, /usersRequestSequence: 0/);
+    assert.match(script, /const requestSequence = \+\+state\.usersRequestSequence/);
+    assert.match(script, /requestSequence !== state\.usersRequestSequence \|\| requestedSearch !== state\.userSearch/);
+    assert.match(e2eSource, /waitForResponse\(response =>/);
+    assert.match(e2eSource, /url\.searchParams\.get\('search'\) === normalCredentials\.username/);
+    assert.match(e2eSource, /hasText: \/1 utilizatori găsiți\/i/);
+});
+
 test('admin destructive actions require a current password and use text-only DOM rendering', () => {
     assert.match(script, /currentPassword/);
     assert.match(script, /revoke-sessions/);

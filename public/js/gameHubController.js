@@ -33,6 +33,18 @@
     windowObject = globalObject
   } = {}) {
     let clickInstalled = false;
+    let duelRoomSync = null;
+
+    function ensureDuelRoomSync() {
+      const view = getDashboardView();
+      if (duelRoomSync || typeof view?.installGameHubDuelRoomSync !== 'function') return duelRoomSync;
+      duelRoomSync = view.installGameHubDuelRoomSync({
+        documentObject,
+        windowObject,
+        socket: windowObject?.__f1GameSocket || null
+      });
+      return duelRoomSync;
+    }
 
     function handleClick(event) {
       const gameModeChoice = event?.target?.closest?.('[data-game-mode-choice]');
@@ -59,16 +71,23 @@
       const runtimeSettings = windowObject?.F1RuntimeSettings;
       if (root.dataset.gameHubReady === 'true') {
         syncRuntimeModeCards(root, registry, runtimeSettings);
+        ensureDuelRoomSync();
         return true;
       }
       if (!registry.listGameVariantsByState(registry.GAME_VARIANT_STATES.AVAILABLE).length) return false;
       root.replaceChildren(view.createDashboard(documentObject, registry, runtimeSettings));
       root.dataset.gameHubReady = 'true';
       installClickHandler(root);
+      ensureDuelRoomSync();
       return true;
     }
 
-    return { handleClick, render };
+    function disconnect() {
+      duelRoomSync?.disconnect?.();
+      duelRoomSync = null;
+    }
+
+    return { disconnect, handleClick, render };
   }
 
   function installGameHubController(windowObject = globalObject) {

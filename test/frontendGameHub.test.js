@@ -203,7 +203,157 @@ test('game hub renders the dashboard layout with all ten enabled cards', async (
     assert.equal(cards.every(card => flatten(card).some(element => element.textContent === 'Disponibil')), true);
     assert.equal(featuredDuel.dataset.gameModeChoice, 'duel');
     assert.equal(featuredDuel.tagName, 'BUTTON');
+    assert.equal(elements.find(element => element.id === 'gameHubDuelActiveRooms')?.textContent, '0');
+    assert.equal(elements.find(element => element.id === 'gameHubDuelActiveMatches')?.textContent, '0');
+    assert.equal(elements.find(element => element.id === 'gameHubDuelParticipants')?.textContent, '0');
+    assert.equal(elements.find(element => element.id === 'gameHubDuelRoomListTitle')?.textContent, 'Camere active (0)');
+    assert.equal(
+        elements.find(element => element.id === 'gameHubDuelRoomItems')?.children[0]?.textContent,
+        ''
+    );
 });
+
+
+test('Duel card renders live room metrics and a safe three-room preview', async () => {
+    const { registry, createGameHubController, dashboardView } = await loadGameHubModules();
+    const documentObject = createFakeDocument();
+    createGameHubController({ documentObject, registry }).render();
+
+    const result = dashboardView.renderDuelRoomSnapshot(documentObject, {
+        totalRooms: 4,
+        generatedAt: Date.now(),
+        rooms: [
+            {
+                roomId: 'LIVE123',
+                hostUsername: '<Host Live>',
+                playerCount: 2,
+                spectatorCount: 3,
+                totalCount: 5,
+                maxPlayers: 2,
+                roundState: 'playing',
+                canJoinAsPlayer: false,
+                lobbySettings: { difficulty: 'hard', timed: true, timeLimitSeconds: 90 }
+            },
+            {
+                roomId: 'OPEN456',
+                hostUsername: 'Narcis',
+                playerCount: 1,
+                spectatorCount: 0,
+                maxPlayers: 2,
+                roundState: 'waiting',
+                canJoinAsPlayer: true,
+                lobbySettings: { difficulty: 'medium', timed: false }
+            },
+            {
+                roomId: 'FULL789',
+                hostUsername: 'Mihai',
+                playerCount: 2,
+                spectatorCount: 1,
+                maxPlayers: 2,
+                roundState: 'waiting',
+                canJoinAsPlayer: false,
+                lobbySettings: { difficulty: 'easy', timed: false }
+            },
+            {
+                roomId: 'LAST000',
+                hostUsername: 'Alex',
+                playerCount: 1,
+                spectatorCount: 0,
+                maxPlayers: 2,
+                roundState: 'finished',
+                canJoinAsPlayer: true,
+                lobbySettings: { difficulty: 'easy', timed: true, timeLimitSeconds: 60 }
+            }
+        ]
+    });
+
+    assert.equal(result.totalRooms, 4);
+    assert.equal(result.activeMatches, 1);
+    assert.equal(result.participants, 10);
+    assert.equal(documentObject.getElementById('gameHubDuelActiveRooms').textContent, '4');
+    assert.equal(documentObject.getElementById('gameHubDuelActiveMatches').textContent, '1');
+    assert.equal(documentObject.getElementById('gameHubDuelParticipants').textContent, '10');
+    assert.equal(documentObject.getElementById('gameHubDuelRoomListTitle').textContent, 'Camere active (4)');
+
+    const previewItems = documentObject.getElementById('gameHubDuelRoomItems').children;
+    assert.equal(previewItems.length, 4, 'trei camere și indicatorul pentru camera rămasă');
+    assert.equal(previewItems[0].dataset.roomId, 'LIVE123');
+    assert.equal(previewItems[0].querySelector('.game-hub-duel-room-title').textContent, 'Camera LIVE123 · <Host Live>');
+    assert.equal(previewItems[0].querySelector('.game-hub-duel-room-live').textContent, 'Live');
+    assert.equal(previewItems[1].querySelector('.game-hub-duel-room-live').textContent, 'Lobby');
+    assert.equal(previewItems[2].querySelector('.game-hub-duel-room-live').textContent, 'Plină');
+    assert.match(previewItems[3].querySelector('.game-hub-duel-room-title').textContent, /^\+1 cameră disponibilă$/);
+    assert.equal(documentObject.getElementById('gameHubDuelCard').classList.contains('has-live-rooms'), true);
+});
+
+test('Duel room sync requests the initial list, consumes roomListUpdate and cleans listeners', async () => {
+    const { registry, createGameHubController, dashboardView } = await loadGameHubModules();
+    const documentObject = createFakeDocument();
+    createGameHubController({
+        documentObject,
+        registry,
+        windowObject: {}
+    }).render();
+
+    const windowListeners = new Map();
+    const socketListeners = new Map();
+    const emitted = [];
+    const windowObject = {
+        addEventListener(eventName, handler) {
+            windowListeners.set(eventName, handler);
+        },
+        removeEventListener(eventName, handler) {
+            if (windowListeners.get(eventName) === handler) windowListeners.delete(eventName);
+        }
+    };
+    const socket = {
+        emit(eventName, payload) {
+            emitted.push({ eventName, payload });
+        },
+        on(eventName, handler) {
+            socketListeners.set(eventName, handler);
+        },
+        off(eventName, handler) {
+            if (socketListeners.get(eventName) === handler) socketListeners.delete(eventName);
+        }
+    };
+
+    const sync = dashboardView.installGameHubDuelRoomSync({
+        documentObject,
+        windowObject,
+        socket
+    });
+
+    assert.equal(emitted[0]?.eventName, 'requestRoomList');
+    assert.equal(typeof socketListeners.get('roomListUpdate'), 'function');
+    socketListeners.get('roomListUpdate')({
+        totalRooms: 1,
+        rooms: [{
+            roomId: 'SYNC123',
+            hostUsername: 'Narcis',
+            playerCount: 1,
+            spectatorCount: 0,
+            maxPlayers: 2,
+            roundState: 'waiting',
+            canJoinAsPlayer: true
+        }]
+    });
+
+    assert.equal(documentObject.getElementById('gameHubDuelActiveRooms').textContent, '1');
+    assert.equal(documentObject.getElementById('gameHubDuelRoomItems').children[0].dataset.roomId, 'SYNC123');
+
+    socketListeners.get('disconnect')?.();
+    assert.equal(documentObject.getElementById('gameHubDuelCard').classList.contains('is-room-list-offline'), true);
+    assert.match(documentObject.getElementById('gameHubDuelRoomStatus').textContent, /Conexiunea a fost întreruptă/);
+
+    sync.disconnect();
+    assert.equal(windowListeners.has('f1:socket-created'), false);
+    assert.equal(socketListeners.has('roomListUpdate'), false);
+    assert.equal(socketListeners.has('connect'), false);
+    assert.equal(socketListeners.has('disconnect'), false);
+    assert.equal(socketListeners.has('connect_error'), false);
+});
+
 
 test('profile header and summary render authenticated account data without unsafe HTML', async () => {
     const { registry, createGameHubController, dashboardView } = await loadGameHubModules();

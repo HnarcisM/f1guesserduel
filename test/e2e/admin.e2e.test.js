@@ -229,11 +229,23 @@ test('admin console protects access and supports core moderation flows', { concu
                 timeout: 7000
             });
             await adminPage.locator('#adminUserSearch').fill(normalCredentials.username);
+            const filteredUsersResponse = adminPage.waitForResponse(response => {
+                const url = new URL(response.url());
+                return url.pathname === '/api/admin/users'
+                    && url.searchParams.get('search') === normalCredentials.username
+                    && response.request().method() === 'GET';
+            });
             await adminPage.locator('#adminUserSearchForm').evaluate(form => form.requestSubmit());
+            const response = await filteredUsersResponse;
+            assert.equal(response.status(), 200);
+            await adminPage.locator('#adminUsersMeta').filter({ hasText: /1 utilizatori găsiți/i }).waitFor({
+                state: 'visible',
+                timeout: 7000
+            });
             const row = adminPage.locator('#adminUsersBody tr').filter({ hasText: normalCredentials.username });
             await row.waitFor({ state: 'visible', timeout: 7000 });
             assert.match(await row.innerText(), new RegExp(normalCredentials.email));
-            assert.match(await adminPage.locator('#adminUsersMeta').innerText(), /1 utilizatori găsiți/i);
+            assert.equal(await adminPage.locator('#adminUsersBody tr').count(), 1);
         });
 
         await t.test('administratorul poate deschide detaliile unui cont', async () => {
