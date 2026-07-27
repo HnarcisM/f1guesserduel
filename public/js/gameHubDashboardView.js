@@ -21,6 +21,96 @@
 
   const DUEL_ROOM_PREVIEW_LIMIT = 3;
 
+
+  const SVG_NAMESPACE = 'http://www.w3.org/2000/svg';
+  const DEFAULT_GAME_HUB_ICON = 'sparkles';
+  const GAME_HUB_ICON_DEFINITIONS = Object.freeze({
+    trophy: Object.freeze([
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M8 4h8v3a4 4 0 0 1-8 0V4Z' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M8 6H5a2 2 0 0 0 2 3h1M16 6h3a2 2 0 0 1-2 3h-1M12 11v4M9 20h6M10 15h4v5h-4z' }) })
+    ]),
+    target: Object.freeze([
+      Object.freeze({ tag: 'circle', attributes: Object.freeze({ cx: '12', cy: '12', r: '8' }) }),
+      Object.freeze({ tag: 'circle', attributes: Object.freeze({ cx: '12', cy: '12', r: '3' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M12 2v3M22 12h-3M12 22v-3M2 12h3' }) })
+    ]),
+    sunrise: Object.freeze([
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M4 15a8 8 0 0 1 16 0M2 19h20M5 22h14M12 2v4M4.5 6.5l2.2 2.2M19.5 6.5l-2.2 2.2' }) })
+    ]),
+    swords: Object.freeze([
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M14 5 18.5 2 22 2.5 21.5 6 18 9.5M13 7l4 4M3 3l8 8-3 3-4-1-1-4 3-3M14 14l7 7M17 14l3 3' }) })
+    ]),
+    stopwatch: Object.freeze([
+      Object.freeze({ tag: 'circle', attributes: Object.freeze({ cx: '12', cy: '13', r: '8' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M9 2h6M12 2v3M18 7l2-2M12 13l3-2' }) })
+    ]),
+    landmark: Object.freeze([
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'm3 9 9-6 9 6M4 10h16M6 10v8M10 10v8M14 10v8M18 10v8M3 18h18M2 21h20' }) })
+    ]),
+    flame: Object.freeze([
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M13 2c1 4-2 5-2 8 0 1.7 1.3 3 3 3 2.5 0 4-2.2 3.4-4.6C20.8 11 21 14.8 19 18a8 8 0 0 1-14 0c-2.2-4.1.3-8 3.5-10.5C8 10.8 9.6 12 11 12c-1.3-4 1.8-6.3 2-10Z' }) })
+    ]),
+    calendar: Object.freeze([
+      Object.freeze({ tag: 'rect', attributes: Object.freeze({ x: '3', y: '5', width: '18', height: '16', rx: '3' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M8 2v6M16 2v6M3 10h18M8 15l2 2 5-5' }) })
+    ]),
+    car: Object.freeze([
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M3 14 5.5 8h11L21 14v4h-2M5 18H3v-4h18M7 18h10M7 14h10' }) }),
+      Object.freeze({ tag: 'circle', attributes: Object.freeze({ cx: '7', cy: '18', r: '2' }) }),
+      Object.freeze({ tag: 'circle', attributes: Object.freeze({ cx: '17', cy: '18', r: '2' }) })
+    ]),
+    puzzle: Object.freeze([
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M4 4h6a2 2 0 1 1 4 0h6v6a2 2 0 1 1 0 4v6h-6a2 2 0 1 0-4 0H4v-6a2 2 0 1 1 0-4V4Z' }) })
+    ]),
+    map: Object.freeze([
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'm3 5 6-3 6 3 6-3v17l-6 3-6-3-6 3V5ZM9 2v17M15 5v17' }) })
+    ]),
+    sparkles: Object.freeze([
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'm12 3 1.2 3.8L17 8l-3.8 1.2L12 13l-1.2-3.8L7 8l3.8-1.2L12 3ZM19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14ZM5 13l.8 2.2L8 16l-2.2.8L5 19l-.8-2.2L2 16l2.2-.8L5 13Z' }) })
+    ]),
+    grid: Object.freeze([
+      Object.freeze({ tag: 'rect', attributes: Object.freeze({ x: '3', y: '3', width: '18', height: '18', rx: '3' }) }),
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M9 3v18M15 3v18M3 9h18M3 15h18' }) })
+    ]),
+    'arrow-right': Object.freeze([
+      Object.freeze({ tag: 'path', attributes: Object.freeze({ d: 'M5 12h14M14 7l5 5-5 5' }) })
+    ])
+  });
+
+  function createSvgElement(documentObject, tagName) {
+    if (typeof documentObject?.createElementNS === 'function') {
+      return documentObject.createElementNS(SVG_NAMESPACE, tagName);
+    }
+    return documentObject.createElement(tagName);
+  }
+
+  function createGameHubIcon(documentObject, iconKey, className = 'game-hub-svg-icon') {
+    const normalizedKey = Object.hasOwn(GAME_HUB_ICON_DEFINITIONS, iconKey)
+      ? iconKey
+      : DEFAULT_GAME_HUB_ICON;
+    const svg = createSvgElement(documentObject, 'svg');
+    svg.setAttribute('class', className);
+    if (typeof svg.className === 'string') svg.className = className;
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '1.8');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
+    svg.dataset.iconKey = normalizedKey;
+
+    for (const definition of GAME_HUB_ICON_DEFINITIONS[normalizedKey]) {
+      const shape = createSvgElement(documentObject, definition.tag);
+      for (const [name, value] of Object.entries(definition.attributes)) {
+        shape.setAttribute(name, value);
+      }
+      svg.append(shape);
+    }
+    return svg;
+  }
+
   function asNonNegativeInteger(value) {
     const number = Number(value);
     return Number.isSafeInteger(number) && number >= 0 ? number : 0;
@@ -708,9 +798,7 @@
     const chrome = createElement(documentObject, 'span', 'game-hub-card-chrome');
     const topRow = createElement(documentObject, 'span', 'game-hub-card-top');
     const iconWrap = createElement(documentObject, 'span', 'game-hub-card-icon-wrap');
-    const icon = createElement(documentObject, 'span', 'mode-icon', variant.icon);
-    icon.setAttribute('aria-hidden', 'true');
-    iconWrap.append(icon);
+    iconWrap.append(createGameHubIcon(documentObject, variant.iconKey, 'mode-icon game-hub-svg-icon'));
     topRow.append(iconWrap, createElement(documentObject, 'span', 'game-hub-state'));
 
     const art = createElement(documentObject, 'span', 'game-hub-card-art');
@@ -726,11 +814,12 @@
     return applyModeCardAvailability(card, variant, runtimeSettings);
   }
 
-  function createPanel(documentObject, { title, description, icon, accentClass, bodyClass = '' }) {
+  function createPanel(documentObject, { title, description, iconKey, accentClass, bodyClass = '' }) {
     const panel = createElement(documentObject, 'section', `game-hub-panel ${accentClass} ${bodyClass}`.trim());
     const header = createElement(documentObject, 'div', `game-hub-panel-header ${accentClass}`.trim());
-    const badge = createElement(documentObject, 'span', 'game-hub-panel-badge', icon);
+    const badge = createElement(documentObject, 'span', 'game-hub-panel-badge');
     badge.setAttribute('aria-hidden', 'true');
+    badge.append(createGameHubIcon(documentObject, iconKey, 'game-hub-panel-icon game-hub-svg-icon'));
     const copy = createElement(documentObject, 'div', 'game-hub-panel-copy');
     copy.append(
       createElement(documentObject, 'h3', 'game-hub-panel-title', title),
@@ -811,7 +900,14 @@
       createElement(documentObject, 'span', 'game-hub-featured-description', 'Creează o cameră, invită un prieten și joacă în timp real fără să părăsești meniul principal.'),
       appendTags(documentObject, variant, 'game-hub-featured-tags'),
       features,
-      createElement(documentObject, 'span', 'game-hub-featured-cta', 'Deschide Duel'),
+      (() => {
+        const cta = createElement(documentObject, 'span', 'game-hub-featured-cta');
+        cta.append(
+          createElement(documentObject, 'span', 'game-hub-featured-cta-label', 'Deschide Duel'),
+          createGameHubIcon(documentObject, 'arrow-right', 'game-hub-featured-cta-icon game-hub-svg-icon')
+        );
+        return cta;
+      })(),
       rooms
     );
     return applyModeCardAvailability(card, variant, runtimeSettings);
@@ -858,10 +954,11 @@
     return item;
   }
 
-  function createSummaryMetric(documentObject, { id, icon, label, value = '—', accentClass = '' }) {
+  function createSummaryMetric(documentObject, { id, iconKey, label, value = '—', accentClass = '' }) {
     const item = createElement(documentObject, 'div', `game-hub-summary-item game-hub-summary-stat ${accentClass}`.trim());
-    const iconElement = createElement(documentObject, 'span', 'game-hub-summary-icon', icon);
+    const iconElement = createElement(documentObject, 'span', 'game-hub-summary-icon');
     iconElement.setAttribute('aria-hidden', 'true');
+    iconElement.append(createGameHubIcon(documentObject, iconKey, 'game-hub-summary-svg game-hub-svg-icon'));
     const copy = createElement(documentObject, 'span', 'game-hub-summary-stat-copy');
     const valueElement = createElement(documentObject, 'strong', 'game-hub-summary-value', String(value));
     valueElement.id = id;
@@ -883,21 +980,21 @@
     const singlePanel = createPanel(documentObject, {
       title: 'Single Player & Challenges',
       description: 'Classic, Daily și provocările oficiale într-o zonă separată.',
-      icon: '🏆', accentClass: 'game-hub-panel--single'
+      iconKey: 'trophy', accentClass: 'game-hub-panel--single'
     });
     singlePanel.append(createGrid(documentObject, singleVariants, runtimeSettings, 'game-hub-card-grid game-hub-card-grid--single'));
 
     const duelPanel = createPanel(documentObject, {
       title: 'Duel',
       description: 'Modul central pentru sesiunile multiplayer și camerele live.',
-      icon: '⚔️', accentClass: 'game-hub-panel--duel', bodyClass: 'game-hub-panel--featured'
+      iconKey: 'swords', accentClass: 'game-hub-panel--duel', bodyClass: 'game-hub-panel--featured'
     });
     duelPanel.append(createFeaturedDuelCard(documentObject, duelVariant, runtimeSettings));
 
     const specialtyPanel = createPanel(documentObject, {
       title: 'Specialty Guesser Modes',
       description: 'Modurile rapide și experimentele competitive pe care le-ai adăugat recent.',
-      icon: '⭐', accentClass: 'game-hub-panel--specialty'
+      iconKey: 'sparkles', accentClass: 'game-hub-panel--specialty'
     });
     specialtyPanel.append(createGrid(documentObject, specialtyVariants, runtimeSettings, 'game-hub-card-grid game-hub-card-grid--specialty'));
     dashboard.append(singlePanel, duelPanel, specialtyPanel);
@@ -907,16 +1004,16 @@
     summary.append(
       createProfileSummary(documentObject),
       createSummaryMetric(documentObject, {
-        id: 'gameHubProfileVictories', icon: '🏆', label: 'Victorii', accentClass: 'game-hub-summary-item--single'
+        id: 'gameHubProfileVictories', iconKey: 'trophy', label: 'Victorii', accentClass: 'game-hub-summary-item--single'
       }),
       createSummaryMetric(documentObject, {
-        id: 'gameHubProfileAccuracy', icon: '◎', label: 'Acuratețe', accentClass: 'game-hub-summary-item--single'
+        id: 'gameHubProfileAccuracy', iconKey: 'target', label: 'Acuratețe', accentClass: 'game-hub-summary-item--single'
       }),
       createSummaryMetric(documentObject, {
-        id: 'gameHubProfileActiveDays', icon: '◷', label: 'Zile active', accentClass: 'game-hub-summary-item--specialty'
+        id: 'gameHubProfileActiveDays', iconKey: 'calendar', label: 'Zile active', accentClass: 'game-hub-summary-item--specialty'
       }),
       createSummaryMetric(documentObject, {
-        id: 'gameHubProfilePlayed', icon: '▣', label: 'Meciuri jucate', accentClass: 'game-hub-summary-item--duel'
+        id: 'gameHubProfilePlayed', iconKey: 'grid', label: 'Meciuri jucate', accentClass: 'game-hub-summary-item--duel'
       })
     );
 
@@ -928,6 +1025,7 @@
   const api = Object.freeze({
     applyModeCardAvailability,
     createDashboard,
+    createGameHubIcon,
     createFeaturedDuelCard,
     createModeCard,
     ensureHeaderProfileMarkup,

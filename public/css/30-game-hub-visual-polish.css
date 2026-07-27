@@ -1189,3 +1189,176 @@ body:has(#difficulty-overlay:not(.hidden)) .header-actions {
     }
 }
 /* GAME_HUB_DUEL_LIVE_ROOMS_END */
+
+/* GAME_HUB_SVG_ICON_POLISH_START */
+.game-hub-svg-icon {
+    display: block;
+    width: 1em;
+    height: 1em;
+    flex: 0 0 auto;
+    overflow: visible;
+    color: inherit;
+    vector-effect: non-scaling-stroke;
+}
+
+.game-hub-svg-icon * {
+    vector-effect: non-scaling-stroke;
+}
+
+.game-hub-panel-badge,
+.game-hub-card-icon-wrap,
+.game-hub-summary-icon {
+    isolation: isolate;
+    overflow: hidden;
+}
+
+.game-hub-panel-badge::before,
+.game-hub-card-icon-wrap::before,
+.game-hub-summary-icon::before {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    z-index: -1;
+    border-radius: inherit;
+    background: radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.18), transparent 58%);
+    opacity: 0.62;
+    pointer-events: none;
+}
+
+.game-hub-panel-badge,
+.game-hub-card-icon-wrap,
+.game-hub-summary-icon {
+    position: relative;
+}
+
+.game-hub-panel-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.game-hub-card .mode-icon {
+    width: 23px;
+    height: 23px;
+    font-size: initial;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.32));
+    transition: transform var(--transition-fast), filter var(--transition-fast);
+}
+
+.game-hub-panel-header.game-hub-panel--single .game-hub-panel-badge,
+.game-hub-panel--single .game-hub-card-icon-wrap {
+    color: #79e9ff;
+    border-color: rgba(92, 224, 255, 0.38);
+    background: linear-gradient(145deg, rgba(10, 44, 60, 0.92), rgba(4, 12, 22, 0.82));
+}
+
+.game-hub-panel-header.game-hub-panel--duel .game-hub-panel-badge {
+    color: #ff7777;
+    border-color: rgba(255, 93, 93, 0.42);
+    background: linear-gradient(145deg, rgba(67, 16, 22, 0.94), rgba(17, 8, 12, 0.84));
+}
+
+.game-hub-panel-header.game-hub-panel--specialty .game-hub-panel-badge,
+.game-hub-panel--specialty .game-hub-card-icon-wrap {
+    color: #ffd363;
+    border-color: rgba(255, 205, 80, 0.38);
+    background: linear-gradient(145deg, rgba(60, 44, 11, 0.92), rgba(18, 13, 5, 0.84));
+}
+
+.game-hub-card--daily .game-hub-card-icon-wrap,
+.game-hub-card--weekly .game-hub-card-icon-wrap {
+    color: #ffd976;
+}
+
+.game-hub-card--era .game-hub-card-icon-wrap {
+    color: #e8c99e;
+}
+
+.game-hub-card--streak .game-hub-card-icon-wrap {
+    color: #ff7a66;
+}
+
+.game-hub-card--constructor .game-hub-card-icon-wrap {
+    color: #74dcff;
+}
+
+.game-hub-card--pilot-sudoku .game-hub-card-icon-wrap {
+    color: #d4a8ff;
+}
+
+.game-hub-card--track .game-hub-card-icon-wrap {
+    color: #82e4a2;
+}
+
+.game-hub-summary-svg {
+    width: 21px;
+    height: 21px;
+}
+
+.game-hub-summary-item--single .game-hub-summary-icon {
+    color: #71e7ff;
+    background: rgba(38, 186, 220, 0.09);
+    box-shadow: inset 0 0 0 1px rgba(92, 224, 255, 0.18);
+}
+
+.game-hub-summary-item--specialty .game-hub-summary-icon {
+    color: #ffd363;
+    background: rgba(222, 168, 40, 0.09);
+    box-shadow: inset 0 0 0 1px rgba(255, 205, 80, 0.18);
+}
+
+.game-hub-summary-item--duel .game-hub-summary-icon {
+    color: #ff7777;
+    background: rgba(225, 55, 65, 0.10);
+    box-shadow: inset 0 0 0 1px rgba(255, 93, 93, 0.18);
+}
+
+.game-hub-featured-cta {
+    gap: 9px;
+}
+
+.game-hub-featured-cta-icon {
+    width: 19px;
+    height: 19px;
+    transition: transform var(--transition-fast);
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .game-hub-card.game-mode-card:not(:disabled):hover .mode-icon {
+        transform: translateY(-1px) scale(1.08);
+        filter: drop-shadow(0 6px 11px color-mix(in srgb, currentColor 42%, transparent));
+    }
+
+    .game-hub-featured-card.game-mode-card:not(:disabled):hover .game-hub-featured-cta-icon {
+        transform: translateX(3px);
+    }
+}
+
+@media (max-width: 520px) {
+    .game-hub-panel-icon {
+        width: 21px;
+        height: 21px;
+    }
+
+    .game-hub-card .mode-icon {
+        width: 20px;
+        height: 20px;
+    }
+
+    .game-hub-summary-svg {
+        width: 19px;
+        height: 19px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .game-hub-card .mode-icon,
+    .game-hub-featured-cta-icon {
+        transition: none;
+    }
+
+    .game-hub-card.game-mode-card:not(:disabled):hover .mode-icon,
+    .game-hub-featured-card.game-mode-card:not(:disabled):hover .game-hub-featured-cta-icon {
+        transform: none;
+    }
+}
+/* GAME_HUB_SVG_ICON_POLISH_END */

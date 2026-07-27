@@ -119,6 +119,7 @@ function createFakeDocument() {
         root,
         authButton,
         createElement: createFakeElement,
+        createElementNS(_namespace, tagName) { return createFakeElement(tagName); },
         getElementById(id) {
             if (id === 'gameModeHub') return root;
             if (id === 'authOpenBtn') return authButton;
@@ -142,6 +143,11 @@ test('game variant registry exposes every planned mode as playable in release or
         variants.map(variant => variant.key),
         ['classic', 'daily', 'duel', 'speed-run', 'era', 'streak', 'weekly', 'constructor', 'pilot-sudoku', 'track']
     );
+    assert.deepEqual(
+        variants.map(variant => variant.iconKey),
+        ['target', 'sunrise', 'swords', 'stopwatch', 'landmark', 'flame', 'calendar', 'car', 'puzzle', 'map']
+    );
+    assert.equal(variants.every(variant => typeof variant.iconKey === 'string' && !Object.hasOwn(variant, 'icon')), true);
     assert.deepEqual(
         registry.listGameVariantsByState(registry.GAME_VARIANT_STATES.AVAILABLE).map(variant => variant.key),
         variants.map(variant => variant.key)
@@ -211,6 +217,44 @@ test('game hub renders the dashboard layout with all ten enabled cards', async (
         elements.find(element => element.id === 'gameHubDuelRoomItems')?.children[0]?.textContent,
         ''
     );
+
+    const svgIcons = elements.filter(element => element.tagName === 'SVG' && element.dataset?.iconKey);
+    assert.equal(svgIcons.length, 17, '9 carduri standard + 3 panouri + 4 statistici + săgeata CTA');
+    assert.deepEqual(
+        cards.filter(card => !card.classList.contains('game-hub-featured-card'))
+            .map(card => flatten(card).find(element => element.classList?.contains('mode-icon'))?.dataset.iconKey),
+        ['target', 'sunrise', 'landmark', 'calendar', 'stopwatch', 'flame', 'car', 'puzzle', 'map']
+    );
+    assert.deepEqual(
+        elements.filter(element => element.classList?.contains('game-hub-panel-icon'))
+            .map(element => element.dataset.iconKey),
+        ['trophy', 'swords', 'sparkles']
+    );
+    assert.deepEqual(
+        elements.filter(element => element.classList?.contains('game-hub-summary-svg'))
+            .map(element => element.dataset.iconKey),
+        ['trophy', 'target', 'calendar', 'grid']
+    );
+    assert.equal(
+        elements.find(element => element.classList?.contains('game-hub-featured-cta-icon'))?.dataset.iconKey,
+        'arrow-right'
+    );
+    assert.equal(svgIcons.every(icon => icon.getAttribute('aria-hidden') === 'true'), true);
+    assert.equal(svgIcons.every(icon => icon.getAttribute('focusable') === 'false'), true);
+});
+
+
+test('SVG icon factory uses a safe static fallback without innerHTML', async () => {
+    const { dashboardView } = await loadGameHubModules();
+    const documentObject = createFakeDocument();
+    const icon = dashboardView.createGameHubIcon(documentObject, '<script>alert(1)</script>');
+
+    assert.equal(icon.tagName, 'SVG');
+    assert.equal(icon.dataset.iconKey, 'sparkles');
+    assert.equal(icon.getAttribute('viewBox'), '0 0 24 24');
+    assert.equal(icon.getAttribute('aria-hidden'), 'true');
+    assert.ok(icon.children.length > 0);
+    assert.equal(flatten(icon).some(element => /script/i.test(element.tagName)), false);
 });
 
 
@@ -681,4 +725,18 @@ test('responsive E2E expects all planned modes to be enabled', () => {
     assert.match(source, /catalog\.comingSoon\.length, 0/);
     assert.match(source, /assertExtendedModesLaunch/);
     assert.match(source, /card\.dataset\.gameModeChoice \|\| card\.dataset\.gameVariant/);
+});
+
+test('Game Hub SVG polish keeps semantic icon keys, theme colors and reduced-motion support', () => {
+    const registrySource = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'gameVariantRegistry.js'), 'utf8');
+    const viewSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'gameHubDashboardView.js'), 'utf8');
+    const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', '30-game-hub-visual-polish.css'), 'utf8');
+
+    assert.doesNotMatch(registrySource, /🎯|🌅|⚔️|⏱️|🏛️|🔥|📅|🏎️|🧩|🗺️/);
+    assert.match(registrySource, /iconKey:\s*'target'/);
+    assert.match(viewSource, /createElementNS\(SVG_NAMESPACE, tagName\)/);
+    assert.doesNotMatch(viewSource, /innerHTML\s*=/);
+    assert.match(css, /GAME_HUB_SVG_ICON_POLISH_START/);
+    assert.match(css, /\.game-hub-svg-icon\s*\{[\s\S]*?color:\s*inherit;/);
+    assert.match(css, /@media \(prefers-reduced-motion:\s*reduce\)/);
 });

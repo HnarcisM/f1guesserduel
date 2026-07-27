@@ -16,7 +16,7 @@
         Object.freeze({
             key: 'classic',
             title: 'Classic',
-            icon: '🎯',
+            iconKey: 'target',
             description: 'Experiența originală F1 Guesser, cu maximum șase încercări.',
             context: 'single',
             modeChoice: 'single',
@@ -27,7 +27,7 @@
         Object.freeze({
             key: 'daily',
             title: 'Daily Challenge',
-            icon: '🌅',
+            iconKey: 'sunrise',
             description: 'Aceeași provocare zilnică pentru fiecare dificultate.',
             context: 'daily',
             modeChoice: 'daily',
@@ -39,7 +39,7 @@
         Object.freeze({
             key: 'duel',
             title: 'Duel',
-            icon: '⚔️',
+            iconKey: 'swords',
             description: 'Creează o cameră și joacă în timp real cu un prieten.',
             context: 'duel',
             modeChoice: 'duel',
@@ -50,7 +50,7 @@
         Object.freeze({
             key: 'speed-run',
             title: 'Speed Run',
-            icon: '⏱️',
+            iconKey: 'stopwatch',
             description: 'Ghicește cinci piloți înainte ca timpul total să expire.',
             context: 'single',
             pagePath: '/modes/speed-run/',
@@ -61,7 +61,7 @@
         Object.freeze({
             key: 'era',
             title: 'Era Challenge',
-            icon: '🏛️',
+            iconKey: 'landmark',
             description: 'Alege o perioadă din istoria Formulei 1 și joacă doar cu acei piloți.',
             context: 'single',
             pagePath: '/modes/era/',
@@ -72,7 +72,7 @@
         Object.freeze({
             key: 'streak',
             title: 'Streak',
-            icon: '🔥',
+            iconKey: 'flame',
             description: 'Continuă seria cât timp ghicești pilotul în maximum trei încercări.',
             context: 'single',
             pagePath: '/modes/streak/',
@@ -83,7 +83,7 @@
         Object.freeze({
             key: 'weekly',
             title: 'Weekly Challenge',
-            icon: '📅',
+            iconKey: 'calendar',
             description: 'O singură încercare oficială pe săptămână, cu aceeași secvență pentru fiecare dificultate.',
             context: 'daily',
             pagePath: '/modes/weekly/',
@@ -95,7 +95,7 @@
         Object.freeze({
             key: 'constructor',
             title: 'Constructor Guesser',
-            icon: '🏎️',
+            iconKey: 'car',
             description: 'Identifică echipa pe baza țării, debutului, titlurilor și erei.',
             context: 'single',
             pagePath: '/modes/constructor/',
@@ -106,7 +106,7 @@
         Object.freeze({
             key: 'pilot-sudoku',
             title: 'Pilot Sudoku',
-            icon: '🧩',
+            iconKey: 'puzzle',
             description: 'Completează grila 3×3 cu nouă piloți diferiți care respectă două criterii.',
             context: 'single',
             pagePath: '/modes/pilot-sudoku/',
@@ -117,7 +117,7 @@
         Object.freeze({
             key: 'track',
             title: 'Track Guesser',
-            icon: '🗺️',
+            iconKey: 'map',
             description: 'Recunoaște circuitul după siluetă și compară datele tehnice.',
             context: 'single',
             pagePath: '/modes/track/',
