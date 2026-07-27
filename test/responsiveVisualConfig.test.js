@@ -38,6 +38,10 @@ test('responsive E2E suite captures home and game states and checks horizontal o
     assert.match(source, /compareWithBaseline/);
     assert.match(source, /assertGameHubSvgIcons/);
     assert.match(source, /stabilizeHomeVisualState/);
+    assert.match(source, /\.game-hub-card-art/);
+    assert.match(source, /\.game-hub-featured-card\[data-game-variant=/);
+    assert.match(source, /artworkReport\.artworkCount/);
+    assert.doesNotMatch(source, /\.game-hub-mode-artwork/);
     assert.doesNotMatch(source, /captureState\(page, viewport, 'home',[^\n]+compareVisual:\s*false/);
     assert.match(source, /UPDATE_VISUAL_BASELINES/);
     assert.match(source, /\.diff\.png/);

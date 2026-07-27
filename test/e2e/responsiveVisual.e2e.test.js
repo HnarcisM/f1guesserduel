@@ -283,14 +283,47 @@ async function stabilizeHomeVisualState(page) {
             element.scrollLeft = 0;
         }
     });
-    await page.locator('.game-hub-mode-artwork').first().evaluate(async element => {
-        const backgroundImage = getComputedStyle(element).backgroundImage;
-        const match = backgroundImage.match(/url\(["']?(.+?)["']?\)/);
-        if (!match) return;
-        const image = new Image();
-        image.src = match[1];
-        if (typeof image.decode === 'function') await image.decode().catch(() => {});
+
+    const artworkSelector = '.game-hub-card-art, .game-hub-featured-card[data-game-variant="duel"]';
+    await page.waitForFunction(
+        selector => document.querySelectorAll(selector).length === 10,
+        artworkSelector,
+        { timeout: 7000 }
+    );
+
+    const artworkReport = await page.locator(artworkSelector).evaluateAll(async artworkElements => {
+        const artworkUrls = new Set();
+        for (const element of artworkElements) {
+            const backgroundImage = getComputedStyle(element).backgroundImage;
+            for (const match of backgroundImage.matchAll(/url\((["']?)(.*?)\1\)/g)) {
+                if (match[2]) artworkUrls.add(match[2]);
+            }
+        }
+
+        const results = await Promise.all(Array.from(artworkUrls, url => new Promise(resolve => {
+            const image = new Image();
+            let settled = false;
+            const finish = loaded => {
+                if (settled) return;
+                settled = true;
+                resolve({ url, loaded });
+            };
+            image.addEventListener('load', () => finish(true), { once: true });
+            image.addEventListener('error', () => finish(false), { once: true });
+            image.src = url;
+            if (image.complete) finish(image.naturalWidth > 0);
+        })));
+
+        return {
+            elementCount: artworkElements.length,
+            artworkCount: artworkUrls.size,
+            failedUrls: results.filter(result => !result.loaded).map(result => result.url)
+        };
     });
+
+    assert.equal(artworkReport.elementCount, 10, 'Game Hub nu a randat toate cele 10 zone de artwork');
+    assert.equal(artworkReport.artworkCount, 10, 'Game Hub nu a expus toate cele 10 imagini de fundal');
+    assert.deepEqual(artworkReport.failedUrls, [], 'Una sau mai multe imagini Game Hub nu s-au încărcat');
 }
 
 async function assertGameHubSvgIcons(page, viewportLabel) {
