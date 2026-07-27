@@ -848,7 +848,7 @@
 
   function createPanel(documentObject, { title, description, iconKey, accentClass, bodyClass = '' }) {
     const panel = createElement(documentObject, 'section', `game-hub-panel ${accentClass} ${bodyClass}`.trim());
-    const header = createElement(documentObject, 'div', `game-hub-panel-header ${accentClass}`.trim());
+    const header = createElement(documentObject, 'div', 'game-hub-panel-header');
     const heading = createElement(documentObject, 'div', 'game-hub-panel-heading');
     const copy = createElement(documentObject, 'div', 'game-hub-panel-copy');
     copy.append(

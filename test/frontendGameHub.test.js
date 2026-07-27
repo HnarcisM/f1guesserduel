@@ -230,6 +230,14 @@ test('game hub renders the dashboard layout with all ten enabled cards', async (
             .map(element => element.dataset.iconKey),
         ['trophy', 'duel-helmets', 'sparkles']
     );
+    const panelHeaders = elements.filter(element => element.classList?.contains('game-hub-panel-header'));
+    assert.equal(panelHeaders.length, 3);
+    assert.equal(
+        panelHeaders.every(header => !['game-hub-panel--single', 'game-hub-panel--duel', 'game-hub-panel--specialty']
+            .some(className => header.classList.contains(className))),
+        true,
+        'headerurile nu trebuie să moștenească box-shadow-ul panourilor'
+    );
     assert.equal(
         elements.some(element => element.classList?.contains('game-hub-panel-badge')),
         false,
@@ -802,8 +810,12 @@ test('Game Hub category headers keep unframed icons left of titles and centered 
     assert.match(source, /\.game-hub-panel-header\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)/);
     assert.match(source, /\.game-hub-panel-header\s*\{[\s\S]*?justify-items:\s*center/);
     assert.match(source, /\.game-hub-panel-heading\s*\{[\s\S]*?display:\s*inline-flex[\s\S]*?align-items:\s*center[\s\S]*?justify-content:\s*center/);
-    assert.match(source, /\.game-hub-panel-icon\s*\{[\s\S]*?width:\s*23px[\s\S]*?height:\s*23px/);
+    assert.match(source, /\.game-hub-panel-icon\s*\{[\s\S]*?width:\s*28px[\s\S]*?height:\s*28px/);
+    assert.match(source, /@media \(max-width:\s*520px\)[\s\S]*?\.game-hub-panel-icon\s*\{[\s\S]*?width:\s*24px[\s\S]*?height:\s*24px/);
     assert.doesNotMatch(source, /\.game-hub-panel-icon\s*\{[^}]*?(?:border|background)\s*:/);
+    assert.match(source, /\.game-hub-panel-header\s*\{[\s\S]*?border:\s*0[\s\S]*?background:\s*none[\s\S]*?box-shadow:\s*none/);
+    assert.match(dashboardSource, /const header = createElement\(documentObject, 'div', 'game-hub-panel-header'\)/);
+    assert.doesNotMatch(dashboardSource, /`game-hub-panel-header \${accentClass}`/);
     assert.match(dashboardSource, /heading\.append\([\s\S]*?createGameHubIcon\(documentObject,\s*iconKey,\s*'game-hub-panel-icon game-hub-svg-icon'\)[\s\S]*?copy/);
     assert.doesNotMatch(dashboardSource, /game-hub-panel-badge/);
     assert.match(source, /\.game-hub-panel-copy\s*\{[\s\S]*?text-align:\s*left/);

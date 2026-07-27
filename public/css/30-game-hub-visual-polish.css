@@ -35,6 +35,9 @@
     justify-items: center;
     gap: 6px;
     margin-bottom: 10px;
+    border: 0;
+    background: none;
+    box-shadow: none;
     text-align: center;
 }
 
@@ -49,20 +52,20 @@
 
 .game-hub-panel-icon {
     flex: 0 0 auto;
-    width: 23px;
-    height: 23px;
+    width: 28px;
+    height: 28px;
     filter: drop-shadow(0 4px 9px rgba(0, 0, 0, 0.34));
 }
 
-.game-hub-panel-header.game-hub-panel--single .game-hub-panel-icon {
+.game-hub-panel--single .game-hub-panel-icon {
     color: #79e9ff;
 }
 
-.game-hub-panel-header.game-hub-panel--duel .game-hub-panel-icon {
+.game-hub-panel--duel .game-hub-panel-icon {
     color: #ff7777;
 }
 
-.game-hub-panel-header.game-hub-panel--specialty .game-hub-panel-icon {
+.game-hub-panel--specialty .game-hub-panel-icon {
     color: #ffd363;
 }
 
@@ -1386,8 +1389,8 @@ body:has(#difficulty-overlay:not(.hidden)) .header-actions {
     }
 
     .game-hub-panel-icon {
-        width: 20px;
-        height: 20px;
+        width: 24px;
+        height: 24px;
     }
 
     .game-hub-card .mode-icon {
