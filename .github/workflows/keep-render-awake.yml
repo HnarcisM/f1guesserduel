@@ -1,0 +1,34 @@
+name: Keep Render Awake
+
+on:
+  schedule:
+    # Evităm minutul 00, când GitHub Actions are de obicei încărcare mai mare.
+    # Intervalul maxim este 10 minute, sub limita Render de 15 minute.
+    - cron: '3,13,23,33,43,53 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keep-render-awake
+  cancel-in-progress: true
+
+jobs:
+  wake-and-check-redis:
+    name: Wake service and verify Redis
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22.x'
+
+      - name: Wake Render and validate Redis
+        env:
+          RENDER_HEALTH_URL: ${{ vars.RENDER_HEALTH_URL || 'https://f1guesserduel.onrender.com/api/health' }}
+        run: node scripts/wake-render-service.js
