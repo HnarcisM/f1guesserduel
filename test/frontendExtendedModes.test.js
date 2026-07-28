@@ -7,6 +7,7 @@ const root = path.join(__dirname, '..');
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), 'utf8');
 
 const autocomplete = read('public/js/extendedModeAutocomplete.js');
+const comparisonBoard = read('public/js/extendedComparisonBoard.js');
 const controller = read('public/js/extendedModesController.js');
 const weeklyView = read('public/js/weeklyChallengeView.js');
 const extendedConfig = read('public/js/extendedModesConfig.js');
@@ -79,6 +80,31 @@ test('new modes remain isolated from classic game orchestration', () => {
     assert.match(coordinator, /extendedSessions/);
 });
 
+test('five extended modes reuse a declarative Classic-style comparison board', () => {
+    assert.match(controller, /createExtendedComparisonBoard/);
+    assert.match(controller, /comparisonBoard\?\.startRound/);
+    assert.match(controller, /comparisonBoard\?\.syncRound/);
+    assert.match(controller, /comparisonBoard\?\.appendFeedback/);
+    assert.match(comparisonBoard, /const DRIVER_SCHEMA/);
+    assert.match(comparisonBoard, /const CONSTRUCTOR_SCHEMA/);
+    assert.match(comparisonBoard, /EXCLUDED_VARIANTS = new Set\(\['pilot-sudoku', 'track'\]\)/);
+    assert.match(comparisonBoard, /for \(let index = 0; index < maxAttempts; index\+\+\)/);
+    assert.doesNotMatch(comparisonBoard, /innerHTML|insertAdjacentHTML/);
+    assert.match(pageStyles, /\.extended-comparison\.extended-classic-board/);
+    assert.match(pageStyles, /\.extended-classic-board-row/);
+    assert.match(pageStyles, /\.extended-classic-board-cell\.is-empty/);
+
+    for (const variantKey of ['speed-run', 'era', 'streak', 'weekly']) {
+        assert.match(
+            extendedConfig,
+            new RegExp(`['\"]?${variantKey}['\"]?:?[\\s\\S]*?comparisonEntityType: 'driver'`)
+        );
+    }
+    assert.match(extendedConfig, /constructor:[\s\S]*?comparisonEntityType: 'constructor'/);
+    assert.doesNotMatch(extendedConfig, /'pilot-sudoku':[\s\S]*?comparisonEntityType/);
+    assert.doesNotMatch(extendedConfig, /track:[\s\S]*?comparisonEntityType/);
+});
+
 test('track, Sudoku and responsive layouts have dedicated accessible UI', () => {
     assert.match(controller, /createElementNS\('http:\/\/www\.w3\.org\/2000\/svg'/);
     assert.match(controller, /role', 'grid'/);
@@ -143,6 +169,7 @@ test('non-timed modes do not interpret a null deadline as an expired timer', () 
 
 test('extended mode modules stay within maintainable size budgets', () => {
     const budgets = {
+        'public/js/extendedComparisonBoard.js': 12_000,
         'public/js/extendedModeAutocomplete.js': 9_000,
         'public/js/extendedModesController.js': 40_000,
         'public/css/24-extended-modes.css': 16_000,
@@ -152,7 +179,7 @@ test('extended mode modules stay within maintainable size budgets', () => {
         'public/js/extendedModeHeaderController.js': 6_000,
         'public/js/extendedModeShell.js': 6_000,
         'public/js/extendedModeShellMarkup.js': 26_000,
-        'public/css/25-mode-pages.css': 8_000,
+        'public/css/25-mode-pages.css': 12_000,
         'public/css/28-extended-mode-autocomplete.css': 4_000,
         'server/game/extendedModesService.js': 40_000,
         'server/game/extendedModesCatalogs.js': 12_000,

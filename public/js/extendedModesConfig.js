@@ -4,27 +4,32 @@ export const VARIANT_COPY = Object.freeze({
     'speed-run': {
         title: 'Speed Run',
         eyebrow: '5 piloți · 90 secunde',
-        description: 'Ghicește cât mai repede. Poți sări o rundă cu o penalizare de 250 puncte.'
+        description: 'Ghicește cât mai repede. Poți sări o rundă cu o penalizare de 250 puncte.',
+        comparisonEntityType: 'driver'
     },
     era: {
         title: 'Era Challenge',
         eyebrow: 'Filtru istoric',
-        description: 'Alege era, apoi identifică pilotul în maximum șase încercări.'
+        description: 'Alege era, apoi identifică pilotul în maximum șase încercări.',
+        comparisonEntityType: 'driver'
     },
     streak: {
         title: 'Streak',
         eyebrow: 'Serie nelimitată',
-        description: 'Ai doar trei încercări pentru fiecare pilot. Prima rundă pierdută încheie seria.'
+        description: 'Ai doar trei încercări pentru fiecare pilot. Prima rundă pierdută încheie seria.',
+        comparisonEntityType: 'driver'
     },
     weekly: {
         title: 'Weekly Challenge',
         eyebrow: 'O încercare oficială pe săptămână',
-        description: 'Alege dificultatea și ghicește aceeași secvență de cinci piloți ca ceilalți jucători în 120 de secunde.'
+        description: 'Alege dificultatea și ghicește aceeași secvență de cinci piloți ca ceilalți jucători în 120 de secunde.',
+        comparisonEntityType: 'driver'
     },
     constructor: {
         title: 'Constructor Guesser',
         eyebrow: 'Istoria echipelor',
-        description: 'Compară țara, debutul, titlurile, statutul și era constructorului.'
+        description: 'Compară țara, debutul, titlurile, statutul și era constructorului.',
+        comparisonEntityType: 'constructor'
     },
     'pilot-sudoku': {
         title: 'Pilot Sudoku',

@@ -1,3 +1,4 @@
+import { createExtendedComparisonBoard } from './extendedComparisonBoard.js';
 import { createExtendedModeAutocomplete } from './extendedModeAutocomplete.js';
 import { setProgressPercent } from './progressStyle.js';
 import {
@@ -182,6 +183,11 @@ function createExtendedModesController({ windowObject, documentObject, storage }
         restart: panel.querySelector('#extendedRestart'),
         home: panel.querySelector('#extendedHome')
     };
+
+    const comparisonBoard = createExtendedComparisonBoard({
+        documentObject: doc,
+        root: elements.comparison
+    });
 
     const state = {
         socket: null,
@@ -406,6 +412,7 @@ function createExtendedModesController({ windowObject, documentObject, storage }
 
     function appendFeedback(feedback) {
         if (!feedback) return;
+        if (comparisonBoard?.appendFeedback(feedback)) return;
         elements.comparison.prepend(createComparisonRow(feedback));
     }
 
@@ -491,6 +498,11 @@ function createExtendedModesController({ windowObject, documentObject, storage }
 
     function renderRound() {
         const round = state.serverState?.round || {};
+        comparisonBoard?.syncRound({
+            variantKey: state.variantKey,
+            entityType: VARIANT_COPY[state.variantKey]?.comparisonEntityType,
+            maxAttempts: round.maxAttempts
+        });
         renderHud();
         renderTrackClue(round.clue);
         elements.skip.hidden = !['speed-run', 'weekly'].includes(state.variantKey) || Boolean(round.awaitingAdvance);
@@ -566,7 +578,7 @@ function createExtendedModesController({ windowObject, documentObject, storage }
         state.activeSudokuCell = null;
         state.weeklyStartPending = false;
         state.hasStarted = false;
-        elements.comparison.replaceChildren();
+        comparisonBoard?.clear();
         elements.resultStats.replaceChildren();
         setVisible(elements.result, false);
         setVisible(elements.setup, false);
@@ -616,7 +628,11 @@ function createExtendedModesController({ windowObject, documentObject, storage }
         state.catalog = Array.isArray(payload.catalog) ? payload.catalog : [];
         state.serverState = payload.state || null;
         state.activeSudokuCell = null;
-        elements.comparison.replaceChildren();
+        comparisonBoard?.startRound({
+            variantKey: state.variantKey,
+            entityType: VARIANT_COPY[state.variantKey]?.comparisonEntityType,
+            maxAttempts: state.serverState?.round?.maxAttempts
+        });
         setVisible(elements.setup, false);
         setVisible(elements.game, true);
         setVisible(elements.result, false);
@@ -664,7 +680,11 @@ function createExtendedModesController({ windowObject, documentObject, storage }
     function handleRoundReady(payload = {}) {
         if (!state.isOpen || payload.variantKey !== state.variantKey) return;
         state.serverState = payload.state || null;
-        elements.comparison.replaceChildren();
+        comparisonBoard?.startRound({
+            variantKey: state.variantKey,
+            entityType: VARIANT_COPY[state.variantKey]?.comparisonEntityType,
+            maxAttempts: state.serverState?.round?.maxAttempts
+        });
         elements.continueButton.hidden = true;
         elements.submit.disabled = false;
         elements.input.disabled = false;
@@ -845,7 +865,8 @@ function createExtendedModesController({ windowObject, documentObject, storage }
         handleWeeklyStatus,
         open,
         _state: state,
-        _elements: elements
+        _elements: elements,
+        _comparisonBoard: comparisonBoard
     };
 
     elements.close.addEventListener('click', () => close());

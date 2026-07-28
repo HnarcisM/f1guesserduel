@@ -33,6 +33,7 @@ const DEFAULT_PRECACHE_STATIC_URLS = Object.freeze([
     '/js/constants.js',
     '/js/dialogFocusManager.js',
     '/js/extendedModesConfig.js',
+    '/js/extendedComparisonBoard.js',
     '/js/extendedModeAutocomplete.js',
     '/js/extendedModesController.js',
     '/js/extendedModePage.js',
