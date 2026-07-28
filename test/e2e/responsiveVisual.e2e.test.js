@@ -274,6 +274,41 @@ async function assertGameHubCatalog(page, viewportLabel) {
 
 
 
+async function assertStandardGameHubCardLayersFillWidth(page, viewportLabel) {
+    const report = await page.evaluate(() => Array.from(
+        document.querySelectorAll('.game-hub-card.game-mode-card:not(.game-hub-featured-card)')
+    ).map(card => {
+        const chrome = card.querySelector('.game-hub-card-chrome');
+        const artwork = card.querySelector('.game-hub-card-art');
+        const content = card.querySelector('.game-hub-card-content');
+        const widthOf = element => element?.getBoundingClientRect?.().width || 0;
+        return {
+            key: card.dataset.gameVariant || 'unknown',
+            cardWidth: card.clientWidth,
+            chromeWidth: widthOf(chrome),
+            artworkWidth: widthOf(artwork),
+            contentWidth: widthOf(content)
+        };
+    }));
+
+    assert.equal(report.length, 9, `${viewportLabel}/home: număr neașteptat de carduri standard`);
+    for (const card of report) {
+        assert.ok(
+            Math.abs(card.chromeWidth - card.cardWidth) <= 1,
+            `${viewportLabel}/home/${card.key}: containerul intern nu ocupă cardul (${card.chromeWidth}/${card.cardWidth}px)`
+        );
+        assert.ok(
+            Math.abs(card.artworkWidth - card.chromeWidth) <= 1,
+            `${viewportLabel}/home/${card.key}: imaginea nu ocupă containerul (${card.artworkWidth}/${card.chromeWidth}px)`
+        );
+        assert.ok(
+            Math.abs(card.contentWidth - card.chromeWidth) <= 1,
+            `${viewportLabel}/home/${card.key}: textul și fundalul nu ocupă containerul (${card.contentWidth}/${card.chromeWidth}px)`
+        );
+    }
+}
+
+
 async function stabilizeHomeVisualState(page) {
     await page.evaluate(() => {
         document.activeElement?.blur?.();
@@ -518,6 +553,7 @@ test('responsive layouts match committed visual baselines', { concurrency: false
                 const home = await captureState(page, viewport, 'home', HOME_SELECTORS, { compareVisual: false });
                 if (home.visualRegression.failure) visualFailures.push(home.visualRegression.failure);
                 await assertGameHubCatalog(page, viewport.label);
+                await assertStandardGameHubCardLayersFillWidth(page, viewport.label);
                 await assertMainMenuShowsCompactHeader(page, `${viewport.label}/home`);
                 if (viewport.label === VIEWPORTS[0].label) {
                     await assertExtendedModesLaunch(page, viewport.label, app.baseUrl);

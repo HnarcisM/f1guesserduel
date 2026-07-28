@@ -825,27 +825,32 @@ test('Game Hub category headers keep unframed icons left of titles and centered 
     assert.match(source, /rgba\(255,\s*198,\s*41,\s*0\.97\)\s*50%/);
 });
 
-test('all standard Game Hub cards stretch artwork and copy across mobile width', () => {
+test('all standard Game Hub cards stretch artwork and copy across phone and Fold widths', () => {
     const css = fs.readFileSync(
         path.join(__dirname, '..', 'public', 'css', '30-game-hub-visual-polish.css'),
         'utf8'
     );
 
-    assert.match(css, /GAME_HUB_MOBILE_CARD_FULL_WIDTH_FIX_START/);
-    const mobileBlock = css.match(
-        /@media \(max-width:\s*520px\)\s*\{[\s\S]*?GAME_HUB_MOBILE_CARD_FULL_WIDTH_FIX_END/
+    assert.doesNotMatch(css, /GAME_HUB_MOBILE_CARD_FULL_WIDTH_FIX/);
+    const fullWidthBlock = css.match(
+        /GAME_HUB_STANDARD_CARD_FULL_WIDTH_FIX_START([\s\S]*?)GAME_HUB_STANDARD_CARD_FULL_WIDTH_FIX_END/
     );
-    assert.ok(mobileBlock, 'Lipsește fixul responsive comun pentru cardurile Game Hub');
+    assert.ok(fullWidthBlock, 'Lipsește fixul comun pentru lățimea cardurilor Game Hub');
+    assert.doesNotMatch(
+        fullWidthBlock[1],
+        /@media\s*\(/,
+        'Fixul nu trebuie limitat la un breakpoint care exclude ecranul interior Fold'
+    );
     assert.match(
-        mobileBlock[0],
+        fullWidthBlock[1],
         /\.game-hub-card-grid--single \.game-hub-card\.game-mode-card,\s*\.game-hub-card-grid--specialty \.game-hub-card\.game-mode-card\s*\{[^}]*align-items:\s*stretch;/s
     );
     assert.match(
-        mobileBlock[0],
+        fullWidthBlock[1],
         /\.game-hub-card\.game-mode-card:not\(\.game-hub-featured-card\) \.game-hub-card-chrome\s*\{[^}]*width:\s*100%;[^}]*max-width:\s*none;[^}]*align-self:\s*stretch;/s
     );
     assert.match(
-        mobileBlock[0],
+        fullWidthBlock[1],
         /\.game-hub-card\.game-mode-card:not\(\.game-hub-featured-card\) \.game-hub-card-art,\s*\.game-hub-card\.game-mode-card:not\(\.game-hub-featured-card\) \.game-hub-card-content\s*\{[^}]*width:\s*100%;[^}]*max-width:\s*none;[^}]*align-self:\s*stretch;/s
     );
 });

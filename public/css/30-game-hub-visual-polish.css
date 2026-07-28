@@ -1507,34 +1507,32 @@ body:has(#difficulty-overlay:not(.hidden)) .header-actions {
 }
 /* GAME_HUB_TRACK_FULL_WIDTH_FIX_END */
 
-/* GAME_HUB_MOBILE_CARD_FULL_WIDTH_FIX_START */
+/* GAME_HUB_STANDARD_CARD_FULL_WIDTH_FIX_START */
 /*
- * Butonul de bază aliniază conținutul la flex-start. Pe mobil, cardurile cu
- * texte mai scurte puteau lăsa chrome-ul intern la lățimea conținutului, în
- * timp ce modurile cu texte mai lungi păreau corecte accidental. Întindem
- * toate straturile cardurilor standard, fără să atingem cardul Duel featured.
+ * Butonul de bază aliniază conținutul la flex-start, iar lățimea chrome-ului
+ * putea depinde accidental de text. Fixul trebuie să funcționeze și pe ecranul
+ * interior Fold (704–842px), nu doar sub 520px, așa că întindem permanent
+ * toate straturile cardurilor standard. Cardul Duel featured rămâne separat.
  */
-@media (max-width: 520px) {
-    .game-hub-card-grid--single .game-hub-card.game-mode-card,
-    .game-hub-card-grid--specialty .game-hub-card.game-mode-card {
-        align-items: stretch;
-    }
-
-    .game-hub-card.game-mode-card:not(.game-hub-featured-card) .game-hub-card-chrome {
-        width: 100%;
-        max-width: none;
-        min-width: 0;
-        align-self: stretch;
-        box-sizing: border-box;
-    }
-
-    .game-hub-card.game-mode-card:not(.game-hub-featured-card) .game-hub-card-art,
-    .game-hub-card.game-mode-card:not(.game-hub-featured-card) .game-hub-card-content {
-        width: 100%;
-        max-width: none;
-        min-width: 0;
-        align-self: stretch;
-        box-sizing: border-box;
-    }
+.game-hub-card-grid--single .game-hub-card.game-mode-card,
+.game-hub-card-grid--specialty .game-hub-card.game-mode-card {
+    align-items: stretch;
 }
-/* GAME_HUB_MOBILE_CARD_FULL_WIDTH_FIX_END */
+
+.game-hub-card.game-mode-card:not(.game-hub-featured-card) .game-hub-card-chrome {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    align-self: stretch;
+    box-sizing: border-box;
+}
+
+.game-hub-card.game-mode-card:not(.game-hub-featured-card) .game-hub-card-art,
+.game-hub-card.game-mode-card:not(.game-hub-featured-card) .game-hub-card-content {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    align-self: stretch;
+    box-sizing: border-box;
+}
+/* GAME_HUB_STANDARD_CARD_FULL_WIDTH_FIX_END */

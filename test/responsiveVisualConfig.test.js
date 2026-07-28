@@ -22,6 +22,28 @@ test('responsive visual matrix covers phone, Galaxy Fold 5, laptop and desktop l
     assert.ok(VIEWPORTS.some(viewport => viewport.label === 'fold5-inner-landscape' && viewport.width > viewport.height));
 });
 
+
+test('Fold inner viewports receive the global Game Hub card-width fix', () => {
+    const css = fs.readFileSync(
+        path.join(__dirname, '..', 'public', 'css', '30-game-hub-visual-polish.css'),
+        'utf8'
+    );
+    const foldInnerViewports = VIEWPORTS.filter(viewport => viewport.label.startsWith('fold5-inner-'));
+    const fullWidthBlock = css.match(
+        /GAME_HUB_STANDARD_CARD_FULL_WIDTH_FIX_START([\s\S]*?)GAME_HUB_STANDARD_CARD_FULL_WIDTH_FIX_END/
+    );
+
+    assert.equal(foldInnerViewports.length, 2);
+    assert.ok(
+        foldInnerViewports.every(viewport => viewport.width > 520),
+        'Testul trebuie să acopere dimensiuni Fold care depășesc breakpoint-ul de telefon'
+    );
+    assert.ok(fullWidthBlock, 'Lipsește fixul global pentru cardurile standard Game Hub');
+    assert.doesNotMatch(fullWidthBlock[1], /@media\s*\(/);
+    assert.match(fullWidthBlock[1], /\.game-hub-card-chrome\s*\{[^}]*width:\s*100%/s);
+    assert.match(fullWidthBlock[1], /\.game-hub-card-content\s*\{[^}]*width:\s*100%/s);
+});
+
 test('responsive E2E suite captures home and game states and checks horizontal overflow', () => {
     const source = fs.readFileSync(
         path.join(__dirname, 'e2e', 'responsiveVisual.e2e.test.js'),
@@ -41,6 +63,7 @@ test('responsive E2E suite captures home and game states and checks horizontal o
     assert.match(source, /assertNoVisibleOverlap/);
     assert.match(source, /compareWithBaseline/);
     assert.match(source, /assertGameHubSvgIcons/);
+    assert.match(source, /assertStandardGameHubCardLayersFillWidth/);
     assert.match(source, /stabilizeHomeVisualState/);
     assert.match(source, /\.game-hub-card-art/);
     assert.match(source, /\.game-hub-featured-card\[data-game-variant=/);
