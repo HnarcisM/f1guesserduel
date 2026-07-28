@@ -94,6 +94,15 @@ test('track, Sudoku and responsive layouts have dedicated accessible UI', () => 
     assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
+test('extended mode pages place the guess form directly below the title area', () => {
+    assert.match(pageController, /function placeGuessControlsAfterTitle/);
+    assert.match(pageController, /game\.insertBefore\(guessArea, game\.firstElementChild\)/);
+    assert.match(pageController, /game\.insertBefore\(status, guessArea\.nextSibling\)/);
+    assert.match(pageController, /placeGuessControlsAfterTitle\(controller\)/);
+    assert.match(controller, /id="extendedGuessArea"[\s\S]*?id="extendedSubmitGuess"/);
+    assert.doesNotMatch(styles, /\.extended-guess-area\s*\{[^}]*order\s*:/);
+});
+
 test('Carbon extended submit button matches the Classic grey action palette', () => {
     assert.match(controller, /id="extendedSubmitGuess" class="extended-primary-btn"/);
     assert.match(

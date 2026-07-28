@@ -90,7 +90,21 @@ async function setupEmbeddedAuth({ socket, documentObject, afterAuthChanged = nu
     return authView;
 }
 
+function placeGuessControlsAfterTitle(controller) {
+    const game = controller?._elements?.game;
+    const guessArea = controller?._elements?.guessArea;
+    const status = controller?._elements?.status;
+    if (!game || !guessArea || guessArea.parentElement !== game) return false;
+
+    game.insertBefore(guessArea, game.firstElementChild);
+    if (status?.parentElement === game) {
+        game.insertBefore(status, guessArea.nextSibling);
+    }
+    return true;
+}
+
 function preparePageSurface(controller, documentObject) {
+    placeGuessControlsAfterTitle(controller);
     const panel = controller?._elements?.panel;
     const close = controller?._elements?.close;
     const root = documentObject.getElementById('modePageContent');
@@ -193,6 +207,7 @@ export {
     MODE_PATHS,
     getModeKey,
     loadAuthenticatedUser,
+    placeGuessControlsAfterTitle,
     refreshSocketAuth,
     runExtendedModePage,
     setupEmbeddedAuth,
