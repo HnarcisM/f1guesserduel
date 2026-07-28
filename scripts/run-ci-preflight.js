@@ -2,6 +2,7 @@
 'use strict';
 
 const { spawnSync } = require('node:child_process');
+const { cleanupPythonCache, formatCleanupResult } = require('./cleanup-python-cache');
 
 const BACKEND_LOG_FILE = 'test-results/ci/backend-tests.log';
 const GENERATED_FILES = Object.freeze([
@@ -198,38 +199,66 @@ function runSteps(steps, {
     return results;
 }
 
-function main() {
-    const options = parseArguments();
-    const platform = process.platform;
-    const env = process.env;
-    const steps = buildSteps({ ...options, platform, env });
-    const results = runSteps(steps, {
-        afterStep(step, result) {
-            if (step.id !== 'backend-tests' || !String(env.GITHUB_STEP_SUMMARY || '').trim()) {
-                return null;
+function runCiVerification({
+    argv = process.argv.slice(2),
+    platform = process.platform,
+    env = process.env,
+    runner = runStep,
+    cleanup = cleanupPythonCache,
+    consoleObject = console,
+    rootDirectory = process.cwd()
+} = {}) {
+    let results = [];
+    let exitCode = 1;
+    let cleanupResult = null;
+    let cleanupError = null;
+
+    try {
+        const options = parseArguments(argv);
+        const steps = buildSteps({ ...options, platform, env });
+        results = runSteps(steps, {
+            runner,
+            afterStep(step, result) {
+                if (step.id !== 'backend-tests' || !String(env.GITHUB_STEP_SUMMARY || '').trim()) {
+                    return null;
+                }
+                const summaryStep = buildBackendSummaryStep({
+                    exitCode: result.exitCode,
+                    platform,
+                    env
+                });
+                return { id: summaryStep.id, ...runner(summaryStep) };
             }
-            const summaryStep = buildBackendSummaryStep({
-                exitCode: result.exitCode,
-                platform,
-                env
-            });
-            return { id: summaryStep.id, ...runStep(summaryStep) };
+        });
+        const failures = results.filter(result => result.exitCode !== 0);
+
+        consoleObject.log('\n=== Rezumat ci:verify ===');
+        for (const result of results) {
+            consoleObject.log(`${result.exitCode === 0 ? '✓' : '✗'} ${result.name}`);
         }
-    });
-    const failures = results.filter(result => result.exitCode !== 0);
 
-    console.log('\n=== Rezumat ci:verify ===');
-    for (const result of results) {
-        console.log(`${result.exitCode === 0 ? '✓' : '✗'} ${result.name}`);
+        exitCode = failures.length > 0 ? 1 : 0;
+        if (exitCode !== 0) {
+            consoleObject.error(`\n[ci:verify] ${failures.length} etapă(e) au eșuat. Nu face push până nu sunt rezolvate.`);
+        } else {
+            consoleObject.log('\n[ci:verify] Toate verificările au trecut.');
+        }
+    } finally {
+        try {
+            cleanupResult = cleanup({ rootDirectory });
+            consoleObject.log(`[ci:verify] Cache Python: ${formatCleanupResult(cleanupResult)}.`);
+        } catch (error) {
+            cleanupError = error;
+            consoleObject.warn(`[ci:verify] Cache-ul Python nu a putut fi șters: ${error.message}`);
+        }
     }
 
-    if (failures.length > 0) {
-        console.error(`\n[ci:verify] ${failures.length} etapă(e) au eșuat. Nu face push până nu sunt rezolvate.`);
-        process.exitCode = 1;
-        return;
-    }
+    return { results, exitCode, cleanupResult, cleanupError };
+}
 
-    console.log('\n[ci:verify] Toate verificările au trecut.');
+function main() {
+    const result = runCiVerification();
+    process.exitCode = result.exitCode;
 }
 
 if (require.main === module) main();
@@ -242,6 +271,7 @@ module.exports = {
     resolveNpmCommand,
     parseArguments,
     resolvePythonCommand,
+    runCiVerification,
     runStep,
     runSteps
 };
