@@ -11,6 +11,7 @@ const controller = read('public/js/extendedModesController.js');
 const weeklyView = read('public/js/weeklyChallengeView.js');
 const extendedConfig = read('public/js/extendedModesConfig.js');
 const styles = read('public/css/24-extended-modes.css');
+const pageStyles = read('public/css/25-mode-pages.css');
 const hub = read('public/js/gameHubController.js');
 const pageController = read('public/js/extendedModePage.js');
 const registry = read('public/js/gameVariantRegistry.js');
@@ -91,6 +92,23 @@ test('track, Sudoku and responsive layouts have dedicated accessible UI', () => 
     assert.match(weeklyView, /formatWeeklyCountdown/);
     assert.match(styles, /@media \(max-width: 680px\)/);
     assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
+});
+
+test('Carbon extended submit button matches the Classic grey action palette', () => {
+    assert.match(controller, /id="extendedSubmitGuess" class="extended-primary-btn"/);
+    assert.match(
+        pageStyles,
+        /\[data-app-theme="carbon"\]\s+#extendedSubmitGuess\s*\{[\s\S]*?linear-gradient\(180deg,\s*#5f6368\s+0%,\s*#3f4347\s+100%\)[\s\S]*?border:\s*1px\s+solid\s+#7a7f85/
+    );
+    assert.match(
+        pageStyles,
+        /#extendedSubmitGuess:hover:not\(:disabled\)[\s\S]*?#extendedSubmitGuess:focus-visible:not\(:disabled\)[\s\S]*?linear-gradient\(180deg,\s*#6f747a\s+0%,\s*#4b5055\s+100%\)/
+    );
+    assert.match(
+        pageStyles,
+        /#extendedSubmitGuess:active:not\(:disabled\)[\s\S]*?linear-gradient\(180deg,\s*#3c4044\s+0%,\s*#303337\s+100%\)/
+    );
+    assert.doesNotMatch(pageStyles, /\[data-app-theme="carbon"\]\s+\.extended-primary-btn/);
 });
 
 test('extended autocomplete mirrors Classic keyboard selection and entity visuals', () => {
