@@ -69,6 +69,12 @@ function getDirectionalArrow(state) {
     return '';
 }
 
+function getDirectionalLabel(state) {
+    if (state === 'orange') return 'valoarea țintă este mai mare';
+    if (state === 'purple') return 'valoarea țintă este mai mică';
+    return '';
+}
+
 function createHeaderRow(documentObject, schema) {
     const row = createElement(documentObject, 'div', 'extended-classic-board-row extended-classic-board-header');
     row.setAttribute('role', 'row');
@@ -98,15 +104,28 @@ function createFeedbackCell(documentObject, column, feedbackCell, attemptNumber)
     const state = normalizeCellState(feedbackCell.state);
     const cell = createElement(documentObject, 'div', `extended-classic-board-cell state-${state}`);
     cell.setAttribute('role', 'cell');
-    cell.setAttribute('aria-label', `Încercarea ${attemptNumber}, ${column.label}: ${feedbackCell.value ?? '—'}`);
 
-    const value = createElement(documentObject, 'strong', 'extended-classic-board-value', feedbackCell.value ?? '—');
+    const valueText = feedbackCell.value ?? '—';
+    const directionLabel = column.directional ? getDirectionalLabel(state) : '';
+    cell.setAttribute(
+        'aria-label',
+        `Încercarea ${attemptNumber}, ${column.label}: ${valueText}${directionLabel ? `, ${directionLabel}` : ''}`
+    );
+
+    const value = createElement(documentObject, 'strong', 'extended-classic-board-value', valueText);
     cell.append(value);
 
     if (column.directional) {
         const arrow = getDirectionalArrow(state);
         if (arrow) {
-            const indicator = createElement(documentObject, 'span', 'extended-classic-board-arrow', arrow);
+            const direction = state === 'orange' ? 'up' : 'down';
+            cell.classList.add('has-direction');
+            const indicator = createElement(
+                documentObject,
+                'span',
+                `extended-classic-board-arrow is-${direction}`,
+                arrow
+            );
             indicator.setAttribute('aria-hidden', 'true');
             cell.append(indicator);
         }
@@ -114,12 +133,12 @@ function createFeedbackCell(documentObject, column, feedbackCell, attemptNumber)
     return cell;
 }
 
-function createAttemptRow(documentObject, schema, feedback, attemptNumber) {
+function createAttemptRow(documentObject, schema, feedback, attemptNumber, { animate = false } = {}) {
     const completed = Boolean(feedback);
     const row = createElement(
         documentObject,
         'div',
-        `extended-classic-board-row${completed ? ' is-completed' : ''}`
+        `extended-classic-board-row${completed ? ' is-completed' : ''}${completed && animate ? ' is-revealing' : ''}`
     );
     row.setAttribute('role', 'row');
 
@@ -161,7 +180,7 @@ function createExtendedComparisonBoard({ documentObject, root } = {}) {
         root.removeAttribute?.('aria-label');
     }
 
-    function render() {
+    function render({ animateNewest = false } = {}) {
         if (!schema) return false;
 
         root.replaceChildren();
@@ -171,8 +190,15 @@ function createExtendedComparisonBoard({ documentObject, root } = {}) {
         root.setAttribute('aria-label', 'Istoricul încercărilor');
         root.append(createHeaderRow(documentObject, schema));
 
+        const newestFeedbackIndex = feedbackRows.length - 1;
         for (let index = 0; index < maxAttempts; index++) {
-            root.append(createAttemptRow(documentObject, schema, feedbackRows[index] || null, index + 1));
+            root.append(createAttemptRow(
+                documentObject,
+                schema,
+                feedbackRows[index] || null,
+                index + 1,
+                { animate: animateNewest && index === newestFeedbackIndex }
+            ));
         }
         return true;
     }
@@ -186,18 +212,21 @@ function createExtendedComparisonBoard({ documentObject, root } = {}) {
         const nextSchema = nextEntityType ? ENTITY_SCHEMAS[nextEntityType] : null;
         const nextMaxAttempts = normalizeMaxAttempts(options.maxAttempts, maxAttempts || 6);
         const wasEnabled = Boolean(schema);
+        const variantChanged = nextVariantKey !== variantKey;
         const schemaChanged = nextEntityType !== entityType;
+        const maxAttemptsChanged = nextMaxAttempts !== maxAttempts;
 
         variantKey = nextVariantKey;
         entityType = nextEntityType;
         schema = nextSchema;
         maxAttempts = nextMaxAttempts;
-        if (schemaChanged) feedbackRows = [];
+        if (variantChanged || schemaChanged) feedbackRows = [];
         if (feedbackRows.length > maxAttempts) feedbackRows = feedbackRows.slice(0, maxAttempts);
         if (!schema) {
             if (wasEnabled) clearBoardMarkup();
             return false;
         }
+        if (!variantChanged && !schemaChanged && !maxAttemptsChanged) return true;
         return render();
     }
 
@@ -218,7 +247,7 @@ function createExtendedComparisonBoard({ documentObject, root } = {}) {
         }
         if (!schema || feedbackRows.length >= maxAttempts) return false;
         feedbackRows.push(feedback);
-        render();
+        render({ animateNewest: true });
         return true;
     }
 
@@ -256,6 +285,7 @@ export {
     ENTITY_SCHEMAS,
     createExtendedComparisonBoard,
     getDirectionalArrow,
+    getDirectionalLabel,
     normalizeCellState,
     normalizeMaxAttempts,
     resolveComparisonEntityType,

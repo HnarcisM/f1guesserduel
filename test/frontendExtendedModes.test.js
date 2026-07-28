@@ -93,6 +93,16 @@ test('five extended modes reuse a declarative Classic-style comparison board', (
     assert.match(pageStyles, /\.extended-comparison\.extended-classic-board/);
     assert.match(pageStyles, /\.extended-classic-board-row/);
     assert.match(pageStyles, /\.extended-classic-board-cell\.is-empty/);
+    assert.match(pageStyles, /\.extended-classic-board-cell\.has-direction/);
+    assert.match(pageStyles, /@keyframes extendedClassicCellReveal/);
+    assert.match(pageStyles, /@keyframes extendedClassicArrowUp/);
+    assert.match(pageStyles, /@keyframes extendedClassicArrowDown/);
+    assert.match(
+        pageStyles,
+        /@media \(prefers-reduced-motion: reduce\)[\s\S]*?extended-classic-board-row\.is-revealing/
+    );
+    assert.match(comparisonBoard, /render\(\{ animateNewest = false \} = \{\}\)/);
+    assert.match(comparisonBoard, /render\(\{ animateNewest: true \}\)/);
 
     for (const variantKey of ['speed-run', 'era', 'streak', 'weekly']) {
         assert.match(
@@ -179,7 +189,7 @@ test('extended mode modules stay within maintainable size budgets', () => {
         'public/js/extendedModeHeaderController.js': 6_000,
         'public/js/extendedModeShell.js': 6_000,
         'public/js/extendedModeShellMarkup.js': 26_000,
-        'public/css/25-mode-pages.css': 12_000,
+        'public/css/25-mode-pages.css': 14_000,
         'public/css/28-extended-mode-autocomplete.css': 4_000,
         'server/game/extendedModesService.js': 40_000,
         'server/game/extendedModesCatalogs.js': 12_000,

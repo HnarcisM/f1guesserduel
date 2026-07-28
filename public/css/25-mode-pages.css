@@ -347,18 +347,75 @@ body.extended-mode-page.mode-page-classic-shell {
 
 .extended-classic-board-value {
     display: block;
+    flex: 1 1 auto;
+    min-width: 0;
     max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
+.extended-classic-board-cell.has-direction {
+    padding-right: 30px;
+}
+
 .extended-classic-board-arrow {
-    flex: 0 0 auto;
-    margin-left: 6px;
-    font-size: 1rem;
+    position: absolute;
+    top: 50%;
+    right: 9px;
+    z-index: 1;
+    transform: translateY(-50%);
+    color: #ffffff;
+    font-size: 1.1rem;
     font-weight: 950;
     line-height: 1;
+    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.48);
+}
+
+.extended-classic-board-row.is-revealing .extended-classic-board-cell {
+    animation: extendedClassicCellReveal 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--extended-reveal-delay, 0ms);
+}
+
+.extended-classic-board-row.is-revealing .extended-classic-board-cell:nth-child(1) { --extended-reveal-delay: 0ms; }
+.extended-classic-board-row.is-revealing .extended-classic-board-cell:nth-child(2) { --extended-reveal-delay: 35ms; }
+.extended-classic-board-row.is-revealing .extended-classic-board-cell:nth-child(3) { --extended-reveal-delay: 70ms; }
+.extended-classic-board-row.is-revealing .extended-classic-board-cell:nth-child(4) { --extended-reveal-delay: 105ms; }
+.extended-classic-board-row.is-revealing .extended-classic-board-cell:nth-child(5) { --extended-reveal-delay: 140ms; }
+.extended-classic-board-row.is-revealing .extended-classic-board-cell:nth-child(6) { --extended-reveal-delay: 175ms; }
+.extended-classic-board-row.is-revealing .extended-classic-board-cell:nth-child(7) { --extended-reveal-delay: 210ms; }
+
+.extended-classic-board-row.is-revealing .extended-classic-board-arrow.is-up {
+    animation: extendedClassicArrowUp 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--extended-reveal-delay, 0ms) + 100ms);
+}
+
+.extended-classic-board-row.is-revealing .extended-classic-board-arrow.is-down {
+    animation: extendedClassicArrowDown 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: calc(var(--extended-reveal-delay, 0ms) + 100ms);
+}
+
+@keyframes extendedClassicCellReveal {
+    from {
+        opacity: 0;
+        transform: translateY(7px) scale(0.97);
+        filter: saturate(0.65);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        filter: saturate(1);
+    }
+}
+
+@keyframes extendedClassicArrowUp {
+    from { opacity: 0; transform: translateY(calc(-50% + 8px)) scale(0.72); }
+    to { opacity: 1; transform: translateY(-50%) scale(1); }
+}
+
+@keyframes extendedClassicArrowDown {
+    from { opacity: 0; transform: translateY(calc(-50% - 8px)) scale(0.72); }
+    to { opacity: 1; transform: translateY(-50%) scale(1); }
 }
 
 .extended-classic-board-cell.state-green {
@@ -440,5 +497,12 @@ body.extended-mode-page.mode-page-classic-shell {
         padding: 5px 3px;
         font-size: 0.57rem;
         letter-spacing: 0.45px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .extended-classic-board-row.is-revealing .extended-classic-board-cell,
+    .extended-classic-board-row.is-revealing .extended-classic-board-arrow {
+        animation: none;
     }
 }

@@ -143,9 +143,44 @@ test('driver board renders Classic headers, empty attempts and directional feedb
 
     const firstAttempt = rootElement.children[1];
     assert.equal(firstAttempt.classList.contains('is-completed'), true);
+    assert.equal(firstAttempt.classList.contains('is-revealing'), true);
+    assert.equal(firstAttempt.children[4].classList.contains('has-direction'), true);
     assert.equal(firstAttempt.children[4].children[1].textContent, '↑');
+    assert.equal(firstAttempt.children[4].children[1].classList.contains('is-up'), true);
+    assert.match(firstAttempt.children[4].getAttribute('aria-label'), /valoarea țintă este mai mare/);
+    assert.equal(firstAttempt.children[5].classList.contains('has-direction'), true);
     assert.equal(firstAttempt.children[5].children[1].textContent, '↓');
+    assert.equal(firstAttempt.children[5].children[1].classList.contains('is-down'), true);
+    assert.match(firstAttempt.children[5].getAttribute('aria-label'), /valoarea țintă este mai mică/);
     assert.equal(rootElement.children[2].children[1].classList.contains('is-empty'), true);
+
+    board.syncRound({ variantKey: 'speed-run', entityType: 'driver', maxAttempts: 6 });
+    assert.equal(rootElement.children[1], firstAttempt, 'same-round sync must not restart the reveal animation');
+});
+
+test('only the newest completed row receives the reveal animation class', async () => {
+    const { createExtendedComparisonBoard } = await loadModule();
+    const documentObject = createFakeDocument();
+    const rootElement = new FakeElement('section');
+    const board = createExtendedComparisonBoard({ documentObject, root: rootElement });
+    const feedback = {
+        entityType: 'driver',
+        cells: [
+            { key: 'name', value: 'Pilot', state: 'red' },
+            { key: 'nat', value: 'ROU', state: 'red' },
+            { key: 'team', value: 'Team', state: 'red' },
+            { key: 'age', value: 30, state: 'orange' },
+            { key: 'debut', value: 2010, state: 'purple' },
+            { key: 'wins', value: 1, state: 'green' }
+        ]
+    };
+
+    board.startRound({ variantKey: 'era', entityType: 'driver', maxAttempts: 6 });
+    board.appendFeedback(feedback);
+    board.appendFeedback(feedback);
+
+    assert.equal(rootElement.children[1].classList.contains('is-revealing'), false);
+    assert.equal(rootElement.children[2].classList.contains('is-revealing'), true);
 });
 
 test('Streak keeps its three-attempt rule while reusing the same board component', async () => {

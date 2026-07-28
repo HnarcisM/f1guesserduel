@@ -2,7 +2,7 @@
 
 const CACHE_PREFIX = 'f1-guesser-static-';
 /* GENERATED_PRECACHE_START */
-const STATIC_CACHE_NAME = 'f1-guesser-static-0cda625cdddf63bf0b31';
+const STATIC_CACHE_NAME = 'f1-guesser-static-a012aaaa28322d0a4f77';
 const PRECACHE_URLS = Object.freeze([
     "/css/01-theme-tokens.css",
     "/css/02-header-menu.css",
