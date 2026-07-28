@@ -11,6 +11,7 @@ const {
     parseArguments,
     resolveNpmCommand,
     resolvePythonCommand,
+    runCiVerification,
     runStep,
     runSteps
 } = require('../scripts/run-ci-preflight');
@@ -176,8 +177,65 @@ test('GitHub backend summary uses the exact captured test result', () => {
     ]);
 });
 
+
+test('ci:verify always cleans Python cache and preserves a failed verification exit code', () => {
+    const events = [];
+    const result = runCiVerification({
+        argv: [],
+        platform: 'linux',
+        env: {},
+        rootDirectory: '/tmp/project',
+        runner(step) {
+            events.push(`step:${step.id}`);
+            return { name: step.name, exitCode: step.id === 'build' ? 2 : 0 };
+        },
+        cleanup(options) {
+            events.push(`cleanup:${options.rootDirectory}`);
+            return { removedDirectories: 2, removedFiles: 3 };
+        },
+        consoleObject: {
+            log() {},
+            error() {},
+            warn() {}
+        }
+    });
+
+    assert.equal(result.exitCode, 1);
+    assert.deepEqual(events, [
+        'step:python-helpers',
+        'step:build',
+        'cleanup:/tmp/project'
+    ]);
+    assert.deepEqual(result.cleanupResult, { removedDirectories: 2, removedFiles: 3 });
+    assert.equal(result.cleanupError, null);
+});
+
+test('ci:verify cleanup errors do not hide the original verification result', () => {
+    const result = runCiVerification({
+        argv: [],
+        platform: 'linux',
+        env: {},
+        runner(step) {
+            return { name: step.name, exitCode: 0 };
+        },
+        cleanup() {
+            throw new Error('access denied');
+        },
+        consoleObject: {
+            log() {},
+            error() {},
+            warn() {}
+        }
+    });
+
+    assert.equal(result.exitCode, 0);
+    assert.equal(result.cleanupResult, null);
+    assert.match(result.cleanupError.message, /access denied/);
+});
+
 test('package scripts expose canonical and full CI verification commands', () => {
     assert.equal(packageJson.scripts['ci:verify'], 'node scripts/run-ci-preflight.js');
+    assert.equal(packageJson.scripts['clean:python-cache'], 'node scripts/cleanup-python-cache.js');
     assert.equal(
         packageJson.scripts['ci:verify:full'],
         'node scripts/run-ci-preflight.js --with-services --with-browser'

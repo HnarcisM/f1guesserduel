@@ -6,6 +6,27 @@
     padding: 0;
 }
 
+/* Pe telefon și Fold, catalogul pornește sub headerul fix și păstrează titlurile vizibile la scroll. */
+@media (max-width: 920px) {
+    #difficulty-overlay:has(#gameHubCatalogView:not(.is-hidden)) {
+        --game-hub-header-clearance: calc(var(--header-height) + env(safe-area-inset-top, 0px) + 12px);
+        align-items: flex-start;
+        height: 100dvh;
+        padding-top: var(--game-hub-header-clearance);
+        padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+        scroll-padding-top: var(--game-hub-header-clearance);
+        overscroll-behavior-y: contain;
+    }
+
+    #difficulty-overlay:has(#gameHubCatalogView:not(.is-hidden)) > .menu-container.game-hub-menu {
+        margin-top: 0;
+    }
+
+    #difficulty-overlay:has(#gameHubCatalogView:not(.is-hidden)) .game-hub-panel {
+        scroll-margin-top: 8px;
+    }
+}
+
 .game-mode-selection.game-hub {
     width: 100%;
     max-width: none;

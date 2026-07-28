@@ -274,6 +274,55 @@ async function assertGameHubCatalog(page, viewportLabel) {
 
 
 
+async function assertGameHubPanelTitlesClearFixedHeader(page, viewport) {
+    if (viewport.width > 920) return;
+
+    const report = await page.evaluate(async () => {
+        const overlay = document.getElementById('difficulty-overlay');
+        const header = document.querySelector('.site-header');
+        const singleTitle = document.querySelector('.game-hub-panel--single .game-hub-panel-title');
+        const duelPanel = document.querySelector('.game-hub-panel--duel');
+        const duelTitle = duelPanel?.querySelector('.game-hub-panel-title');
+        if (!overlay || !header || !singleTitle || !duelPanel || !duelTitle) return null;
+
+        const nextPaint = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        overlay.scrollTop = 0;
+        await nextPaint();
+        const headerBottom = header.getBoundingClientRect().bottom;
+        const singleRectangle = singleTitle.getBoundingClientRect();
+
+        duelPanel.scrollIntoView({ block: 'start', inline: 'nearest' });
+        await nextPaint();
+        const duelRectangle = duelTitle.getBoundingClientRect();
+        const result = {
+            headerBottom,
+            singleTop: singleRectangle.top,
+            singleBottom: singleRectangle.bottom,
+            duelTop: duelRectangle.top,
+            duelBottom: duelRectangle.bottom,
+            viewportHeight: window.innerHeight,
+            overlayPaddingTop: Number.parseFloat(getComputedStyle(overlay).paddingTop) || 0
+        };
+        overlay.scrollTop = 0;
+        return result;
+    });
+
+    assert.ok(report, `${viewport.label}/home: titlurile Game Hub nu au putut fi măsurate`);
+    assert.ok(
+        report.overlayPaddingTop >= report.headerBottom + 8,
+        `${viewport.label}/home: overlay-ul nu rezervă headerul (${report.overlayPaddingTop}/${report.headerBottom}px)`
+    );
+    assert.ok(
+        report.singleTop >= report.headerBottom + 4,
+        `${viewport.label}/home: titlul Single este ascuns de header (${report.singleTop}/${report.headerBottom}px)`
+    );
+    assert.ok(
+        report.duelTop >= report.headerBottom + 4 && report.duelBottom <= report.viewportHeight,
+        `${viewport.label}/home: titlul Duel nu este vizibil după scroll (${JSON.stringify(report)})`
+    );
+}
+
+
 async function assertStandardGameHubCardLayersFillWidth(page, viewportLabel) {
     const report = await page.evaluate(() => Array.from(
         document.querySelectorAll('.game-hub-card.game-mode-card:not(.game-hub-featured-card)')
@@ -555,6 +604,7 @@ test('responsive layouts match committed visual baselines', { concurrency: false
                 await assertGameHubCatalog(page, viewport.label);
                 await assertStandardGameHubCardLayersFillWidth(page, viewport.label);
                 await assertMainMenuShowsCompactHeader(page, `${viewport.label}/home`);
+                await assertGameHubPanelTitlesClearFixedHeader(page, viewport);
                 if (viewport.label === VIEWPORTS[0].label) {
                     await assertExtendedModesLaunch(page, viewport.label, app.baseUrl);
                 }

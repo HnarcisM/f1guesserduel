@@ -24,6 +24,7 @@
     "build:version": "node scripts/version-frontend-assets.js",
     "optimize:raster": "node scripts/optimize-raster-assets.js",
     "optimize:svg": "node scripts/optimize-svg-assets.js",
+    "clean:python-cache": "node scripts/cleanup-python-cache.js",
     "postgres:backup": "node scripts/backup-postgres.js",
     "postgres:backup:verify": "node scripts/verify-postgres-backup.js",
     "postgres:backup:encrypt": "node scripts/encrypt-postgres-backup.js",

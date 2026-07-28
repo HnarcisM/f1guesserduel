@@ -63,6 +63,8 @@ test('responsive E2E suite captures home and game states and checks horizontal o
     assert.match(source, /assertNoVisibleOverlap/);
     assert.match(source, /compareWithBaseline/);
     assert.match(source, /assertGameHubSvgIcons/);
+    assert.match(source, /assertGameHubPanelTitlesClearFixedHeader/);
+    assert.match(source, /await assertGameHubPanelTitlesClearFixedHeader\(page, viewport\)/);
     assert.match(source, /assertStandardGameHubCardLayersFillWidth/);
     assert.match(source, /stabilizeHomeVisualState/);
     assert.match(source, /\.game-hub-card-art/);
