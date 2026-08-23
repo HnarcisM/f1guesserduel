@@ -29,6 +29,7 @@ test('Render blueprint documents production web service settings', () => {
     assert.match(source, /key:\s*SOCKET_RATE_LIMIT_WINDOW_MS\s+value:\s*60000/s);
     assert.match(source, /key:\s*LOG_LEVEL\s+value:\s*info/s);
     assert.match(source, /key:\s*REQUEST_LOGGING_ENABLED\s+value:\s*true/s);
+    assert.doesNotMatch(source, /key:\s*REDIS_URL/);
 });
 
 test('Render blueprint keeps production secrets out of Git', () => {

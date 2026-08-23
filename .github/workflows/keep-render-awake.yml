@@ -28,7 +28,7 @@ jobs:
         with:
           node-version: '22.x'
 
-      - name: Wake Render and validate Redis
+      - name: Wake Render and validate health
         env:
           RENDER_HEALTH_URL: ${{ vars.RENDER_HEALTH_URL || 'https://f1guesserduel.onrender.com/api/health' }}
         run: node scripts/wake-render-service.js

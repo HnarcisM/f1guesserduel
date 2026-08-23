@@ -156,6 +156,8 @@ Nu este nevoie să modifici `ROOMS_FILE_PATH`: când `REDIS_URL` este prezent, s
 
 La pornire, o conexiune Redis configurată dar indisponibilă oprește deploy-ul cu o eroare clară. După pornire, o întrerupere Redis apare în `/api/health`; rate limiting-ul revine la contoare locale în memorie, iar mesajele Redis repetitive din log sunt limitate.
 
+`render.yaml` păstrează intenționat `REDIS_URL` opțional pentru deploy-ul single-instance. Workflow-ul **Keep Render Awake** validează întotdeauna statusul general al `/api/health` și check-urile critice `database`, `drivers` și `rooms`: dacă Redis nu este configurat și `rooms.provider` este `file`, serviciul este considerat sănătos; dacă Redis este prezent, check-ul `redis` trebuie să fie `ok`. Dacă `rooms.provider` raportează `redis`, dar check-ul Redis lipsește sau este degradat, keep-alive eșuează pentru a semnala configurația inconsistentă.
+
 Această etapă nu include adapterul Socket.IO Redis. Snapshot-ul restaurează camerele după restart pentru o singură instanță, iar rate limiting-ul este distribuit, dar duelurile live nu sunt încă sincronizate complet între mai multe instanțe de server.
 
 ### Socket.IO rate limit

@@ -29,7 +29,9 @@ test('Render keep-alive executes the repository script and supports a URL overri
     assert.match(source, /uses:\s*actions\/checkout@v7/);
     assert.match(source, /uses:\s*actions\/setup-node@v7/);
     assert.match(source, /node-version:\s*'22\.x'/);
+    assert.match(source, /name:\s*Wake Render and validate health/);
     assert.match(source, /vars\.RENDER_HEALTH_URL/);
     assert.match(source, /https:\/\/f1guesserduel\.onrender\.com\/api\/health/);
     assert.match(source, /run:\s*node scripts\/wake-render-service\.js/);
+    assert.doesNotMatch(source, /Wake Render and validate Redis/);
 });

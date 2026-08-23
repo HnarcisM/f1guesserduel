@@ -5,6 +5,7 @@ const DEFAULT_HEALTH_URL = 'https://f1guesserduel.onrender.com/api/health';
 const DEFAULT_ATTEMPTS = 3;
 const DEFAULT_TIMEOUT_MS = 90_000;
 const DEFAULT_RETRY_DELAY_MS = 10_000;
+const REQUIRED_HEALTH_CHECKS = Object.freeze(['database', 'drivers', 'rooms']);
 
 function delay(milliseconds) {
     return new Promise(resolve => setTimeout(resolve, milliseconds));
@@ -36,9 +37,23 @@ function validateHealthPayload(payload) {
         throw new Error(`Serviciul raportează status ${JSON.stringify(payload.status || 'necunoscut')}.`);
     }
 
-    const redisStatus = payload.checks?.redis?.status;
-    if (redisStatus !== 'ok') {
-        throw new Error(`Verificarea Redis nu este disponibilă sau este degradată (${JSON.stringify(redisStatus || 'lipsește')}).`);
+    for (const checkName of REQUIRED_HEALTH_CHECKS) {
+        const checkStatus = payload.checks?.[checkName]?.status;
+        if (checkStatus !== 'ok') {
+            throw new Error(`Verificarea ${checkName} lipsește sau nu este ok (${JSON.stringify(checkStatus || 'lipsește')}).`);
+        }
+    }
+
+    const redisCheck = payload.checks?.redis;
+    const redisStatus = redisCheck?.status;
+    const roomProvider = payload.checks?.rooms?.provider;
+
+    if (redisCheck && redisStatus !== 'ok') {
+        throw new Error(`Verificarea Redis este degradată (${JSON.stringify(redisStatus || 'lipsește')}).`);
+    }
+
+    if (roomProvider === 'redis' && redisStatus !== 'ok') {
+        throw new Error('Health check inconsistent: rooms folosește Redis, dar checks.redis lipsește sau nu este ok.');
     }
 
     return payload;
@@ -108,8 +123,11 @@ async function wakeRenderService({
         try {
             logger.log(`[keep-alive] Verificare ${attempt}/${attempts}: ${url}`);
             const payload = await requestHealth({ url, fetchFn, timeoutMs });
+            const redisSummary = payload.checks?.redis?.status === 'ok'
+                ? 'Redis OK'
+                : 'Redis neconfigurat (opțional)';
             logger.log(
-                `[keep-alive] Serviciu activ; Redis OK; uptime=${Number(payload.uptimeSeconds || 0)}s.`
+                `[keep-alive] Serviciu activ; ${redisSummary}; uptime=${Number(payload.uptimeSeconds || 0)}s.`
             );
             return payload;
         } catch (error) {
