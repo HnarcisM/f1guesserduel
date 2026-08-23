@@ -2,6 +2,7 @@
 
 const assert = require('node:assert/strict');
 const test = require('node:test');
+const extendedModesModule = require('../server/game/extendedModesService');
 const {
     EXTENDED_VARIANTS,
     SPEED_RUN_ROUNDS,
@@ -11,7 +12,7 @@ const {
     filterDriversByEra,
     getIsoWeekInfo,
     matchesSudokuCriterion
-} = require('../server/game/extendedModesService');
+} = extendedModesModule;
 
 const TEAM_SETS = [
     ['Ferrari', 'McLaren', 'Williams'],
@@ -61,6 +62,37 @@ function createService(options = {}) {
         })
     };
 }
+
+
+test('Extended Modes service facade preserves its public helper exports after modularization', () => {
+    const expectedExports = [
+        'ERA_FILTERS',
+        'EXTENDED_VARIANTS',
+        'EXTENDED_VARIANT_KEYS',
+        'MAX_DRIVER_ATTEMPTS',
+        'SKIP_PENALTY',
+        'SPEED_RUN_ROUNDS',
+        'SPEED_RUN_SECONDS',
+        'STREAK_ATTEMPTS',
+        'WEEKLY_ROUNDS',
+        'WEEKLY_SECONDS',
+        'buildConstructorFeedback',
+        'buildDriverFeedback',
+        'buildSudokuCandidates',
+        'buildTrackFeedback',
+        'createExtendedModesService',
+        'createSeededRandom',
+        'createSudokuPuzzle',
+        'filterDriversByEra',
+        'findDistinctSudokuSolution',
+        'getIsoWeekInfo',
+        'matchesSudokuCriterion',
+        'normalizeDrivers',
+        'sampleUnique',
+        'shuffle'
+    ];
+    assert.deepEqual(Object.keys(extendedModesModule).sort(), expectedExports.sort());
+});
 
 test('Speed Run creates five unique server-side targets and a 90 second deadline', () => {
     const { service, clock } = createService();

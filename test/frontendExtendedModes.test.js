@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
+const { pathToFileURL } = require('node:url');
 
 const root = path.join(__dirname, '..');
 const read = relativePath => fs.readFileSync(path.join(root, relativePath), 'utf8');
@@ -9,6 +10,10 @@ const read = relativePath => fs.readFileSync(path.join(root, relativePath), 'utf
 const autocomplete = read('public/js/extendedModeAutocomplete.js');
 const comparisonBoard = read('public/js/extendedComparisonBoard.js');
 const controller = read('public/js/extendedModesController.js');
+const renderer = read('public/js/extendedModesRenderer.js');
+const runtime = read('public/js/extendedModesRuntime.js');
+const view = read('public/js/extendedModesView.js');
+const extendedUiSource = [controller, renderer, runtime, view].join('\n');
 const weeklyView = read('public/js/weeklyChallengeView.js');
 const extendedConfig = read('public/js/extendedModesConfig.js');
 const styles = read('public/css/24-extended-modes.css');
@@ -19,6 +24,24 @@ const registry = read('public/js/gameVariantRegistry.js');
 const socketHandlers = read('server/socket/extendedModesSocketHandlers.js');
 const weeklyCoordinator = read('server/socket/weeklyChallengeCoordinator.js');
 const coordinator = read('server/socket/registerSocketHandlers.js');
+
+test('Extended Modes controller facade preserves its public exports after modularization', async () => {
+    const moduleUrl = pathToFileURL(path.join(root, 'public/js/extendedModesController.js')).href;
+    const controllerModule = await import(moduleUrl);
+    const expectedExports = [
+        'ERA_OPTIONS',
+        'RECORDS_KEY',
+        'STYLE_URL',
+        'VARIANT_COPY',
+        'createExtendedModesController',
+        'formatDuration',
+        'installExtendedModesController',
+        'normalizeName',
+        'readRecords',
+        'writeRecords'
+    ];
+    assert.deepEqual(Object.keys(controllerModule).sort(), expectedExports.sort());
+});
 
 test('every extended mode is enabled and launches through an isolated page route', () => {
     for (const variantKey of [
@@ -52,7 +75,7 @@ test('frontend listens to the complete server-authoritative extended-mode protoc
         'extendedModeError',
         'weeklyChallengeStatus'
     ]) {
-        assert.match(controller, new RegExp(eventName));
+        assert.match(extendedUiSource, new RegExp(eventName));
     }
     for (const eventName of [
         'submitExtendedGuess',
@@ -63,7 +86,7 @@ test('frontend listens to the complete server-authoritative extended-mode protoc
         'leaveExtendedMode',
         'requestWeeklyChallengeStatus'
     ]) {
-        assert.match(controller, new RegExp(eventName));
+        assert.match(extendedUiSource, new RegExp(eventName));
         assert.match(`${socketHandlers}
 ${weeklyCoordinator}`, new RegExp(`'${eventName}'`));
     }
@@ -81,10 +104,10 @@ test('new modes remain isolated from classic game orchestration', () => {
 });
 
 test('five extended modes reuse a declarative Classic-style comparison board', () => {
-    assert.match(controller, /createExtendedComparisonBoard/);
-    assert.match(controller, /comparisonBoard\?\.startRound/);
-    assert.match(controller, /comparisonBoard\?\.syncRound/);
-    assert.match(controller, /comparisonBoard\?\.appendFeedback/);
+    assert.match(extendedUiSource, /createExtendedComparisonBoard/);
+    assert.match(extendedUiSource, /comparisonBoard\?\.startRound/);
+    assert.match(extendedUiSource, /comparisonBoard\?\.syncRound/);
+    assert.match(extendedUiSource, /comparisonBoard\?\.appendFeedback/);
     assert.match(comparisonBoard, /const DRIVER_SCHEMA/);
     assert.match(comparisonBoard, /const CONSTRUCTOR_SCHEMA/);
     assert.match(comparisonBoard, /EXCLUDED_VARIANTS = new Set\(\['pilot-sudoku', 'track'\]\)/);
@@ -116,11 +139,11 @@ test('five extended modes reuse a declarative Classic-style comparison board', (
 });
 
 test('track, Sudoku and responsive layouts have dedicated accessible UI', () => {
-    assert.match(controller, /createElementNS\('http:\/\/www\.w3\.org\/2000\/svg'/);
-    assert.match(controller, /role', 'grid'/);
-    assert.match(controller, /aria-modal/);
+    assert.match(extendedUiSource, /createElementNS\('http:\/\/www\.w3\.org\/2000\/svg'/);
+    assert.match(extendedUiSource, /role', 'grid'/);
+    assert.match(extendedUiSource, /aria-modal/);
     assert.match(pageController, /removeAttribute\('aria-modal'\)/);
-    assert.match(controller, /aria-live/);
+    assert.match(extendedUiSource, /aria-live/);
     assert.match(styles, /\.extended-sudoku-grid/);
     assert.match(styles, /\.extended-mode-hud/);
     assert.match(styles, /\.extended-weekly-grid/);
@@ -135,12 +158,12 @@ test('extended mode pages place the guess form directly below the title area', (
     assert.match(pageController, /game\.insertBefore\(guessArea, game\.firstElementChild\)/);
     assert.match(pageController, /game\.insertBefore\(status, guessArea\.nextSibling\)/);
     assert.match(pageController, /placeGuessControlsAfterTitle\(controller\)/);
-    assert.match(controller, /id="extendedGuessArea"[\s\S]*?id="extendedSubmitGuess"/);
+    assert.match(extendedUiSource, /id="extendedGuessArea"[\s\S]*?id="extendedSubmitGuess"/);
     assert.doesNotMatch(styles, /\.extended-guess-area\s*\{[^}]*order\s*:/);
 });
 
 test('Carbon extended submit button matches the Classic grey action palette', () => {
-    assert.match(controller, /id="extendedSubmitGuess" class="extended-primary-btn"/);
+    assert.match(extendedUiSource, /id="extendedSubmitGuess" class="extended-primary-btn"/);
     assert.match(
         pageStyles,
         /\[data-app-theme="carbon"\]\s+#extendedSubmitGuess\s*\{[\s\S]*?linear-gradient\(180deg,\s*#5f6368\s+0%,\s*#3f4347\s+100%\)[\s\S]*?border:\s*1px\s+solid\s+#7a7f85/
@@ -173,15 +196,34 @@ test('extended autocomplete mirrors Classic keyboard selection and entity visual
 });
 
 test('non-timed modes do not interpret a null deadline as an expired timer', () => {
-    assert.match(controller, /rawExpiresAt === null \|\| rawExpiresAt === undefined/);
-    assert.match(controller, /current\.expiresAt !== null/);
+    assert.match(extendedUiSource, /rawExpiresAt === null \|\| rawExpiresAt === undefined/);
+    assert.match(extendedUiSource, /current\.expiresAt !== null/);
+});
+
+test('large Extended Modes responsibilities are split behind stable controller and service facades', () => {
+    assert.match(controller, /createExtendedModesRenderer/);
+    assert.match(controller, /createExtendedModesRuntime/);
+    assert.match(controller, /collectExtendedModeElements/);
+    assert.match(renderer, /function renderSudoku/);
+    assert.match(view, /function createShell/);
+    assert.match(runtime, /installSocketListeners/);
+    assert.match(runtime, /extendedModeStarted/);
+
+    const service = read('server/game/extendedModesService.js');
+    assert.match(service, /createExtendedModesSessionFactory/);
+    assert.match(service, /require\('\.\/extendedModesModel'\)/);
+    assert.match(service, /require\('\.\/extendedModesSessionState'\)/);
+    assert.match(service, /require\('\.\/extendedModesSudoku'\)/);
 });
 
 test('extended mode modules stay within maintainable size budgets', () => {
     const budgets = {
         'public/js/extendedComparisonBoard.js': 12_000,
         'public/js/extendedModeAutocomplete.js': 9_000,
-        'public/js/extendedModesController.js': 40_000,
+        'public/js/extendedModesController.js': 18_000,
+        'public/js/extendedModesRenderer.js': 14_000,
+        'public/js/extendedModesRuntime.js': 8_000,
+        'public/js/extendedModesView.js': 8_000,
         'public/css/24-extended-modes.css': 16_000,
         'public/js/weeklyChallengeView.js': 6_000,
         'public/js/extendedModesConfig.js': 3_000,
@@ -191,7 +233,11 @@ test('extended mode modules stay within maintainable size budgets', () => {
         'public/js/extendedModeShellMarkup.js': 26_000,
         'public/css/25-mode-pages.css': 14_000,
         'public/css/28-extended-mode-autocomplete.css': 4_000,
-        'server/game/extendedModesService.js': 40_000,
+        'server/game/extendedModesService.js': 17_000,
+        'server/game/extendedModesModel.js': 10_000,
+        'server/game/extendedModesSudoku.js': 6_000,
+        'server/game/extendedModesSessionState.js': 5_000,
+        'server/game/extendedModesSessionFactory.js': 8_000,
         'server/game/extendedModesCatalogs.js': 12_000,
         'server/socket/extendedModesSocketHandlers.js': 13_000,
         'server/socket/extendedModesSocketPayloads.js': 2_000,
