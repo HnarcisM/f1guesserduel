@@ -1,6 +1,7 @@
 const {
     DUMMY_PASSWORD_HASH,
     hashPassword,
+    needsPasswordRehash,
     verifyPassword
 } = require('./passwordService');
 const { createAuthRepository } = require('./authRepository');
@@ -151,6 +152,10 @@ function createAuthService(databaseOrRepository, sessionService) {
                 message: buildSuspensionMessage(userRow),
                 suspendedUntil: userRow.suspendedUntil || null
             };
+        }
+
+        if (needsPasswordRehash(passwordHash)) {
+            await repository.updatePasswordHash(userRow.id, await hashPassword(password));
         }
 
         await repository.updateLastSeen(userRow.id);

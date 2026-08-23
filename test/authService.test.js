@@ -1,9 +1,10 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const asyncHooks = require('node:async_hooks');
+const crypto = require('node:crypto');
 
 const { createAuthService } = require('../server/auth/authService');
-const { verifyPassword } = require('../server/auth/passwordService');
+const { PBKDF2_ITERATIONS, verifyPassword } = require('../server/auth/passwordService');
 
 function createFakeAuthRepository() {
     let nextUserId = 1;
@@ -115,6 +116,12 @@ async function countPbkdf2Requests(action) {
     return requestCount;
 }
 
+function createLegacyPasswordHash(password, iterations = 120000) {
+    const salt = '00112233445566778899aabbccddeeff';
+    const hash = crypto.pbkdf2Sync(password, salt, iterations, 64, 'sha512').toString('hex');
+    return `pbkdf2$${iterations}$${salt}$${hash}`;
+}
+
 test('auth service registers users with async password hashing', async () => {
     const repository = createFakeAuthRepository();
     const authService = createAuthService(repository, createFakeSessionService());
@@ -160,6 +167,41 @@ test('auth service login awaits async password verification', async () => {
     assert.equal(loginResult.ok, true);
     assert.equal(loginResult.user.username, 'Narcis');
     assert.equal(loginResult.session.token, 'session-2');
+});
+
+test('successful login transparently upgrades a legacy password work factor', async () => {
+    const repository = createFakeAuthRepository();
+    const authService = createAuthService(repository, createFakeSessionService());
+    const password = 'LegacyPassword123!';
+    const legacyHash = createLegacyPasswordHash(password);
+    const user = {
+        id: 7,
+        username: 'LegacyUser',
+        email: 'legacy@example.com',
+        password_hash: legacyHash,
+        createdAt: '2026-07-06T00:00:00.000Z',
+        last_seen_at: null
+    };
+    repository.users.set(user.id, user);
+
+    const failedLogin = await authService.login({
+        email: user.email,
+        password: 'wrong-password'
+    });
+    assert.equal(failedLogin.status, 401);
+    assert.equal(repository.users.get(user.id).password_hash, legacyHash);
+
+    const loginResult = await authService.login({
+        email: user.email,
+        password
+    });
+    const upgradedHash = repository.users.get(user.id).password_hash;
+    const [, iterationsText] = upgradedHash.split('$');
+
+    assert.equal(loginResult.ok, true);
+    assert.notEqual(upgradedHash, legacyHash);
+    assert.equal(Number(iterationsText), PBKDF2_ITERATIONS);
+    assert.equal(await verifyPassword(password, upgradedHash), true);
 });
 
 test('auth service accepts 64-character passwords and rejects longer credentials', async () => {
@@ -410,6 +452,8 @@ test('auth service blocks a suspended account even when the password is correct'
         password: 'StrongPassword123!'
     });
     const storedUser = repository.users.get(registered.user.id);
+    const legacyHash = createLegacyPasswordHash('StrongPassword123!');
+    storedUser.password_hash = legacyHash;
     storedUser.accountStatus = 'suspended';
     storedUser.suspendedUntil = new Date(Date.now() + 60_000).toISOString();
 
@@ -421,4 +465,5 @@ test('auth service blocks a suspended account even when the password is correct'
     assert.equal(result.ok, false);
     assert.equal(result.status, 423);
     assert.match(result.message, /suspendat/i);
+    assert.equal(storedUser.password_hash, legacyHash);
 });
