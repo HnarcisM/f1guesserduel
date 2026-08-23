@@ -38,7 +38,7 @@ git push origin master
 
 ```text
 Runtime: Node
-Build Command: npm ci --include=dev && npm run build
+Build Command: node scripts/verify-package-lock-integrity.js && npm ci --include=dev && npm run build
 Start Command: npm start
 Health Check Path: /api/health
 Auto-Deploy: On Commit
@@ -344,6 +344,20 @@ Configurația include:
 
 Timerul și barele de progres folosesc o listă finită de clase procentuale din
 `public/css/13-progress-values.css`; frontend-ul nu necesită `unsafe-inline`.
+
+---
+
+## Supply-chain security
+
+Înainte de instalarea dependențelor, atât GitHub Actions cât și Render rulează:
+
+```bash
+node scripts/verify-package-lock-integrity.js
+```
+
+Validatorul acceptă doar pachete rezolvate din `https://registry.npmjs.org/` și cere metadata de integritate `sha512-...` pentru fiecare pachet instalat din registry. Păstrează această verificare înainte de `npm ci`, astfel încât un lockfile degradat să fie respins înainte de instalare.
+
+Workflow-ul GitHub **Security** rulează Dependency Review pe pull request-uri și CodeQL pentru JavaScript/TypeScript pe `main`, pull request-uri, manual și săptămânal. `.github/dependabot.yml` verifică săptămânal atât dependențele npm, cât și GitHub Actions.
 
 ---
 

@@ -77,6 +77,12 @@ function buildSteps({
     const python = resolvePythonCommand({ platform, env });
     const steps = [
         {
+            id: 'lockfile-integrity',
+            name: 'Verify package-lock integrity',
+            command: 'node',
+            args: ['scripts/verify-package-lock-integrity.js']
+        },
+        {
             id: 'python-helpers',
             name: 'Validate CI Python helpers',
             command: python.command,

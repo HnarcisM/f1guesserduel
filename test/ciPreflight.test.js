@@ -27,20 +27,22 @@ test('ci:verify builds generated assets before testing them in one fail-fast seq
     const commands = steps.map(commandOf);
 
     assert.deepEqual(steps.map(step => step.id), [
+        'lockfile-integrity',
         'python-helpers',
         'build',
         'backend-tests',
         'generated-files',
         'whitespace'
     ]);
-    assert.equal(commands[0], 'python test/ci_backend_tests_test.py');
-    assert.equal(commands[1], 'npm run build');
+    assert.equal(commands[0], 'node scripts/verify-package-lock-integrity.js');
+    assert.equal(commands[1], 'python test/ci_backend_tests_test.py');
+    assert.equal(commands[2], 'npm run build');
     assert.equal(
-        commands[2],
+        commands[3],
         `python scripts/ci_backend_tests.py run --propagate-exit-code --log-file ${BACKEND_LOG_FILE} -- npm run test:coverage`
     );
-    assert.deepEqual(steps[3].args, ['diff', '--exit-code', '--', ...GENERATED_FILES]);
-    assert.equal(commands[4], 'git diff --check');
+    assert.deepEqual(steps[4].args, ['diff', '--exit-code', '--', ...GENERATED_FILES]);
+    assert.equal(commands[5], 'git diff --check');
     assert.equal(steps.some(step => step.args.includes('test:integration:services')), false);
     assert.equal(steps.some(step => step.id === 'responsive-visual'), false);
 });
@@ -70,11 +72,13 @@ test('ci:verify resolves Python and npm commands cross-platform', () => {
         platform: 'win32',
         env: { ComSpec: 'C:\\Windows\\System32\\cmd.exe' }
     });
-    assert.equal(windowsSteps[0].command, 'py');
-    assert.deepEqual(windowsSteps[0].args, ['-3', 'test/ci_backend_tests_test.py']);
-    assert.equal(windowsSteps[1].command, 'C:\\Windows\\System32\\cmd.exe');
-    assert.deepEqual(windowsSteps[1].args, ['/d', '/s', '/c', 'npm.cmd', 'run', 'build']);
-    assert.deepEqual(windowsSteps[2].args.slice(-8), [
+    assert.equal(windowsSteps[0].command, 'node');
+    assert.deepEqual(windowsSteps[0].args, ['scripts/verify-package-lock-integrity.js']);
+    assert.equal(windowsSteps[1].command, 'py');
+    assert.deepEqual(windowsSteps[1].args, ['-3', 'test/ci_backend_tests_test.py']);
+    assert.equal(windowsSteps[2].command, 'C:\\Windows\\System32\\cmd.exe');
+    assert.deepEqual(windowsSteps[2].args, ['/d', '/s', '/c', 'npm.cmd', 'run', 'build']);
+    assert.deepEqual(windowsSteps[3].args.slice(-8), [
         '--',
         'C:\\Windows\\System32\\cmd.exe',
         '/d',
@@ -202,6 +206,7 @@ test('ci:verify always cleans Python cache and preserves a failed verification e
 
     assert.equal(result.exitCode, 1);
     assert.deepEqual(events, [
+        'step:lockfile-integrity',
         'step:python-helpers',
         'step:build',
         'cleanup:/tmp/project'
@@ -234,6 +239,7 @@ test('ci:verify cleanup errors do not hide the original verification result', ()
 });
 
 test('package scripts expose canonical and full CI verification commands', () => {
+    assert.equal(packageJson.scripts['security:lockfile'], 'node scripts/verify-package-lock-integrity.js');
     assert.equal(packageJson.scripts['ci:verify'], 'node scripts/run-ci-preflight.js');
     assert.equal(packageJson.scripts['clean:python-cache'], 'node scripts/cleanup-python-cache.js');
     assert.equal(

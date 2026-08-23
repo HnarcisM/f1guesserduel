@@ -34,7 +34,12 @@ test('GitHub Actions CI uses locked Node dependencies and an explicit Python run
     assert.match(source, /cache:\s*npm/);
     assert.match(source, /uses:\s*actions\/setup-python@v6/);
     assert.match(source, /python-version:\s*['"]3\.13['"]/);
+    assert.equal((source.match(/name:\s*Verify package-lock integrity/g) || []).length, 3);
+    assert.equal((source.match(/run:\s*node scripts\/verify-package-lock-integrity\.js/g) || []).length, 3);
     assert.match(source, /run:\s*npm ci/);
+
+    const integrityChecks = [...source.matchAll(/name:\s*Verify package-lock integrity[\s\S]*?run:\s*node scripts\/verify-package-lock-integrity\.js[\s\S]*?name:\s*Install dependencies[\s\S]*?run:\s*npm ci/g)];
+    assert.equal(integrityChecks.length, 3);
 });
 
 test('GitHub Actions delegates the required test-and-build job to the canonical local command', () => {

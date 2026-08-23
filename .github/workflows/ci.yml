@@ -40,6 +40,9 @@ jobs:
         with:
           python-version: '3.13'
 
+      - name: Verify package-lock integrity
+        run: node scripts/verify-package-lock-integrity.js
+
       - name: Install dependencies
         run: npm ci
 
@@ -109,6 +112,9 @@ jobs:
           node-version: '22.x'
           cache: npm
 
+      - name: Verify package-lock integrity
+        run: node scripts/verify-package-lock-integrity.js
+
       - name: Install dependencies
         run: npm ci
 
@@ -130,6 +136,9 @@ jobs:
         with:
           node-version: '22.x'
           cache: npm
+
+      - name: Verify package-lock integrity
+        run: node scripts/verify-package-lock-integrity.js
 
       - name: Install dependencies
         run: npm ci
