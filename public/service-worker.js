@@ -2,31 +2,24 @@
 
 const CACHE_PREFIX = 'f1-guesser-static-';
 /* GENERATED_PRECACHE_START */
-const STATIC_CACHE_NAME = 'f1-guesser-static-87300e5fe65fe6e174a3';
+const STATIC_CACHE_NAME = 'f1-guesser-static-9c1adce53c1580fba758';
 const PRECACHE_URLS = Object.freeze([
     "/css/01-theme-tokens.css",
-    "/css/02-header-menu.css",
     "/css/02-header-menu.css?v=28eff13600d50eeb",
-    "/css/08-auth.css",
     "/css/08-auth.css?v=0129cc0c688bd225",
-    "/css/11-mobile-layout-fix.css",
     "/css/11-mobile-layout-fix.css?v=50671d073fbb27c4",
     "/css/13-progress-values.css",
-    "/css/14-auth-panel-viewport-fix.css",
     "/css/14-auth-panel-viewport-fix.css?v=6512708d67926feb",
     "/css/16-duel-ready.css?v=325c0498b808b8c1",
     "/css/17-duel-series.css?v=519233effd931ef4",
     "/css/18-duel-round-history.css?v=2d04b48dd080faa8",
-    "/css/19-account-game-history.css",
     "/css/19-account-game-history.css?v=cc05ef00b611d229",
     "/css/20-duel-identity.css?v=884e3a5bec345dbb",
-    "/css/21-feedback-settings.css",
     "/css/21-feedback-settings.css?v=be4013981c050ad8",
     "/css/22-connection-status.css?v=a05172cdad41910e",
     "/css/23-game-hub.css?v=3f932e8a7ba35e9b",
     "/css/24-extended-modes.css",
     "/css/25-mode-pages.css",
-    "/css/26-runtime-status.css",
     "/css/26-runtime-status.css?v=9e36b3f6d4da0032",
     "/css/27-extended-mode-legend.css",
     "/css/28-extended-mode-autocomplete.css",
@@ -35,19 +28,8 @@ const PRECACHE_URLS = Object.freeze([
     "/game.bundle.min.js?v=ba8b523c64d44d9e",
     "/icons/pwa-192.png",
     "/icons/pwa-512.png",
-    "/images/game-hub/classic.webp",
-    "/images/game-hub/constructor.webp",
-    "/images/game-hub/daily.webp",
-    "/images/game-hub/duel.webp",
-    "/images/game-hub/era.webp",
-    "/images/game-hub/pilot-sudoku.webp",
-    "/images/game-hub/speed-run.webp",
-    "/images/game-hub/streak.webp",
-    "/images/game-hub/track.webp",
-    "/images/game-hub/weekly.webp",
     "/index.html",
     "/js/accountDashboardView.js",
-    "/js/accountGameHistoryController.js",
     "/js/accountGameHistoryController.js?v=0bdff1b6f186805c",
     "/js/accountSettingsController.js",
     "/js/apiClient.js",
@@ -84,7 +66,6 @@ const PRECACHE_URLS = Object.freeze([
     "/js/navigationMenuController.js",
     "/js/progressStyle.js",
     "/js/pwaController.js?v=1fa4c81639f75660",
-    "/js/runtimeExperienceController.js",
     "/js/runtimeExperienceController.js?v=b3f5d64959795f47",
     "/js/socketBridgeBootstrap.js?v=fd76646cd8126930",
     "/js/themeBootstrap.js?v=6afc6a3773845bb4",
@@ -131,9 +112,23 @@ function canCacheResponse(response) {
     return !/\bno-store\b/i.test(cacheControl);
 }
 
+function canIgnoreStaticVersionSearch(request) {
+    try {
+        const url = new URL(request?.url || request, 'http://localhost');
+        if (!url.search) return true;
+        return url.searchParams.size === 1 && url.searchParams.has('v');
+    } catch {
+        return false;
+    }
+}
+
 async function cacheFirstStatic(request, { cachesObject = caches, fetchFn = fetch } = {}) {
     const cache = await cachesObject.open(STATIC_CACHE_NAME);
-    const cached = await cache.match(request);
+    // Versioned and unversioned references can point to the same immutable build asset.
+    // Ignore only the dedicated ?v= cache-busting query; preserve any semantic query parameters.
+    const cached = await cache.match(request, {
+        ignoreSearch: canIgnoreStaticVersionSearch(request)
+    });
     if (cached) return cached;
 
     const response = await fetchFn(request);
@@ -222,6 +217,7 @@ if (typeof module !== 'undefined') {
         NETWORK_ONLY_PREFIXES,
         STATIC_ASSET_EXTENSION_PATTERN,
         canCacheResponse,
+        canIgnoreStaticVersionSearch,
         cacheFirstStatic,
         handleFetchEvent,
         installStaticCache,

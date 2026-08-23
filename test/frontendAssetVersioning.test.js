@@ -118,7 +118,12 @@ test('frontend asset versioning replaces manual values with deterministic conten
     assert.match(firstHtml, /\/other\.js\?v=keep-this/);
     assert.equal(
         firstResult.serviceWorker.precacheUrls.length,
-        DEFAULT_ASSETS.length + DEFAULT_PRECACHE_STATIC_URLS.length
+        createPrecacheUrls(firstResult.assets, DEFAULT_PRECACHE_STATIC_URLS).length
+    );
+    assert.ok(
+        firstResult.serviceWorker.precacheUrls.length
+            < DEFAULT_ASSETS.length + DEFAULT_PRECACHE_STATIC_URLS.length,
+        'overlapping versioned and unversioned assets must share one precache entry'
     );
     const serviceWorker = fs.readFileSync(path.join(rootDir, 'public', 'service-worker.js'), 'utf8');
     assert.match(serviceWorker, /f1-guesser-static-[a-f0-9]{20}/);
@@ -200,7 +205,12 @@ test('precache generation is deterministic, unique and excludes dynamic endpoint
         { publicPath: '/game.bundle.min.js', version: 'abc123' },
         { publicPath: '/style.bundle.css', version: 'def456' },
         { publicPath: '/game.bundle.min.js', version: 'abc123' }
-    ], ['/index.html', '/index.html', '/icons/pwa-192.png']);
+    ], [
+        '/index.html',
+        '/index.html',
+        '/icons/pwa-192.png',
+        '/game.bundle.min.js'
+    ]);
 
     assert.deepEqual(urls, [
         '/index.html',
@@ -208,8 +218,22 @@ test('precache generation is deterministic, unique and excludes dynamic endpoint
         '/game.bundle.min.js?v=abc123',
         '/style.bundle.css?v=def456'
     ]);
+    assert.equal(
+        new Set(urls.map(url => new URL(url, 'http://localhost').pathname)).size,
+        urls.length
+    );
     assert.equal(urls.some(url => url.startsWith('/api')), false);
     assert.equal(urls.some(url => url.startsWith('/socket.io')), false);
+});
+
+test('default precache keeps functional offline assets but defers Game Hub artwork', () => {
+    assert.ok(DEFAULT_PRECACHE_STATIC_URLS.includes('/index.html'));
+    assert.ok(DEFAULT_PRECACHE_STATIC_URLS.includes('/modes/track/'));
+    assert.ok(DEFAULT_PRECACHE_STATIC_URLS.includes('/js/modes/trackPage.js'));
+    assert.equal(
+        DEFAULT_PRECACHE_STATIC_URLS.some(url => url.startsWith('/images/game-hub/')),
+        false
+    );
 });
 
 test('service worker precache updater replaces only the generated block', () => {

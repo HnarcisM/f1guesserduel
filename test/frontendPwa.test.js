@@ -7,6 +7,19 @@ const projectRoot = path.join(__dirname, '..');
 const serviceWorker = require('../public/service-worker.js');
 const pwaModulePromise = import('../public/js/pwaController.js');
 
+function readGeneratedPrecacheUrls() {
+    const workerSource = fs.readFileSync(path.join(projectRoot, 'public', 'service-worker.js'), 'utf8');
+    const block = workerSource.match(/const PRECACHE_URLS = Object\.freeze\(\[([\s\S]*?)\]\);/)?.[1] || '';
+    return [...block.matchAll(/\s*("[^"]+")\s*,/g)].map(match => JSON.parse(match[1]));
+}
+
+function resolvePrecacheFile(url) {
+    const pathname = new URL(url, 'https://app.test').pathname;
+    const relativePath = path.join('public', pathname.replace(/^\/+/, ''));
+    const absolutePath = path.join(projectRoot, relativePath);
+    return pathname.endsWith('/') ? path.join(absolutePath, 'index.html') : absolutePath;
+}
+
 function readPngDimensions(filePath) {
     const buffer = fs.readFileSync(filePath);
     assert.equal(buffer.toString('ascii', 1, 4), 'PNG');
@@ -96,6 +109,7 @@ test('service worker treats API, auth, metrics and Socket.IO as network only', (
     assert.equal(serviceWorker.isNetworkOnlyPath('/game.bundle.min.js'), false);
     assert.equal(serviceWorker.isStaticAssetPath('/game.bundle.min.js'), true);
     assert.equal(serviceWorker.isStaticAssetPath('/manifest.webmanifest'), true);
+    assert.equal(serviceWorker.isStaticAssetPath('/images/game-hub/duel.webp'), true);
     assert.equal(serviceWorker.isStaticAssetPath('/room/ABC'), false);
 });
 
@@ -136,6 +150,19 @@ test('service worker handles only same-origin GET navigations and static assets'
     }), true);
     assert.equal(responded.length, 2);
     await Promise.all(responded);
+});
+
+test('service worker precache stays lean and defers decorative Game Hub artwork', () => {
+    const urls = readGeneratedPrecacheUrls();
+    const pathnames = urls.map(url => new URL(url, 'https://app.test').pathname);
+    const totalBytes = urls.reduce((sum, url) => sum + fs.statSync(resolvePrecacheFile(url)).size, 0);
+
+    assert.equal(new Set(pathnames).size, pathnames.length);
+    assert.ok(urls.length <= 85, `precache entries exceeded budget: ${urls.length}`);
+    assert.ok(totalBytes <= 1024 * 1024, `precache bytes exceeded 1 MiB: ${totalBytes}`);
+    assert.equal(pathnames.some(pathname => pathname.startsWith('/images/game-hub/')), false);
+    assert.ok(pathnames.includes('/index.html'));
+    assert.ok(pathnames.includes('/modes/track/'));
 });
 
 test('service worker precache bypasses stale HTTP cache entries', async () => {
@@ -315,6 +342,13 @@ test('PWA installer waits for load and reuses one registration promise', async (
     assert.deepEqual(interactiveCalls, ['/service-worker.js']);
 });
 
+test('service worker deduplicates only cache-busting version queries', () => {
+    assert.equal(serviceWorker.canIgnoreStaticVersionSearch(new Request('https://app.test/app.js')), true);
+    assert.equal(serviceWorker.canIgnoreStaticVersionSearch(new Request('https://app.test/app.js?v=abc123')), true);
+    assert.equal(serviceWorker.canIgnoreStaticVersionSearch(new Request('https://app.test/app.js?locale=ro')), false);
+    assert.equal(serviceWorker.canIgnoreStaticVersionSearch(new Request('https://app.test/app.js?v=abc&locale=ro')), false);
+});
+
 test('service worker cache helpers reject unsafe responses and refresh cache misses', async () => {
     assert.equal(serviceWorker.normalizePathname(), '/');
     assert.equal(serviceWorker.normalizePathname('assets/app.js'), '/assets/app.js');
@@ -327,12 +361,16 @@ test('service worker cache helpers reject unsafe responses and refresh cache mis
     assert.equal(serviceWorker.canCacheResponse(new Response('static')), true);
 
     const stored = [];
-    const request = new Request('https://app.test/app.js');
+    const cacheMatchCalls = [];
+    const request = new Request('https://app.test/app.js?v=current-build');
     const response = await serviceWorker.cacheFirstStatic(request, {
         cachesObject: {
             async open() {
                 return {
-                    async match() { return null; },
+                    async match(key, options) {
+                        cacheMatchCalls.push({ key, options });
+                        return null;
+                    },
                     async put(key, value) { stored.push({ key, value }); }
                 };
             }
@@ -341,6 +379,8 @@ test('service worker cache helpers reject unsafe responses and refresh cache mis
     });
     assert.equal(await response.text(), 'fresh');
     assert.equal(stored.length, 1);
+    assert.equal(cacheMatchCalls.length, 1);
+    assert.deepEqual(cacheMatchCalls[0].options, { ignoreSearch: true });
 
     const noStoreWrites = [];
     await serviceWorker.cacheFirstStatic(request, {

@@ -59,16 +59,6 @@ const DEFAULT_PRECACHE_STATIC_URLS = Object.freeze([
     '/modes/constructor/',
     '/modes/pilot-sudoku/',
     '/modes/track/',
-    '/images/game-hub/classic.webp',
-    '/images/game-hub/daily.webp',
-    '/images/game-hub/era.webp',
-    '/images/game-hub/weekly.webp',
-    '/images/game-hub/speed-run.webp',
-    '/images/game-hub/streak.webp',
-    '/images/game-hub/constructor.webp',
-    '/images/game-hub/pilot-sudoku.webp',
-    '/images/game-hub/track.webp',
-    '/images/game-hub/duel.webp'
 ]);
 const DEFAULT_ASSETS = Object.freeze([
     {
@@ -323,16 +313,31 @@ function updateAssetReference(htmlContent, asset, version) {
 
 function createPrecacheUrls(versionedAssets, additionalUrls = DEFAULT_PRECACHE_STATIC_URLS) {
     const urls = [];
-    for (const url of additionalUrls) {
-        if (typeof url === 'string' && url.startsWith('/') && !urls.includes(url)) urls.push(url);
+    const indexByPathname = new Map();
+
+    function addUrl(url, { preferVersioned = false } = {}) {
+        if (typeof url !== 'string' || !url.startsWith('/')) return;
+
+        const pathname = new URL(url, 'http://localhost').pathname;
+        const existingIndex = indexByPathname.get(pathname);
+        if (existingIndex === undefined) {
+            indexByPathname.set(pathname, urls.length);
+            urls.push(url);
+            return;
+        }
+
+        if (preferVersioned) urls[existingIndex] = url;
     }
+
+    for (const url of additionalUrls) addUrl(url);
+
     for (const asset of versionedAssets) {
         const publicPath = asset?.publicPath;
         const version = asset?.version;
         if (typeof publicPath !== 'string' || typeof version !== 'string') continue;
-        const url = `${publicPath}?v=${version}`;
-        if (!urls.includes(url)) urls.push(url);
+        addUrl(`${publicPath}?v=${version}`, { preferVersioned: true });
     }
+
     return urls;
 }
 
