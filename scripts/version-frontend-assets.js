@@ -158,6 +158,26 @@ const DEFAULT_ASSETS = Object.freeze([
     },
     {
         attribute: 'src',
+        publicPath: '/js/gameHubViewCore.js',
+        sourceFile: path.join('public', 'js', 'gameHubViewCore.js')
+    },
+    {
+        attribute: 'src',
+        publicPath: '/js/gameHubProfileView.js',
+        sourceFile: path.join('public', 'js', 'gameHubProfileView.js')
+    },
+    {
+        attribute: 'src',
+        publicPath: '/js/gameHubDuelRoomView.js',
+        sourceFile: path.join('public', 'js', 'gameHubDuelRoomView.js')
+    },
+    {
+        attribute: 'src',
+        publicPath: '/js/gameHubCardsView.js',
+        sourceFile: path.join('public', 'js', 'gameHubCardsView.js')
+    },
+    {
+        attribute: 'src',
         publicPath: '/js/gameHubDashboardView.js',
         sourceFile: path.join('public', 'js', 'gameHubDashboardView.js')
     },

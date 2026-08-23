@@ -5,6 +5,10 @@ const test = require('node:test');
 
 async function loadGameHubModules() {
     await import('../public/js/gameVariantRegistry.js');
+    await import('../public/js/gameHubViewCore.js');
+    await import('../public/js/gameHubProfileView.js');
+    await import('../public/js/gameHubDuelRoomView.js');
+    await import('../public/js/gameHubCardsView.js');
     await import('../public/js/gameHubDashboardView.js');
     await import('../public/js/gameHubController.js');
     return {
@@ -700,6 +704,10 @@ test('game hub installer is idempotent', async () => {
 test('production HTML loads the Game Hub before the existing game bundle', () => {
     const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
     const registryIndex = html.indexOf('/js/gameVariantRegistry.js');
+    const coreIndex = html.indexOf('/js/gameHubViewCore.js');
+    const profileIndex = html.indexOf('/js/gameHubProfileView.js');
+    const duelIndex = html.indexOf('/js/gameHubDuelRoomView.js');
+    const cardsIndex = html.indexOf('/js/gameHubCardsView.js');
     const viewIndex = html.indexOf('/js/gameHubDashboardView.js');
     const controllerIndex = html.indexOf('/js/gameHubController.js');
     const bundleIndex = html.indexOf('/game.bundle.min.js');
@@ -720,7 +728,11 @@ test('production HTML loads the Game Hub before the existing game bundle', () =>
     assert.ok(mobileStylesIndex > authStylesIndex);
     assert.ok(authViewportFixIndex > mobileStylesIndex);
     assert.ok(registryIndex > 0);
-    assert.ok(viewIndex > registryIndex);
+    assert.ok(coreIndex > registryIndex);
+    assert.ok(profileIndex > coreIndex);
+    assert.ok(duelIndex > profileIndex);
+    assert.ok(cardsIndex > duelIndex);
+    assert.ok(viewIndex > cardsIndex);
     assert.ok(controllerIndex > viewIndex);
     assert.ok(bundleIndex > controllerIndex);
 });
@@ -785,7 +797,7 @@ test('Track Guesser wide card stretches artwork, copy and background across its 
 
 test('Game Hub SVG polish keeps semantic icon keys, theme colors and reduced-motion support', () => {
     const registrySource = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'gameVariantRegistry.js'), 'utf8');
-    const viewSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'gameHubDashboardView.js'), 'utf8');
+    const viewSource = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'gameHubViewCore.js'), 'utf8');
     const css = fs.readFileSync(path.join(__dirname, '..', 'public', 'css', '30-game-hub-visual-polish.css'), 'utf8');
 
     assert.doesNotMatch(registrySource, /🎯|🌅|⚔️|⏱️|🏛️|🔥|📅|🏎️|🧩|🗺️/);
@@ -803,7 +815,7 @@ test('Game Hub category headers keep unframed icons left of titles and centered 
         'utf8'
     );
     const dashboardSource = fs.readFileSync(
-        path.join(__dirname, '..', 'public', 'js', 'gameHubDashboardView.js'),
+        path.join(__dirname, '..', 'public', 'js', 'gameHubCardsView.js'),
         'utf8'
     );
 
@@ -823,6 +835,52 @@ test('Game Hub category headers keep unframed icons left of titles and centered 
     assert.match(source, /rgba\(0,\s*238,\s*255,\s*0\.96\)\s*50%/);
     assert.match(source, /rgba\(255,\s*67,\s*67,\s*0\.98\)\s*50%/);
     assert.match(source, /rgba\(255,\s*198,\s*41,\s*0\.97\)\s*50%/);
+});
+
+test('Game Hub dashboard facade preserves the legacy public API surface', async () => {
+    const { dashboardView } = await loadGameHubModules();
+
+    assert.deepEqual(Object.keys(dashboardView).sort(), [
+        'applyModeCardAvailability',
+        'createDashboard',
+        'createFeaturedDuelCard',
+        'createGameHubIcon',
+        'createModeCard',
+        'ensureHeaderProfileMarkup',
+        'getActiveStreak',
+        'installGameHubDuelRoomSync',
+        'installGameHubProfileSync',
+        'normalizeAvatarKey',
+        'normalizeDuelRoomListPayload',
+        'renderDuelRoomSnapshot',
+        'renderProfileSnapshot',
+        'setProgressPercent'
+    ].sort());
+});
+
+test('Game Hub dashboard remains a small compatibility facade over focused view modules', () => {
+    const jsDir = path.join(__dirname, '..', 'public', 'js');
+    const modules = [
+        ['gameHubViewCore.js', 'F1GameHubViewCore', 250],
+        ['gameHubProfileView.js', 'F1GameHubProfileView', 300],
+        ['gameHubDuelRoomView.js', 'F1GameHubDuelRoomView', 500],
+        ['gameHubCardsView.js', 'F1GameHubCardsView', 350],
+        ['gameHubDashboardView.js', 'F1GameHubDashboardView', 180]
+    ];
+
+    for (const [fileName, globalName, maxLines] of modules) {
+        const source = fs.readFileSync(path.join(jsDir, fileName), 'utf8');
+        const lineCount = source.split(/\r?\n/).length;
+        assert.match(source, new RegExp(globalName));
+        assert.ok(lineCount <= maxLines, `${fileName} exceeded ${maxLines} lines: ${lineCount}`);
+        assert.doesNotMatch(source, /innerHTML\s*=/);
+    }
+
+    const facade = fs.readFileSync(path.join(jsDir, 'gameHubDashboardView.js'), 'utf8');
+    assert.match(facade, /resolveDependency\('F1GameHubViewCore'/);
+    assert.match(facade, /resolveDependency\('F1GameHubProfileView'/);
+    assert.match(facade, /resolveDependency\('F1GameHubDuelRoomView'/);
+    assert.match(facade, /resolveDependency\('F1GameHubCardsView'/);
 });
 
 test('all standard Game Hub cards stretch artwork and copy across phone and Fold widths', () => {
