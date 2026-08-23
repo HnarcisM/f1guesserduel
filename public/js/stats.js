@@ -40,11 +40,23 @@ export function getStats() {
 		return defaultStats;
 	}
 
-	if (!stats || typeof stats !== 'object') return defaultStats;
-	if (!stats.distribution || typeof stats.distribution !== 'object') {
-		stats.distribution = { ...defaultStats.distribution };
+	if (!stats || typeof stats !== 'object' || Array.isArray(stats)) return defaultStats;
+
+	const sourceDistribution = stats.distribution && typeof stats.distribution === 'object' && !Array.isArray(stats.distribution)
+		? stats.distribution
+		: {};
+	const distribution = createEmptyDistribution();
+
+	for (let attemptNumber = 1; attemptNumber <= 6; attemptNumber++) {
+		distribution[attemptNumber] = asNonNegativeInteger(sourceDistribution[attemptNumber]);
 	}
-	return stats;
+
+	return {
+		played: asNonNegativeInteger(stats.played),
+		won: asNonNegativeInteger(stats.won),
+		streak: asNonNegativeInteger(stats.streak),
+		distribution
+	};
 }
 
 /**

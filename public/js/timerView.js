@@ -6,7 +6,7 @@ import { safeGetItem, safeSetItem } from './safeStorage.js';
 export function createTimerView({ getSocket, isRoundFinished, onHostOnlyMessage }) {
 	let isCurrentRoomHost = false;
 	let isTimedModeEnabled = safeGetItem('f1-guesser-timed-mode') === 'on';
-	let selectedTimeLimitSeconds = Number(safeGetItem('f1-guesser-time-limit')) || DEFAULT_TIME_LIMIT_SECONDS;
+	let selectedTimeLimitSeconds = normalizeTimeLimitSeconds(safeGetItem('f1-guesser-time-limit'));
 	let currentRoundTimed = false;
 	let currentTimeLimitSeconds = DEFAULT_TIME_LIMIT_SECONDS;
 	let areRoundSettingsLocked = false;

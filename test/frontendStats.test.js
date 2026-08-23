@@ -53,6 +53,42 @@ test('frontend stats update recovers after corrupted localStorage state', async 
     });
 });
 
+test('frontend stats normalize valid JSON with malformed value types before updating', async () => {
+    global.localStorage = createLocalStorageMock({
+        'f1-guesser-stats': JSON.stringify({
+            played: '9',
+            won: '2',
+            streak: '1',
+            distribution: {
+                1: '4',
+                2: -3,
+                3: 'invalid',
+                4: 2.5,
+                5: 3,
+                7: 99
+            }
+        })
+    });
+
+    const { getStats, updateStats } = await import('../public/js/stats.js');
+
+    assert.deepEqual(getStats(), {
+        played: 9,
+        won: 2,
+        streak: 1,
+        distribution: { 1: 4, 2: 0, 3: 0, 4: 0, 5: 3, 6: 0 }
+    });
+
+    updateStats(true, 1);
+
+    assert.deepEqual(getStats(), {
+        played: 10,
+        won: 3,
+        streak: 2,
+        distribution: { 1: 5, 2: 0, 3: 0, 4: 0, 5: 3, 6: 0 }
+    });
+});
+
 test('account stats card uses authoritative totals and aggregates mode distributions', async () => {
     const { normalizeAccountStatsForCard } = await import('../public/js/stats.js');
 
