@@ -164,6 +164,17 @@ function createSessionService(databaseOrRepository, options = {}) {
         return repository.deleteOtherSessionsByUserId(Number(userId), hashToken(currentToken));
     }
 
+    async function rotateSessionsForUser(userId) {
+        const normalizedUserId = Number(userId);
+        if (!Number.isSafeInteger(normalizedUserId) || normalizedUserId <= 0) {
+            return { revoked: { changes: 0 }, session: null };
+        }
+
+        const revoked = await destroyAllSessionsForUser(normalizedUserId);
+        const session = await createSession(normalizedUserId);
+        return { revoked, session };
+    }
+
     return {
         createSession,
         getUserByToken,
@@ -175,6 +186,7 @@ function createSessionService(databaseOrRepository, options = {}) {
         destroySession,
         destroyAllSessionsForUser,
         destroyOtherSessionsForUser,
+        rotateSessionsForUser,
         cookieName,
         maxAgeMs,
         sessionCleanupIntervalMs

@@ -36,7 +36,9 @@ function createTestApp() {
         },
         async destroySession() {},
         async destroyAllSessionsForUser() {},
-        async destroyOtherSessionsForUser() { return { changes: 0 }; }
+        async rotateSessionsForUser() {
+            return { revoked: { changes: 0 }, session: { token: 'rotated-session', socketAuthToken: 'rotated-socket-token' } };
+        }
     };
     const csrfProtection = createCsrfProtectionMiddleware({
         allowedOrigins: [TRUSTED_ORIGIN]
@@ -235,6 +237,7 @@ test('real auth routes reject login CSRF and allow trusted login and registratio
             body: { email: 'login@example.com', password: 'password123' }
         });
         assert.equal(trustedLogin.response.status, 200);
+        assert.equal(trustedLogin.response.headers.get('cache-control'), 'no-store');
         assert.equal(trustedLogin.data.user.username, 'Login_Test');
         assert.equal(trustedLogin.data.socketAuthToken, 'login-socket-token');
 
@@ -249,6 +252,7 @@ test('real auth routes reject login CSRF and allow trusted login and registratio
             }
         });
         assert.equal(trustedRegister.response.status, 201);
+        assert.equal(trustedRegister.response.headers.get('cache-control'), 'no-store');
         assert.equal(trustedRegister.data.user.username, 'Register_Test');
         assert.equal(trustedRegister.data.socketAuthToken, 'register-socket-token');
         assert.deepEqual(authCalls, { login: 1, register: 1 });
@@ -256,6 +260,7 @@ test('real auth routes reject login CSRF and allow trusted login and registratio
 
         const safeAuthRead = await sendJson(baseUrl, '/api/auth/me');
         assert.equal(safeAuthRead.response.status, 200);
+        assert.equal(safeAuthRead.response.headers.get('cache-control'), 'no-store');
         assert.equal(safeAuthRead.data.user.username, 'Csrf_Test');
         assert.equal(sessionCalls.createSocketAuthToken, 1);
     } finally {

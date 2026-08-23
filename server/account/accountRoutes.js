@@ -94,14 +94,25 @@ function createAccountRoutes({
             || sessionService.createSocketAuthToken(getSessionToken(req));
     }
 
-    function clearSessionCookie(res) {
-        const { maxAge, ...clearOptions } = {
+    function buildCookieOptions(extraOptions = {}) {
+        return {
             httpOnly: true,
             sameSite: 'lax',
             secure: false,
             path: '/',
-            ...cookieOptions
+            ...cookieOptions,
+            ...extraOptions
         };
+    }
+
+    function setSessionCookie(res, token) {
+        res.cookie(sessionService.cookieName, token, buildCookieOptions({
+            maxAge: sessionService.maxAgeMs
+        }));
+    }
+
+    function clearSessionCookie(res) {
+        const { maxAge, ...clearOptions } = buildCookieOptions();
         res.clearCookie(sessionService.cookieName, clearOptions);
     }
 
@@ -138,13 +149,18 @@ function createAccountRoutes({
                 return res.status(result.status || 400).json({ message: result.message });
             }
 
-            const token = getSessionToken(req);
-            const revoked = await sessionService.destroyOtherSessionsForUser(req.user.id, token);
+            const rotation = await sessionService.rotateSessionsForUser(req.user.id);
+            if (!rotation?.session?.token) {
+                throw new Error('Session rotation failed after password change.');
+            }
+
+            setSessionCookie(res, rotation.session.token);
             return res.json({
                 ok: true,
                 user: result.user,
-                socketAuthToken: await getSocketAuthToken(req),
-                sessionsRevoked: Number(revoked?.changes ?? revoked?.rowCount) || 0
+                socketAuthToken: rotation.session.socketAuthToken
+                    || await sessionService.createSocketAuthToken(rotation.session.token),
+                sessionsRevoked: Number(rotation.revoked?.changes ?? rotation.revoked?.rowCount) || 0
             });
         } catch (error) {
             return next(error);

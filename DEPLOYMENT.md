@@ -76,20 +76,19 @@ LOG_LEVEL=info
 REQUEST_LOGGING_ENABLED=true
 ```
 
-Adaugă separat două secrete lungi:
+Adaugă un secret dedicat pentru autentificarea Socket.IO, de minimum 32 bytes random:
 
 ```env
-SESSION_SECRET=<secret-random-lung>
-SOCKET_AUTH_SECRET=<alt-secret-random-lung>
+SOCKET_AUTH_SECRET=<secret-random-lung>
 ```
 
-Le poți genera local cu:
+Îl poți genera local cu:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-Rulează comanda de două ori: o dată pentru `SESSION_SECRET`, o dată pentru `SOCKET_AUTH_SECRET`.
+`SESSION_SECRET` nu mai este necesar pentru deployment-uri noi. Este acceptat doar ca fallback legacy pentru instanțe vechi care nu au încă `SOCKET_AUTH_SECRET`.
 
 
 ### Conturi persistente cu Neon Postgres
@@ -245,7 +244,7 @@ Fișierul setează automat:
 - `DATABASE_PROVIDER=postgres` pentru conturi persistente prin Postgres extern;
 - `DATABASE_URL` ca variabilă nesincronizată, completată manual în Render;
 - `PUBLIC_ORIGIN` ca variabilă nesincronizată, pe care o completezi cu URL-ul Render real;
-- `SESSION_SECRET` și `SOCKET_AUTH_SECRET` ca variabile nesincronizate, care trebuie completate în Render.
+- `SOCKET_AUTH_SECRET` ca variabilă nesincronizată, care trebuie completată în Render cu minimum 32 bytes random.
 
 Nu pune niciodată valorile reale ale secretelor în Git.
 
@@ -388,14 +387,14 @@ COOKIE_SAMESITE=lax
 PUBLIC_ORIGIN=https://numele-serviciului-tau.onrender.com
 LOG_LEVEL=info
 REQUEST_LOGGING_ENABLED=true
-SESSION_SECRET=<setat>
+SOCKET_AUTH_SECRET=<setat-cu-minimum-32-bytes>
 ```
 
 ### Aplicația pornește local, dar nu pe Render
 
 Verifică în logs:
 
-- dacă lipsește `SESSION_SECRET`;
-- dacă `SOCKET_AUTH_SECRET` este gol;
+- dacă lipsește `SOCKET_AUTH_SECRET` (sau fallback-ul legacy `SESSION_SECRET`);
+- dacă secretul folosit are mai puțin de 32 bytes;
 - dacă `PORT` a fost setat manual greșit;
 - dacă build command-ul rulează `npm ci --include=dev && npm run build`.

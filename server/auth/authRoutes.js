@@ -1,6 +1,7 @@
 const express = require('express');
 const { createMemoryRateLimiter } = require('../middleware/rateLimit');
 const { sanitizeUser } = require('./authService');
+const { noStoreResponse } = require('../middleware/noStoreResponse');
 
 function createAuthRoutes({
     authService,
@@ -13,6 +14,7 @@ function createAuthRoutes({
     onLoginSuccess = null
 }) {
     const router = express.Router();
+    router.use(noStoreResponse);
     const loginRateLimiter = rateLimiters.login || createMemoryRateLimiter({
         windowMs: 10 * 60 * 1000,
         maxRequests: 5,

@@ -168,16 +168,22 @@ test('session service hashes tokens before storing them', async () => {
     assert.equal(repository.sessions.has(hashToken(session.token)), true);
 });
 
-test('password changes keep the current session and revoke every other user session', async () => {
+test('password changes can rotate every existing session into one fresh session', async () => {
     const { repository, sessionService } = createTestSessionService();
     const currentSession = await sessionService.createSession(1);
     const otherSession = await sessionService.createSession(1);
+    const oldSocketAuthToken = currentSession.socketAuthToken;
 
-    const result = await sessionService.destroyOtherSessionsForUser(1, currentSession.token);
+    const rotation = await sessionService.rotateSessionsForUser(1);
 
-    assert.equal(result.changes, 1);
-    assert.equal(repository.sessions.has(hashToken(currentSession.token)), true);
+    assert.equal(rotation.revoked.changes, 2);
+    assert.ok(rotation.session?.token);
+    assert.notEqual(rotation.session.token, currentSession.token);
+    assert.equal(repository.sessions.has(hashToken(currentSession.token)), false);
     assert.equal(repository.sessions.has(hashToken(otherSession.token)), false);
+    assert.equal(repository.sessions.has(hashToken(rotation.session.token)), true);
+    assert.equal(await sessionService.getUserBySocketAuthToken(oldSocketAuthToken), null);
+    assert.equal((await sessionService.getUserBySocketAuthToken(rotation.session.socketAuthToken))?.id, 1);
 });
 
 test('logout everywhere revokes the current session and all other user sessions', async () => {

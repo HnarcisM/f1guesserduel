@@ -35,11 +35,10 @@ test('Render blueprint documents production web service settings', () => {
 test('Render blueprint keeps production secrets out of Git', () => {
     const source = readProjectFile('render.yaml');
 
-    assert.match(source, /key:\s*SESSION_SECRET\s+sync:\s*false/s);
+    assert.doesNotMatch(source, /key:\s*SESSION_SECRET/);
     assert.match(source, /key:\s*SOCKET_AUTH_SECRET\s+sync:\s*false/s);
     assert.match(source, /key:\s*PUBLIC_ORIGIN\s+sync:\s*false/s);
     assert.match(source, /key:\s*DATABASE_URL\s+sync:\s*false/s);
-    assert.doesNotMatch(source, /change-me-to-a-long-random-secret/);
     assert.doesNotMatch(source, /change-me-to-another-long-random-secret/);
 });
 
@@ -79,6 +78,8 @@ test('example environment uses Render-safe production defaults', () => {
     assert.match(source, /SOCKET_RATE_LIMIT_WINDOW_MS=60000/);
     assert.match(source, /LOG_LEVEL=info/);
     assert.match(source, /REQUEST_LOGGING_ENABLED=true/);
+    assert.match(source, /^SOCKET_AUTH_SECRET=/m);
+    assert.doesNotMatch(source, /^SESSION_SECRET=/m);
     assert.doesNotMatch(source, /^PORT=/m);
 });
 
@@ -89,6 +90,7 @@ test('deployment guide includes manual Render checks and secret generation', () 
     assert.match(source, /Start Command: npm start/);
     assert.match(source, /Health Check Path: \/api\/health/);
     assert.match(source, /randomBytes\(32\)\.toString\('hex'\)/);
+    assert.match(source, /`SESSION_SECRET` nu mai este necesar/);
     assert.match(source, /Nu seta manual `PORT`/);
     assert.match(source, /PUBLIC_ORIGIN=https:\/\/numele-serviciului-tau\.onrender\.com/);
     assert.match(source, /DATABASE_PROVIDER=postgres/);

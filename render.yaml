@@ -53,8 +53,6 @@ services:
         value: /tmp/f1guesserduel
       - key: PUBLIC_ORIGIN
         sync: false
-      - key: SESSION_SECRET
-        sync: false
       - key: SOCKET_AUTH_SECRET
         sync: false
       - key: ADMIN_ACCOUNT_UUIDS

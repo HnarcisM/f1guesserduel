@@ -13,6 +13,7 @@ function createResponse() {
         headers: {},
         body: null,
         clearedCookie: null,
+        cookie: null,
         set(name, value) {
             this.headers[name] = value;
             return this;
@@ -23,6 +24,10 @@ function createResponse() {
         },
         json(body) {
             this.body = body;
+            return this;
+        },
+        cookie(name, value, options) {
+            this.cookie = { name, value, options };
             return this;
         },
         clearCookie(name, options) {
@@ -48,6 +53,7 @@ function createSettingsRouter({ authService = {}, sessionService = {} } = {}) {
         authService,
         sessionService: {
             cookieName: 'f1_session',
+            maxAgeMs: 60_000,
             async createSocketAuthToken() { return 'fresh-socket-token'; },
             ...sessionService
         },
@@ -149,7 +155,7 @@ test('profile update uses the authenticated user and refreshes socket authentica
     assert.equal(response.body.socketAuthToken, 'verified-socket-token');
 });
 
-test('password update revokes other sessions while preserving the current session', async () => {
+test('password update revokes every existing session and rotates the current session token', async () => {
     const calls = [];
     const router = createSettingsRouter({
         authService: {
@@ -159,9 +165,15 @@ test('password update revokes other sessions while preserving the current sessio
             }
         },
         sessionService: {
-            async destroyOtherSessionsForUser(userId, token) {
-                calls.push({ userId, token });
-                return { changes: 2 };
+            async rotateSessionsForUser(userId) {
+                calls.push({ userId });
+                return {
+                    revoked: { changes: 3 },
+                    session: {
+                        token: 'rotated-session',
+                        socketAuthToken: 'rotated-socket-token'
+                    }
+                };
             }
         }
     });
@@ -170,15 +182,26 @@ test('password update revokes other sessions while preserving the current sessio
 
     await handler({
         user: { id: 7 },
-        authContext: { socketAuthToken: 'verified-socket-token' },
+        authContext: { socketAuthToken: 'stale-socket-token' },
         body: { currentPassword: 'old-secret', newPassword: 'new-secret', userId: 999 },
         cookies: { f1_session: 'current-session' }
     }, response, error => { throw error; });
 
     assert.deepEqual(calls[0], { userId: 7, currentPassword: 'old-secret', newPassword: 'new-secret' });
-    assert.deepEqual(calls[1], { userId: 7, token: 'current-session' });
-    assert.equal(response.body.sessionsRevoked, 2);
-    assert.equal(response.body.socketAuthToken, 'verified-socket-token');
+    assert.deepEqual(calls[1], { userId: 7 });
+    assert.equal(response.body.sessionsRevoked, 3);
+    assert.equal(response.body.socketAuthToken, 'rotated-socket-token');
+    assert.deepEqual(response.cookie, {
+        name: 'f1_session',
+        value: 'rotated-session',
+        options: {
+            httpOnly: true,
+            sameSite: 'lax',
+            secure: true,
+            path: '/',
+            maxAge: 60_000
+        }
+    });
 });
 
 test('avatar update uses the authenticated user and refreshes socket authentication', async () => {

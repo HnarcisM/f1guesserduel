@@ -36,7 +36,7 @@ const DEFAULT_REDIS_ROOM_LOCK_TTL_MS = 15 * 1000;
 const DEFAULT_REDIS_ROOM_LOCK_WAIT_TIMEOUT_MS = 5 * 1000;
 const DEFAULT_SOCKET_REDIS_ADAPTER_REQUEST_TIMEOUT_MS = 5 * 1000;
 const MIN_METRICS_TOKEN_LENGTH = 32;
-const DEV_SESSION_SECRET = 'f1-guesser-duel-dev-session-secret';
+const MIN_AUTH_SECRET_LENGTH = 32;
 const DEV_SOCKET_AUTH_SECRET = 'f1-guesser-duel-dev-socket-auth-secret';
 const ALLOWED_NODE_ENV_VALUES = new Set(['development', 'test', 'production']);
 const ALLOWED_SAME_SITE_VALUES = new Set(['lax', 'strict', 'none']);
@@ -300,13 +300,26 @@ function normalizeNodeEnv(value) {
     return normalized;
 }
 
-function resolveSecret({ env, primaryName, fallbackName, devFallback, isProduction }) {
+function resolveSecret({
+    env,
+    primaryName,
+    fallbackName,
+    devFallback,
+    isProduction,
+    minProductionLength = 0
+}) {
     const primaryValue = getOptionalEnvString(env, primaryName);
     const fallbackValue = fallbackName ? getOptionalEnvString(env, fallbackName) : null;
     const resolved = primaryValue || fallbackValue || (!isProduction ? devFallback : null);
+    const resolvedName = primaryValue ? primaryName : (fallbackValue ? fallbackName : primaryName);
 
     if (!resolved) {
         throw new Error(`${primaryName} must be set when NODE_ENV=production.`);
+    }
+    if (isProduction
+        && minProductionLength > 0
+        && Buffer.byteLength(resolved, 'utf8') < minProductionLength) {
+        throw new Error(`${resolvedName} must contain at least ${minProductionLength} bytes when NODE_ENV=production.`);
     }
 
     return resolved;
@@ -423,18 +436,13 @@ function createAppConfig(env = process.env, options = {}) {
         { min: 1, max: 3650 }
     );
 
-    const sessionSecret = resolveSecret({
-        env,
-        primaryName: 'SESSION_SECRET',
-        devFallback: DEV_SESSION_SECRET,
-        isProduction
-    });
     const socketAuthSecret = resolveSecret({
         env,
         primaryName: 'SOCKET_AUTH_SECRET',
         fallbackName: 'SESSION_SECRET',
         devFallback: DEV_SOCKET_AUTH_SECRET,
-        isProduction
+        isProduction,
+        minProductionLength: MIN_AUTH_SECRET_LENGTH
     });
     const cookieSecure = parseBooleanEnv(env, 'COOKIE_SECURE', isProduction);
     const cookieSameSite = parseSameSiteEnv(env, 'COOKIE_SAMESITE', 'lax');
@@ -684,7 +692,6 @@ function createAppConfig(env = process.env, options = {}) {
             }
         },
         auth: {
-            sessionSecret,
             socketAuthSecret,
             sessionCookieName: resolveCookieName(env),
             sessionMaxAgeMs: sessionMaxAgeDays * 24 * 60 * 60 * 1000,
@@ -757,5 +764,6 @@ module.exports = {
     DEFAULT_REDIS_ROOM_LOCK_TTL_MS,
     DEFAULT_REDIS_ROOM_LOCK_WAIT_TIMEOUT_MS,
     DEFAULT_SOCKET_REDIS_ADAPTER_REQUEST_TIMEOUT_MS,
-    MIN_METRICS_TOKEN_LENGTH
+    MIN_METRICS_TOKEN_LENGTH,
+    MIN_AUTH_SECRET_LENGTH
 };

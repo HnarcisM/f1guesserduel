@@ -9,8 +9,12 @@ const {
     normalizeSameSite,
     normalizeAllowedOrigin,
     normalizeLogLevel,
-    normalizeDatabaseProvider
+    normalizeDatabaseProvider,
+    MIN_AUTH_SECRET_LENGTH
 } = require('../server/config/appConfig');
+
+const STRONG_SESSION_SECRET = 'legacy-session-secret-with-at-least-32-bytes';
+const STRONG_SOCKET_AUTH_SECRET = 'socket-auth-secret-with-at-least-32-bytes';
 
 test('app config provides safe development defaults', () => {
     const projectRoot = path.join('/tmp', 'f1guesserduel');
@@ -132,8 +136,8 @@ test('app config reads production values from environment', () => {
         SOCKET_REDIS_ADAPTER_REQUEST_TIMEOUT_MS: '7000',
         REDIS_ROOM_LOCK_TTL_MS: '20000',
         REDIS_ROOM_LOCK_WAIT_TIMEOUT_MS: '6000',
-        SESSION_SECRET: 'session-secret',
-        SOCKET_AUTH_SECRET: 'socket-secret',
+        SESSION_SECRET: STRONG_SESSION_SECRET,
+        SOCKET_AUTH_SECRET: STRONG_SOCKET_AUTH_SECRET,
         COOKIE_SECURE: 'false',
         COOKIE_SAMESITE: 'strict',
         SESSION_COOKIE_NAME: 'custom_session',
@@ -203,8 +207,8 @@ test('app config reads production values from environment', () => {
     assert.equal(path.normalize(config.dbFilePath), path.normalize('/var/lib/f1guesser/f1guesser.sqlite'));
     assert.equal(config.postgresMigrationsDirPath, '/opt/f1/migrations/postgres');
     assert.equal(config.trustProxy, true);
-    assert.equal(config.auth.sessionSecret, 'session-secret');
-    assert.equal(config.auth.socketAuthSecret, 'socket-secret');
+    assert.equal(Object.hasOwn(config.auth, 'sessionSecret'), false);
+    assert.equal(config.auth.socketAuthSecret, STRONG_SOCKET_AUTH_SECRET);
     assert.equal(config.auth.cookie.secure, false);
     assert.equal(config.auth.cookie.sameSite, 'strict');
     assert.equal(config.auth.sessionCookieName, 'custom_session');
@@ -258,8 +262,42 @@ test('metrics config is opt-in and requires a strong bearer token', () => {
     );
 });
 
-test('production config requires SESSION_SECRET', () => {
-    assert.throws(() => createAppConfig({ NODE_ENV: 'production' }), /SESSION_SECRET must be set/);
+test('production config requires a strong socket authentication secret', () => {
+    assert.equal(MIN_AUTH_SECRET_LENGTH, 32);
+    assert.throws(
+        () => createAppConfig({ NODE_ENV: 'production' }),
+        /SOCKET_AUTH_SECRET must be set/
+    );
+    assert.throws(
+        () => createAppConfig({ NODE_ENV: 'production', SOCKET_AUTH_SECRET: 'too-short' }),
+        /SOCKET_AUTH_SECRET must contain at least 32 bytes/
+    );
+
+    const config = createAppConfig({
+        NODE_ENV: 'production',
+        SOCKET_AUTH_SECRET: STRONG_SOCKET_AUTH_SECRET,
+        PUBLIC_ORIGIN: 'https://f1guesserduel.onrender.com',
+        DATABASE_PROVIDER: 'postgres',
+        DATABASE_URL: 'postgresql://example.com/f1'
+    });
+    assert.equal(config.auth.socketAuthSecret, STRONG_SOCKET_AUTH_SECRET);
+    assert.equal(Object.hasOwn(config.auth, 'sessionSecret'), false);
+});
+
+test('production config accepts SESSION_SECRET only as a strong legacy socket-auth fallback', () => {
+    assert.throws(
+        () => createAppConfig({ NODE_ENV: 'production', SESSION_SECRET: 'too-short' }),
+        /SESSION_SECRET must contain at least 32 bytes/
+    );
+
+    const config = createAppConfig({
+        NODE_ENV: 'production',
+        SESSION_SECRET: STRONG_SESSION_SECRET,
+        PUBLIC_ORIGIN: 'https://f1guesserduel.onrender.com',
+        DATABASE_PROVIDER: 'postgres',
+        DATABASE_URL: 'postgresql://example.com/f1'
+    });
+    assert.equal(config.auth.socketAuthSecret, STRONG_SESSION_SECRET);
 });
 
 test('boolean and sameSite parsing are defensive', () => {
@@ -387,7 +425,7 @@ test('app config resolves explicit and inferred persistence modes', () => {
 
     const explicitEphemeral = createAppConfig({
         NODE_ENV: 'production',
-        SESSION_SECRET: 'session-secret',
+        SESSION_SECRET: STRONG_SESSION_SECRET,
         DATA_DIR: projectRoot,
         PERSISTENCE_MODE: 'ephemeral',
         DATABASE_PROVIDER: 'postgres',
@@ -398,7 +436,7 @@ test('app config resolves explicit and inferred persistence modes', () => {
 
     const inferredEphemeral = createAppConfig({
         NODE_ENV: 'production',
-        SESSION_SECRET: 'session-secret',
+        SESSION_SECRET: STRONG_SESSION_SECRET,
         DATA_DIR: projectRoot,
         DATABASE_PROVIDER: 'postgres',
         DATABASE_URL: 'postgresql://example.com/f1'
@@ -407,7 +445,7 @@ test('app config resolves explicit and inferred persistence modes', () => {
 
     const inferredSystemTempRoot = createAppConfig({
         NODE_ENV: 'production',
-        SESSION_SECRET: 'session-secret',
+        SESSION_SECRET: STRONG_SESSION_SECRET,
         DATA_DIR: os.tmpdir(),
         DATABASE_PROVIDER: 'postgres',
         DATABASE_URL: 'postgresql://example.com/f1'
@@ -416,7 +454,7 @@ test('app config resolves explicit and inferred persistence modes', () => {
 
     const inferredUnixTemporaryDirectory = createAppConfig({
         NODE_ENV: 'production',
-        SESSION_SECRET: 'session-secret',
+        SESSION_SECRET: STRONG_SESSION_SECRET,
         DATA_DIR: '/var/tmp/f1guesserduel',
         DATABASE_PROVIDER: 'postgres',
         DATABASE_URL: 'postgresql://example.com/f1'
@@ -425,7 +463,7 @@ test('app config resolves explicit and inferred persistence modes', () => {
 
     const inferredPersistent = createAppConfig({
         NODE_ENV: 'production',
-        SESSION_SECRET: 'session-secret',
+        SESSION_SECRET: STRONG_SESSION_SECRET,
         DATA_DIR: '/var/data'
     }, { projectRoot });
     assert.equal(inferredPersistent.persistence.mode, 'persistent');
@@ -435,7 +473,7 @@ test('production config rejects SQLite on ephemeral storage', () => {
     const ephemeralDataDir = path.join(os.tmpdir(), 'f1guesserduel');
     const baseEnvironment = {
         NODE_ENV: 'production',
-        SESSION_SECRET: 'session-secret',
+        SESSION_SECRET: STRONG_SESSION_SECRET,
         DATA_DIR: ephemeralDataDir
     };
 
@@ -457,7 +495,7 @@ test('production config rejects SQLite on ephemeral storage', () => {
 
     const persistentSqlite = createAppConfig({
         NODE_ENV: 'production',
-        SESSION_SECRET: 'session-secret',
+        SESSION_SECRET: STRONG_SESSION_SECRET,
         DATA_DIR: '/var/data',
         PERSISTENCE_MODE: 'persistent',
         DATABASE_PROVIDER: 'sqlite'
@@ -570,6 +608,10 @@ test('app config rejects empty string environment overrides', () => {
         /SESSION_SECRET must not be empty/
     );
     assert.throws(
+        () => createAppConfig({ SOCKET_AUTH_SECRET: '   ' }),
+        /SOCKET_AUTH_SECRET must not be empty/
+    );
+    assert.throws(
         () => createAppConfig({ POSTGRES_MIGRATIONS_DIR: '   ' }),
         /POSTGRES_MIGRATIONS_DIR must not be empty/
     );
@@ -579,7 +621,7 @@ test('app config rejects empty string environment overrides', () => {
 test('logging config defaults to info request logging in production', () => {
     const config = createAppConfig({
         NODE_ENV: 'production',
-        SESSION_SECRET: 'session-secret',
+        SESSION_SECRET: STRONG_SESSION_SECRET,
         PUBLIC_ORIGIN: 'https://f1guesserduel.onrender.com'
     });
 
