@@ -16,6 +16,8 @@ const { createRedisClient, closeRedisClient } = require('./redis/redisClient');
 const { createSessionService } = require('./auth/sessionService');
 const { createAuthService } = require('./auth/authService');
 const { createPasswordResetService } = require('./auth/passwordResetService');
+const { createEmailDeliveryService } = require('./email/emailDeliveryService');
+const { createPasswordResetEmailNotifier } = require('./email/passwordResetEmailNotifier');
 const { createAuthRoutes } = require('./auth/authRoutes');
 const { createAccountStatsService } = require('./account/accountStatsService');
 const { createGameHistoryCleanupService } = require('./account/gameHistoryCleanupService');
@@ -182,6 +184,11 @@ const sessionService = createSessionService(db, {
 });
 const authService = createAuthService(db, sessionService);
 const passwordResetService = createPasswordResetService(db);
+const emailDeliveryService = createEmailDeliveryService();
+const passwordResetEmailNotifier = createPasswordResetEmailNotifier({
+    emailDeliveryService,
+    requireHttps: config.isProduction
+});
 const accountStatsService = createAccountStatsService(db);
 const runtimeSettingsService = createRuntimeSettingsService({
     database: db,
@@ -313,7 +320,8 @@ app.use('/api/auth', createAuthRoutes({
         user,
         request,
         authorizationMode: adminAccess.mode
-    })
+    }),
+    onPasswordResetRequested: delivery => passwordResetEmailNotifier.notify(delivery)
 }));
 app.use('/api/account', createAccountRoutes({
     accountStatsService,
