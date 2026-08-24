@@ -2,14 +2,10 @@
 
 const CACHE_PREFIX = 'f1-guesser-static-';
 /* GENERATED_PRECACHE_START */
-const STATIC_CACHE_NAME = 'f1-guesser-static-a3e0f46b69a38b412b91';
+const STATIC_CACHE_NAME = 'f1-guesser-static-7db34d05263d80433ea0';
 const PRECACHE_URLS = Object.freeze([
     "/css/01-theme-tokens.css",
-    "/css/02-header-menu.css?v=28eff13600d50eeb",
-    "/css/08-auth.css?v=0129cc0c688bd225",
-    "/css/11-mobile-layout-fix.css?v=50671d073fbb27c4",
     "/css/13-progress-values.css",
-    "/css/14-auth-panel-viewport-fix.css?v=6512708d67926feb",
     "/css/16-duel-ready.css?v=325c0498b808b8c1",
     "/css/17-duel-series.css?v=519233effd931ef4",
     "/css/18-duel-round-history.css?v=2d04b48dd080faa8",
@@ -25,6 +21,7 @@ const PRECACHE_URLS = Object.freeze([
     "/css/28-extended-mode-autocomplete.css",
     "/css/29-game-hub-dashboard.css?v=c50cd7d9d204dc3c",
     "/css/30-game-hub-visual-polish.css?v=6c5293a66b0e7df8",
+    "/game-hub.bundle.js?v=0a1bbaa89c1ce0b4",
     "/game.bundle.min.js?v=ba8b523c64d44d9e",
     "/icons/pwa-192.png",
     "/icons/pwa-512.png",
@@ -56,13 +53,6 @@ const PRECACHE_URLS = Object.freeze([
     "/js/extendedModesRuntime.js",
     "/js/extendedModesView.js",
     "/js/feedbackController.js?v=5cd6b13e762a05bd",
-    "/js/gameHubCardsView.js?v=0f57ac6d76dcf895",
-    "/js/gameHubController.js?v=6dfabb2aa1f4b98f",
-    "/js/gameHubDashboardView.js?v=a68cee5d4a454482",
-    "/js/gameHubDuelRoomView.js?v=b72884aa55e28f34",
-    "/js/gameHubProfileView.js?v=dd8efe0dd0998995",
-    "/js/gameHubViewCore.js?v=77237d9db7891091",
-    "/js/gameVariantRegistry.js?v=27e50758846ee846",
     "/js/modes/constructorPage.js",
     "/js/modes/eraPage.js",
     "/js/modes/pilotSudokuPage.js",

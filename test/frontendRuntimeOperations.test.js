@@ -39,7 +39,7 @@ test('public runtime controller renders announcements and maintenance without un
 test('main page loads runtime controls before the game hub and game bundle', () => {
     const styleIndex = mainHtml.indexOf('/css/26-runtime-status.css');
     const runtimeIndex = mainHtml.indexOf('/js/runtimeExperienceController.js');
-    const hubIndex = mainHtml.indexOf('/js/gameHubController.js');
+    const hubIndex = mainHtml.indexOf('/game-hub.bundle.js');
     const bundleIndex = mainHtml.indexOf('/game.bundle.min.js');
     assert.ok(styleIndex > 0);
     assert.ok(runtimeIndex > 0);

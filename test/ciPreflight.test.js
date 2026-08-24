@@ -23,6 +23,7 @@ function commandOf(step) {
 }
 
 test('ci:verify builds generated assets before testing them in one fail-fast sequence', () => {
+    assert.ok(GENERATED_FILES.includes('public/game-hub.bundle.js'));
     const steps = buildSteps({ platform: 'linux', env: {} });
     const commands = steps.map(commandOf);
 

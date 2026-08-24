@@ -11,11 +11,7 @@ const DEFAULT_PRECACHE_STATIC_URLS = Object.freeze([
     '/icons/pwa-192.png',
     '/icons/pwa-512.png',
     '/css/01-theme-tokens.css',
-    '/css/02-header-menu.css',
-    '/css/08-auth.css',
-    '/css/11-mobile-layout-fix.css',
     '/css/13-progress-values.css',
-    '/css/14-auth-panel-viewport-fix.css',
     '/css/19-account-game-history.css',
     '/css/21-feedback-settings.css',
     '/css/24-extended-modes.css',
@@ -73,26 +69,6 @@ const DEFAULT_ASSETS = Object.freeze([
         attribute: 'src',
         publicPath: '/js/themeBootstrap.js',
         sourceFile: path.join('public', 'js', 'themeBootstrap.js')
-    },
-    {
-        attribute: 'href',
-        publicPath: '/css/02-header-menu.css',
-        sourceFile: path.join('public', 'css', '02-header-menu.css')
-    },
-    {
-        attribute: 'href',
-        publicPath: '/css/08-auth.css',
-        sourceFile: path.join('public', 'css', '08-auth.css')
-    },
-    {
-        attribute: 'href',
-        publicPath: '/css/11-mobile-layout-fix.css',
-        sourceFile: path.join('public', 'css', '11-mobile-layout-fix.css')
-    },
-    {
-        attribute: 'href',
-        publicPath: '/css/14-auth-panel-viewport-fix.css',
-        sourceFile: path.join('public', 'css', '14-auth-panel-viewport-fix.css')
     },
     {
         attribute: 'href',
@@ -156,43 +132,13 @@ const DEFAULT_ASSETS = Object.freeze([
     },
     {
         attribute: 'src',
-        publicPath: '/js/gameVariantRegistry.js',
-        sourceFile: path.join('public', 'js', 'gameVariantRegistry.js')
-    },
-    {
-        attribute: 'src',
-        publicPath: '/js/gameHubViewCore.js',
-        sourceFile: path.join('public', 'js', 'gameHubViewCore.js')
-    },
-    {
-        attribute: 'src',
-        publicPath: '/js/gameHubProfileView.js',
-        sourceFile: path.join('public', 'js', 'gameHubProfileView.js')
-    },
-    {
-        attribute: 'src',
-        publicPath: '/js/gameHubDuelRoomView.js',
-        sourceFile: path.join('public', 'js', 'gameHubDuelRoomView.js')
-    },
-    {
-        attribute: 'src',
-        publicPath: '/js/gameHubCardsView.js',
-        sourceFile: path.join('public', 'js', 'gameHubCardsView.js')
-    },
-    {
-        attribute: 'src',
-        publicPath: '/js/gameHubDashboardView.js',
-        sourceFile: path.join('public', 'js', 'gameHubDashboardView.js')
-    },
-    {
-        attribute: 'src',
         publicPath: '/js/runtimeExperienceController.js',
         sourceFile: path.join('public', 'js', 'runtimeExperienceController.js')
     },
     {
         attribute: 'src',
-        publicPath: '/js/gameHubController.js',
-        sourceFile: path.join('public', 'js', 'gameHubController.js')
+        publicPath: '/game-hub.bundle.js',
+        sourceFile: path.join('public', 'game-hub.bundle.js')
     },
     {
         attribute: 'src',

@@ -9,6 +9,7 @@ const GENERATED_FILES = Object.freeze([
     'public/index.html',
     'public/style.bundle.css',
     'public/game.bundle.min.js',
+    'public/game-hub.bundle.js',
     'public/service-worker.js'
 ]);
 

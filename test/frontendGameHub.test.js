@@ -701,16 +701,11 @@ test('game hub installer is idempotent', async () => {
 });
 
 
-test('production HTML loads the Game Hub before the existing game bundle', () => {
+test('production HTML loads the bundled Game Hub before the existing game bundle', () => {
     const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'index.html'), 'utf8');
-    const registryIndex = html.indexOf('/js/gameVariantRegistry.js');
-    const coreIndex = html.indexOf('/js/gameHubViewCore.js');
-    const profileIndex = html.indexOf('/js/gameHubProfileView.js');
-    const duelIndex = html.indexOf('/js/gameHubDuelRoomView.js');
-    const cardsIndex = html.indexOf('/js/gameHubCardsView.js');
-    const viewIndex = html.indexOf('/js/gameHubDashboardView.js');
-    const controllerIndex = html.indexOf('/js/gameHubController.js');
-    const bundleIndex = html.indexOf('/game.bundle.min.js');
+    const runtimeIndex = html.indexOf('/js/runtimeExperienceController.js');
+    const hubBundleIndex = html.indexOf('/game-hub.bundle.js');
+    const gameBundleIndex = html.indexOf('/game.bundle.min.js');
 
     assert.ok(html.includes('id="gameModeHub"'));
     assert.ok(html.includes('id="gameHubCatalogView"'));
@@ -719,22 +714,12 @@ test('production HTML loads the Game Hub before the existing game bundle', () =>
     assert.match(html, /id="difficultySection" class="difficulty-section is-hidden"/);
     assert.ok(html.includes('/css/23-game-hub.css'));
     assert.ok(html.includes('/css/29-game-hub-dashboard.css'));
-    const authStylesIndex = html.indexOf('/css/08-auth.css');
-    const mobileStylesIndex = html.indexOf('/css/11-mobile-layout-fix.css');
-    const authViewportFixIndex = html.indexOf('/css/14-auth-panel-viewport-fix.css');
-
-    assert.ok(html.includes('/css/02-header-menu.css'));
-    assert.ok(authStylesIndex > 0);
-    assert.ok(mobileStylesIndex > authStylesIndex);
-    assert.ok(authViewportFixIndex > mobileStylesIndex);
-    assert.ok(registryIndex > 0);
-    assert.ok(coreIndex > registryIndex);
-    assert.ok(profileIndex > coreIndex);
-    assert.ok(duelIndex > profileIndex);
-    assert.ok(cardsIndex > duelIndex);
-    assert.ok(viewIndex > cardsIndex);
-    assert.ok(controllerIndex > viewIndex);
-    assert.ok(bundleIndex > controllerIndex);
+    assert.equal(html.includes('/css/02-header-menu.css'), false);
+    assert.equal(html.includes('/css/08-auth.css'), false);
+    assert.equal(html.includes('/css/11-mobile-layout-fix.css'), false);
+    assert.equal(html.includes('/css/14-auth-panel-viewport-fix.css'), false);
+    assert.ok(hubBundleIndex > runtimeIndex);
+    assert.ok(gameBundleIndex > hubBundleIndex);
 });
 
 test('Game Hub keeps profile and settings on the right while the title stays centered', () => {
