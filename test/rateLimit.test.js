@@ -4,6 +4,7 @@ const assert = require('node:assert/strict');
 const { createMemoryRateLimiter } = require('../server/middleware/rateLimit');
 const { createAuthRoutes } = require('../server/auth/authRoutes');
 const { createAccountRoutes } = require('../server/account/accountRoutes');
+const { getPasswordResetEmailRateLimitKey } = require('../server/auth/passwordResetService');
 
 function createMockResponse() {
     return {
@@ -281,7 +282,7 @@ test('HTTP rate limiter can fail closed when an external store is unavailable', 
     assert.equal(result.res.headers['Retry-After'], '60');
 });
 
-test('auth routes share the distributed store with isolated login and register limits', async () => {
+test('auth routes share the distributed store with isolated login, register and password reset limits', async () => {
     const consumed = [];
     const rateLimitStore = {
         provider: 'redis',
@@ -309,11 +310,20 @@ test('auth routes share the distributed store with isolated login and register l
     });
     const loginRoute = router.stack.find(layer => layer.route?.path === '/login');
     const registerRoute = router.stack.find(layer => layer.route?.path === '/register');
+    const resetRequestRoute = router.stack.find(layer => layer.route?.path === '/password-reset/request');
+    const resetConfirmRoute = router.stack.find(layer => layer.route?.path === '/password-reset/confirm');
     const loginLimiter = loginRoute.route.stack[0].handle;
     const registerLimiter = registerRoute.route.stack[0].handle;
+    const resetRequestIpLimiter = resetRequestRoute.route.stack[0].handle;
+    const resetRequestEmailLimiter = resetRequestRoute.route.stack[1].handle;
+    const resetConfirmLimiter = resetConfirmRoute.route.stack[0].handle;
+    const resetRequest = { ip: '198.51.100.7', body: { email: 'Narcis@Example.com' } };
 
     await runAsyncLimiter(loginLimiter, { ip: '198.51.100.7' });
     await runAsyncLimiter(registerLimiter, { ip: '198.51.100.7' });
+    await runAsyncLimiter(resetRequestIpLimiter, resetRequest);
+    await runAsyncLimiter(resetRequestEmailLimiter, resetRequest);
+    await runAsyncLimiter(resetConfirmLimiter, { ip: '198.51.100.7' });
 
     assert.equal(consumed[0].key, 'auth-login:198.51.100.7');
     assert.equal(consumed[0].maxEvents, 5);
@@ -321,6 +331,19 @@ test('auth routes share the distributed store with isolated login and register l
     assert.equal(consumed[1].key, 'auth-register:198.51.100.7');
     assert.equal(consumed[1].maxEvents, 3);
     assert.equal(consumed[1].windowMs, 10 * 60 * 1000);
+    assert.equal(consumed[2].key, 'auth-password-reset-request-ip:198.51.100.7');
+    assert.equal(consumed[2].maxEvents, 5);
+    assert.equal(consumed[2].windowMs, 15 * 60 * 1000);
+    assert.equal(
+        consumed[3].key,
+        `auth-password-reset-request-email:${getPasswordResetEmailRateLimitKey('narcis@example.com')}`
+    );
+    assert.equal(consumed[3].maxEvents, 3);
+    assert.equal(consumed[3].windowMs, 30 * 60 * 1000);
+    assert.equal(consumed[3].key.includes('narcis@example.com'), false);
+    assert.equal(consumed[4].key, 'auth-password-reset-confirm:198.51.100.7');
+    assert.equal(consumed[4].maxEvents, 10);
+    assert.equal(consumed[4].windowMs, 15 * 60 * 1000);
 });
 
 test('sensitive account settings use isolated distributed limits per authenticated user', async () => {

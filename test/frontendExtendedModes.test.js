@@ -243,8 +243,10 @@ test('extended mode modules stay within maintainable size budgets', () => {
         'server/socket/extendedModesSocketPayloads.js': 2_000,
         'server/socket/weeklyChallengeCoordinator.js': 7_000
     };
-    for (const [relativePath, maximumBytes] of Object.entries(budgets)) {
-        const size = fs.statSync(path.join(root, relativePath)).size;
-        assert.ok(size <= maximumBytes, `${relativePath}: ${size} bytes > ${maximumBytes} bytes`);
-    }
+for (const [relativePath, maximumBytes] of Object.entries(budgets)) {
+    const source = fs.readFileSync(path.join(root, relativePath), 'utf8');
+    const normalizedSource = source.replace(/\r\n?/g, '\n');
+    const size = Buffer.byteLength(normalizedSource, 'utf8');
+    assert.ok(size <= maximumBytes, `${relativePath}: ${size} bytes > ${maximumBytes} bytes`);
+}
 });

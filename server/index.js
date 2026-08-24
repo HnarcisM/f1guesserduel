@@ -15,6 +15,7 @@ const { createDatabase } = require('./db/database');
 const { createRedisClient, closeRedisClient } = require('./redis/redisClient');
 const { createSessionService } = require('./auth/sessionService');
 const { createAuthService } = require('./auth/authService');
+const { createPasswordResetService } = require('./auth/passwordResetService');
 const { createAuthRoutes } = require('./auth/authRoutes');
 const { createAccountStatsService } = require('./account/accountStatsService');
 const { createGameHistoryCleanupService } = require('./account/gameHistoryCleanupService');
@@ -180,6 +181,7 @@ const sessionService = createSessionService(db, {
     socketAuthSecret: config.auth.socketAuthSecret
 });
 const authService = createAuthService(db, sessionService);
+const passwordResetService = createPasswordResetService(db);
 const accountStatsService = createAccountStatsService(db);
 const runtimeSettingsService = createRuntimeSettingsService({
     database: db,
@@ -301,6 +303,7 @@ app.use('/api', createHealthRoutes({
 }));
 app.use('/api/auth', createAuthRoutes({
     authService,
+    passwordResetService,
     sessionService,
     rateLimitStore: redisRateLimitStore,
     logger,

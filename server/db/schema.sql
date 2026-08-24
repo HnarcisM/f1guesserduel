@@ -45,6 +45,19 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE INDEX IF NOT EXISTS idx_sessions_token_hash ON sessions(token_hash);
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 
+
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    user_id INTEGER PRIMARY KEY,
+    token_hash TEXT NOT NULL UNIQUE CHECK (length(token_hash) = 64),
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    expires_at TEXT NOT NULL,
+    consumed_at TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires_at
+    ON password_reset_tokens(expires_at);
+
 CREATE TABLE IF NOT EXISTS user_game_results (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
