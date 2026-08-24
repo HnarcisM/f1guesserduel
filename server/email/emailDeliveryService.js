@@ -157,6 +157,9 @@ function createEmailDeliveryService({
             };
         } catch (error) {
             if (error?.code === 'EMAIL_DELIVERY_TIMEOUT') throw error;
+            if (abortController.signal.aborted) {
+                throw createEmailDeliveryError('EMAIL_DELIVERY_TIMEOUT');
+            }
             throw createEmailDeliveryError('EMAIL_DELIVERY_FAILED');
         } finally {
             if (timeoutHandle !== null) clearTimeoutFn(timeoutHandle);

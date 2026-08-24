@@ -141,7 +141,11 @@ test('delivery timeout aborts cooperative transports and returns a sanitized tim
             provider: 'slow-provider',
             send(message, { signal }) {
                 observedSignal = signal;
-                return new Promise(() => {});
+                return new Promise((resolve, reject) => {
+                    signal.addEventListener('abort', () => {
+                        reject(new Error('provider abort details must stay private'));
+                    }, { once: true });
+                });
             }
         },
         defaultFrom: FROM,

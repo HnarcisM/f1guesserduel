@@ -17,6 +17,8 @@ const { createSessionService } = require('./auth/sessionService');
 const { createAuthService } = require('./auth/authService');
 const { createPasswordResetService } = require('./auth/passwordResetService');
 const { createEmailDeliveryService } = require('./email/emailDeliveryService');
+const { createEmailProviderConfig } = require('./email/emailProviderConfig');
+const { createResendEmailTransport } = require('./email/resendEmailTransport');
 const { createPasswordResetEmailNotifier } = require('./email/passwordResetEmailNotifier');
 const { createAuthRoutes } = require('./auth/authRoutes');
 const { createAccountStatsService } = require('./account/accountStatsService');
@@ -63,6 +65,14 @@ const operationalMetrics = createOperationalMetrics({
     enabled: config.metrics.enabled,
     includeProcessMetrics: config.metrics.includeProcessMetrics
 });
+const emailConfig = createEmailProviderConfig(process.env, {
+    isProduction: config.isProduction
+});
+if (config.isProduction && !emailConfig.enabled) {
+    logger.warn('Transactional email delivery is disabled. Password reset emails will not be sent.', {
+        emailProvider: emailConfig.provider
+    });
+}
 
 function logPersistenceMode(currentConfig) {
     const databaseProvider = currentConfig.database?.provider || 'sqlite';
@@ -184,9 +194,17 @@ const sessionService = createSessionService(db, {
 });
 const authService = createAuthService(db, sessionService);
 const passwordResetService = createPasswordResetService(db);
-const emailDeliveryService = createEmailDeliveryService();
+const emailTransport = emailConfig.provider === 'resend'
+    ? createResendEmailTransport({ apiKey: emailConfig.resend.apiKey })
+    : null;
+const emailDeliveryService = createEmailDeliveryService({
+    transport: emailTransport,
+    defaultFrom: emailConfig.from,
+    timeoutMs: emailConfig.timeoutMs
+});
 const passwordResetEmailNotifier = createPasswordResetEmailNotifier({
     emailDeliveryService,
+    publicOrigin: emailConfig.publicOrigin,
     requireHttps: config.isProduction
 });
 const accountStatsService = createAccountStatsService(db);
@@ -451,6 +469,7 @@ server.listen(config.port, () => {
         adminAuditExportMaxRows: config.admin.audit.exportMaxRows,
         runtimeSettingsRefreshIntervalMs: config.admin.runtimeSettingsRefreshIntervalMs,
         adminLoginWebhookEnabled: adminLoginNotifier.enabled,
+        emailProvider: emailConfig.provider,
         rateLimitProvider: redisClient ? 'redis' : 'memory'
     });
 });
