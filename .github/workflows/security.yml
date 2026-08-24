@@ -58,3 +58,57 @@ jobs:
         uses: github/codeql-action/analyze@v4
         with:
           category: /language:javascript-typescript
+
+  security-gate:
+    name: Security Gate
+    if: always()
+    needs: [dependency-review, codeql]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    permissions:
+      contents: read
+
+    steps:
+      - name: Publish final security summary
+        if: always()
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DEPENDENCY_REVIEW_RESULT: ${{ needs.dependency-review.result }}
+          CODEQL_RESULT: ${{ needs.codeql.result }}
+        run: |
+          {
+            echo "## Final security gate"
+            echo
+            echo "| Required job | Result |"
+            echo "| --- | --- |"
+            echo "| CodeQL | ${CODEQL_RESULT} |"
+            echo "| Dependency review | ${DEPENDENCY_REVIEW_RESULT} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Enforce required security jobs
+        if: always()
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          DEPENDENCY_REVIEW_RESULT: ${{ needs.dependency-review.result }}
+          CODEQL_RESULT: ${{ needs.codeql.result }}
+        run: |
+          failed=0
+
+          if [[ "$CODEQL_RESULT" != "success" ]]; then
+            failed=1
+          fi
+
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            if [[ "$DEPENDENCY_REVIEW_RESULT" != "success" ]]; then
+              failed=1
+            fi
+          elif [[ "$DEPENDENCY_REVIEW_RESULT" != "skipped" ]]; then
+            failed=1
+          fi
+
+          if [[ "$failed" == "1" ]]; then
+            echo "::error title=Security gate failed::One or more required security jobs did not finish successfully."
+          fi
+          exit "$failed"

@@ -52,6 +52,26 @@ test('supply-chain workflows use the repository checkout major and fixed runner 
     const source = read('.github/workflows/security.yml');
 
     assert.equal((source.match(/uses:\s*actions\/checkout@v7/g) || []).length, 2);
-    assert.equal((source.match(/runs-on:\s*ubuntu-24\.04/g) || []).length, 2);
+    assert.equal((source.match(/runs-on:\s*ubuntu-24\.04/g) || []).length, 3);
     assert.doesNotMatch(source, /runs-on:\s*ubuntu-latest/);
+});
+
+test('security workflow exposes one stable final Security Gate for branch protection', () => {
+    const source = read('.github/workflows/security.yml');
+    const gate = source.split(/^  security-gate:$/m)[1] || '';
+
+    assert.match(source, /^  security-gate:$/m);
+    assert.match(gate, /name:\s*Security Gate/);
+    assert.match(gate, /if:\s*always\(\)/);
+    assert.match(gate, /needs:\s*\[dependency-review, codeql\]/);
+    assert.match(gate, /EVENT_NAME:\s*\$\{\{ github\.event_name \}\}/);
+    assert.match(gate, /DEPENDENCY_REVIEW_RESULT:\s*\$\{\{ needs\.dependency-review\.result \}\}/);
+    assert.match(gate, /CODEQL_RESULT:\s*\$\{\{ needs\.codeql\.result \}\}/);
+    assert.match(gate, /name:\s*Publish final security summary/);
+    assert.match(gate, /name:\s*Enforce required security jobs/);
+    assert.match(gate, /\[\[ "\$CODEQL_RESULT" != "success" \]\]/);
+    assert.match(gate, /\[\[ "\$EVENT_NAME" == "pull_request" \]\]/);
+    assert.match(gate, /\[\[ "\$DEPENDENCY_REVIEW_RESULT" != "success" \]\]/);
+    assert.match(gate, /\[\[ "\$DEPENDENCY_REVIEW_RESULT" != "skipped" \]\]/);
+    assert.match(gate, /Security gate failed/);
 });
